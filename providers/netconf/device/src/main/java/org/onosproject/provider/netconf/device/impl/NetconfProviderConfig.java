@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,17 +21,15 @@ import com.google.common.annotations.Beta;
 import com.google.common.collect.Sets;
 import org.onlab.packet.IpAddress;
 import org.onosproject.core.ApplicationId;
-import org.onosproject.net.config.ConfigException;
+import org.onosproject.incubator.net.config.basics.ConfigException;
 import org.onosproject.net.config.Config;
 
 import java.util.Set;
 
 /**
  * Configuration for Netconf provider.
- * @deprecated 1.10.0 Kingfisher
  */
 @Beta
-@Deprecated
 public class NetconfProviderConfig extends Config<ApplicationId> {
 
     public static final String CONFIG_VALUE_ERROR = "Error parsing config value";
@@ -44,6 +42,7 @@ public class NetconfProviderConfig extends Config<ApplicationId> {
 
     public Set<NetconfDeviceAddress> getDevicesAddresses() throws ConfigException {
         Set<NetconfDeviceAddress> devicesAddresses = Sets.newHashSet();
+
         try {
             for (JsonNode node : array) {
                 String ip = node.path(IP).asText();
@@ -62,8 +61,7 @@ public class NetconfProviderConfig extends Config<ApplicationId> {
         return devicesAddresses;
     }
 
-    public class
-    NetconfDeviceAddress {
+    public class NetconfDeviceAddress {
         private final IpAddress ip;
         private final int port;
         private final String name;

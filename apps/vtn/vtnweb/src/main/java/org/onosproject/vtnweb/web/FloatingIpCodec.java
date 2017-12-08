@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,36 +60,36 @@ public final class FloatingIpCodec extends JsonCodec<FloatingIp> {
         Iterator<String> i = fields.iterator();
         while (i.hasNext()) {
             String s = i.next();
-            if ("floating_network_id".equals(s)) {
+            if (s.equals("floating_network_id")) {
                 result.put("floating_network_id", floatingIp.networkId()
                         .toString());
             }
-            if ("router_id".equals(s)) {
+            if (s.equals("router_id")) {
                 result.put("router_id",
                            floatingIp.routerId() == null ? null : floatingIp
                                    .routerId().routerId());
             }
-            if ("tenant_id".equals(s)) {
+            if (s.equals("tenant_id")) {
                 result.put("tenant_id", floatingIp.tenantId().toString());
             }
-            if ("port_id".equals(s)) {
+            if (s.equals("port_id")) {
                 result.put("port_id",
                            floatingIp.portId() == null ? null : floatingIp
                                    .portId().toString());
             }
-            if ("id".equals(s)) {
+            if (s.equals("id")) {
                 result.put("id", floatingIp.id().floatingIpId().toString());
             }
-            if ("fixed_ip_address".equals(s)) {
+            if (s.equals("fixed_ip_address")) {
                 result.put("fixed_ip_address",
                            floatingIp.fixedIp() == null ? null : floatingIp
                                    .fixedIp().toString());
             }
-            if ("floating_ip_address".equals(s)) {
+            if (s.equals("floating_ip_address")) {
                 result.put("floating_ip_address", floatingIp.floatingIp()
                         .toString());
             }
-            if ("status".equals(s)) {
+            if (s.equals("status")) {
                 result.put("status", floatingIp.status().toString());
             }
         }

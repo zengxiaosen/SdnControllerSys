@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,10 +84,6 @@ public class EventuallyConsistentMapImplTest {
     private SequentialClockService<String, String> clockService;
 
     private static final String MAP_NAME = "test";
-    private static final MessageSubject BOOTSTRAP_MESSAGE_SUBJECT
-            = new MessageSubject("ecm-" + MAP_NAME + "-bootstrap");
-    private static final MessageSubject INITIALIZE_MESSAGE_SUBJECT
-            = new MessageSubject("ecm-" + MAP_NAME + "-initialize");
     private static final MessageSubject UPDATE_MESSAGE_SUBJECT
             = new MessageSubject("ecm-" + MAP_NAME + "-update");
     private static final MessageSubject ANTI_ENTROPY_MESSAGE_SUBJECT
@@ -121,17 +117,6 @@ public class EventuallyConsistentMapImplTest {
         // delegate to our ClusterCommunicationService implementation. This
         // allows us to get a reference to the map's internal cluster message
         // handlers so we can induce events coming in from a peer.
-        clusterCommunicator.<Object, Object>addSubscriber(anyObject(MessageSubject.class),
-                anyObject(Function.class),
-                anyObject(Function.class),
-                anyObject(Function.class));
-        expectLastCall().andDelegateTo(new TestClusterCommunicationService()).times(1);
-        clusterCommunicator.<Object, Object>addSubscriber(anyObject(MessageSubject.class),
-                anyObject(Function.class),
-                anyObject(Function.class),
-                anyObject(Function.class),
-                anyObject(Executor.class));
-        expectLastCall().andDelegateTo(new TestClusterCommunicationService()).times(1);
         clusterCommunicator.<Object>addSubscriber(anyObject(MessageSubject.class),
                 anyObject(Function.class), anyObject(Consumer.class), anyObject(Executor.class));
         expectLastCall().andDelegateTo(new TestClusterCommunicationService()).times(1);
@@ -496,10 +481,6 @@ public class EventuallyConsistentMapImplTest {
         EventuallyConsistentMapListener<String, String> listener
                 = getListener();
         listener.event(new EventuallyConsistentMapEvent<>(
-                MAP_NAME, EventuallyConsistentMapEvent.Type.PUT, KEY1, VALUE1));
-        listener.event(new EventuallyConsistentMapEvent<>(
-                MAP_NAME, EventuallyConsistentMapEvent.Type.PUT, KEY2, VALUE2));
-        listener.event(new EventuallyConsistentMapEvent<>(
                 MAP_NAME, EventuallyConsistentMapEvent.Type.REMOVE, KEY1, VALUE1));
         listener.event(new EventuallyConsistentMapEvent<>(
                 MAP_NAME, EventuallyConsistentMapEvent.Type.REMOVE, KEY2, VALUE2));
@@ -651,8 +632,6 @@ public class EventuallyConsistentMapImplTest {
 
     @Test
     public void testDestroy() throws Exception {
-        clusterCommunicator.removeSubscriber(BOOTSTRAP_MESSAGE_SUBJECT);
-        clusterCommunicator.removeSubscriber(INITIALIZE_MESSAGE_SUBJECT);
         clusterCommunicator.removeSubscriber(UPDATE_MESSAGE_SUBJECT);
         clusterCommunicator.removeSubscriber(UPDATE_REQUEST_SUBJECT);
         clusterCommunicator.removeSubscriber(ANTI_ENTROPY_MESSAGE_SUBJECT);
@@ -814,7 +793,7 @@ public class EventuallyConsistentMapImplTest {
                 Function<byte[], M> decoder, Function<M, R> handler, Function<R, byte[]> encoder, Executor executor) {
             if (subject.equals(ANTI_ENTROPY_MESSAGE_SUBJECT)) {
                 antiEntropyHandler = (Function<AntiEntropyAdvertisement<String>, AntiEntropyResponse>) handler;
-            } else if (!subject.equals(INITIALIZE_MESSAGE_SUBJECT)) {
+            } else {
                 throw new RuntimeException("Unexpected message subject " + subject.toString());
             }
         }

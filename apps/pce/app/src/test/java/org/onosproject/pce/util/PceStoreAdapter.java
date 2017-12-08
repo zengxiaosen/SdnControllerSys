@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,22 @@
 package org.onosproject.pce.util;
 
 import com.google.common.collect.ImmutableSet;
-import org.onosproject.incubator.net.tunnel.TunnelId;
-import org.onosproject.pce.pceservice.ExplicitPathInfo;
-import org.onosproject.pce.pcestore.PcePathInfo;
-import org.onosproject.pce.pcestore.api.PceStore;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Arrays;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.onosproject.incubator.net.tunnel.TunnelId;
+import org.onosproject.net.resource.ResourceConsumer;
+import org.onosproject.pce.pceservice.ExplicitPathInfo;
+import org.onosproject.pce.pcestore.PcePathInfo;
+import org.onosproject.pce.pcestore.api.PceStore;
 
 /**
  * Provides test implementation of PceStore.
@@ -35,6 +39,7 @@ import java.util.Set;
 public class PceStoreAdapter implements PceStore {
 
     // Mapping tunnel with device local info with tunnel consumer id
+    private ConcurrentMap<TunnelId, ResourceConsumer> tunnelInfoMap = new ConcurrentHashMap<>();
 
     // Set of Path info
     private Set<PcePathInfo> failedPathInfoSet = new HashSet<>();
@@ -42,12 +47,19 @@ public class PceStoreAdapter implements PceStore {
     // Locally maintain with tunnel name as key and corresponding list of explicit path object
     private Map<String, List<ExplicitPathInfo>> tunnelNameExplicitPathInfoMap = new HashMap<>();
 
-    //Mapping tunnel name with Disjoint paths
-    private Map<String, List<TunnelId>> loadBalancingPathNameTunnelIdInfo = new HashMap<>();
+    @Override
+    public boolean existsTunnelInfo(TunnelId tunnelId) {
+        return tunnelInfoMap.containsKey(tunnelId);
+    }
 
     @Override
     public boolean existsFailedPathInfo(PcePathInfo pathInfo) {
         return failedPathInfoSet.contains(pathInfo);
+    }
+
+    @Override
+    public int getTunnelInfoCount() {
+        return tunnelInfoMap.size();
     }
 
     @Override
@@ -56,13 +68,38 @@ public class PceStoreAdapter implements PceStore {
     }
 
     @Override
+    public Map<TunnelId, ResourceConsumer> getTunnelInfos() {
+       return tunnelInfoMap.entrySet().stream()
+                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue()));
+    }
+
+    @Override
     public Iterable<PcePathInfo> getFailedPathInfos() {
        return ImmutableSet.copyOf(failedPathInfoSet);
     }
 
     @Override
+    public ResourceConsumer getTunnelInfo(TunnelId tunnelId) {
+        return tunnelInfoMap.get(tunnelId);
+    }
+
+    @Override
+    public void addTunnelInfo(TunnelId tunnelId, ResourceConsumer tunnelConsumerId) {
+        tunnelInfoMap.put(tunnelId, tunnelConsumerId);
+    }
+
+    @Override
     public void addFailedPathInfo(PcePathInfo pathInfo) {
         failedPathInfoSet.add(pathInfo);
+    }
+
+    @Override
+    public boolean removeTunnelInfo(TunnelId tunnelId) {
+        tunnelInfoMap.remove(tunnelId);
+        if (tunnelInfoMap.containsKey(tunnelId)) {
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -83,47 +120,4 @@ public class PceStoreAdapter implements PceStore {
     public List<ExplicitPathInfo> getTunnelNameExplicitPathInfoMap(String tunnelName) {
         return tunnelNameExplicitPathInfoMap.get(tunnelName);
     }
-
-/*    @Override
-    public DisjointPath getDisjointPaths(String tunnelName) {
-        if (tunnelNameDisjointPathInfo.get(tunnelName) != null) {
-            return tunnelNameDisjointPathInfo.get(tunnelName);
-        }
-        return null;
-    }
-
-    @Override
-    public boolean addDisjointPathInfo(String tunnelName, DisjointPath path) {
-        return tunnelNameDisjointPathInfo.put(tunnelName, path) != null ? true : false;
-    }*/
-
-    @Override
-    public boolean addLoadBalancingTunnelIdsInfo(String loadBalancingPathName, TunnelId... tunnelIds) {
-        return loadBalancingPathNameTunnelIdInfo.put(loadBalancingPathName,
-                Arrays.asList(tunnelIds)) != null ? true : false;
-    }
-
-    @Override
-    public List<TunnelId> getLoadBalancingTunnelIds(String loadBalancingPathName) {
-        if (loadBalancingPathNameTunnelIdInfo.get(loadBalancingPathName) != null) {
-            return loadBalancingPathNameTunnelIdInfo.get(loadBalancingPathName);
-        }
-        return null;
-    }
-
-    @Override
-    public boolean removeLoadBalancingTunnelIdsInfo(String loadBalancingPathName) {
-        if (loadBalancingPathNameTunnelIdInfo.remove(loadBalancingPathName) == null) {
-            return false;
-        }
-        return true;
-    }
-
-/*    @Override
-    public boolean removeDisjointPathInfo(String tunnelName) {
-        if (tunnelNameDisjointPathInfo.remove(tunnelName) == null) {
-            return false;
-        }
-        return true;
-    }*/
 }

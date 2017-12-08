@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -846,13 +846,10 @@ public class YangApplicationBroker {
                         .getDeclaredMethod(yangNode.getJavaClassNameOrBuiltInType(),
                                            inputObject.getClass().getInterfaces());
             }
-            if (methodObject != null) {
-                return methodObject.getReturnType().getSimpleName();
-            }
-            throw new YabException("No such method in application");
         } catch (NoSuchMethodException e) {
-            throw new YabException(e);
+            new YabException(e);
         }
+        return methodObject.getReturnType().getSimpleName();
     }
 
     /**

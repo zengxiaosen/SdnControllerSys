@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,12 @@
  */
 package org.onosproject.net.mcast;
 
+import com.google.common.annotations.Beta;
 import org.onosproject.event.EventListener;
 
 /**
  * A listener interface for multicast events.
- *
- * @deprecated in 1.11 ("Loon") release. To be moved into an app.
  */
-@Deprecated
+@Beta
 public interface McastListener extends EventListener<McastEvent> {
 }

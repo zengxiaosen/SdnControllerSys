@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,9 +35,5 @@ enum RequestedCallType {
      * Requested Node is of type multi instance leaf/node.
      */
     MULTI_INSTANCE,
-
-    /**
-     * Requested Node is of type container but is empty.
-     */
-    EMPTY_CONTAINER,
 }
+

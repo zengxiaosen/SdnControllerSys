@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,11 +27,11 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.driver.AbstractHandlerBehaviour;
 import org.onosproject.net.driver.DriverHandler;
 import org.onosproject.netconf.NetconfController;
-import org.onosproject.netconf.NetconfException;
 import org.onosproject.mastership.MastershipService;
 
 import org.slf4j.Logger;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.text.SimpleDateFormat;
@@ -138,7 +138,7 @@ public class FujitsuVoltAlarmConsumer extends AbstractHandlerBehaviour implement
                 alarms = parseVoltActiveAlerts(XmlConfigParser.
                     loadXml(new ByteArrayInputStream(reply.getBytes(StandardCharsets.UTF_8))));
             }
-        } catch (NetconfException e) {
+        } catch (IOException e) {
             log.error("Error reading alarms for device {} exception {}", ncDeviceId, e);
         }
 
@@ -280,7 +280,7 @@ public class FujitsuVoltAlarmConsumer extends AbstractHandlerBehaviour implement
                     try {
                         Date date = dateFormat.parse(strDate + SPACE + strTime);
                         timeRaised = date.getTime();
-                        log.debug("{} {} converted to {}", strDate, strTime, timeRaised);
+                        log.debug("{} {} coverted to {}", strDate, strTime, timeRaised);
                         return timeRaised;
                     } catch (ParseException e) {
                         log.error("Cannot parse exception {} {} {}", strDate, strTime, e);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.onosproject.codec.impl;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.onosproject.codec.CodecContext;
 import org.onosproject.codec.JsonCodec;
+import org.onosproject.core.DefaultGroupId;
 import org.onosproject.core.GroupId;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.TrafficTreatment;
@@ -110,7 +111,7 @@ public class GroupBucketCodec extends JsonCodec<GroupBucket> {
                 // parse watchGroup
                 int groupIdInt = nullIsIllegal(json.get(WATCH_GROUP),
                         WATCH_GROUP + MISSING_MEMBER_MESSAGE).asInt();
-                GroupId watchGroup = new GroupId((short) groupIdInt);
+                GroupId watchGroup = new DefaultGroupId((short) groupIdInt);
 
                 groupBucket =
                         DefaultGroupBucket.createFailoverGroupBucket(trafficTreatment, watchPort, watchGroup);

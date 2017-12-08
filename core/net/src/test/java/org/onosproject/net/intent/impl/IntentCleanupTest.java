@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,14 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.onosproject.cfg.ComponentConfigAdapter;
-import org.onosproject.net.intent.AbstractIntentTest;
+import org.onosproject.core.IdGenerator;
 import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.IntentData;
 import org.onosproject.net.intent.IntentEvent;
 import org.onosproject.net.intent.IntentServiceAdapter;
 import org.onosproject.net.intent.IntentStore;
 import org.onosproject.net.intent.IntentStoreDelegate;
+import org.onosproject.net.intent.MockIdGenerator;
 import org.onosproject.store.Timestamp;
 import org.onosproject.store.trivial.SimpleIntentStore;
 import org.onosproject.store.trivial.SystemClockTimestamp;
@@ -40,11 +41,12 @@ import static org.onosproject.net.intent.IntentTestsMocks.MockIntent;
 /**
  * Test intent cleanup.
  */
-public class IntentCleanupTest extends AbstractIntentTest {
+public class IntentCleanupTest {
 
     private IntentCleanup cleanup;
     private MockIntentService service;
     private IntentStore store;
+    protected IdGenerator idGenerator; // global or one per test? per test for now.
 
     private static class MockIntentService extends IntentServiceAdapter {
 
@@ -76,8 +78,7 @@ public class IntentCleanupTest extends AbstractIntentTest {
         service = new MockIntentService();
         store = new SimpleIntentStore();
         cleanup = new IntentCleanup();
-
-        super.setUp();
+        idGenerator = new MockIdGenerator();
 
         cleanup.cfgService = new ComponentConfigAdapter();
         cleanup.service = service;
@@ -88,12 +89,15 @@ public class IntentCleanupTest extends AbstractIntentTest {
 
         assertTrue("store should be empty",
                    Sets.newHashSet(cleanup.store.getIntents()).isEmpty());
+
+        Intent.unbindIdGenerator(idGenerator);
+        Intent.bindIdGenerator(idGenerator);
     }
 
     @After
     public void tearDown() {
         cleanup.deactivate();
-        super.tearDown();
+        Intent.unbindIdGenerator(idGenerator);
     }
 
     /**

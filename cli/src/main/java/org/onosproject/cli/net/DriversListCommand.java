@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,7 @@ import org.apache.karaf.shell.commands.Command;
 import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.net.driver.Behaviour;
 import org.onosproject.net.driver.Driver;
-import org.onosproject.net.driver.DriverService;
-
+import org.onosproject.net.driver.DriverAdminService;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -46,7 +45,7 @@ public class DriversListCommand extends AbstractShellCommand {
 
     @Override
     protected void execute() {
-        DriverService service = get(DriverService.class);
+        DriverAdminService service = get(DriverAdminService.class);
 
         if (driverName != null) {
             printDriver(service.getDriver(driverName), true);
@@ -88,10 +87,9 @@ public class DriversListCommand extends AbstractShellCommand {
             }
 
             driver.behaviours().forEach(b -> printBehaviour(b, driver));
-            driver.properties().forEach((k, v) -> print(FMT_P, k, v));
-
             //recursion call to print each parent
             parents.stream().forEach(parent -> printDriver(parent, false));
+            driver.properties().forEach((k, v) -> print(FMT_P, k, v));
         }
     }
 

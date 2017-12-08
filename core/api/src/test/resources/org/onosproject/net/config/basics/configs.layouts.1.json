@@ -1,6 +1,6 @@
 {
   "layouts": {
-    "root": {
+    "_default_": {
       "basic": {
         "geomap": "uk",
         "scale": 1.2,

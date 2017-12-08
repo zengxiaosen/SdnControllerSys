@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Objects;
 
-import org.joda.time.DateTime;
 import org.onosproject.store.Timestamp;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 
 /**
@@ -69,7 +69,9 @@ public class WallClockTimestamp implements Timestamp {
 
     @Override
     public String toString() {
-        return new DateTime(unixTimestamp).toString();
+        return MoreObjects.toStringHelper(getClass())
+                    .add("unixTimestamp", unixTimestamp)
+                    .toString();
     }
 
     /**

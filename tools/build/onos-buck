@@ -5,8 +5,9 @@
 
 set -e
 
-BUCK_URL="http://onlab.vicci.org/onos/third-party/buck-v2017.10.03.02.zip"
-BUCK_SHA="c82bfa67b18e3acd3a3ec278be1549856cb74d3b"
+BUCK_URL="http://onlab.vicci.org/onos/third-party/buck-v2016.12.02.01.zip"
+BUCK_SHA="c7b1b46f998c08a175adec37f210c14092f84216"
+REQUIRED_VERSION="buck version c4e714c9c0c774cbb674c2fde0a4419824f0cfdb"
 
 [  "-U" = "$1" ] && shift && FORCE_UPDATE=True
 
@@ -15,21 +16,18 @@ ROOT_DIR=${ONOS_ROOT:-"$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"}
 mkdir -p $ROOT_DIR/bin
 pushd $ROOT_DIR/bin > /dev/null
 
-if [ -n "$FORCE_UPDATE" ] || [ ! -f "buck" ] || [ "$BUCK_SHA" != "$(cat .buck_sha)" ]; then
-    echo "Updating Buck..." >&2
-    rm -fr .buck_version .buck_sha buck plugins
+if [ -n "$FORCE_UPDATE" ] || [ ! -f "buck" ] || [ "$REQUIRED_VERSION" != "$(cat .buck_version)" ]; then
+    echo "Updating Buck..."
+    rm -fr .buck_version buck plugins
     mkdir -p cache
     BUCK_FILE=$(basename $BUCK_URL)
     # Check the local cache; download to cache if required
     [ -f "cache/$BUCK_FILE" ] || curl -o cache/$BUCK_FILE -L $BUCK_URL
     if [ -n "$(which shasum)" ]; then
         SHA=$(shasum cache/$BUCK_FILE | cut -d' ' -f1)
-        if [ "$SHA" != "$BUCK_SHA" ]; then
+        [ "$SHA" != "$BUCK_SHA" ] &&
            echo "ERROR: Downloaded SHA ($SHA) does not match expected SHA ($BUCK_SHA)" &&
            rm -f cache/$BUCK_FILE && exit 1
-        else
-           echo "$SHA" > .buck_sha
-        fi
     else
         echo "SHA cannot be verified"
     fi
@@ -43,9 +41,5 @@ popd > /dev/null
 
 BUCK=$ROOT_DIR/bin/buck
 
-if [ "${ONOS_NO_BUCKD:-1}" == "1" ]; then
-  export NO_BUCKD=1
-fi
-
 # Finally, run the Buck command...
-$BUCK "$@"
+NO_BUCKD=1 $BUCK "$@"

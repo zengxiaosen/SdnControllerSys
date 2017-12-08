@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,10 +28,8 @@ import org.projectfloodlight.openflow.protocol.meterband.OFMeterBandDscpRemark;
 import org.slf4j.Logger;
 
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -84,36 +82,37 @@ public final class MeterModBuilder {
     public OFMeterMod add() {
         validate();
         OFMeterMod.Builder builder = builderMeterMod();
-        builder.setCommand(OFMeterModCommand.ADD);
+        builder.setCommand(OFMeterModCommand.ADD.ordinal());
         return builder.build();
     }
 
     public OFMeterMod remove() {
         validate();
         OFMeterMod.Builder builder = builderMeterMod();
-        builder.setCommand(OFMeterModCommand.DELETE);
+        builder.setCommand(OFMeterModCommand.DELETE.ordinal());
         return builder.build();
     }
 
     public OFMeterMod modify() {
         validate();
         OFMeterMod.Builder builder = builderMeterMod();
-        builder.setCommand(OFMeterModCommand.MODIFY);
+        builder.setCommand(OFMeterModCommand.MODIFY.ordinal());
         return builder.build();
     }
 
     private OFMeterMod.Builder builderMeterMod() {
         OFMeterMod.Builder builder = factory.buildMeterMod();
-        Set<OFMeterFlags> flags = EnumSet.noneOf(OFMeterFlags.class);
+        int flags = 0;
         if (burst) {
-            flags.add(OFMeterFlags.BURST);
+            // covering loxi short comings.
+            flags |= 1 << OFMeterFlags.BURST.ordinal();
         }
         switch (unit) {
             case PKTS_PER_SEC:
-                flags.add(OFMeterFlags.PKTPS);
+                flags |= 1 << OFMeterFlags.PKTPS.ordinal();
                 break;
             case KB_PER_SEC:
-                flags.add(OFMeterFlags.KBPS);
+                flags |= 1 << OFMeterFlags.KBPS.ordinal();
                 break;
             default:
                 log.warn("Unknown unit type {}", unit);

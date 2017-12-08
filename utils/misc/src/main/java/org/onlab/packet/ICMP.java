@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -132,6 +132,21 @@ public class ICMP extends BasePacket {
             bb.putShort(2, this.checksum);
         }
         return data;
+    }
+
+    @Override
+    public IPacket deserialize(final byte[] data, final int offset,
+                               final int length) {
+        final ByteBuffer bb = ByteBuffer.wrap(data, offset, length);
+        this.icmpType = bb.get();
+        this.icmpCode = bb.get();
+        this.checksum = bb.getShort();
+
+        this.payload = new Data();
+        this.payload = this.payload.deserialize(data, bb.position(), bb.limit()
+                - bb.position());
+        this.payload.setParent(this);
+        return this;
     }
 
     /*

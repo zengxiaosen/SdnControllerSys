@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,14 @@
 
 package org.onosproject.ui.model.topo;
 
-import org.onosproject.net.DeviceId;
-import org.onosproject.net.HostId;
-import org.onosproject.net.PortNumber;
-
 /**
  * Designates a link between a device and a host; that is, an edge link.
  */
 public class UiEdgeLink extends UiLink {
 
-    private final HostId hostId;
-    private final DeviceId deviceId;
-    private final PortNumber port;
+    private final String hostId;
+    private final String edgeDevice;
+    private final String edgePort;
 
     /**
      * Creates a UI link.
@@ -37,53 +33,25 @@ public class UiEdgeLink extends UiLink {
      */
     public UiEdgeLink(UiTopology topology, UiLinkId id) {
         super(topology, id);
-        hostId = HostId.hostId(id.idA());
-        deviceId = (DeviceId) id.elementB();
-        port = id.portB();
+        hostId = id.idA();
+        edgeDevice = id.elementB().toString();
+        edgePort = id.portB().toString();
     }
 
     @Override
     public String endPointA() {
-        return hostId.toString();
+        return hostId;
     }
 
     @Override
     public String endPointB() {
-        return deviceId.toString();
+        return edgeDevice;
     }
 
     // no port for end-point A
 
     @Override
     public String endPortB() {
-        return port.toString();
+        return edgePort;
     }
-
-    /**
-     * Returns the host identifier.
-     *
-     * @return host identifier
-     */
-    public HostId hostId() {
-        return hostId;
-    }
-
-    /**
-     * Returns the edge device identifier.
-     *
-     * @return device identifier
-     */
-    public DeviceId deviceId() {
-        return deviceId;
-    }
-
-    /**
-     * Returns the edge port number.
-     *
-     * @return edge port number
-     */
-    public PortNumber portNumber() {
-        return port;
-    }
-
 }

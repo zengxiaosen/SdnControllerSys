@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ import org.onlab.packet.Ip4Address;
 import org.onosproject.app.ApplicationException;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.config.ConfigException;
+import org.onosproject.incubator.net.config.basics.ConfigException;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
@@ -391,9 +391,8 @@ public class TeTopologyManager
                         break;
                     case NETWORK_REMOVED:
                         post(new TeTopologyEvent(NETWORK_REMOVED,
-                                                 new DefaultNetwork(event.networkKey(), null, null,
-                                                                    null, null, false, null,
-                                                                    NOT_OPTIMIZED)));
+                                                 new DefaultNetwork(event.networkKey(),
+                                                                    null, null, null, null, false, null)));
                         break;
                     case NODE_ADDED:
                     case NODE_UPDATED:

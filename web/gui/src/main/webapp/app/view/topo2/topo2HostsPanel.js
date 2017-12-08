@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,43 +15,36 @@
  */
 
 /*
- ONOS GUI -- Topo2 Hosts Panel
- Module that builds the Hosts Panel for the selected Host
+ ONOS GUI -- Topology Layout Module.
+ Module that contains the d3.force.layout logic
  */
 
 (function () {
     'use strict';
 
     // Injected Services
-    var panel, gs, flash, ls, ns;
+    var panel, gs, flash, ls;
 
     // Internal State
-    var hostPath = 'host',
-        hostPanel, hostData;
+    var hostPanel, hostData;
 
     function init() {
         hostPanel = panel();
     }
 
     function formatHostData(data) {
-        var format = {
+        return {
             title: data.get('id'),
-            propOrder: ['MAC', 'IP', 'VLAN'],
+            propOrder: ['MAC', 'IP', 'VLAN', '-', 'Latitude', 'Longitude'],
             props: {
                 '-': '',
                 'MAC': data.get('id'),
                 'IP': data.get('ips')[0],
                 'VLAN': 'None', // TODO: VLAN is not currently in the data received from backend
-            },
+                'Latitude': data.get('location').lat,
+                'Longitude': data.get('location').lng
+            }
         };
-
-        if (data.get('location')) {
-            format.propOrder.push('-', 'Latitude', 'Longitude');
-            format.props['Latitude'] = data.get('location').lat;
-            format.props['Longitude'] = data.get('location').lng;
-        }
-
-        return format;
     }
 
     function displayPanel(data) {
@@ -62,19 +55,13 @@
     }
 
     function render() {
-        hostPanel.show();
+        hostPanel.el.show();
         hostPanel.emptyRegions();
-
-        var navFn = function () {
-            ns.navTo(hostPath, { hostId: hostData.title });
-        };
 
         var svg = hostPanel.appendToHeader('div')
                 .classed('icon', true)
                 .append('svg'),
-            title = hostPanel.appendToHeader('h2')
-                .on('click', navFn)
-                .classed('clickable', true),
+            title = hostPanel.appendToHeader('h2'),
             table = hostPanel.appendToBody('table'),
             tbody = table.append('tbody');
 
@@ -84,7 +71,7 @@
     }
 
     function show() {
-        hostPanel.show();
+        hostPanel.el.show();
     }
 
     function hide() {
@@ -104,14 +91,12 @@
     angular.module('ovTopo2')
     .factory('Topo2HostsPanelService', [
         'Topo2DetailsPanelService', 'GlyphService', 'FlashService', 'ListService',
-        'NavService',
-        function (_ps_, _gs_, _flash_, _ls_, _ns_) {
+        function (_ps_, _gs_, _flash_, _ls_) {
 
             panel = _ps_;
             gs = _gs_;
             flash = _flash_;
             ls = _ls_;
-            ns = _ns_;
 
             return {
                 displayPanel: displayPanel,
@@ -120,9 +105,9 @@
                 hide: hide,
                 toggle: toggle,
                 destroy: destroy,
-                isVisible: function () { return hostPanel.isVisible(); },
+                isVisible: function () { return hostPanel.isVisible(); }
             };
-        },
+        }
     ]);
 
 })();

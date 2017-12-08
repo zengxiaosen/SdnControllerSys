@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,6 +73,18 @@ public class XmlDriverLoader {
      * class loader.
      *
      * @param classLoader class loader to use
+     * @deprecated since 1.7.0 (Hummingbird)
+     */
+    @Deprecated
+    public XmlDriverLoader(ClassLoader classLoader) {
+        this(classLoader, null);
+    }
+
+    /**
+     * Creates a new driver loader capable of loading drivers from the supplied
+     * class loader.
+     *
+     * @param classLoader class loader to use
      * @param resolver    behaviour class resolver
      */
     public XmlDriverLoader(ClassLoader classLoader, BehaviourClassResolver resolver) {
@@ -135,7 +147,7 @@ public class XmlDriverLoader {
         String name = driverCfg.getString(NAME);
         String parentsString = driverCfg.getString(EXTENDS, "");
         List<Driver> parents = Lists.newArrayList();
-        if (!"".equals(parentsString)) {
+        if (!parentsString.equals("")) {
             List<String> parentsNames;
             if (parentsString.contains(",")) {
                 parentsNames = Arrays.asList(parentsString.replace(" ", "").split(","));

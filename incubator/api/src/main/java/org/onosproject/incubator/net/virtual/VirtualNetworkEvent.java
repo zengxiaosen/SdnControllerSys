@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,6 +98,18 @@ public class VirtualNetworkEvent extends AbstractEvent<VirtualNetworkEvent.Type,
     }
 
     /**
+     * Creates an event of a given type and for the specified subject and the
+     * virtual port.
+     *
+     * @param type          event type
+     * @param subject       event subject
+     * @param virtualPort   virtual port
+     */
+    public VirtualNetworkEvent(Type type, NetworkId subject, VirtualPort virtualPort) {
+        this(type, subject, null, virtualPort);
+    }
+
+    /**
      * Creates an event of a given type and for the specified subject, virtual device and
      * virtual port.
      *
@@ -106,7 +118,7 @@ public class VirtualNetworkEvent extends AbstractEvent<VirtualNetworkEvent.Type,
      * @param virtualDevice virtual device
      * @param virtualPort   virtual port
      */
-    public VirtualNetworkEvent(Type type, NetworkId subject, VirtualDevice virtualDevice,
+    private VirtualNetworkEvent(Type type, NetworkId subject, VirtualDevice virtualDevice,
                                 VirtualPort virtualPort) {
         super(type, subject);
         this.virtualDevice = virtualDevice;
@@ -169,7 +181,7 @@ public class VirtualNetworkEvent extends AbstractEvent<VirtualNetworkEvent.Type,
 
     /**
      * Returns virtual device affected by event - may be null (for events relating to
-     * tenants and virtual networks).
+     * tenants, virtual networks and virtual ports).
      *
      * @return virtual device
      */

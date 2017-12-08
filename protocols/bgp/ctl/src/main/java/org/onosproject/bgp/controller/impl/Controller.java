@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ public class Controller {
     private static final BgpFactory FACTORY4 = BgpFactories.getFactory(BgpVersion.BGP_4);
 
     private ChannelGroup cg;
-    private Channel serverChannel;
+    public Channel serverChannel;
 
     // Configuration options
     protected static final short BGP_PORT_NUM = 179;

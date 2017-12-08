@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.Optional;
 import org.onosproject.net.Port;
 import org.onosproject.net.optical.OduCltPort;
 import org.onosproject.net.optical.device.OduCltPortHelper;
+import org.onosproject.net.optical.impl.DefaultOduCltPort;
 
 import com.google.common.annotations.Beta;
 
@@ -48,6 +49,13 @@ public class OduCltPortMapper extends AbstractPortMapper<OduCltPort> {
     protected Optional<OduCltPort> mapPort(Port port) {
         if (port instanceof OduCltPort) {
             return Optional.of((OduCltPort) port);
+        } else if (port instanceof org.onosproject.net.OduCltPort) {
+            // TODO remove after deprecation of old OduCltPort is complete
+
+            // translate to new OduCltPort
+            org.onosproject.net.OduCltPort old = (org.onosproject.net.OduCltPort) port;
+            return Optional.of(new DefaultOduCltPort(old,
+                                                     old.signalType()));
         }
 
         return OduCltPortHelper.asOduCltPort(port);

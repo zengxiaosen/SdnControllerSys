@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,17 +45,8 @@ public class IntentDetailsCommand extends AbstractShellCommand {
 
     @Override
     protected void execute() {
-        detailIntents(idsStr);
-    }
-
-    /**
-     * Print detailed data for intents, given a list of IDs.
-     *
-     * @param intentsIds List of intent IDs
-     */
-    public void detailIntents(List<String> intentsIds) {
-        if (intentsIds != null) {
-            ids = intentsIds.stream()
+        if (idsStr != null) {
+            ids = idsStr.stream()
                     .map(IntentId::valueOf)
                     .collect(Collectors.toSet());
         }
@@ -63,8 +54,8 @@ public class IntentDetailsCommand extends AbstractShellCommand {
         IntentService service = get(IntentService.class);
 
         Tools.stream(service.getIntentData())
-                .filter(this::filter)
-                .forEach(this::printIntentData);
+            .filter(this::filter)
+            .forEach(this::printIntentData);
     }
 
     private boolean filter(IntentData data) {

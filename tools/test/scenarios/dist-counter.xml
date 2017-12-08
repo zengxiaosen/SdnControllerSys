@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright 2016-present Open Networking Foundation
+  ~ Copyright 2016-present Open Networking Laboratory
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
     <group name="Distributed-Primitive-Counter">
 
         <step name="Distributed-Primitive-Counter.Test-Counter-Initial-Value"
+              requires="Distributed-Primitives-Setup"
               exec="onos-cluster-execute-expect counter-test test-counter get --expect 0"/>
 
         <step name="Distributed-Primitive-Counter.Test-Counter-Set"
@@ -79,10 +80,10 @@
 
         <group name="Distributed-Primitive-Counter.Check-Log-Exceptions"
 	       requires="Distributed-Primitive-Counter.Test-Counter-Get-After-Reset">
-            <parallel var="${OC#}">
-                <step name="Distributed-Primitive-Counter.Check-Log-Exceptions-${#}"
-                      exec="onos-check-logs ${OC#}"/>
-            </parallel>
+	    <parallel var="${OC#}">
+	        <step name="Distributed-Primitive-Counter.Check-Log-Exceptions-${#}"
+		      exec="onos-check-logs ${OC#}"/>
+	    </parallel>
         </group>
 
     </group>

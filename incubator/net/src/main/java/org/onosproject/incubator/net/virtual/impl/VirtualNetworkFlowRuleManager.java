@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,10 +40,10 @@ import org.onosproject.net.flow.CompletedBatchOperation;
 import org.onosproject.net.flow.DefaultFlowEntry;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchEntry;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchEvent;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchRequest;
+import org.onosproject.net.flow.FlowRuleBatchEntry;
+import org.onosproject.net.flow.FlowRuleBatchEvent;
+import org.onosproject.net.flow.FlowRuleBatchOperation;
+import org.onosproject.net.flow.FlowRuleBatchRequest;
 import org.onosproject.net.flow.FlowRuleEvent;
 import org.onosproject.net.flow.FlowRuleListener;
 import org.onosproject.net.flow.FlowRuleOperation;
@@ -112,7 +112,7 @@ public class VirtualNetworkFlowRuleManager
      */
     public VirtualNetworkFlowRuleManager(VirtualNetworkService virtualNetworkManager,
                                          NetworkId networkId) {
-        super(virtualNetworkManager, networkId, FlowRuleEvent.class);
+        super(virtualNetworkManager, networkId);
 
         store = serviceDirectory.get(VirtualNetworkFlowRuleStore.class);
 
@@ -470,7 +470,7 @@ public class VirtualNetworkFlowRuleManager
                 try {
                     FlowEntry storedRule = storedRules.remove(rule);
                     if (storedRule != null) {
-                        if (storedRule.id().equals(rule.id())) {
+                        if (storedRule.exactMatch(rule)) {
                             // we both have the rule, let's update some info then.
                             flowAdded(rule);
                         } else {
@@ -553,17 +553,7 @@ public class VirtualNetworkFlowRuleManager
                     break;
 
                 case BATCH_OPERATION_COMPLETED:
-                    FlowOperationsProcessor fops = pendingFlowOperations.remove(
-                            event.subject().batchId());
-                    if (fops == null) {
-                       return;
-                    }
-
-                    if (event.result().isSuccess()) {
-                            fops.satisfy(event.deviceId());
-                    } else {
-                        fops.fail(event.deviceId(), event.result().failedItems());
-                    }
+                    //TODO: do post-processing for batch operations.
                     break;
 
                 default:

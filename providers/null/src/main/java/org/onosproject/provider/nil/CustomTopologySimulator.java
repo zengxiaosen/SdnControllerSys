@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,14 +106,5 @@ public class CustomTopologySimulator extends TopologySimulator {
 
     @Override
     protected void createHosts() {
-    }
-
-    /**
-     * Resets the device and host ID seeds to the default values. That is, the
-     * next assigned values will start from 1 again.
-     */
-    public void resetIdSeeds() {
-        nextDeviceId = 0;
-        nextHostId = 0;
     }
 }

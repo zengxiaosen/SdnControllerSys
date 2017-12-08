@@ -3,7 +3,6 @@ BUNDLES = [
     '//providers/netconf/alarm:onos-providers-netconf-alarm',
     '//protocols/netconf/api:onos-protocols-netconf-api',
     '//protocols/netconf/ctl:onos-protocols-netconf-ctl',
-    '//lib:sshd-core',
 ]
 
 EXCLUDED_BUNDLES = [
@@ -13,12 +12,10 @@ EXCLUDED_BUNDLES = [
 onos_app (
     title = 'NETCONF Provider',
     category = 'Provider',
-    url = 'https://wiki.onosproject.org/display/ONOS/NETCONF',
+    url = 'http://onosproject.org',
     included_bundles = BUNDLES,
     excluded_bundles = EXCLUDED_BUNDLES,
-    description = 'Provides means for ONOS to discover and trigger the initial handshake procedure ' +
-        'with NETCONF from information given by network configuration.' +
-        'Also provides capabilities for receiving asynchronous alarm notifications from devices.',
+    description = 'NETCONF protocol southbound providers.',
     required_apps = [ 'org.onosproject.faultmanagement'],
 )
 

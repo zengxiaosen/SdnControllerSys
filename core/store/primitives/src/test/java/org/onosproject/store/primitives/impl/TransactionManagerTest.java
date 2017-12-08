@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,7 +81,7 @@ public class TransactionManagerTest {
 
         replay(storageService, partitionService, asyncMap, primitiveCreator, mapBuilder);
 
-        TransactionManager transactionManager = new TransactionManager(storageService, partitionService, 128);
+        TransactionManager transactionManager = new TransactionManager(storageService, partitionService);
         TransactionId transactionId = TransactionId.from(UUID.randomUUID().toString());
         TransactionCoordinator transactionCoordinator = new TransactionCoordinator(transactionId, transactionManager);
         Serializer serializer = Serializer.using(KryoNamespaces.API);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,13 @@
  */
 package org.onosproject.net.flow;
 
+import com.google.common.base.Charsets;
 import com.google.common.hash.Funnel;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.onosproject.core.ApplicationId;
+import org.onosproject.core.DefaultGroupId;
 import org.onosproject.core.GroupId;
 import org.onosproject.net.DeviceId;
 
@@ -28,7 +30,6 @@ import java.util.Objects;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.onosproject.net.flow.TableId.Type.INDEX;
 
 /**
  * Default flow rule.
@@ -51,7 +52,7 @@ public class DefaultFlowRule implements FlowRule {
     private final FlowRemoveReason reason;
     private final GroupId groupId;
 
-    private final TableId tableId;
+    private final Integer tableId;
     private final FlowRuleExtPayLoad payLoad;
 
     /**
@@ -72,14 +73,14 @@ public class DefaultFlowRule implements FlowRule {
         this.reason = rule.reason();
         this.permanent = rule.isPermanent();
         this.created = System.currentTimeMillis();
-        this.tableId = rule.table();
+        this.tableId = rule.tableId();
         this.payLoad = rule.payLoad();
     }
 
     private DefaultFlowRule(DeviceId deviceId, TrafficSelector selector,
                             TrafficTreatment treatment, Integer priority,
                             FlowId flowId, Boolean permanent, Integer timeout, Integer hardTimeout,
-                            FlowRemoveReason reason, TableId tableId) {
+                            FlowRemoveReason reason, Integer tableId) {
 
         this.deviceId = deviceId;
         this.selector = selector;
@@ -96,7 +97,7 @@ public class DefaultFlowRule implements FlowRule {
 
 
         //FIXME: fields below will be removed.
-        this.groupId = new GroupId(0);
+        this.groupId = new DefaultGroupId(0);
         this.payLoad = null;
     }
 
@@ -154,12 +155,12 @@ public class DefaultFlowRule implements FlowRule {
         this.selector = selector;
         this.treatment = treatment;
         this.appId = appId.id();
-        this.groupId = new GroupId(0);
+        this.groupId = new DefaultGroupId(0);
         this.timeout = timeout;
         this.reason = FlowRemoveReason.NO_REASON;
         this.hardTimeout = hardTimeout;
         this.permanent = permanent;
-        this.tableId = DEFAULT_TABLE;
+        this.tableId = 0;
         this.created = System.currentTimeMillis();
         this.payLoad = payLoad;
 
@@ -235,7 +236,7 @@ public class DefaultFlowRule implements FlowRule {
         this.hardTimeout = hardTimeout;
         this.permanent = permanent;
         this.created = System.currentTimeMillis();
-        this.tableId = DEFAULT_TABLE;
+        this.tableId = 0;
         this.payLoad = payLoad;
 
         /*
@@ -365,12 +366,6 @@ public class DefaultFlowRule implements FlowRule {
 
     @Override
     public int tableId() {
-        // Workaround until we remove this method. Deprecated in Loon.
-        return tableId.type() == INDEX ? ((IndexTableId) tableId).id() : tableId.hashCode();
-    }
-
-    @Override
-    public TableId table() {
         return tableId;
     }
 
@@ -401,7 +396,7 @@ public class DefaultFlowRule implements FlowRule {
         private ApplicationId appId;
         private Integer priority;
         private DeviceId deviceId;
-        private TableId tableId = DEFAULT_TABLE;
+        private Integer tableId = 0;
         private TrafficSelector selector = DefaultTrafficSelector.builder().build();
         private TrafficTreatment treatment = DefaultTrafficTreatment.builder().build();
         private Integer timeout;
@@ -435,12 +430,6 @@ public class DefaultFlowRule implements FlowRule {
 
         @Override
         public FlowRule.Builder forTable(int tableId) {
-            this.tableId = IndexTableId.of(tableId);
-            return this;
-        }
-
-        @Override
-        public FlowRule.Builder forTable(TableId tableId) {
             this.tableId = tableId;
             return this;
         }
@@ -488,7 +477,6 @@ public class DefaultFlowRule implements FlowRule {
         @Override
         public FlowRule build() {
             FlowId localFlowId;
-            checkNotNull(tableId, "Table id cannot be null");
             checkArgument((flowId != null) ^ (appId != null), "Either an application" +
                     " id or a cookie must be supplied");
             checkNotNull(selector, "Traffic selector cannot be null");
@@ -518,17 +506,15 @@ public class DefaultFlowRule implements FlowRule {
         }
 
         private int hash() {
-            // Guava documentation recommends using putUnencodedChars to hash raw character bytes within any encoding
-            // unless cross-language compatibility is needed. See the Hasher.putString documentation for more info.
             Funnel<TrafficSelector> selectorFunnel = (from, into) -> from.criteria()
-                    .forEach(c -> into.putUnencodedChars(c.toString()));
+                    .forEach(c -> into.putString(c.toString(), Charsets.UTF_8));
 
             HashFunction hashFunction = Hashing.murmur3_32();
             HashCode hashCode = hashFunction.newHasher()
-                    .putUnencodedChars(deviceId.toString())
+                    .putString(deviceId.toString(), Charsets.UTF_8)
                     .putObject(selector, selectorFunnel)
                     .putInt(priority)
-                    .putUnencodedChars(tableId.toString())
+                    .putInt(tableId)
                     .hash();
 
             return hashCode.asInt();

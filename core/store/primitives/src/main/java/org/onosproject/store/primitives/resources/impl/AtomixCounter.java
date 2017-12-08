@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,76 +15,63 @@
  */
 package org.onosproject.store.primitives.resources.impl;
 
+import io.atomix.variables.DistributedLong;
+
 import java.util.concurrent.CompletableFuture;
 
-import io.atomix.protocols.raft.proxy.RaftProxy;
-import org.onlab.util.KryoNamespace;
-import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.AsyncAtomicCounter;
-import org.onosproject.store.service.Serializer;
-
-import static org.onosproject.store.primitives.resources.impl.AtomixCounterOperations.ADD_AND_GET;
-import static org.onosproject.store.primitives.resources.impl.AtomixCounterOperations.AddAndGet;
-import static org.onosproject.store.primitives.resources.impl.AtomixCounterOperations.COMPARE_AND_SET;
-import static org.onosproject.store.primitives.resources.impl.AtomixCounterOperations.CompareAndSet;
-import static org.onosproject.store.primitives.resources.impl.AtomixCounterOperations.GET;
-import static org.onosproject.store.primitives.resources.impl.AtomixCounterOperations.GET_AND_ADD;
-import static org.onosproject.store.primitives.resources.impl.AtomixCounterOperations.GET_AND_INCREMENT;
-import static org.onosproject.store.primitives.resources.impl.AtomixCounterOperations.GetAndAdd;
-import static org.onosproject.store.primitives.resources.impl.AtomixCounterOperations.INCREMENT_AND_GET;
-import static org.onosproject.store.primitives.resources.impl.AtomixCounterOperations.SET;
-import static org.onosproject.store.primitives.resources.impl.AtomixCounterOperations.Set;
 
 /**
- * Atomix counter implementation.
+ * {@code AsyncAtomicCounter} implementation backed by Atomix
+ * {@link DistributedLong}.
  */
-public class AtomixCounter extends AbstractRaftPrimitive implements AsyncAtomicCounter {
-    private static final Serializer SERIALIZER = Serializer.using(KryoNamespace.newBuilder()
-            .register(KryoNamespaces.BASIC)
-            .register(AtomixCounterOperations.NAMESPACE)
-            .build());
+public class AtomixCounter implements AsyncAtomicCounter {
 
-    public AtomixCounter(RaftProxy proxy) {
-        super(proxy);
-    }
+    private final String name;
+    private final DistributedLong distLong;
 
-    private long nullOrZero(Long value) {
-        return value != null ? value : 0;
+    public AtomixCounter(String name, DistributedLong distLong) {
+        this.name = name;
+        this.distLong = distLong;
     }
 
     @Override
-    public CompletableFuture<Long> get() {
-        return proxy.<Long>invoke(GET, SERIALIZER::decode).thenApply(this::nullOrZero);
-    }
-
-    @Override
-    public CompletableFuture<Void> set(long value) {
-        return proxy.invoke(SET, SERIALIZER::encode, new Set(value));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> compareAndSet(long expectedValue, long updateValue) {
-        return proxy.invoke(COMPARE_AND_SET, SERIALIZER::encode,
-                new CompareAndSet(expectedValue, updateValue), SERIALIZER::decode);
-    }
-
-    @Override
-    public CompletableFuture<Long> addAndGet(long delta) {
-        return proxy.invoke(ADD_AND_GET, SERIALIZER::encode, new AddAndGet(delta), SERIALIZER::decode);
-    }
-
-    @Override
-    public CompletableFuture<Long> getAndAdd(long delta) {
-        return proxy.invoke(GET_AND_ADD, SERIALIZER::encode, new GetAndAdd(delta), SERIALIZER::decode);
+    public String name() {
+        return name;
     }
 
     @Override
     public CompletableFuture<Long> incrementAndGet() {
-        return proxy.invoke(INCREMENT_AND_GET, SERIALIZER::decode);
+        return distLong.incrementAndGet();
     }
 
     @Override
     public CompletableFuture<Long> getAndIncrement() {
-        return proxy.invoke(GET_AND_INCREMENT, SERIALIZER::decode);
+        return distLong.getAndIncrement();
+    }
+
+    @Override
+    public CompletableFuture<Long> getAndAdd(long delta) {
+        return distLong.getAndAdd(delta);
+    }
+
+    @Override
+    public CompletableFuture<Long> addAndGet(long delta) {
+        return distLong.addAndGet(delta);
+    }
+
+    @Override
+    public CompletableFuture<Long> get() {
+        return distLong.get();
+    }
+
+    @Override
+    public CompletableFuture<Void> set(long value) {
+        return distLong.set(value);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> compareAndSet(long expectedValue, long updateValue) {
+        return distLong.compareAndSet(expectedValue, updateValue);
     }
 }

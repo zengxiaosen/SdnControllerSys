@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,11 +35,7 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.onosproject.store.resource.impl.ConsistentResourceStore.SERIALIZER;
 
-/**
- * Transactional substore for continuous resources.
- */
-class TransactionalContinuousResourceSubStore
-        implements TransactionalResourceSubStore<ContinuousResourceId, ContinuousResource> {
+class TransactionalContinuousResourceSubStore {
     private final Logger log = LoggerFactory.getLogger(getClass());
     private final TransactionalMap<DiscreteResourceId, Set<ContinuousResource>> childMap;
     private final TransactionalMap<ContinuousResourceId, ContinuousResourceAllocation> consumers;
@@ -50,8 +46,7 @@ class TransactionalContinuousResourceSubStore
     }
 
     // iterate over the values in the set: O(n) operation
-    @Override
-    public Optional<ContinuousResource> lookup(ContinuousResourceId id) {
+    Optional<ContinuousResource> lookup(ContinuousResourceId id) {
         // continuous resource always has its parent
         checkArgument(id.parent().isPresent());
 
@@ -65,8 +60,7 @@ class TransactionalContinuousResourceSubStore
                 .findFirst();
     }
 
-    @Override
-    public boolean register(DiscreteResourceId parent, Set<ContinuousResource> resources) {
+    boolean register(DiscreteResourceId parent, Set<ContinuousResource> resources) {
         // short-circuit: receiving empty resource is regarded as success
         if (resources.isEmpty()) {
             return true;
@@ -98,8 +92,7 @@ class TransactionalContinuousResourceSubStore
         return childMap.replace(parent, oldValues, newValues);
     }
 
-    @Override
-    public boolean unregister(DiscreteResourceId parent, Set<ContinuousResource> resources) {
+    boolean unregister(DiscreteResourceId parent, Set<ContinuousResource> resources) {
         // short-circuit: receiving empty resource is regarded as success
         if (resources.isEmpty()) {
             return true;
@@ -130,14 +123,12 @@ class TransactionalContinuousResourceSubStore
         return childMap.replace(parent, oldValues, newValues);
     }
 
-    @Override
-    public boolean isAllocated(ContinuousResourceId id) {
+    private boolean isAllocated(ContinuousResourceId id) {
         ContinuousResourceAllocation allocations = consumers.get(id);
         return allocations != null && !allocations.allocations().isEmpty();
     }
 
-    @Override
-    public boolean allocate(ResourceConsumerId consumerId, ContinuousResource request) {
+    boolean allocate(ResourceConsumerId consumerId, ContinuousResource request) {
         // if the resource is not registered, then abort
         Optional<ContinuousResource> lookedUp = lookup(request.id());
         if (!lookedUp.isPresent()) {
@@ -168,8 +159,7 @@ class TransactionalContinuousResourceSubStore
         return consumers.replace(original.id(), oldValue, newValue);
     }
 
-    @Override
-    public boolean release(ResourceConsumerId consumerId, ContinuousResource resource) {
+    boolean release(ContinuousResource resource, ResourceConsumerId consumerId) {
         ContinuousResourceAllocation oldAllocation = consumers.get(resource.id());
         ContinuousResourceAllocation newAllocation = oldAllocation.release(resource, consumerId);
 

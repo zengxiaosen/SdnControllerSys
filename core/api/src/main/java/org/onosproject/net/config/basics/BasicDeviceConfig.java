@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,10 +49,9 @@ public final class BasicDeviceConfig extends BasicElementConfig<DeviceId> {
         deviceKeyId();
 
         return super.isValid()
-                && hasOnlyFields(ALLOWED, NAME, LOC_TYPE, LATITUDE, LONGITUDE,
-                GRID_Y, GRID_X, UI_TYPE, RACK_ADDRESS, OWNER, TYPE, DRIVER,
-                MANUFACTURER, HW_VERSION, SW_VERSION, SERIAL,
-                MANAGEMENT_ADDRESS, DEVICE_KEY_ID)
+                && hasOnlyFields(ALLOWED, NAME, LATITUDE, LONGITUDE, UI_TYPE,
+                                 RACK_ADDRESS, OWNER, TYPE, DRIVER, MANUFACTURER, HW_VERSION,
+                                 SW_VERSION, SERIAL, MANAGEMENT_ADDRESS, DEVICE_KEY_ID)
                 && isValidLength(DRIVER, DRIVER_MAX_LENGTH)
                 && isValidLength(MANUFACTURER, MANUFACTURER_MAX_LENGTH)
                 && isValidLength(HW_VERSION, MANUFACTURER_MAX_LENGTH)

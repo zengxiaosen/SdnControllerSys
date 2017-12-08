@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,21 @@
 
 package org.onosproject.store.primitives.resources.impl;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.TreeMultiset;
+import io.atomix.resource.ResourceType;
+import org.apache.commons.collections.keyvalue.DefaultMapEntry;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.onlab.util.Tools;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multiset;
-import com.google.common.collect.TreeMultiset;
-import io.atomix.protocols.raft.proxy.RaftProxy;
-import io.atomix.protocols.raft.service.RaftService;
-import org.apache.commons.collections.keyvalue.DefaultMapEntry;
-import org.junit.Test;
-import org.onlab.util.Tools;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -38,7 +39,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Tests the {@link AtomixConsistentSetMultimap}.
  */
-public class AtomixConsistentSetMultimapTest extends AtomixTestBase<AtomixConsistentSetMultimap> {
+public class AtomixConsistentSetMultimapTest extends AtomixTestBase {
     private final String keyOne = "hello";
     private final String keyTwo = "goodbye";
     private final String keyThree = "foo";
@@ -54,14 +55,19 @@ public class AtomixConsistentSetMultimapTest extends AtomixTestBase<AtomixConsis
                                                               valueThree,
                                                               valueFour);
 
-    @Override
-    protected RaftService createService() {
-        return new AtomixConsistentSetMultimapService();
+    @BeforeClass
+    public static void preTestSetup() throws Throwable {
+        createCopycatServers(3);
+    }
+
+    @AfterClass
+    public static void postTestCleanup() throws Exception {
+        clearTests();
     }
 
     @Override
-    protected AtomixConsistentSetMultimap createPrimitive(RaftProxy proxy) {
-        return new AtomixConsistentSetMultimap(proxy);
+    protected ResourceType resourceType() {
+        return new ResourceType(AtomixConsistentSetMultimap.class);
     }
 
     /**
@@ -148,10 +154,9 @@ public class AtomixConsistentSetMultimapTest extends AtomixTestBase<AtomixConsis
             });
         });
 
-        final String[] removedKey = new String[1];
-
         //Test behavior after removals
         allValues.forEach(value -> {
+            final String[] removedKey = new String[1];
             allKeys.forEach(key -> {
                 map.remove(key, value)
                         .thenAccept(result -> assertTrue(result)).join();
@@ -159,11 +164,10 @@ public class AtomixConsistentSetMultimapTest extends AtomixTestBase<AtomixConsis
                         .thenAccept(result -> assertFalse(result)).join();
                 removedKey[0] = key;
             });
+            //Check that contains key works properly for removed keys
+            map.containsKey(removedKey[0])
+                    .thenAccept(result -> assertFalse(result));
         });
-
-        //Check that contains key works properly for removed keys
-        map.containsKey(removedKey[0])
-                .thenAccept(result -> assertFalse(result));
 
         //Check that contains value works correctly for removed values
         allValues.forEach(value -> {
@@ -399,7 +403,9 @@ public class AtomixConsistentSetMultimapTest extends AtomixTestBase<AtomixConsis
 
     private AtomixConsistentSetMultimap createResource(String mapName) {
         try {
-            AtomixConsistentSetMultimap map = newPrimitive(mapName);
+            AtomixConsistentSetMultimap map = createAtomixClient().
+                    getResource(mapName, AtomixConsistentSetMultimap.class)
+                    .join();
             return map;
         } catch (Throwable e) {
             throw new RuntimeException(e.toString());

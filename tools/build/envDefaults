@@ -18,8 +18,8 @@ export PATH="$ONOS_ROOT/tools/build:$PATH"
 export BUILD_NUMBER=${BUILD_NUMBER:-$(id -un)}
 
 # ONOS Version and onos.tar.gz staging environment
-export ONOS_POM_VERSION="1.12.0-SNAPSHOT"
-export ONOS_VERSION=${ONOS_VERSION:-1.12.0.$BUILD_NUMBER}
+export ONOS_POM_VERSION="1.9.3-SNAPSHOT"
+export ONOS_VERSION=${ONOS_VERSION:-1.9.3.$BUILD_NUMBER}
 
 # ONOS production bits (onos.tar.gz, onos.zip, onos.deb, onos.rpm) staging environment
 export ONOS_BITS=onos-${ONOS_VERSION%~*}
@@ -51,6 +51,3 @@ export ONOS_USER="${ONOS_USER:-sdn}"    # ONOS user on remote system
 export ONOS_GROUP="${ONOS_GROUP:-sdn}"  # ONOS group on remote system
 export ONOS_PWD="rocks"                 # ONOS user password on remote system
 export ONOS_SCENARIOS=$ONOS_ROOT/tools/test/scenarios
-
-export ONOS_CLUSTER_KEY_FILE="/tmp/onos.jks"
-export ONOS_CLUSTER_KEY_PASSWORD="changeit"

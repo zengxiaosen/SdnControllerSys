@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ public class LumentumAlarmConsumer extends AbstractHandlerBehaviour implements A
                     alarms.add(new DefaultAlarm.Builder(deviceId, getMessage(alarmId),
                                                         getSeverity(alarmId),
                                                         System.currentTimeMillis())
-                                       .withId(AlarmId.alarmId(deviceId, String.valueOf(alarmId)))
+                                       .withId(AlarmId.alarmId(alarmId))
                                        .build());
                 }));
         return ImmutableList.copyOf(alarms);

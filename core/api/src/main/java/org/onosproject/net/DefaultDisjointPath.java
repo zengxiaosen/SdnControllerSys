@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ public class DefaultDisjointPath extends DefaultPath implements DisjointPath {
     private final DefaultPath path1;
     private final DefaultPath path2;
 
+    boolean usingPath1 = true;
+
     /**
      * Creates a disjoint path pair from two default paths.
      *
@@ -56,17 +58,21 @@ public class DefaultDisjointPath extends DefaultPath implements DisjointPath {
 
     @Override
     public List<Link> links() {
-        return path1.links();
+        if (usingPath1) {
+            return path1.links();
+        } else {
+            return path2.links();
+        }
     }
 
     @Override
     public double cost() {
-        return path1.cost();
+        return usingPath1 ? path1.cost() : path2.cost();
     }
 
     @Override
     public Weight weight() {
-        return path1.weight();
+        return usingPath1 ? path1.weight() : path2.weight();
     }
 
     @Override
@@ -99,9 +105,12 @@ public class DefaultDisjointPath extends DefaultPath implements DisjointPath {
         return false;
     }
 
-    @Deprecated
     @Override
     public boolean useBackup() {
-        return false;
+        if (path2 == null || path2.links() == null) {
+            return false;
+        }
+        usingPath1 = !usingPath1;
+        return true;
     }
 }

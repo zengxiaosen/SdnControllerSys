@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package org.onosproject.codec.impl;
 import org.onosproject.codec.CodecContext;
 import org.onosproject.codec.JsonCodec;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.Link;
+import org.onosproject.net.NetworkResource;
 import org.onosproject.net.ResourceGroup;
 import org.onosproject.net.intent.PointToPointIntent;
 import org.onosproject.net.intent.Intent;
@@ -26,7 +26,6 @@ import org.onosproject.net.intent.IntentService;
 import org.onosproject.net.intent.IntentState;
 import org.onosproject.net.intent.HostToHostIntent;
 import org.onosproject.net.intent.SinglePointToMultiPointIntent;
-import org.onosproject.net.intent.MultiPointToSinglePointIntent;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -68,14 +67,9 @@ public final class IntentCodec extends JsonCodec<Intent> {
 
         final ArrayNode jsonResources = result.putArray(RESOURCES);
 
-        intent.resources()
-                .forEach(resource -> {
-                    if (resource instanceof Link) {
-                        jsonResources.add(context.codec(Link.class).encode((Link) resource, context));
-                    } else {
-                        jsonResources.add(resource.toString());
-                    }
-                });
+        for (final NetworkResource resource : intent.resources()) {
+            jsonResources.add(resource.toString());
+        }
 
         IntentService service = context.getService(IntentService.class);
         IntentState state = service.getIntentState(intent.key());
@@ -99,8 +93,6 @@ public final class IntentCodec extends JsonCodec<Intent> {
             return context.codec(HostToHostIntent.class).decode(json, context);
         } else if (type.equals(SinglePointToMultiPointIntent.class.getSimpleName())) {
             return context.codec(SinglePointToMultiPointIntent.class).decode(json, context);
-        } else if (type.equals(MultiPointToSinglePointIntent.class.getSimpleName())) {
-            return context.codec(MultiPointToSinglePointIntent.class).decode(json, context);
         }
 
         throw new IllegalArgumentException("Intent type "

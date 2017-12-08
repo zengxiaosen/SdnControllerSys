@@ -2,14 +2,12 @@ COMPILE_DEPS = [
     '//lib:CORE_DEPS',
     '//incubator/api:onos-incubator-api',
     '//apps/routing-api:onos-apps-routing-api',
-    '//apps/route-service/api:onos-apps-route-service-api',
 ]
 
 TEST_DEPS = [
     '//lib:TEST_ADAPTERS',
     '//incubator/api:onos-incubator-api-tests',
     '//apps/routing-api:onos-apps-routing-api-tests',
-    '//apps/route-service/api:onos-apps-route-service-api-tests',
 ]
 
 osgi_jar_with_tests (
@@ -24,10 +22,9 @@ BUNDLES = [
 
 onos_app (
     app_name = 'org.onosproject.fibinstaller',
-    title = 'FIB Installer',
+    title = 'FIB installer app',
     category = 'Traffic Steering',
     url = 'http://onosproject.org',
     description = 'Installs routing rules into switches',
     included_bundles = BUNDLES,
-    required_apps = [ 'org.onosproject.route-service' ],
 )

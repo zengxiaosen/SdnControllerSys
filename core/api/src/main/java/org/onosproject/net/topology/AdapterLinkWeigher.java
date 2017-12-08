@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,12 @@ public final class AdapterLinkWeigher
         extends DefaultEdgeWeigher<TopologyVertex, TopologyEdge>
         implements LinkWeigher {
 
-    private final LinkWeight doubleWeigher;
+    //private final LinkWeight doubleWeigher;
+    private LinkWeight doubleWeigher;
+
+    public LinkWeight getDoubleWeigher() {
+        return doubleWeigher;
+    }
 
     private AdapterLinkWeigher(LinkWeight doubleWeigher) {
         this.doubleWeigher = doubleWeigher;

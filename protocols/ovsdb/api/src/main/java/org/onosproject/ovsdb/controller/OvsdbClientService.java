@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,22 +15,20 @@
  */
 package org.onosproject.ovsdb.controller;
 
-import java.util.List;
-import java.util.Set;
-
+import com.google.common.util.concurrent.ListenableFuture;
+import org.onlab.packet.IpAddress;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.PortNumber;
 import org.onosproject.net.behaviour.ControllerInfo;
-import org.onosproject.net.behaviour.MirroringName;
 import org.onosproject.net.behaviour.MirroringStatistics;
-import org.onosproject.net.behaviour.QosId;
-import org.onosproject.net.behaviour.QueueId;
+import org.onosproject.net.behaviour.MirroringName;
 import org.onosproject.ovsdb.rfc.jsonrpc.OvsdbRpc;
 import org.onosproject.ovsdb.rfc.message.TableUpdates;
 import org.onosproject.ovsdb.rfc.notation.Row;
 import org.onosproject.ovsdb.rfc.schema.DatabaseSchema;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Represents to provider facing side of a node.
@@ -79,80 +77,28 @@ public interface OvsdbClientService extends OvsdbRpc {
     void dropMirror(MirroringName mirroringName);
 
     /**
-     * apply qos to port.
+     * Creates a tunnel port with given options.
      *
-     * @param  portNumber port identifier
-     * @param  qosName the qos name
+     * @deprecated version 1.7.0 - Hummingbird
+     * @param bridgeName bridge name
+     * @param portName port name
+     * @param tunnelType tunnel type
+     * @param options tunnel options
+     * @return true if tunnel creation is successful, false otherwise
      */
-    void applyQos(PortNumber portNumber, String qosName);
+    @Deprecated
+    boolean createTunnel(String bridgeName, String portName, String tunnelType,
+                         Map<String, String> options);
 
     /**
-     * Creates a qos port.
+     * Drops the configuration for tunnel.
      *
-     * @param  portNumber port identifier
+     * @deprecated version 1.7.0 - Hummingbird
+     * @param srcIp source IP address
+     * @param dstIp destination IP address
      */
-    void removeQos(PortNumber portNumber);
-
-    /**
-     * Creates a qos. associates with queue to
-     * provide the ability of limit the rate of different flows
-     * depend on itself priority.
-     *
-     * @param  ovsdbQos the OVSDB Qos
-     * @return true if qos creation is successful, false otherwise
-     */
-    boolean createQos(OvsdbQos ovsdbQos);
-
-    /**
-     * Drops the configuration for qos.
-     *
-     * @param qosId qos identifier
-     */
-    void dropQos(QosId qosId);
-
-    /**
-     * Gets a qos of node.
-     * @param qosId qos identifier
-     * @return null if no qos is find
-     */
-    OvsdbQos getQos(QosId qosId);
-
-    /**
-     * Gets qoses of node.
-     *
-     * @return set of qoses; empty if no qos is find
-     */
-    Set<OvsdbQos> getQoses();
-
-    /**
-     * Creates queues. limits the rate of each flow
-     * depend on itself priority.
-     *
-     * @param  queue the OVSDB queue description
-     * @return true if queue creation is successful, false otherwise
-     */
-    boolean createQueue(OvsdbQueue queue);
-
-    /**
-     * Drops the configuration for queue.
-     *
-     * @param queueId  queue identifier
-     */
-    void dropQueue(QueueId queueId);
-
-    /**
-     * Gets a queue of node.
-     * @param queueId the queue identifier
-     * @return null if no queue is find
-     */
-    OvsdbQueue getQueue(QueueId queueId);
-
-    /**
-     * Gets queues of node.
-     *
-     * @return set of queues; empty if no queue is find
-     */
-    Set<OvsdbQueue> getQueues();
+    @Deprecated
+    void dropTunnel(IpAddress srcIp, IpAddress dstIp);
 
     /**
      * Creates an interface with a given OVSDB interface description.
@@ -170,6 +116,39 @@ public interface OvsdbClientService extends OvsdbRpc {
      * @return true if interface creation is successful, false otherwise
      */
     boolean dropInterface(String ifaceName);
+
+    /**
+     * Creates a bridge.
+     *
+     * @deprecated version 1.7.0 - Hummingbird
+     * @param bridgeName bridge name
+     */
+    @Deprecated
+    void createBridge(String bridgeName);
+
+    /**
+     * Creates a bridge.
+     *
+     * @deprecated version 1.7.0 - Hummingbird
+     * @param bridgeName bridge name
+     * @param dpid data path id
+     * @param exPortName external port name
+     */
+    @Deprecated
+    void createBridge(String bridgeName, String dpid, String exPortName);
+
+    /**
+     * Creates a bridge with given name and dpid.
+     * Sets the bridge's controller with given controllers.
+     *
+     * @deprecated version 1.7.0 - Hummingbird
+     * @param bridgeName bridge name
+     * @param dpid data path id
+     * @param controllers controllers
+     * @return true if bridge creation is successful, false otherwise
+     */
+    @Deprecated
+    boolean createBridge(String bridgeName, String dpid, List<ControllerInfo> controllers);
 
     /**
      * Creates a bridge with a given bridge description.
@@ -334,24 +313,4 @@ public interface OvsdbClientService extends OvsdbRpc {
      * Disconnects the OVSDB server.
      */
     void disconnect();
-
-    /**
-     * Gets created  ports for the particular bridgeId.
-     *
-     * @param portNames  the portNames which needs to checked for create
-     * @param bridgeId   bridgeIdentifier
-     * @return OvsdbPortNames  the created ports from port table for the bridgeId by considering input port list.
-     * Considered port as created if port's interface table also gets created,irrespective
-     * of ofport value(has errors or not)
-     */
-    public List<OvsdbPortName> getPorts(List<String> portNames, DeviceId bridgeId);
-
-    /**
-     * Gets error status for the given portNames.
-     *
-     * @param portNames  the portNames which need to be checked for errors
-     * @param bridgeId   bridgeIdentifier
-     * @return errorstatus true if input port list contains error, false otherwise
-     */
-    boolean getPortError(List<OvsdbPortName>  portNames, DeviceId bridgeId);
 }

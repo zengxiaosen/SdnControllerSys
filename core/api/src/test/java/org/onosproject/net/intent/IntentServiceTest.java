@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.onosproject.net.intent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.onosproject.core.IdGenerator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,7 +32,7 @@ import static org.onosproject.net.intent.IntentEvent.Type.*;
 /**
  * Suite of tests for the intent service contract.
  */
-public class IntentServiceTest extends AbstractIntentTest {
+public class IntentServiceTest {
 
     public static final int IID = 123;
     public static final int INSTALLABLE_IID = 234;
@@ -40,18 +41,20 @@ public class IntentServiceTest extends AbstractIntentTest {
 
     protected TestableIntentService service;
     protected TestListener listener = new TestListener();
+    protected IdGenerator idGenerator = new MockIdGenerator();
 
     @Before
     public void setUp() {
-        super.setUp();
         service = createIntentService();
         service.addListener(listener);
+        Intent.unbindIdGenerator(idGenerator);
+        Intent.bindIdGenerator(idGenerator);
     }
 
     @After
     public void tearDown() {
         service.removeListener(listener);
-        super.tearDown();
+        Intent.unbindIdGenerator(idGenerator);
     }
 
     /**

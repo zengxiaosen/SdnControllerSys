@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package org.onosproject.incubator.net.virtual.impl;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
@@ -40,20 +39,16 @@ import org.onosproject.incubator.net.virtual.VirtualLink;
 import org.onosproject.incubator.net.virtual.VirtualNetwork;
 import org.onosproject.incubator.net.virtual.VirtualNetworkAdminService;
 import org.onosproject.incubator.net.virtual.VirtualNetworkEvent;
+import org.onosproject.incubator.net.virtual.VirtualNetworkIntent;
 import org.onosproject.incubator.net.virtual.VirtualNetworkListener;
 import org.onosproject.incubator.net.virtual.VirtualNetworkService;
 import org.onosproject.incubator.net.virtual.VirtualNetworkStore;
 import org.onosproject.incubator.net.virtual.VirtualNetworkStoreDelegate;
 import org.onosproject.incubator.net.virtual.VirtualPort;
 import org.onosproject.incubator.net.virtual.VnetService;
-import org.onosproject.incubator.net.virtual.event.VirtualEvent;
-import org.onosproject.incubator.net.virtual.event.VirtualListenerRegistryManager;
 import org.onosproject.incubator.net.virtual.provider.VirtualNetworkProvider;
 import org.onosproject.incubator.net.virtual.provider.VirtualNetworkProviderRegistry;
 import org.onosproject.incubator.net.virtual.provider.VirtualNetworkProviderService;
-import org.onosproject.mastership.MastershipAdminService;
-import org.onosproject.mastership.MastershipService;
-import org.onosproject.mastership.MastershipTermService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.HostId;
@@ -62,12 +57,12 @@ import org.onosproject.net.Link;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.FlowRuleService;
-import org.onosproject.net.flowobjective.FlowObjectiveService;
-import org.onosproject.net.group.GroupService;
 import org.onosproject.net.host.HostService;
+import org.onosproject.net.intent.IntentEvent;
+import org.onosproject.net.intent.IntentListener;
 import org.onosproject.net.intent.IntentService;
+import org.onosproject.net.intent.IntentState;
 import org.onosproject.net.link.LinkService;
-import org.onosproject.net.meter.MeterService;
 import org.onosproject.net.packet.PacketService;
 import org.onosproject.net.provider.AbstractListenerProviderRegistry;
 import org.onosproject.net.provider.AbstractProviderService;
@@ -76,9 +71,7 @@ import org.onosproject.net.topology.TopologyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -108,7 +101,13 @@ public class VirtualNetworkManager
     protected VirtualNetworkStore store;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected IntentService intentService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected CoreService coreService;
+
+    private final InternalVirtualIntentListener intentListener =
+            new InternalVirtualIntentListener();
 
     private VirtualNetworkStoreDelegate delegate = this::post;
 
@@ -126,12 +125,21 @@ public class VirtualNetworkManager
         this.store = store;
     }
 
+    /**
+     * Only used for Junit test methods outside of this package.
+     *
+     * @param intentService intent service
+     */
+
+    public void setIntentService(IntentService intentService) {
+        this.intentService = intentService;
+    }
+
     @Activate
     public void activate() {
-        eventDispatcher.addSink(VirtualNetworkEvent.class, listenerRegistry);
-        eventDispatcher.addSink(VirtualEvent.class,
-                                VirtualListenerRegistryManager.getInstance());
         store.setDelegate(delegate);
+        eventDispatcher.addSink(VirtualNetworkEvent.class, listenerRegistry);
+        intentService.addListener(intentListener);
         appId = coreService.registerApplication(VIRTUAL_NETWORK_APP_ID_STRING);
         log.info("Started");
     }
@@ -140,7 +148,7 @@ public class VirtualNetworkManager
     public void deactivate() {
         store.unsetDelegate(delegate);
         eventDispatcher.removeSink(VirtualNetworkEvent.class);
-        eventDispatcher.removeSink(VirtualEvent.class);
+        intentService.removeListener(intentListener);
         log.info("Stopped");
     }
 
@@ -345,26 +353,9 @@ public class VirtualNetworkManager
         return store.getPorts(networkId, deviceId);
     }
 
-    @Override
-    public Set<DeviceId> getPhysicalDevices(NetworkId networkId, DeviceId deviceId) {
-        checkNotNull(networkId, "Network ID cannot be null");
-        checkNotNull(deviceId, "Virtual device ID cannot be null");
-        Set<VirtualPort> virtualPortSet = getVirtualPorts(networkId, deviceId);
-        Set<DeviceId> physicalDeviceSet = new HashSet<>();
-
-        virtualPortSet.forEach(virtualPort -> {
-            if (virtualPort.realizedBy() != null) {
-                physicalDeviceSet.add(virtualPort.realizedBy().deviceId());
-            }
-        });
-
-        return ImmutableSet.copyOf(physicalDeviceSet);
-    }
-
     private final Map<ServiceKey, VnetService> networkServices = Maps.newConcurrentMap();
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T> T get(NetworkId networkId, Class<T> serviceClass) {
         checkNotNull(networkId, NETWORK_NULL);
         ServiceKey serviceKey = networkServiceKey(networkId, serviceClass);
@@ -430,16 +421,6 @@ public class VirtualNetworkManager
             service = new VirtualNetworkFlowRuleManager(this, network.id());
         } else if (serviceKey.serviceClass.equals(PacketService.class)) {
             service = new VirtualNetworkPacketManager(this, network.id());
-        } else if (serviceKey.serviceClass.equals(GroupService.class)) {
-            service = new VirtualNetworkGroupManager(this, network.id());
-        } else if (serviceKey.serviceClass.equals(MeterService.class)) {
-            service = new VirtualNetworkMeterManager(this, network.id());
-        } else if (serviceKey.serviceClass.equals(FlowObjectiveService.class)) {
-            service = new VirtualNetworkFlowObjectiveManager(this, network.id());
-        } else if (serviceKey.serviceClass.equals(MastershipService.class) ||
-                serviceKey.serviceClass.equals(MastershipAdminService.class) ||
-                serviceKey.serviceClass.equals(MastershipTermService.class)) {
-            service = new VirtualNetworkMastershipManager(this, network.id());
         } else {
             return null;
         }
@@ -450,7 +431,7 @@ public class VirtualNetworkManager
     /**
      * Service key class.
      */
-    private static class ServiceKey {
+    private class ServiceKey {
         final NetworkId networkId;
         final Class serviceClass;
 
@@ -460,7 +441,7 @@ public class VirtualNetworkManager
          * @param networkId    network identifier
          * @param serviceClass service class
          */
-        ServiceKey(NetworkId networkId, Class serviceClass) {
+        public ServiceKey(NetworkId networkId, Class serviceClass) {
 
             checkNotNull(networkId, NETWORK_NULL);
             this.networkId = networkId;
@@ -484,31 +465,65 @@ public class VirtualNetworkManager
         public Class serviceClass() {
             return serviceClass;
         }
+    }
+
+    /**
+     * Internal intent event listener.
+     */
+    private class InternalVirtualIntentListener implements IntentListener {
 
         @Override
-        public int hashCode() {
-            return Objects.hash(networkId, serviceClass);
+        public void event(IntentEvent event) {
+
+            // Ignore intent events that are not relevant.
+            if (!isRelevant(event)) {
+                return;
+            }
+
+            VirtualNetworkIntent intent = (VirtualNetworkIntent) event.subject();
+
+            switch (event.type()) {
+                case INSTALL_REQ:
+                    store.addOrUpdateIntent(intent, IntentState.INSTALL_REQ);
+                    break;
+                case INSTALLED:
+                    store.addOrUpdateIntent(intent, IntentState.INSTALLED);
+                    break;
+                case WITHDRAW_REQ:
+                    store.addOrUpdateIntent(intent, IntentState.WITHDRAW_REQ);
+                    break;
+                case WITHDRAWN:
+                    store.addOrUpdateIntent(intent, IntentState.WITHDRAWN);
+                    break;
+                case FAILED:
+                    store.addOrUpdateIntent(intent, IntentState.FAILED);
+                    break;
+                case CORRUPT:
+                    store.addOrUpdateIntent(intent, IntentState.CORRUPT);
+                    break;
+                case PURGED:
+                    store.removeIntent(intent.key());
+                default:
+                    break;
+            }
         }
 
         @Override
-        public boolean equals(Object obj) {
-            if (this == obj) {
+        public boolean isRelevant(IntentEvent event) {
+            if (event.subject() instanceof VirtualNetworkIntent) {
                 return true;
-            }
-            if (obj instanceof ServiceKey) {
-                ServiceKey that = (ServiceKey) obj;
-                return Objects.equals(this.networkId, that.networkId) &&
-                        Objects.equals(this.serviceClass, that.serviceClass);
             }
             return false;
         }
     }
+
 
     @Override
     protected VirtualNetworkProviderService
     createProviderService(VirtualNetworkProvider provider) {
         return new InternalVirtualNetworkProviderService(provider);
     }
+
 
     /**
      * Service issued to registered virtual network providers so that they

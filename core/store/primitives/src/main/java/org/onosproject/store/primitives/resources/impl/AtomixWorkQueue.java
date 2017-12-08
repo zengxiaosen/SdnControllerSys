@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,16 @@
  */
 package org.onosproject.store.primitives.resources.impl;
 
+import static java.util.concurrent.Executors.newSingleThreadExecutor;
+import static org.onlab.util.Tools.groupedThreads;
+import static org.slf4j.LoggerFactory.getLogger;
+import io.atomix.copycat.client.CopycatClient;
+import io.atomix.resource.AbstractResource;
+import io.atomix.resource.ResourceTypeInfo;
+
 import java.util.Collection;
 import java.util.List;
+import java.util.Properties;
 import java.util.Timer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -26,64 +34,63 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import com.google.common.collect.ImmutableList;
-import io.atomix.protocols.raft.proxy.RaftProxy;
 import org.onlab.util.AbstractAccumulator;
 import org.onlab.util.Accumulator;
-import org.onlab.util.KryoNamespace;
-import org.onosproject.store.primitives.resources.impl.AtomixWorkQueueOperations.Add;
-import org.onosproject.store.primitives.resources.impl.AtomixWorkQueueOperations.Complete;
-import org.onosproject.store.primitives.resources.impl.AtomixWorkQueueOperations.Take;
-import org.onosproject.store.serializers.KryoNamespaces;
-import org.onosproject.store.service.Serializer;
+import org.onosproject.store.primitives.resources.impl.AtomixWorkQueueCommands.Add;
+import org.onosproject.store.primitives.resources.impl.AtomixWorkQueueCommands.Clear;
+import org.onosproject.store.primitives.resources.impl.AtomixWorkQueueCommands.Complete;
+import org.onosproject.store.primitives.resources.impl.AtomixWorkQueueCommands.Register;
+import org.onosproject.store.primitives.resources.impl.AtomixWorkQueueCommands.Stats;
+import org.onosproject.store.primitives.resources.impl.AtomixWorkQueueCommands.Take;
+import org.onosproject.store.primitives.resources.impl.AtomixWorkQueueCommands.Unregister;
 import org.onosproject.store.service.Task;
 import org.onosproject.store.service.WorkQueue;
 import org.onosproject.store.service.WorkQueueStats;
 import org.slf4j.Logger;
 
-import static java.util.concurrent.Executors.newSingleThreadExecutor;
-import static org.onlab.util.Tools.groupedThreads;
-import static org.onosproject.store.primitives.resources.impl.AtomixWorkQueueEvents.TASK_AVAILABLE;
-import static org.onosproject.store.primitives.resources.impl.AtomixWorkQueueOperations.ADD;
-import static org.onosproject.store.primitives.resources.impl.AtomixWorkQueueOperations.CLEAR;
-import static org.onosproject.store.primitives.resources.impl.AtomixWorkQueueOperations.COMPLETE;
-import static org.onosproject.store.primitives.resources.impl.AtomixWorkQueueOperations.REGISTER;
-import static org.onosproject.store.primitives.resources.impl.AtomixWorkQueueOperations.STATS;
-import static org.onosproject.store.primitives.resources.impl.AtomixWorkQueueOperations.TAKE;
-import static org.onosproject.store.primitives.resources.impl.AtomixWorkQueueOperations.UNREGISTER;
-import static org.slf4j.LoggerFactory.getLogger;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Distributed resource providing the {@link WorkQueue} primitive.
  */
-public class AtomixWorkQueue extends AbstractRaftPrimitive implements WorkQueue<byte[]> {
-    private static final Serializer SERIALIZER = Serializer.using(KryoNamespace.newBuilder()
-            .register(KryoNamespaces.BASIC)
-            .register(AtomixWorkQueueOperations.NAMESPACE)
-            .register(AtomixWorkQueueEvents.NAMESPACE)
-            .build());
+@ResourceTypeInfo(id = -154, factory = AtomixWorkQueueFactory.class)
+public class AtomixWorkQueue extends AbstractResource<AtomixWorkQueue>
+    implements WorkQueue<byte[]> {
 
     private final Logger log = getLogger(getClass());
+    public static final String TASK_AVAILABLE = "task-available";
     private final ExecutorService executor = newSingleThreadExecutor(groupedThreads("AtomixWorkQueue", "%d", log));
     private final AtomicReference<TaskProcessor> taskProcessor = new AtomicReference<>();
     private final Timer timer = new Timer("atomix-work-queue-completer");
     private final AtomicBoolean isRegistered = new AtomicBoolean(false);
 
-    public AtomixWorkQueue(RaftProxy proxy) {
-        super(proxy);
-        proxy.addStateChangeListener(state -> {
-            if (state == RaftProxy.State.CONNECTED && isRegistered.get()) {
-                proxy.invoke(REGISTER);
-            }
-        });
-        proxy.addEventListener(TASK_AVAILABLE, this::resumeWork);
+    protected AtomixWorkQueue(CopycatClient client, Properties options) {
+        super(client, options);
+    }
+
+    @Override
+    public String name() {
+        return null;
     }
 
     @Override
     public CompletableFuture<Void> destroy() {
         executor.shutdown();
         timer.cancel();
-        return proxy.invoke(CLEAR);
+        return client.submit(new Clear());
+    }
+
+    @Override
+    public CompletableFuture<AtomixWorkQueue> open() {
+        return super.open().thenApply(result -> {
+            client.onStateChange(state -> {
+                if (state == CopycatClient.State.CONNECTED && isRegistered.get()) {
+                    client.submit(new Register());
+                }
+            });
+            client.onEvent(TASK_AVAILABLE, this::resumeWork);
+            return result;
+        });
     }
 
     @Override
@@ -91,7 +98,7 @@ public class AtomixWorkQueue extends AbstractRaftPrimitive implements WorkQueue<
         if (items.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         }
-        return proxy.invoke(ADD, SERIALIZER::encode, new Add(items));
+        return client.submit(new Add(items));
     }
 
     @Override
@@ -99,7 +106,7 @@ public class AtomixWorkQueue extends AbstractRaftPrimitive implements WorkQueue<
         if (maxTasks <= 0) {
             return CompletableFuture.completedFuture(ImmutableList.of());
         }
-        return proxy.invoke(TAKE, SERIALIZER::encode, new Take(maxTasks), SERIALIZER::decode);
+        return client.submit(new Take(maxTasks));
     }
 
     @Override
@@ -107,21 +114,21 @@ public class AtomixWorkQueue extends AbstractRaftPrimitive implements WorkQueue<
         if (taskIds.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         }
-        return proxy.invoke(COMPLETE, SERIALIZER::encode, new Complete(taskIds));
+        return client.submit(new Complete(taskIds));
     }
 
     @Override
     public CompletableFuture<Void> registerTaskProcessor(Consumer<byte[]> callback,
-            int parallelism,
-            Executor executor) {
+                                          int parallelism,
+                                          Executor executor) {
         Accumulator<String> completedTaskAccumulator =
                 new CompletedTaskAccumulator(timer, 50, 50); // TODO: make configurable
         taskProcessor.set(new TaskProcessor(callback,
-                parallelism,
-                executor,
-                completedTaskAccumulator));
+                                            parallelism,
+                                            executor,
+                                            completedTaskAccumulator));
         return register().thenCompose(v -> take(parallelism))
-                .thenAccept(taskProcessor.get());
+                         .thenAccept(taskProcessor.get());
     }
 
     @Override
@@ -131,7 +138,7 @@ public class AtomixWorkQueue extends AbstractRaftPrimitive implements WorkQueue<
 
     @Override
     public CompletableFuture<WorkQueueStats> stats() {
-        return proxy.invoke(STATS, SERIALIZER::decode);
+        return client.submit(new Stats());
     }
 
     private void resumeWork() {
@@ -140,15 +147,15 @@ public class AtomixWorkQueue extends AbstractRaftPrimitive implements WorkQueue<
             return;
         }
         this.take(activeProcessor.headRoom())
-                .whenCompleteAsync((tasks, e) -> activeProcessor.accept(tasks), executor);
+            .whenCompleteAsync((tasks, e) -> activeProcessor.accept(tasks), executor);
     }
 
     private CompletableFuture<Void> register() {
-        return proxy.invoke(REGISTER).thenRun(() -> isRegistered.set(true));
+        return client.submit(new Register()).thenRun(() -> isRegistered.set(true));
     }
 
     private CompletableFuture<Void> unregister() {
-        return proxy.invoke(UNREGISTER).thenRun(() -> isRegistered.set(false));
+        return client.submit(new Unregister()).thenRun(() -> isRegistered.set(false));
     }
 
     // TaskId accumulator for paced triggering of task completion calls.
@@ -171,9 +178,9 @@ public class AtomixWorkQueue extends AbstractRaftPrimitive implements WorkQueue<
         private final Accumulator<String> taskCompleter;
 
         public TaskProcessor(Consumer<byte[]> backingConsumer,
-                int parallelism,
-                Executor executor,
-                Accumulator<String> taskCompleter) {
+                             int parallelism,
+                             Executor executor,
+                             Accumulator<String> taskCompleter) {
             this.backingConsumer = backingConsumer;
             this.headRoom = new AtomicInteger(parallelism);
             this.executor = executor;
@@ -191,17 +198,17 @@ public class AtomixWorkQueue extends AbstractRaftPrimitive implements WorkQueue<
             }
             headRoom.addAndGet(-1 * tasks.size());
             tasks.forEach(task ->
-                    executor.execute(() -> {
-                        try {
-                            backingConsumer.accept(task.payload());
-                            taskCompleter.add(task.taskId());
-                        } catch (Exception e) {
-                            log.debug("Task execution failed", e);
-                        } finally {
-                            headRoom.incrementAndGet();
-                            resumeWork();
-                        }
-                    }));
+                executor.execute(() -> {
+                    try {
+                        backingConsumer.accept(task.payload());
+                        taskCompleter.add(task.taskId());
+                    } catch (Exception e) {
+                        log.debug("Task execution failed", e);
+                    } finally {
+                        headRoom.incrementAndGet();
+                        resumeWork();
+                    }
+                }));
         }
     }
 }

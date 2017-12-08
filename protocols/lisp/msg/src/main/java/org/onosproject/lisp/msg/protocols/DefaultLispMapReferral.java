@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -220,8 +220,8 @@ public final class DefaultLispMapReferral extends AbstractLispMessage
             ReferralRecordWriter writer = new ReferralRecordWriter();
             List<LispReferralRecord> records = message.getReferralRecords();
 
-            for (LispReferralRecord record : records) {
-                writer.writeTo(byteBuf, record);
+            for (int i = 0; i < records.size(); i++) {
+                writer.writeTo(byteBuf, records.get(i));
             }
         }
     }

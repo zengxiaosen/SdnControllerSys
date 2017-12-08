@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
  */
 package org.onosproject.provider.nil;
 
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timeout;
+import org.jboss.netty.util.TimerTask;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.ICMP;
 import org.onlab.util.Timer;
@@ -30,9 +33,6 @@ import org.onosproject.net.packet.OutboundPacket;
 import org.onosproject.net.packet.PacketProvider;
 import org.onosproject.net.packet.PacketProviderService;
 import org.slf4j.Logger;
-
-import io.netty.util.Timeout;
-import io.netty.util.TimerTask;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -69,6 +69,7 @@ class NullPacketProvider extends NullProviders.AbstractNullProvider
     private List<Device> devices;
     private int currentDevice = 0;
 
+    private HashedWheelTimer timer = Timer.getTimer();
     private Timeout timeout;
 
     /**
@@ -90,7 +91,7 @@ class NullPacketProvider extends NullProviders.AbstractNullProvider
                 .collect(Collectors.toList());
 
         adjustRate(packetRate);
-        timeout = Timer.newTimeout(new PacketDriverTask(), INITIAL_DELAY, SECONDS);
+        timeout = timer.newTimeout(new PacketDriverTask(), INITIAL_DELAY, SECONDS);
     }
 
     /**
@@ -102,7 +103,7 @@ class NullPacketProvider extends NullProviders.AbstractNullProvider
         boolean needsRestart = delay == 0 && packetRate > 0;
         delay = packetRate > 0 ? 1000 / packetRate : 0;
         if (needsRestart) {
-            timeout = Timer.newTimeout(new PacketDriverTask(), 1, MILLISECONDS);
+            timeout = timer.newTimeout(new PacketDriverTask(), 1, MILLISECONDS);
         }
         log.info("Settings: packetRate={}, delay={}", packetRate, delay);
     }
@@ -143,7 +144,7 @@ class NullPacketProvider extends NullProviders.AbstractNullProvider
             if (!devices.isEmpty() && !to.isCancelled() && delay > 0) {
                 sendEvent(devices.get(Math.min(currentDevice, devices.size() - 1)));
                 currentDevice = (currentDevice + 1) % devices.size();
-                timeout = to.timer().newTimeout(to.task(), delay, TimeUnit.MILLISECONDS);
+                timeout = timer.newTimeout(to.getTask(), delay, TimeUnit.MILLISECONDS);
             }
         }
 

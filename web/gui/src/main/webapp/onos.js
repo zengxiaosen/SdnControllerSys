@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 /*
  ONOS GUI -- Main Application Module
  */
-
 (function () {
     'use strict';
 
@@ -58,10 +57,7 @@
         '24:886774868469',
         '17:7487696973687580739078',
         '14:70777086',
-        '17:7287687967',
-        '11:65678869706783687184',
-        '1:80777778',
-        '9:72696982'
+        '17:7287687967'
         // Add more sauce...
     ];
 
@@ -93,13 +89,12 @@
 
         .controller('OnosCtrl', [
             '$log', '$scope', '$route', '$routeParams', '$location',
-            'LionService',
             'KeyService', 'ThemeService', 'GlyphService', 'VeilService',
             'PanelService', 'FlashService', 'QuickHelpService', 'EeService',
             'WebSocketService', 'SpriteService',
 
             function (_$log_, $scope, $route, $routeParams, $location,
-                      lion, ks, ts, gs, vs, ps, flash, qhs, ee, wss, ss) {
+                      ks, ts, gs, vs, ps, flash, qhs, ee, wss, ss) {
                 var self = this;
                 $log = _$log_;
 
@@ -113,7 +108,6 @@
                 $scope.onos['viewMap'] = viewMap;
 
                 // initialize services...
-                lion.init();
                 ts.init();
                 ks.installOn(d3.select('body'));
                 ks.bindQhs(qhs);
@@ -157,13 +151,7 @@
                     $routeProvider.when('/' + vid, {
                         controller: viewCtrlName(vid),
                         controllerAs: 'ctrl',
-                        templateUrl: viewTemplateUrl(vid),
-
-                        // Disable reload on $loc.hash() changes for bookmarked topo regions
-                        reloadOnSearch: (vid !== 'topo2')
-                        // <SDH> assume this is not needed for ?regionId=... query string
-                        // <SBM> Yes this is still needed. Without it the page will reload when navigating between
-                        //       regions which loads the new regions without a clean transition to it.
+                        templateUrl: viewTemplateUrl(vid)
                     });
                 }
             });

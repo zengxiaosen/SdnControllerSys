@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
-import org.onlab.util.Backtrace;
 import org.onlab.util.KryoNamespace;
 import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.cluster.ClusterService;
@@ -42,7 +41,6 @@ import org.onosproject.net.intent.IntentStoreDelegate;
 import org.onosproject.net.intent.Key;
 import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.store.AbstractStore;
-import org.onosproject.store.Timestamp;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.EventuallyConsistentMap;
 import org.onosproject.store.service.EventuallyConsistentMapBuilder;
@@ -58,7 +56,6 @@ import java.util.Collection;
 import java.util.Dictionary;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -123,26 +120,6 @@ public class GossipIntentStore
     private boolean persistenceEnabled;
 
 
-    /**
-     * TimestampProvieder for currentMap.
-     *
-     * @param key Intent key
-     * @param data Intent data
-     * @return generated time stamp
-     */
-    private Timestamp currentTimestampProvider(Key key, IntentData data) {
-        // vector timestamp consisting from 3 components
-        //  (request timestamp, internal state, sequence #)
-
-        // 2nd component required to avoid compilation result overwriting installation state
-        //    note: above is likely to be a sign of design issue in transition to installation phase
-        // 3rd component required for generating new timestamp for removal..
-        return  new MultiValuedTimestamp<>(
-                Optional.ofNullable(data.version()).orElseGet(WallClockTimestamp::new),
-                    new MultiValuedTimestamp<>(data.internalStateVersion(),
-                            sequenceNumber.incrementAndGet()));
-    }
-
     @Activate
     public void activate(ComponentContext context) {
         configService.registerProperties(getClass());
@@ -162,7 +139,10 @@ public class GossipIntentStore
                 storageService.<Key, IntentData>eventuallyConsistentMapBuilder()
                 .withName("intent-current")
                 .withSerializer(intentSerializer)
-                .withTimestampProvider(this::currentTimestampProvider)
+                .withTimestampProvider((key, intentData) ->
+                        new MultiValuedTimestamp<>(intentData == null ?
+                            new WallClockTimestamp() : intentData.version(),
+                                                   sequenceNumber.getAndIncrement()))
                 .withPeerUpdateFunction((key, intentData) -> getPeerNodes(key, intentData));
 
         EventuallyConsistentMapBuilder pendingECMapBuilder =
@@ -304,42 +284,24 @@ public class GossipIntentStore
             // this always succeeds
             if (newData.state() == PURGE_REQ) {
                 if (currentData != null) {
-                    if (log.isTraceEnabled()) {
-                        log.trace("Purging {} in currentMap. {}@{}",
-                                  newData.key(), newData.state(), newData.version(),
-                                  new Backtrace());
-                    }
                     currentMap.remove(newData.key(), currentData);
                 } else {
                     log.info("Gratuitous purge request for intent: {}", newData.key());
                 }
             } else {
-                if (log.isTraceEnabled()) {
-                    log.trace("Putting {} in currentMap. {}@{}",
-                              newData.key(), newData.state(), newData.version(),
-                              new Backtrace());
-                }
-                currentMap.put(newData.key(), IntentData.copy(newData));
+                currentMap.put(newData.key(), new IntentData(newData));
             }
-        } else {
-            log.debug("Update for {} not acceptable from:\n{}\nto:\n{}",
-                      newData.key(), currentData, newData);
         }
         // Remove the intent data from the pending map if the newData is more
         // recent or equal to the existing entry. No matter if it is an acceptable
         // update or not
-        Key key = newData.key();
-        IntentData existingValue = pendingMap.get(key);
-
-        if (existingValue == null) {
-            return;
-        }
-
-        if (!existingValue.version().isNewerThan(newData.version())) {
-            pendingMap.remove(key, existingValue);
-        } else {
-            log.debug("{} in pending map was newer, leaving it there", key);
-        }
+        pendingMap.compute(newData.key(), (key, existingValue) -> {
+            if (existingValue == null || !existingValue.version().isNewerThan(newData.version())) {
+                return null;
+            } else {
+                return existingValue;
+            }
+        });
     }
 
     private Collection<NodeId> getPeerNodes(Key key, IntentData data) {
@@ -397,7 +359,7 @@ public class GossipIntentStore
         if (current == null) {
             return null;
         }
-        return IntentData.copy(current);
+        return new IntentData(current);
     }
 
     @Override
@@ -408,13 +370,13 @@ public class GossipIntentStore
             // avoid the creation of Intents with state == request, which can
             // be problematic if the Intent state is different from *REQ
             // {INSTALL_, WITHDRAW_ and PURGE_}.
-            pendingMap.put(data.key(), IntentData.assign(data,
-                                                         new WallClockTimestamp(),
-                                                         clusterService.getLocalNode().id()));
+            pendingMap.put(data.key(), new IntentData(data.intent(), data.state(), data.request(),
+                                                      new WallClockTimestamp(), clusterService.getLocalNode().id()));
         } else {
             pendingMap.compute(data.key(), (key, existingValue) -> {
                 if (existingValue == null || existingValue.version().isOlderThan(data.version())) {
-                    return IntentData.assign(data, data.version(), clusterService.getLocalNode().id());
+                    return new IntentData(data.intent(), data.state(), data.request(),
+                                          data.version(), clusterService.getLocalNode().id());
                 } else {
                     return existingValue;
                 }
@@ -465,7 +427,7 @@ public class GossipIntentStore
                 // this intent's partition, notify the Manager that it should
                 // emit notifications about updated tracked resources.
                 if (delegate != null && isMaster(event.value().intent().key())) {
-                    delegate.onUpdate(IntentData.copy(intentData)); // copy for safety, likely unnecessary
+                    delegate.onUpdate(new IntentData(intentData)); // copy for safety, likely unnecessary
                 }
                 IntentEvent.getEvent(intentData).ifPresent(e -> notifyDelegate(e));
             }
@@ -483,7 +445,7 @@ public class GossipIntentStore
                 // some work.
                 if (isMaster(event.value().intent().key())) {
                     if (delegate != null) {
-                        delegate.process(IntentData.copy(event.value()));
+                        delegate.process(new IntentData(event.value()));
                     }
                 }
 

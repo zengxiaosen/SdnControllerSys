@@ -15,11 +15,11 @@ set -x
 # build plugins
 
 pushd buck
-onos-buck build buck
+buck build buck
 popd #buck
 
 pushd onos
-onos-buck build //tools/build/buck-plugin:onos
+buck build //tools/build/buck-plugin:onos
 popd #onos
 
 pushd onos-yang-tools
@@ -32,7 +32,7 @@ mkdir -p buck-bin/plugins
 
 cp buck/buck-out/gen/programs/buck.pex $ZIP_STAGE/buck
 cp onos/buck-out/gen/tools/build/buck-plugin/onos.jar $ZIP_STAGE/plugins/onos.jar
-cp onos-yang-tools/compiler/plugin/buck/target/onos-yang-compiler-buck-plugin-*.jar $ZIP_STAGE/plugins/yang.jar
+cp onos-yang-tools/plugin/buck/target/onos-yang-buck-plugin-*.jar $ZIP_STAGE/plugins/yang.jar
 
 BUCK_VERSION=$(buck/buck-out/gen/programs/buck.pex -V)
 echo $BUCK_VERSION > $ZIP_STAGE/.buck_version
@@ -44,11 +44,9 @@ pushd $ZIP_STAGE
 zip -r ../$BUCK_ZIP buck .buck_version plugins
 popd #$ZIP_STAGE
 
-if [ "$1" != "--dry-run" ]; then
-    # publish zip
-    #FIXME check for s3 credentials
-    uploadToS3.py --dest third-party/ $BUCK_ZIP
-fi
+# publish zip
+#FIXME check for s3 credentials
+uploadToS3.py --dest third-party/ $BUCK_ZIP
 
 # update version in onos-buck
 URL="$DOWNLOAD_BASE/$BUCK_ZIP"
@@ -56,6 +54,7 @@ SHA=$(shasum $BUCK_ZIP | cut -d' ' -f1)
 
 sed -i "" -E "s#BUCK_URL=.*#BUCK_URL=\"$URL\"#" onos/tools/build/onos-buck
 sed -i "" -E "s#BUCK_SHA=.*#BUCK_SHA=\"$SHA\"#" onos/tools/build/onos-buck
+sed -i "" -E "s#REQUIRED_VERSION=.*#REQUIRED_VERSION=\"$BUCK_VERSION\"#" onos/tools/build/onos-buck
 
 set +x
 echo

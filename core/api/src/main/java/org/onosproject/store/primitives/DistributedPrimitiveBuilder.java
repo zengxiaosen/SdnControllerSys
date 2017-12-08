@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 package org.onosproject.store.primitives;
+
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 
 import org.onosproject.core.ApplicationId;
 import org.onosproject.store.service.DistributedPrimitive;
@@ -31,6 +34,7 @@ public abstract class DistributedPrimitiveBuilder<B extends DistributedPrimitive
     private String name;
     private ApplicationId applicationId;
     private Serializer serializer;
+    private Supplier<Executor> executorSupplier;
     private boolean partitionsDisabled = false;
     private boolean meteringDisabled = false;
     private boolean readOnly = false;
@@ -59,6 +63,31 @@ public abstract class DistributedPrimitiveBuilder<B extends DistributedPrimitive
      */
     public B withSerializer(Serializer serializer) {
         this.serializer = serializer;
+        return (B) this;
+    }
+
+    /**
+     * Sets the executor to use for asynchronous callbacks.
+     * <p>
+     * For partitioned primitives, the provided executor will be shared across all partitions.
+     *
+     * @param executor the executor to use for asynchronous callbacks
+     * @return this builder
+     */
+    public B withExecutor(Executor executor) {
+        return withExecutorSupplier(() -> executor);
+    }
+
+    /**
+     * Sets the supplier to be used to create executors.
+     * <p>
+     * When a factory is set, the supplier will be used to create a separate executor for each partition.
+     *
+     * @param executorSupplier the executor supplier
+     * @return this builder
+     */
+    public B withExecutorSupplier(Supplier<Executor> executorSupplier) {
+        this.executorSupplier = executorSupplier;
         return (B) this;
     }
 
@@ -145,6 +174,15 @@ public abstract class DistributedPrimitiveBuilder<B extends DistributedPrimitive
      */
     public final Serializer serializer() {
         return serializer;
+    }
+
+    /**
+     * Returns the executor supplier.
+     *
+     * @return executor supplier
+     */
+    public final Supplier<Executor> executorSupplier() {
+        return executorSupplier;
     }
 
     /**

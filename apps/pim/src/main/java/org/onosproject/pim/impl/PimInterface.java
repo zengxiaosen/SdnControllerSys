@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import org.onlab.packet.pim.PIMHello;
 import org.onlab.packet.pim.PIMHelloOption;
 import org.onlab.packet.pim.PIMJoinPrune;
 import org.onlab.packet.pim.PIMJoinPruneGroup;
-import org.onosproject.net.intf.Interface;
+import org.onosproject.incubator.net.intf.Interface;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.host.InterfaceIpAddress;
@@ -167,7 +167,7 @@ public final class PimInterface {
     /**
      * Return a single "best" IP address.
      *
-     * @return the chosen IP address or null if none
+     * @return the choosen IP address or null if none
      */
     public IpAddress getIpAddress() {
         if (onosInterface.ipAddressesList().isEmpty()) {
@@ -593,9 +593,9 @@ public final class PimInterface {
     }
 
     private static class RouteData {
-        final IpAddress ipAddress;
-        final MacAddress macAddress;
-        long timestamp;
+        public final IpAddress ipAddress;
+        public final MacAddress macAddress;
+        public long timestamp;
 
         public RouteData(IpAddress ip, MacAddress mac) {
             this.ipAddress = ip;

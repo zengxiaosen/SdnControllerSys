@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,26 +56,6 @@ public class ApplicationResource extends BaseResource {
             service.activate(app.id());
         }
         return Response.ok().build();
-    }
-
-    /**
-     * Get application OAR/JAR file.
-     * Returns the OAR/JAR file used to install the specified application.
-     *
-     * @param name application name
-     * @return 200 OK; 404; 401
-     */
-    @GET
-    @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    @Path("{name}/download")
-    public Response download(@PathParam("name") String name) {
-        ApplicationAdminService service = get(ApplicationAdminService.class);
-        ApplicationId appId = service.getId(name);
-        InputStream bits = service.getApplicationArchive(appId);
-        String fileName = appId.name() + ".oar";
-        return Response.ok(bits)
-                .header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
-                .build();
     }
 
     @Path("{name}/icon")

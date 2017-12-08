@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -255,7 +255,8 @@ public class VirtualNetworkPacketManager extends AbstractVnetService
         if (device == null) {
             return;
         }
-        VirtualPacketProvider packetProvider = providerService.provider();
+        VirtualPacketProvider packetProvider =
+                (VirtualPacketProvider) providerService.provider();
 
         if (packetProvider != null) {
             packetProvider.emit(networkId, packet);
@@ -301,7 +302,7 @@ public class VirtualNetworkPacketManager extends AbstractVnetService
      * @param request the packet request
      */
     private void pushRule(Device device, PacketRequest request) {
-        if (!device.type().equals(Device.Type.VIRTUAL)) {
+        if (!device.type().equals(Device.Type.SWITCH)) {
             return;
         }
 
@@ -324,7 +325,7 @@ public class VirtualNetworkPacketManager extends AbstractVnetService
      * @param request the packet request
      */
     private void removeRule(Device device, PacketRequest request) {
-        if (!device.type().equals(Device.Type.VIRTUAL)) {
+        if (!device.type().equals(Device.Type.SWITCH)) {
             return;
         }
         ForwardingObjective forwarding = createBuilder(request)
@@ -363,7 +364,7 @@ public class VirtualNetworkPacketManager extends AbstractVnetService
         return DefaultForwardingObjective.builder()
                 .withPriority(request.priority().priorityValue())
                 .withSelector(request.selector())
-                .fromApp(request.appId())
+                .fromApp(manager.getVirtualNetworkApplicationId(networkId()))
                 .withFlag(ForwardingObjective.Flag.VERSATILE)
                 .withTreatment(DefaultTrafficTreatment.builder().punt().build())
                 .makePermanent();

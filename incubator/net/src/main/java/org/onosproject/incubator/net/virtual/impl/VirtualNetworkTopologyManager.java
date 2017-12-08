@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ public class VirtualNetworkTopologyManager
      */
     public VirtualNetworkTopologyManager(VirtualNetworkService virtualNetworkManager,
                                          NetworkId networkId) {
-        super(virtualNetworkManager, networkId, TopologyEvent.class);
+        super(virtualNetworkManager, networkId);
     }
 
     @Override
@@ -135,6 +135,11 @@ public class VirtualNetworkTopologyManager
         checkNotNull(src, DEVICE_ID_NULL);
         checkNotNull(dst, DEVICE_ID_NULL);
         return defaultTopology(topology).getPaths(src, dst);
+    }
+
+    @Override
+    public Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs) {
+        return null;
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@ package org.onosproject.provider.lldp.impl;
 
 import java.util.Dictionary;
 import java.util.EnumSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -189,10 +187,7 @@ public class LldpLinkProvider extends AbstractProvider implements ProbedLinkProv
     private ApplicationId appId;
 
     static final SuppressionRules DEFAULT_RULES
-        = new SuppressionRules(EnumSet.of(Device.Type.ROADM,
-                                          Device.Type.FIBER_SWITCH,
-                                          Device.Type.OPTICAL_AMPLIFIER,
-                                          Device.Type.OTN),
+        = new SuppressionRules(EnumSet.of(Device.Type.ROADM, Device.Type.FIBER_SWITCH, Device.Type.OTN),
                                ImmutableMap.of(NO_LLDP, SuppressionRules.ANY_VALUE));
 
     private SuppressionRules rules = LldpLinkProvider.DEFAULT_RULES;
@@ -371,7 +366,6 @@ public class LldpLinkProvider extends AbstractProvider implements ProbedLinkProv
         }
         discoverers.values().forEach(LinkDiscovery::stop);
         discoverers.clear();
-        linkTimes.clear();
 
         providerService = null;
     }
@@ -423,19 +417,6 @@ public class LldpLinkProvider extends AbstractProvider implements ProbedLinkProv
      */
     private Optional<LinkDiscovery> updateDevice(Device device) {
         if (device == null) {
-            return Optional.empty();
-        }
-        if (!masterService.isLocalMaster(device.id())) {
-            // Reset the last seen time for all links to this device
-            // then stop discovery for this device
-            List<LinkKey> updateLinks = new LinkedList<>();
-            linkTimes.forEach((link, time) -> {
-                if (link.dst().deviceId().equals(device.id())) {
-                    updateLinks.add(link);
-                }
-            });
-            updateLinks.forEach(link -> linkTimes.remove(link));
-            removeDevice(device.id());
             return Optional.empty();
         }
         if (rules.isSuppressed(device) || isBlacklisted(device.id())) {
@@ -813,32 +794,21 @@ public class LldpLinkProvider extends AbstractProvider implements ProbedLinkProv
             updateRules(newRules);
         }
 
-        private boolean isRelevantDeviceEvent(NetworkConfigEvent event) {
-            return event.configClass() == LinkDiscoveryFromDevice.class &&
-                    CONFIG_CHANGED.contains(event.type());
-        }
-
-        private boolean isRelevantPortEvent(NetworkConfigEvent event) {
-            return event.configClass() == LinkDiscoveryFromPort.class &&
-                    CONFIG_CHANGED.contains(event.type());
-        }
-
-        private boolean isRelevantSuppressionEvent(NetworkConfigEvent event) {
-            return (event.configClass().equals(SuppressionConfig.class) &&
-                    (event.type() == NetworkConfigEvent.Type.CONFIG_ADDED ||
-                            event.type() == NetworkConfigEvent.Type.CONFIG_UPDATED));
-        }
-
         @Override
         public void event(NetworkConfigEvent event) {
             eventExecutor.execute(() -> {
-                if (isRelevantDeviceEvent(event)) {
+                if (event.configClass() == LinkDiscoveryFromDevice.class &&
+                        CONFIG_CHANGED.contains(event.type())) {
+
                     if (event.subject() instanceof DeviceId) {
                         final DeviceId did = (DeviceId) event.subject();
                         Device device = deviceService.getDevice(did);
                         updateDevice(device).ifPresent(ld -> updatePorts(ld, did));
                     }
-                } else if (isRelevantPortEvent(event)) {
+
+                } else if (event.configClass() == LinkDiscoveryFromPort.class &&
+                        CONFIG_CHANGED.contains(event.type())) {
+
                     if (event.subject() instanceof ConnectPoint) {
                         ConnectPoint cp = (ConnectPoint) event.subject();
                         if (cp.elementId() instanceof DeviceId) {
@@ -848,7 +818,10 @@ public class LldpLinkProvider extends AbstractProvider implements ProbedLinkProv
                             updateDevice(device).ifPresent(ld -> updatePort(ld, port));
                         }
                     }
-                } else if (isRelevantSuppressionEvent(event)) {
+
+                } else if (event.configClass().equals(SuppressionConfig.class) &&
+                        (event.type() == NetworkConfigEvent.Type.CONFIG_ADDED ||
+                                event.type() == NetworkConfigEvent.Type.CONFIG_UPDATED)) {
                     SuppressionConfig cfg = cfgRegistry.getConfig(appId, SuppressionConfig.class);
                     reconfigureSuppressionRules(cfg);
                     log.trace("Network config reconfigured");

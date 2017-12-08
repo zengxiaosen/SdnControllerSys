@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,13 @@ import java.util.stream.Collectors;
  */
 public enum VplsCommandEnum {
     ADD_IFACE("add-if"),
+    CLEAN("clean"),
     CREATE("create"),
     DELETE("delete"),
     LIST("list"),
     REMOVE_IFACE("rem-if"),
     SET_ENCAP("set-encap"),
-    SHOW("show"),
-    CLEAN("clean");
+    SHOW("show");
 
     private final String command;
 
@@ -40,7 +40,7 @@ public enum VplsCommandEnum {
      *
      * @param command the text representing the command
      */
-    VplsCommandEnum(final String command) {
+    private VplsCommandEnum(final String command) {
         this.command = command;
     }
 
@@ -56,7 +56,7 @@ public enum VplsCommandEnum {
      */
     public static List<String> toStringList() {
         return Arrays.stream(values())
-                .map(VplsCommandEnum::toString)
+                .map(c -> c.toString())
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
@@ -71,7 +71,7 @@ public enum VplsCommandEnum {
     public static VplsCommandEnum enumFromString(String command) {
         if (command != null && !command.isEmpty()) {
             for (VplsCommandEnum c : values()) {
-                if (command.equalsIgnoreCase(c.toString())) {
+                if (command.toString().equalsIgnoreCase(c.toString())) {
                     return c;
                 }
             }

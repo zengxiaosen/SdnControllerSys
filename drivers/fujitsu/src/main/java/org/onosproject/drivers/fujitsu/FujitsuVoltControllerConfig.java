@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ import org.onosproject.netconf.NetconfException;
 import org.slf4j.Logger;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -109,7 +110,7 @@ public class FujitsuVoltControllerConfig extends AbstractHandlerBehaviour
                 log.debug("Reply XML {}", reply);
                 controllers.addAll(parseStreamVoltControllers(XmlConfigParser.
                         loadXml(new ByteArrayInputStream(reply.getBytes(StandardCharsets.UTF_8)))));
-            } catch (NetconfException e) {
+            } catch (IOException e) {
                 log.error("Cannot communicate to device {} ", ncDeviceId);
             }
         } else {

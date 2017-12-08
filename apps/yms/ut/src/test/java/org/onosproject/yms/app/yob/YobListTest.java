@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,8 @@ public class YobListTest {
                 (YdtExtendedContext) childCtx, YdtTestUtils.
                         getSchemaRegistry());
         assertNotNull(yangObject);
-        assertTrue("RootlistOpParam".equals(yangObject.getClass().getSimpleName()));
+        assertTrue(yangObject.getClass().getSimpleName()
+                           .equals("RootlistOpParam"));
         try {
 
             Field field =
@@ -98,7 +99,8 @@ public class YobListTest {
                 (YdtExtendedContext) ydtContext1, YdtTestUtils
                         .getSchemaRegistry());
         assertNotNull(yangObject);
-        assertTrue("RootlistOpParam".equals(yangObject.getClass().getSimpleName()));
+        assertTrue(yangObject.getClass().getSimpleName()
+                           .equals("RootlistOpParam"));
         try {
 
             Field field = yangObject.getClass()

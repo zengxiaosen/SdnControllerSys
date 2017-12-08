@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,9 +48,6 @@ public final class ExtensionTreatmentType {
         NICIRA_RESUBMIT_TABLE(14),
         NICIRA_PUSH_NSH(38),
         NICIRA_POP_NSH(39),
-        NICIRA_CT(40),
-        NICIRA_NAT(41),
-        NICIRA_CT_CLEAR(42),
         OFDPA_SET_VLAN_ID(64),
         OFDPA_SET_MPLS_TYPE(65),
         OFDPA_SET_OVID(66),
@@ -72,6 +69,7 @@ public final class ExtensionTreatmentType {
         NICIRA_ENCAP_ETH_SRC(121),
         NICIRA_ENCAP_ETH_DST(122),
         NICIRA_ENCAP_ETH_TYPE(123),
+        BMV2_ACTION(128),
         OPLINK_ATTENUATION(130),
 
         UNRESOLVED_TYPE(200);

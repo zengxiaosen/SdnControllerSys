@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,9 +68,5 @@ describe('factory: fw/layer/flash.js', function () {
             expect(text.size()).toEqual(1);
             expect(text.text()).toEqual('foo');
         }, 100);
-    });
-
-    it('should create temp div', function () {
-        expect(flash.tempDiv()).toBeDefined();
     });
 });

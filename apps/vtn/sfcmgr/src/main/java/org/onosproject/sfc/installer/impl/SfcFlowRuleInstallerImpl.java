@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -379,7 +379,7 @@ public class SfcFlowRuleInstallerImpl implements SfcFlowRuleInstallerService {
         Set<PortNumber> ports = bridgeConfig.getPortNumbers();
         String tunnelName = "vxlan-" + DEFAULT_IP;
         ports.stream()
-        .filter(p -> p.name().equalsIgnoreCase(tunnelName))
+        .filter(p ->p.name().equalsIgnoreCase(tunnelName))
         .forEach(p -> {
             treatment.setOutput(p);
             sendSfcRule(selector, treatment, deviceId, type, TUNNEL_SEND_PRIORITY);
@@ -697,11 +697,11 @@ public class SfcFlowRuleInstallerImpl implements SfcFlowRuleInstallerService {
         }
 
         if ((flowClassifier.protocol() != null) && (!flowClassifier.protocol().isEmpty())) {
-            if ("TCP".equalsIgnoreCase(flowClassifier.protocol())) {
+            if (flowClassifier.protocol().equalsIgnoreCase("TCP")) {
                 selector.add(Criteria.matchIPProtocol(IPv4.PROTOCOL_TCP));
-            } else if ("UDP".equalsIgnoreCase(flowClassifier.protocol())) {
+            } else if (flowClassifier.protocol().equalsIgnoreCase("UDP")) {
                 selector.add(Criteria.matchIPProtocol(IPv4.PROTOCOL_UDP));
-            } else if ("ICMP".equalsIgnoreCase(flowClassifier.protocol())) {
+            } else if (flowClassifier.protocol().equalsIgnoreCase("ICMP")) {
                 selector.add(Criteria.matchIPProtocol(IPv4.PROTOCOL_ICMP));
             }
         } else if (fiveTuple != null && fiveTuple.protocol() != 0) {
@@ -709,8 +709,8 @@ public class SfcFlowRuleInstallerImpl implements SfcFlowRuleInstallerService {
         }
 
         if (((flowClassifier.etherType() != null) && (!flowClassifier.etherType().isEmpty()))
-                && ("IPv4".equals(flowClassifier.etherType()) || "IPv6".equals(flowClassifier.etherType()))) {
-            if ("IPv4".equals(flowClassifier.etherType())) {
+                && (flowClassifier.etherType().equals("IPv4") || flowClassifier.etherType().equals("IPv6"))) {
+            if (flowClassifier.etherType().equals("IPv4")) {
                 selector.matchEthType(Ethernet.TYPE_IPV4);
             } else {
                 selector.matchEthType(Ethernet.TYPE_IPV6);
@@ -899,8 +899,8 @@ public class SfcFlowRuleInstallerImpl implements SfcFlowRuleInstallerService {
     private PortNumber getVxlanPortNumber(DeviceId deviceId) {
         Iterable<Port> ports = deviceService.getPorts(deviceId);
         Port vxlanPort = Sets.newHashSet(ports).stream()
-                .filter(p -> !p.number().equals(PortNumber.LOCAL))
-                .filter(p -> p.annotations().value(AnnotationKeys.PORT_NAME)
+                .filter(p ->!p.number().equals(PortNumber.LOCAL))
+                .filter(p ->p.annotations().value(AnnotationKeys.PORT_NAME)
                         .startsWith(VXLANPORT_HEAD))
                 .findFirst().get();
         return vxlanPort.number();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -156,7 +156,7 @@ public class OltPipeline extends AbstractHandlerBehaviour implements Pipeliner {
                     .findFirst().get();
 
             if (output == null || !output.port().equals(PortNumber.CONTROLLER)) {
-                log.warn("OLT can only filter packet to controller");
+                log.error("OLT can only filter packet to controller");
                 fail(filter, ObjectiveError.UNSUPPORTED);
                 return;
             }
@@ -183,11 +183,6 @@ public class OltPipeline extends AbstractHandlerBehaviour implements Pipeliner {
         } else if (ethType.ethType().equals(EthType.EtherType.IPV4.ethType())) {
             IPProtocolCriterion ipProto = (IPProtocolCriterion)
                     filterForCriterion(filter.conditions(), Criterion.Type.IP_PROTO);
-            if (ipProto == null) {
-                log.warn("OLT can only filter IGMP and DHCP");
-                fail(filter, ObjectiveError.UNSUPPORTED);
-                return;
-            }
             if (ipProto.protocol() == IPv4.PROTOCOL_IGMP) {
                 provisionIgmp(filter, ethType, ipProto, output);
             } else if (ipProto.protocol() == IPv4.PROTOCOL_UDP) {
@@ -198,18 +193,16 @@ public class OltPipeline extends AbstractHandlerBehaviour implements Pipeliner {
                         filterForCriterion(filter.conditions(), Criterion.Type.UDP_DST);
 
                 if (udpSrcPort.udpPort().toInt() != 68 || udpDstPort.udpPort().toInt() != 67) {
-                    log.warn("OLT can only filter DHCP, wrong UDP Src or Dst Port");
+                    log.error("OLT can only filte DHCP, wrong UDP Src or Dst Port");
                     fail(filter, ObjectiveError.UNSUPPORTED);
                 }
                 provisionDhcp(filter, ethType, ipProto, udpSrcPort, udpDstPort, output);
             } else {
-                log.warn("OLT can only filter IGMP and DHCP");
+                log.error("OLT can only filter igmp and DHCP");
                 fail(filter, ObjectiveError.UNSUPPORTED);
             }
         } else {
-            log.warn("\nOnly the following are Supported in OLT for filter ->\n"
-                    + "ETH TYPE : EAPOL and IPV4\n"
-                    + "IPV4 TYPE: IGMP and UDP (for DHCP)");
+            log.error("OLT can only filter eapol igmp");
             fail(filter, ObjectiveError.UNSUPPORTED);
         }
 

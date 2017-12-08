@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.onlab.osgi.ComponentContextAdapter;
 import org.onlab.packet.EthType;
 import org.onlab.packet.Ip6Address;
 import org.onlab.packet.IpAddress;
@@ -32,11 +31,11 @@ import org.onosproject.app.ApplicationService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.core.CoreServiceAdapter;
-import org.onosproject.net.intf.Interface;
-import org.onosproject.net.intf.InterfaceEvent;
-import org.onosproject.net.intf.InterfaceListener;
-import org.onosproject.net.intf.InterfaceService;
-import org.onosproject.net.intf.InterfaceServiceAdapter;
+import org.onosproject.incubator.net.intf.Interface;
+import org.onosproject.incubator.net.intf.InterfaceEvent;
+import org.onosproject.incubator.net.intf.InterfaceListener;
+import org.onosproject.incubator.net.intf.InterfaceService;
+import org.onosproject.incubator.net.intf.InterfaceServiceAdapter;
 import org.onosproject.mastership.MastershipService;
 import org.onosproject.mastership.MastershipServiceAdapter;
 import org.onosproject.net.ConnectPoint;
@@ -48,8 +47,8 @@ import org.onosproject.net.config.Config;
 import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigEvent.Type;
 import org.onosproject.net.config.NetworkConfigListener;
-import org.onosproject.net.config.NetworkConfigRegistry;
-import org.onosproject.net.config.NetworkConfigRegistryAdapter;
+import org.onosproject.net.config.NetworkConfigService;
+import org.onosproject.net.config.NetworkConfigServiceAdapter;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceListener;
 import org.onosproject.net.device.DeviceService;
@@ -98,7 +97,7 @@ public class ControlPlaneRedirectManagerTest {
 
     private DeviceService deviceService;
     private FlowObjectiveService flowObjectiveService;
-    private NetworkConfigRegistry networkConfigService;
+    private NetworkConfigService networkConfigService;
     private final Set<Interface> interfaces = Sets.newHashSet();
     static Device dev3 = NetTestTools.device("0000000000000001");
     private static final int OSPF_IP_PROTO = 0x59;
@@ -153,7 +152,7 @@ public class ControlPlaneRedirectManagerTest {
         controlPlaneRedirectManager.hostService = createNiceMock(HostService.class);
         controlPlaneRedirectManager.mastershipService = mastershipService;
         controlPlaneRedirectManager.applicationService = applicationService;
-        controlPlaneRedirectManager.activate(new ComponentContextAdapter());
+        controlPlaneRedirectManager.activate();
         verify(flowObjectiveService);
     }
 
@@ -272,7 +271,7 @@ public class ControlPlaneRedirectManagerTest {
     private void setUpInterfaceConfiguration(Interface intf, boolean install) {
         DeviceId deviceId = controlPlaneConnectPoint.deviceId();
         PortNumber controlPlanePort = controlPlaneConnectPoint.port();
-        for (InterfaceIpAddress ip : intf.ipAddressesList()) {
+        for (InterfaceIpAddress ip : intf.ipAddresses()) {
             int cpNextId, intfNextId;
             cpNextId = modifyNextObjective(deviceId, controlPlanePort,
                     VlanId.vlanId(ControlPlaneRedirectManager.ASSIGNED_VLAN), true, install);
@@ -588,7 +587,7 @@ public class ControlPlaneRedirectManagerTest {
 
     }
 
-    private class TestNetworkConfigService extends NetworkConfigRegistryAdapter {
+    private class TestNetworkConfigService extends NetworkConfigServiceAdapter {
 
         @Override
         public void addListener(NetworkConfigListener listener) {
@@ -698,7 +697,7 @@ public class ControlPlaneRedirectManagerTest {
         public Interface getMatchingInterface(IpAddress ip) {
             Interface intff = null;
             for (Interface intf : interfaces) {
-                for (InterfaceIpAddress address : intf.ipAddressesList()) {
+                for (InterfaceIpAddress address : intf.ipAddresses()) {
                     if (address.ipAddress().equals(ip)) {
                         intff = intf;
                         break;

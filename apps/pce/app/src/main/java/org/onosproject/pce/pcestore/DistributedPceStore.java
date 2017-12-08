@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,30 @@
  */
 package org.onosproject.pce.pcestore;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.collect.ImmutableSet;
-import java.util.Arrays;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
+
 import org.onlab.util.KryoNamespace;
 import org.onosproject.incubator.net.tunnel.TunnelId;
+import org.onosproject.net.intent.constraint.BandwidthConstraint;
+import org.onosproject.net.resource.ResourceConsumer;
 import org.onosproject.pce.pceservice.ExplicitPathInfo;
-import org.onosproject.pce.pceservice.LspType;
 import org.onosproject.pce.pceservice.constraint.CapabilityConstraint;
 import org.onosproject.pce.pceservice.constraint.CostConstraint;
-import org.onosproject.pce.pceservice.constraint.PceBandwidthConstraint;
+import org.onosproject.pce.pceservice.TunnelConsumerId;
+import org.onosproject.pce.pceservice.LspType;
 import org.onosproject.pce.pceservice.constraint.SharedBandwidthConstraint;
 import org.onosproject.pce.pcestore.api.PceStore;
 import org.onosproject.store.serializers.KryoNamespaces;
@@ -37,12 +46,9 @@ import org.onosproject.store.service.ConsistentMap;
 import org.onosproject.store.service.DistributedSet;
 import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.StorageService;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Manages the pool of available labels to devices, links and tunnels.
@@ -59,8 +65,8 @@ public class DistributedPceStore implements PceStore {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected StorageService storageService;
 
-    //Mapping tunnel name with Disjoint paths
-    private ConsistentMap<String, List<TunnelId>> tunnelNameDisjoinTunnelIdInfo;
+    // Mapping tunnel with device local info with tunnel consumer id
+    private ConsistentMap<TunnelId, ResourceConsumer> tunnelInfoMap;
 
     // List of Failed path info
     private DistributedSet<PcePathInfo> failedPathSet;
@@ -75,7 +81,7 @@ public class DistributedPceStore implements PceStore {
                     .register(ExplicitPathInfo.Type.class)
                     .register(CostConstraint.class)
                     .register(CostConstraint.Type.class)
-                    .register(PceBandwidthConstraint.class)
+                    .register(BandwidthConstraint.class)
                     .register(SharedBandwidthConstraint.class)
                     .register(CapabilityConstraint.class)
                     .register(CapabilityConstraint.CapabilityType.class)
@@ -84,6 +90,15 @@ public class DistributedPceStore implements PceStore {
 
     @Activate
     protected void activate() {
+        tunnelInfoMap = storageService.<TunnelId, ResourceConsumer>consistentMapBuilder()
+                .withName("onos-pce-tunnelinfomap")
+                .withSerializer(Serializer.using(
+                        new KryoNamespace.Builder()
+                                .register(KryoNamespaces.API)
+                                .register(TunnelId.class,
+                                          TunnelConsumerId.class)
+                                .build()))
+                .build();
 
         failedPathSet = storageService.<PcePathInfo>setBuilder()
                 .withName("failed-path-info")
@@ -101,15 +116,6 @@ public class DistributedPceStore implements PceStore {
                                 .build()))
                 .build();
 
-        tunnelNameDisjoinTunnelIdInfo = storageService.<String, List<TunnelId>>consistentMapBuilder()
-                .withName("onos-pce-disjointTunnelIds")
-                .withSerializer(Serializer.using(
-                        new KryoNamespace.Builder()
-                                .register(KryoNamespaces.API)
-                                .register(TunnelId.class)
-                                .build()))
-                .build();
-
         log.info("Started");
     }
 
@@ -119,11 +125,21 @@ public class DistributedPceStore implements PceStore {
     }
 
     @Override
+    public boolean existsTunnelInfo(TunnelId tunnelId) {
+        checkNotNull(tunnelId, TUNNEL_ID_NULL);
+        return tunnelInfoMap.containsKey(tunnelId);
+    }
+
+    @Override
     public boolean existsFailedPathInfo(PcePathInfo failedPathInfo) {
         checkNotNull(failedPathInfo, PATH_INFO_NULL);
         return failedPathSet.contains(failedPathInfo);
     }
 
+    @Override
+    public int getTunnelInfoCount() {
+        return tunnelInfoMap.size();
+    }
 
     @Override
     public int getFailedPathInfoCount() {
@@ -131,11 +147,29 @@ public class DistributedPceStore implements PceStore {
     }
 
     @Override
+    public Map<TunnelId, ResourceConsumer> getTunnelInfos() {
+       return tunnelInfoMap.entrySet().stream()
+                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().value()));
+    }
+
+    @Override
     public Iterable<PcePathInfo> getFailedPathInfos() {
        return ImmutableSet.copyOf(failedPathSet);
     }
 
+    @Override
+    public ResourceConsumer getTunnelInfo(TunnelId tunnelId) {
+        checkNotNull(tunnelId, TUNNEL_ID_NULL);
+        return tunnelInfoMap.get(tunnelId) == null ? null : tunnelInfoMap.get(tunnelId).value();
+    }
 
+    @Override
+    public void addTunnelInfo(TunnelId tunnelId, ResourceConsumer tunnelConsumerId) {
+        checkNotNull(tunnelId, TUNNEL_ID_NULL);
+        checkNotNull(tunnelConsumerId, PCECC_TUNNEL_INFO_NULL);
+
+        tunnelInfoMap.put(tunnelId, tunnelConsumerId);
+    }
 
     @Override
     public void addFailedPathInfo(PcePathInfo failedPathInfo) {
@@ -143,6 +177,16 @@ public class DistributedPceStore implements PceStore {
         failedPathSet.add(failedPathInfo);
     }
 
+    @Override
+    public boolean removeTunnelInfo(TunnelId tunnelId) {
+        checkNotNull(tunnelId, TUNNEL_ID_NULL);
+
+        if (tunnelInfoMap.remove(tunnelId) == null) {
+            log.error("Tunnel info deletion for tunnel id {} has failed.", tunnelId.toString());
+            return false;
+        }
+        return true;
+    }
 
     @Override
     public boolean removeFailedPathInfo(PcePathInfo failedPathInfo) {
@@ -171,51 +215,4 @@ public class DistributedPceStore implements PceStore {
         return null;
     }
 
-/*    @Override
-    public DisjointPath getDisjointPaths(String tunnelName) {
-        if (tunnelNameDisjointPathInfo.get(tunnelName) != null) {
-            return tunnelNameDisjointPathInfo.get(tunnelName).value();
-        }
-        return null;
-    }
-
-    @Override
-    public boolean addDisjointPathInfo(String tunnelName, DisjointPath path) {
-        checkNotNull(tunnelName);
-        checkNotNull(path);
-        return tunnelNameDisjointPathInfo.put(tunnelName, path) != null ? true : false;
-    }*/
-
-    @Override
-    public boolean addLoadBalancingTunnelIdsInfo(String tunnelName, TunnelId... tunnelIds) {
-        checkNotNull(tunnelName);
-        checkNotNull(tunnelIds);
-        return tunnelNameDisjoinTunnelIdInfo.put(tunnelName, Arrays.asList(tunnelIds)) != null ? true : false;
-    }
-
-    @Override
-    public List<TunnelId> getLoadBalancingTunnelIds(String tunnelName) {
-        if (tunnelNameDisjoinTunnelIdInfo.get(tunnelName) != null) {
-            return tunnelNameDisjoinTunnelIdInfo.get(tunnelName).value();
-        }
-        return null;
-    }
-
-    @Override
-    public boolean removeLoadBalancingTunnelIdsInfo(String tunnelName) {
-        if (tunnelNameDisjoinTunnelIdInfo.remove(tunnelName) == null) {
-            log.error("Failed to remove entry {} for this tunnelName in DisjointTunnelIdsInfoMap" + tunnelName);
-            return false;
-        }
-        return true;
-    }
-
- /*   @Override
-    public boolean removeDisjointPathInfo(String tunnelName) {
-        if (tunnelNameDisjointPathInfo.remove(tunnelName) == null) {
-            log.error("Failed to remove entry {} for this tunnelName in DisjointPathInfoMap", tunnelName);
-            return false;
-        }
-        return true;
-    }*/
 }

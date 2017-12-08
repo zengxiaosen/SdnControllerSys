@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ public class LispMacAuthentication {
             algorithm = authType.getName();
         } else {
             log.warn(NOT_SUPPORT_ALGORITHM_MSG, authType.getName());
+            return;
         }
     }
 
@@ -80,5 +81,14 @@ public class LispMacAuthentication {
             log.warn(INVALID_KEY_MSG, key, e.getMessage());
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Obtains authentication algorithm.
+     *
+     * @return authentication algorithm
+     */
+    String getAlgorithm() {
+        return algorithm;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,25 @@
 package org.onosproject.openflow.controller.impl;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
+import java.util.List;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-
-import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Before;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.junit.Test;
 import org.onosproject.openflow.OfMessageAdapter;
+import org.projectfloodlight.openflow.protocol.OFMessage;
 import org.projectfloodlight.openflow.protocol.OFType;
+
+import com.google.common.collect.ImmutableList;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
 /**
  * Tests for the OpenFlow message encoder.
  */
 public class OFMessageEncoderTest {
 
-    private ByteBuf buf;
     static class MockOfMessage extends OfMessageAdapter {
         static int nextId = 1;
         final int id;
@@ -47,32 +45,46 @@ public class OFMessageEncoderTest {
         }
 
         @Override
-        public void writeTo(ByteBuf byteBuf) {
+        public void writeTo(ChannelBuffer channelBuffer) {
             String message = "message" + Integer.toString(id) + " ";
-            byteBuf.writeBytes(message.getBytes(StandardCharsets.UTF_8));
+            channelBuffer.writeBytes(message.getBytes(StandardCharsets.UTF_8));
         }
     }
 
-    @Before
-    public void setUp() {
-        buf = ByteBufAllocator.DEFAULT.buffer();
-    }
-
-    @After
-    public void tearDown() {
-        buf.release();
-    }
-
+    /**
+     * Tests that encoding a non-list returns the object specified.
+     *
+     * @throws Exception on exception in the encoder
+     */
     @Test
-    public void testEncode() throws Exception {
-        OFMessageEncoder encoder = OFMessageEncoder.getInstance();
-        MockOfMessage message1 = new MockOfMessage();
-        encoder.encode(null, Collections.singletonList(message1), buf);
+    public void testNoList() throws Exception {
+        OFMessageEncoder encoder = new OFMessageEncoder();
+        MockOfMessage message = new MockOfMessage();
+        OFMessage returnedMessage =
+                (OFMessage) encoder.encode(null, null, message);
+        assertThat(message, is(returnedMessage));
+    }
 
-        assertThat(buf.isReadable(), Matchers.is(true));
-        byte[] channelBytes = new byte[buf.readableBytes()];
-        buf.readBytes(channelBytes);
-        String expectedListMessage = "message1 ";
-        assertThat(channelBytes, is(expectedListMessage.getBytes()));
+    /**
+     * Tests that encoding a list returns the proper encoded payload.
+     *
+     * @throws Exception on exception in the encoder
+     */
+    @Test
+    public void testList() throws Exception {
+        OFMessageEncoder encoder = new OFMessageEncoder();
+        MockOfMessage message1 = new MockOfMessage();
+        MockOfMessage message2 = new MockOfMessage();
+        MockOfMessage message3 = new MockOfMessage();
+        List<MockOfMessage> messages = ImmutableList.of(message1, message2, message3);
+        ChannelBuffer returnedChannel =
+                (ChannelBuffer) encoder.encode(null, null, messages);
+        assertThat(returnedChannel, notNullValue());
+        byte[] channelBytes = returnedChannel.array();
+        String expectedListMessage = "message1 message2 message3 ";
+        String listMessage =
+                (new String(channelBytes, StandardCharsets.UTF_8))
+                        .substring(0, expectedListMessage.length());
+        assertThat(listMessage, is(expectedListMessage));
     }
 }

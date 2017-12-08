@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,15 @@
  */
 package org.onosproject.store.service;
 
-import java.util.List;
-
 import com.google.common.collect.ImmutableList;
-import org.onosproject.cluster.PartitionId;
+
+import java.util.List;
 
 /**
  * Contains information about a database partition.
  */
 public class PartitionInfo {
-    private final PartitionId partitionId;
+    private final String name;
     private final long term;
     private final List<String> members;
     private final String leader;
@@ -32,25 +31,25 @@ public class PartitionInfo {
     /**
      * Class constructor.
      *
-     * @param partitionId partition identifier
+     * @param name partition name
      * @param term term number
      * @param members partition members
      * @param leader leader name
      */
-    public PartitionInfo(PartitionId partitionId, long term, List<String> members, String leader) {
-        this.partitionId = partitionId;
+    public PartitionInfo(String name, long term, List<String> members, String leader) {
+        this.name = name;
         this.term = term;
         this.members = ImmutableList.copyOf(members);
         this.leader = leader;
     }
 
     /**
-     * Returns the partition ID.
+     * Returns the name of the partition.
      *
-     * @return partition ID
+     * @return partition name
      */
-    public PartitionId id() {
-        return partitionId;
+    public String name() {
+        return name;
     }
 
     /**

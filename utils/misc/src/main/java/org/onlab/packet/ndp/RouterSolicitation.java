@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package org.onlab.packet.ndp;
 
 import org.onlab.packet.BasePacket;
 import org.onlab.packet.Deserializer;
+import org.onlab.packet.IPacket;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -77,6 +78,17 @@ public class RouterSolicitation extends BasePacket {
         return data;
     }
 
+    @Override
+    public IPacket deserialize(byte[] data, int offset, int length) {
+        final ByteBuffer bb = ByteBuffer.wrap(data, offset, length);
+
+        bb.getInt();
+
+        this.options.deserialize(data, bb.position(),
+                                 bb.limit() - bb.position());
+
+        return this;
+    }
 
     /*
      * (non-Javadoc)

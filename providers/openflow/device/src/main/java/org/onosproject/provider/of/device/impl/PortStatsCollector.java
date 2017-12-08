@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ public class PortStatsCollector {
 
         @Override
         public void run() {
-            sendPortStatisticRequest();
+            sendPortStatistic();
         }
     }
 
@@ -101,7 +101,7 @@ public class PortStatsCollector {
     /**
      * Sends port statistic request to switch.
      */
-    private void sendPortStatisticRequest() {
+    private void sendPortStatistic() {
         if (sw.getRole() != RoleState.MASTER) {
             return;
         }

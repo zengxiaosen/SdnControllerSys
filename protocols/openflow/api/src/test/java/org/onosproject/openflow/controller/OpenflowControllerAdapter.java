@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 package org.onosproject.openflow.controller;
 
 import org.projectfloodlight.openflow.protocol.OFMessage;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Test adapter for the OpenFlow controller interface.
@@ -81,11 +79,6 @@ public class OpenflowControllerAdapter implements OpenFlowController {
 
     @Override
     public void write(Dpid dpid, OFMessage msg) {
-    }
-
-    @Override
-    public CompletableFuture<OFMessage> writeResponse(Dpid dpid, OFMessage msg) {
-        return null;
     }
 
     @Override

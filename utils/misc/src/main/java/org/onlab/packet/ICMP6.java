@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,8 @@ import org.onlab.packet.ndp.Redirect;
 import org.onlab.packet.ndp.RouterAdvertisement;
 import org.onlab.packet.ndp.RouterSolicitation;
 
-import com.google.common.collect.ImmutableMap;
-
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -102,13 +101,15 @@ public class ICMP6 extends BasePacket {
     public static final byte IPV6_OPT_ERR = (byte) 0x01;
 
     public static final Map<Byte, Deserializer<? extends IPacket>> TYPE_DESERIALIZER_MAP =
-            ImmutableMap.<Byte, Deserializer<? extends IPacket>>builder()
-                .put(ICMP6.ROUTER_SOLICITATION, RouterSolicitation.deserializer())
-                .put(ICMP6.ROUTER_ADVERTISEMENT, RouterAdvertisement.deserializer())
-                .put(ICMP6.NEIGHBOR_SOLICITATION, NeighborSolicitation.deserializer())
-                .put(ICMP6.NEIGHBOR_ADVERTISEMENT, NeighborAdvertisement.deserializer())
-                .put(ICMP6.REDIRECT, Redirect.deserializer())
-                .build();
+            new HashMap<>();
+
+    static {
+        ICMP6.TYPE_DESERIALIZER_MAP.put(ICMP6.ROUTER_SOLICITATION, RouterSolicitation.deserializer());
+        ICMP6.TYPE_DESERIALIZER_MAP.put(ICMP6.ROUTER_ADVERTISEMENT, RouterAdvertisement.deserializer());
+        ICMP6.TYPE_DESERIALIZER_MAP.put(ICMP6.NEIGHBOR_SOLICITATION, NeighborSolicitation.deserializer());
+        ICMP6.TYPE_DESERIALIZER_MAP.put(ICMP6.NEIGHBOR_ADVERTISEMENT, NeighborAdvertisement.deserializer());
+        ICMP6.TYPE_DESERIALIZER_MAP.put(ICMP6.REDIRECT, Redirect.deserializer());
+    }
 
     protected byte icmpType;
     protected byte icmpCode;
@@ -262,6 +263,31 @@ public class ICMP6 extends BasePacket {
             bbData.putShort(2, this.checksum);
         }
         return data;
+    }
+
+    @Override
+    public IPacket deserialize(final byte[] data, final int offset,
+                               final int length) {
+        final ByteBuffer bb = ByteBuffer.wrap(data, offset, length);
+        this.icmpType = bb.get();
+        this.icmpCode = bb.get();
+        this.checksum = bb.getShort();
+
+        Deserializer<? extends IPacket> deserializer;
+        if (ICMP6.TYPE_DESERIALIZER_MAP.containsKey(icmpType)) {
+            deserializer = TYPE_DESERIALIZER_MAP.get(icmpType);
+        } else {
+            deserializer = Data.deserializer();
+        }
+        try {
+            this.payload = deserializer.deserialize(data, bb.position(),
+                                                     bb.limit() - bb.position());
+            this.payload.setParent(this);
+        } catch (DeserializationException e) {
+            return this;
+        }
+
+        return this;
     }
 
     /*

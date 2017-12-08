@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,39 +15,36 @@
  */
 package org.onosproject.store.flow.impl;
 
-import java.util.Collections;
-import java.util.Iterator;
-
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.onlab.packet.Ip4Address;
+
+import org.onosproject.cfg.ComponentConfigAdapter;
+import org.onosproject.cluster.NodeId;
 import org.onosproject.cluster.ClusterService;
 import org.onosproject.cluster.ControllerNode;
-import org.onosproject.cluster.NodeId;
 import org.onosproject.core.CoreServiceAdapter;
 import org.onosproject.mastership.MastershipServiceAdapter;
+import org.onosproject.net.device.DeviceServiceAdapter;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.MastershipRole;
-import org.onosproject.net.device.DeviceServiceAdapter;
-import org.onosproject.net.flow.DefaultFlowEntry;
-import org.onosproject.net.flow.DefaultFlowRule;
-import org.onosproject.net.flow.FlowEntry;
-import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchEntry;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
 import org.onosproject.net.flow.FlowRuleOperation;
+import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.flow.FlowRuleBatchEntry;
+import org.onosproject.net.flow.DefaultFlowEntry;
+import org.onosproject.net.flow.FlowEntry;
+import org.onosproject.net.flow.DefaultFlowRule;
+import org.onosproject.net.flow.FlowRuleBatchOperation;
 import org.onosproject.net.intent.IntentTestsMocks;
 import org.onosproject.store.cluster.messaging.ClusterCommunicationServiceAdapter;
-import org.onosproject.store.service.AsyncDocumentTree;
-import org.onosproject.store.service.DocumentTreeBuilder;
-import org.onosproject.store.service.Serializer;
-import org.onosproject.store.service.TestAsyncDocumentTree;
+import org.onosproject.store.persistence.PersistenceServiceAdapter;
 import org.onosproject.store.service.TestStorageService;
-import org.onosproject.store.service.TestTopic;
-import org.onosproject.store.service.Topic;
+
+import org.onlab.packet.Ip4Address;
+import java.util.Iterator;
+import org.osgi.service.component.ComponentContext;
 
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
@@ -66,6 +63,7 @@ import static org.onosproject.net.NetTestTools.did;
 public class DistributedFlowRuleStoreTest {
 
     DistributedFlowRuleStore flowStoreImpl;
+    ComponentContext context = null;
     private ClusterService mockClusterService;
     private ControllerNode mockControllerNode;
 
@@ -131,33 +129,11 @@ public class DistributedFlowRuleStoreTest {
         }
     }
 
-    private static class MockStorageService extends TestStorageService {
-        @Override
-        public <V> DocumentTreeBuilder<V> documentTreeBuilder() {
-            return new DocumentTreeBuilder<V>() {
-                @Override
-                public AsyncDocumentTree<V> buildDocumentTree() {
-                    return build();
-                }
-
-                @Override
-                @SuppressWarnings("unchecked")
-                public AsyncDocumentTree<V> build() {
-                    return new TestAsyncDocumentTree<>(name());
-                }
-            };
-        }
-
-        @Override
-        public <T> Topic<T> getTopic(String name, Serializer serializer) {
-            return new TestTopic<>(name);
-        }
-    }
-
     @Before
     public void setUp() throws Exception {
         flowStoreImpl = new DistributedFlowRuleStore();
-        flowStoreImpl.storageService = new MockStorageService();
+        flowStoreImpl.storageService = new TestStorageService();
+        flowStoreImpl.replicaInfoManager = new ReplicaInfoManager();
         mockClusterService = createMock(ClusterService.class);
         flowStoreImpl.clusterService = mockClusterService;
         nodeId = new NodeId("1");
@@ -171,12 +147,14 @@ public class DistributedFlowRuleStoreTest {
         flowStoreImpl.mastershipService = new MasterOfAll();
         flowStoreImpl.deviceService = new DeviceServiceAdapter();
         flowStoreImpl.coreService = new CoreServiceAdapter();
-        flowStoreImpl.activate();
+        flowStoreImpl.configService = new ComponentConfigAdapter();
+        flowStoreImpl.persistenceService = new PersistenceServiceAdapter();
+        flowStoreImpl.activate(context);
     }
 
     @After
     public void tearDown() throws Exception {
-        flowStoreImpl.deactivate();
+        flowStoreImpl.deactivate(context);
     }
 
     /**
@@ -261,15 +239,10 @@ public class DistributedFlowRuleStoreTest {
     @Test
     public void testPurgeFlow() {
         FlowEntry flowEntry = new DefaultFlowEntry(flowRule);
-        flowStoreImpl.storeBatch(new FlowRuleBatchOperation(
-                Collections.singletonList(new FlowRuleBatchEntry(FlowRuleBatchEntry.FlowRuleOperation.ADD, flowEntry)),
-                flowEntry.deviceId(), 1));
+        flowStoreImpl.addOrUpdateFlowRule(flowEntry);
 
         FlowEntry flowEntry1 = new DefaultFlowEntry(flowRule1);
-        flowStoreImpl.storeBatch(new FlowRuleBatchOperation(
-                Collections.singletonList(new FlowRuleBatchEntry(FlowRuleBatchEntry.FlowRuleOperation.ADD, flowEntry1)),
-                flowEntry1.deviceId(), 2));
-
+        flowStoreImpl.addOrUpdateFlowRule(flowEntry1);
         Iterable<FlowEntry> flows1 = flowStoreImpl.getFlowEntries(deviceId);
         int sum2 = 0;
         Iterator it1 = flows1.iterator();

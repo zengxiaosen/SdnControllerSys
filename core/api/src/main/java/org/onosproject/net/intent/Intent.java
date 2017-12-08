@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,11 @@ import org.onosproject.net.NetworkResource;
 import org.onosproject.net.ResourceGroup;
 
 import java.util.Collection;
+import java.util.Objects;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Abstraction of an application level intent.
@@ -283,7 +286,7 @@ public abstract class Intent {
      * @param oldIdGenerator the current id generator
      */
     public static void unbindIdGenerator(IdGenerator oldIdGenerator) {
-        if (idGenerator == oldIdGenerator) {
+        if (Objects.equals(idGenerator, oldIdGenerator)) {
             idGenerator = null;
         }
     }

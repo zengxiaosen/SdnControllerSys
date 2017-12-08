@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,9 @@ package org.onosproject.provider.lldpcommon;
 
 import com.google.common.collect.Sets;
 
-import io.netty.util.Timeout;
-import io.netty.util.TimerTask;
-
+import org.jboss.netty.util.Timeout;
+import org.jboss.netty.util.TimerTask;
 import org.onlab.packet.Ethernet;
-import org.onlab.packet.MacAddress;
 import org.onlab.packet.ONOSLLDP;
 import org.onlab.util.Timer;
 import org.onosproject.net.ConnectPoint;
@@ -84,12 +82,12 @@ public class LinkDiscovery implements TimerTask {
 
         ethPacket = new Ethernet();
         ethPacket.setEtherType(Ethernet.TYPE_LLDP);
-        ethPacket.setDestinationMACAddress(MacAddress.ONOS_LLDP);
+        ethPacket.setDestinationMACAddress(ONOSLLDP.LLDP_ONLAB);
         ethPacket.setPad(true);
 
         bddpEth = new Ethernet();
         bddpEth.setEtherType(Ethernet.TYPE_BSN);
-        bddpEth.setDestinationMACAddress(MacAddress.BROADCAST);
+        bddpEth.setDestinationMACAddress(ONOSLLDP.BDDP_MULTICAST);
         bddpEth.setPad(true);
 
         isStopped = true;
@@ -110,7 +108,7 @@ public class LinkDiscovery implements TimerTask {
     public synchronized void start() {
         if (isStopped) {
             isStopped = false;
-            timeout = Timer.newTimeout(this, 0, MILLISECONDS);
+            timeout = Timer.getTimer().newTimeout(this, 0, MILLISECONDS);
         } else {
             log.warn("LinkDiscovery started multiple times?");
         }
@@ -219,7 +217,7 @@ public class LinkDiscovery implements TimerTask {
         }
 
         if (!isStopped()) {
-            timeout = t.timer().newTimeout(this, context.probeRate(), MILLISECONDS);
+            timeout = Timer.getTimer().newTimeout(this, context.probeRate(), MILLISECONDS);
         }
     }
 
@@ -265,7 +263,7 @@ public class LinkDiscovery implements TimerTask {
         if (context.packetService() == null) {
             return;
         }
-        log.trace("Sending probes out of {}@{}", portNumber, device.id());
+        log.trace("Sending probes out to {}@{}", portNumber, device.id());
         OutboundPacket pkt = createOutBoundLldp(portNumber);
         context.packetService().emit(pkt);
         if (context.useBddp()) {

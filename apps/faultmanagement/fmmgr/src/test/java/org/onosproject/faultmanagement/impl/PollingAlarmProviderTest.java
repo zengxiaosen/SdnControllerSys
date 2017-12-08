@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import org.onosproject.cluster.NodeId;
 import org.onosproject.cluster.RoleInfo;
 import org.onosproject.incubator.net.faultmanagement.alarm.Alarm;
 import org.onosproject.incubator.net.faultmanagement.alarm.AlarmConsumer;
-import org.onosproject.incubator.net.faultmanagement.alarm.AlarmId;
 import org.onosproject.incubator.net.faultmanagement.alarm.AlarmProvider;
 import org.onosproject.incubator.net.faultmanagement.alarm.AlarmProviderRegistry;
 import org.onosproject.incubator.net.faultmanagement.alarm.AlarmProviderRegistryAdapter;
@@ -97,9 +96,8 @@ public class PollingAlarmProviderTest {
     private final DeviceEvent deviceEvent =
             new DeviceEvent(DeviceEvent.Type.DEVICE_AVAILABILITY_CHANGED, device);
 
-    private static final String UNIQUE_ID_1 = "unique_id_1";
-    private static final AlarmId A_ID = AlarmId.alarmId(DEVICE_ID, UNIQUE_ID_1);
-    private static final DefaultAlarm ALARM = new DefaultAlarm.Builder(A_ID,
+
+    private static final DefaultAlarm ALARM = new DefaultAlarm.Builder(
             DEVICE_ID, "aaa", Alarm.SeverityLevel.CRITICAL, 0).build();
 
     private final Driver driver = new MockDriver();
@@ -300,7 +298,7 @@ public class PollingAlarmProviderTest {
 
         @Override
         public Object get(Object key) {
-            if ("pollFrequency".equals(key)) {
+            if (key.equals("pollFrequency")) {
                 return "1";
             }
             return null;

@@ -1,6 +1,5 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
-    '//lib:JACKSON',
     '//lib:javax.ws.rs-api',
     '//incubator/api:onos-incubator-api',
     '//utils/rest:onlab-rest',
@@ -27,10 +26,10 @@ osgi_jar_with_tests (
 
 onos_app (
     app_name = 'org.onosproject.drivers.arista',
-    title = 'Arista Drivers',
+    title = 'Arista Device Drivers',
     category = 'Drivers',
     url = 'http://onosproject.org',
-    description = 'Adds support for Arista devices.',
+    description = 'ONOS Arista Device Drivers application.',
     included_bundles = BUNDLES,
     required_apps = [ 'org.onosproject.restsb' ],
 )

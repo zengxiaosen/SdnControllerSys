@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ public class OpticalOduIntentCompiler implements IntentCompiler<OpticalOduIntent
         // Release of intent resources here is only a temporary solution for handling the
         // case of recompiling due to intent restoration (when intent state is FAILED).
         // TODO: try to release intent resources in IntentManager.
-        resourceService.release(intent.key());
+        resourceService.release(intent.id());
 
         // Check OduClt ports availability
         Resource srcPortResource = Resources.discrete(src.deviceId(), src.port()).resource();
@@ -210,7 +210,7 @@ public class OpticalOduIntentCompiler implements IntentCompiler<OpticalOduIntent
         Set<Resource> resources = slotsMap.entrySet().stream()
                 .flatMap(x -> x.getValue()
                         .stream()
-                        .flatMap(ts -> Stream.of(
+                        .flatMap(ts-> Stream.of(
                                 Resources.discrete(x.getKey().src().deviceId(), x.getKey().src().port())
                                         .resource().child(ts),
                                 Resources.discrete(x.getKey().dst().deviceId(), x.getKey().dst().port())
@@ -221,7 +221,7 @@ public class OpticalOduIntentCompiler implements IntentCompiler<OpticalOduIntent
 
     private void allocateResources(Intent intent, List<Resource> resources) {
         // reserve all of required resources
-        List<ResourceAllocation> allocations = resourceService.allocate(intent.key(), resources);
+        List<ResourceAllocation> allocations = resourceService.allocate(intent.id(), resources);
         if (allocations.isEmpty()) {
             log.info("Resource allocation for {} failed (resource request: {})", intent, resources);
             throw new OpticalIntentCompilationException("Unable to allocate resources: " + resources);

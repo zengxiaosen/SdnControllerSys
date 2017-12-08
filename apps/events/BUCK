@@ -1,9 +1,7 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
-    '//lib:JACKSON',
     '//lib:org.apache.karaf.shell.console',
     '//cli:onos-cli',
-    '//lib:joda-time',
 ]
 
 osgi_jar_with_tests (
@@ -13,10 +11,8 @@ osgi_jar_with_tests (
 )
 
 onos_app (
-    title = 'Event History',
-    category = 'Test Utility',
+    title = 'Event History App',
+    category = 'Utility',
     url = 'http://onosproject.org',
-    description = 'Allows recording and tracking of otherwise ephemeral ONOS core events. ' +
-        'It is primarily aimed for supporting various system tests and to assure that expected ' +
-        'events are raised and broadcast to applications that have requested them.',
+    description = 'App to display ONOS event history.',
 )

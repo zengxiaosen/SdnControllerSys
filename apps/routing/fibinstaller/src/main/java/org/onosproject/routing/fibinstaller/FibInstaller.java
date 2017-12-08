@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.onosproject.routing.fibinstaller;
 import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -36,14 +37,14 @@ import org.onosproject.app.ApplicationService;
 import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.config.basics.McastConfig;
-import org.onosproject.net.intf.Interface;
-import org.onosproject.net.intf.InterfaceService;
-import org.onosproject.routeservice.ResolvedRoute;
-import org.onosproject.routeservice.Route;
-import org.onosproject.routeservice.RouteEvent;
-import org.onosproject.routeservice.RouteListener;
-import org.onosproject.routeservice.RouteService;
+import org.onosproject.incubator.net.config.basics.McastConfig;
+import org.onosproject.incubator.net.intf.Interface;
+import org.onosproject.incubator.net.intf.InterfaceService;
+import org.onosproject.incubator.net.routing.ResolvedRoute;
+import org.onosproject.incubator.net.routing.RouteEvent;
+import org.onosproject.incubator.net.routing.RouteListener;
+import org.onosproject.incubator.net.routing.RouteService;
+import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
@@ -66,14 +67,12 @@ import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.flowobjective.NextObjective;
 import org.onosproject.net.flowobjective.ObjectiveContext;
-import org.onosproject.routing.InterfaceProvisionRequest;
+import org.onosproject.routing.AsyncDeviceFetcher;
 import org.onosproject.routing.NextHop;
 import org.onosproject.routing.NextHopGroupKey;
-import org.onosproject.routing.Router;
-import org.onosproject.routing.RouterInfo;
+import org.onosproject.routing.RouterInterfaceManager;
 import org.onosproject.routing.RoutingService;
-import org.onosproject.routing.config.RoutingConfiguration;
-import org.onosproject.routing.config.RoutersConfig;
+import org.onosproject.routing.config.RouterConfig;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -132,7 +131,10 @@ public class FibInstaller {
     // Device id of data-plane switch - should be learned from config
     private DeviceId deviceId;
 
-    private Router interfaceManager;
+    private ConnectPoint controlPlaneConnectPoint;
+
+    private RouterInterfaceManager interfaceManager;
+    private AsyncDeviceFetcher asyncDeviceFetcher;
 
     private ApplicationId coreAppId;
     private ApplicationId routerAppId;
@@ -164,8 +166,6 @@ public class FibInstaller {
         componentConfigService.registerProperties(getClass());
         modified(context);
 
-        RoutingConfiguration.register(networkConfigRegistry);
-
         coreAppId = coreService.registerApplication(CoreService.CORE_APP_NAME);
         routerAppId = coreService.registerApplication(RoutingService.ROUTER_APP_ID);
         fibAppId = coreService.registerApplication(APP_NAME);
@@ -173,6 +173,8 @@ public class FibInstaller {
         networkConfigRegistry.registerConfigFactory(mcastConfigFactory);
 
         networkConfigService.addListener(configListener);
+
+        asyncDeviceFetcher = AsyncDeviceFetcher.create(deviceService);
 
         processRouterConfig();
 
@@ -183,9 +185,8 @@ public class FibInstaller {
 
     @Deactivate
     protected void deactivate() {
+        asyncDeviceFetcher.shutdown();
         networkConfigService.removeListener(configListener);
-
-        RoutingConfiguration.unregister(networkConfigRegistry);
 
         componentConfigService.unregisterProperties(getClass(), false);
 
@@ -206,27 +207,32 @@ public class FibInstaller {
     }
 
     private void processRouterConfig() {
-        Set<RoutersConfig.Router> routerConfigs =
-                RoutingConfiguration.getRouterConfigurations(networkConfigService, routerAppId);
-        if (routerConfigs.isEmpty()) {
+        RouterConfig routerConfig =
+                networkConfigService.getConfig(routerAppId, RoutingService.ROUTER_CONFIG_CLASS);
+
+        if (routerConfig == null) {
             log.info("Router config not available");
             return;
         }
-        RoutersConfig.Router routerConfig = routerConfigs.stream().findFirst().get();
 
-        if (interfaceManager == null) {
-            deviceId = routerConfig.controlPlaneConnectPoint().deviceId();
+        Set<String> interfaces = Sets.newHashSet(routerConfig.getInterfaces());
+
+        if (deviceId == null) {
+            controlPlaneConnectPoint = routerConfig.getControlPlaneConnectPoint();
+            log.info("Control Plane Connect Point: {}", controlPlaneConnectPoint);
+
+            deviceId = routerConfig.getControlPlaneConnectPoint().deviceId();
             log.info("Router device ID is {}", deviceId);
 
             routeService.addListener(routeListener);
-
-            interfaceManager = createRouter(RouterInfo.from(routerConfig));
+            asyncDeviceFetcher.getDevice(deviceId).whenComplete((deviceId, e) ->
+                    interfaceManager = createRouter(deviceId, interfaces));
         } else {
-            interfaceManager.changeConfiguration(RouterInfo.from(routerConfig), false);
+            interfaceManager.changeConfiguredInterfaces(interfaces);
         }
     }
 
-    /**
+    /*
      * Removes filtering objectives and routes before deactivate.
      */
     private void cleanUp() {
@@ -234,23 +240,21 @@ public class FibInstaller {
         routeService.removeListener(routeListener);
 
         //clean up the routes.
-        prefixToNextHop.entrySet().stream()
-                .map(e -> new Route(Route.Source.UNDEFINED, e.getKey(), e.getValue()))
-                .forEach(this::deleteRoute);
+        for (Map.Entry<IpPrefix, IpAddress> routes: prefixToNextHop.entrySet()) {
+            deleteRoute(new ResolvedRoute(routes.getKey(), null, null, null));
+        }
 
         if (interfaceManager != null) {
             interfaceManager.cleanup();
         }
     }
 
-    private Router createRouter(RouterInfo info) {
-        return new Router(
-                info,
+    private RouterInterfaceManager createRouter(DeviceId deviceId, Set<String> configuredInterfaces) {
+        return new RouterInterfaceManager(deviceId,
+                configuredInterfaces,
                 interfaceService,
-                deviceService,
                 this::provisionInterface,
-                this::unprovisionInterface,
-                false);
+                this::unprovisionInterface);
     }
 
     private void updateRoute(ResolvedRoute route) {
@@ -267,10 +271,6 @@ public class FibInstaller {
     }
 
     private synchronized void deleteRoute(ResolvedRoute route) {
-        deleteRoute(route.route());
-    }
-
-    private void deleteRoute(Route route) {
         //Integer nextId = nextHops.get(route.nextHop());
 
         /* Group group = deleteNextHop(route.prefix());
@@ -410,11 +410,11 @@ public class FibInstaller {
         return group;
     }*/
 
-    private void provisionInterface(InterfaceProvisionRequest intf) {
+    private void provisionInterface(Interface intf) {
         updateInterfaceFilters(intf, true);
     }
 
-    private void unprovisionInterface(InterfaceProvisionRequest intf) {
+    private void unprovisionInterface(Interface intf) {
         updateInterfaceFilters(intf, false);
     }
 
@@ -424,7 +424,7 @@ public class FibInstaller {
      * @param intf interface to update objectives for
      * @param install true to install the objectives, false to remove them
      */
-    private void updateInterfaceFilters(InterfaceProvisionRequest intf, boolean install) {
+    private void updateInterfaceFilters(Interface intf, boolean install) {
         updateFilteringObjective(intf, install);
         updateMcastFilteringObjective(intf, install);
     }
@@ -432,11 +432,10 @@ public class FibInstaller {
     /**
      * Installs or removes unicast filtering objectives relating to an interface.
      *
-     * @param routerIntf interface to update objectives for
+     * @param intf interface to update objectives for
      * @param install true to install the objectives, false to remove them
      */
-    private void updateFilteringObjective(InterfaceProvisionRequest routerIntf, boolean install) {
-        Interface intf = routerIntf.intf();
+    private void updateFilteringObjective(Interface intf, boolean install) {
         VlanId assignedVlan = (egressVlan().equals(VlanId.NONE)) ?
                 VlanId.vlanId(ASSIGNED_VLAN) :
                 egressVlan();
@@ -455,19 +454,20 @@ public class FibInstaller {
         fob.permit().fromApp(fibAppId);
         sendFilteringObjective(install, fob, intf);
 
-        // then add the same mac/vlan filters for control-plane connect point
-        fob.withKey(Criteria.matchInPort(routerIntf.controlPlaneConnectPoint().port()));
-        sendFilteringObjective(install, fob, intf);
+        if (controlPlaneConnectPoint != null) {
+            // then add the same mac/vlan filters for control-plane connect point
+            fob.withKey(Criteria.matchInPort(controlPlaneConnectPoint.port()));
+            sendFilteringObjective(install, fob, intf);
+        }
     }
 
     /**
      * Installs or removes multicast filtering objectives relating to an interface.
      *
-     * @param routerIntf interface to update objectives for
+     * @param intf interface to update objectives for
      * @param install true to install the objectives, false to remove them
      */
-    private void updateMcastFilteringObjective(InterfaceProvisionRequest routerIntf, boolean install) {
-        Interface intf = routerIntf.intf();
+    private void updateMcastFilteringObjective(Interface intf, boolean install) {
         VlanId assignedVlan = (egressVlan().equals(VlanId.NONE)) ?
                 VlanId.vlanId(ASSIGNED_VLAN) :
                 egressVlan();

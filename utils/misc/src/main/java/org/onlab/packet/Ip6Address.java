@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,11 +30,6 @@ public final class Ip6Address extends IpAddress {
     public static final IpAddress.Version VERSION = IpAddress.Version.INET6;
     public static final int BYTE_LENGTH = IpAddress.INET6_BYTE_LENGTH;
     public static final int BIT_LENGTH = IpAddress.INET6_BIT_LENGTH;
-
-    /**
-     * All-zero unspecified IPv6 address.
-     */
-    public static final Ip6Address ZERO = Ip6Address.valueOf("::");
 
     /**
      * Constructor for given IP address version and address octets.

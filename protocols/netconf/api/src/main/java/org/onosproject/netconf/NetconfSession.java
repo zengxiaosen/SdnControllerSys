@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,51 +17,29 @@
 package org.onosproject.netconf;
 
 import com.google.common.annotations.Beta;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Set;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * NETCONF session object that allows NETCONF operations on top with the physical
  * device on top of an SSH connection.
  */
-// TODO change return type of methods to <Capability, XMLdoc, string or yang obj>
+// TODO change return type of methdos to <Capability, XMLdoc, string or yang obj>
 public interface NetconfSession {
 
     /**
      * Executes an asynchronous RPC to the server and obtains a future to be completed.
      *
-     * The caller must ensure that the message-id in any request is unique
-     * for the session
-     *
-     * @deprecated  - 1.10.0 do not remove needs reworking
      * @param request the XML containing the RPC for the server.
      * @return Server response or ERROR
      * @throws NetconfException when there is a problem in the communication process on
      * the underlying connection
      */
-    @Deprecated
     CompletableFuture<String> request(String request) throws NetconfException;
 
-    /**
-     * Executes an asynchronous RPC request to the server and obtains a future
-     * for it's response.
-     *
-     * @param request the XML containing the RPC request for the server.
-     * @return Server response or ERROR
-     * @throws NetconfException when there is a problem in the communication process on
-     * the underlying connection
-     * @throws NetconfTransportException on secure transport-layer error
-     */
-    default CompletableFuture<String> rpc(String request) throws NetconfException {
-        return request(request);
-    }
-
 
     /**
-     * Retrieves the requested configuration, different from get-config.
+     * Retrives the requested configuration, different from get-config.
      *
      * @param request the XML containing the request to the server.
      * @return device running configuration
@@ -71,7 +49,7 @@ public interface NetconfSession {
     String get(String request) throws NetconfException;
 
     /**
-     * Retrieves the requested data.
+     * Retrives the requested data.
      *
      * @param filterSchema XML subtrees to include in the reply
      * @param withDefaultsMode with-defaults mode
@@ -103,64 +81,50 @@ public interface NetconfSession {
     String requestSync(String request) throws NetconfException;
 
     /**
-     * Retrieves the specified configuration.
+     * Retrives the specified configuration.
      *
-     * @param netconfTargetConfig the type of configuration to retrieve.
+     * @param targetConfiguration the type of configuration to retrieve.
      * @return specified configuration.
      * @throws NetconfException when there is a problem in the communication process on
      * the underlying connection
      */
-    String getConfig(DatastoreId netconfTargetConfig) throws NetconfException;
+    String getConfig(String targetConfiguration) throws NetconfException;
 
     /**
-     * Retrieves part of the specified configuration based on the filterSchema.
+     * Retrives part of the specivied configuration based on the filterSchema.
      *
-     * @param netconfTargetConfig       the type of configuration to retrieve.
+     * @param targetConfiguration       the type of configuration to retrieve.
      * @param configurationFilterSchema XML schema to filter the configuration
      *                                  elements we are interested in
      * @return device running configuration.
      * @throws NetconfException when there is a problem in the communication process on
      * the underlying connection
      */
-    String getConfig(DatastoreId netconfTargetConfig,
-                             String configurationFilterSchema)
+    String getConfig(String targetConfiguration, String configurationFilterSchema)
             throws NetconfException;
 
     /**
-     * Retrieves part of the specified configuration based on the filterSchema.
+     * Retrives part of the specified configuration based on the filterSchema.
      *
      * @param newConfiguration configuration to set
      * @return true if the configuration was edited correctly
      * @throws NetconfException when there is a problem in the communication process on
      * the underlying connection
      */
+
     boolean editConfig(String newConfiguration) throws NetconfException;
 
     /**
-     * Retrieves part of the specified configuration based on the filterSchema.
+     * Retrives part of the specified configuration based on the filterSchema.
      *
-     * @param netconfTargetConfig the targetConfiguration to change
+     * @param targetConfiguration the targetConfiguration to change
      * @param mode                selected mode to change the configuration
      * @param newConfiguration    configuration to set
      * @return true if the configuration was edited correctly
      * @throws NetconfException when there is a problem in the communication process on
      * the underlying connection
      */
-    boolean editConfig(DatastoreId netconfTargetConfig, String mode, String newConfiguration)
-            throws NetconfException;
-
-    /**
-     * Copies the configuration between configuration datastores.
-     * <p>
-     * The target configuration can't be the running one
-     *
-     * @param destination configuration datastore
-     * @param source configuration datastore
-     * @return true if the configuration was copied correctly
-     * @throws NetconfException when there is a problem in the communication process on
-     * the underlying connection
-     */
-    boolean copyConfig(DatastoreId destination, DatastoreId source)
+    boolean editConfig(String targetConfiguration, String mode, String newConfiguration)
             throws NetconfException;
 
     /**
@@ -168,38 +132,24 @@ public interface NetconfSession {
      * to the target configuration.
      * The target configuration can't be the running one
      *
-     * @param netconfTargetConfig the type of configuration to retrieve.
-     * @param newConfiguration configuration XML to set or URL tag to the configuration
-     * @return true if the configuration was copied correctly
-     * @throws NetconfException when there is a problem in the communication process on
-     * the underlying connection
-     */
-     boolean copyConfig(DatastoreId netconfTargetConfig, String newConfiguration)
-            throws NetconfException;
-
-    /**
-     * Copies the new configuration, an Url or a complete configuration xml tree
-     * to the target configuration.
-     * The target configuration can't be the running one
-     *
-     * @param netconfTargetConfig the type of configuration to retrieve.
+     * @param targetConfiguration the type of configuration to retrieve.
      * @param newConfiguration    configuration to set
      * @return true if the configuration was copied correctly
      * @throws NetconfException when there is a problem in the communication process on
      * the underlying connection
      */
-    boolean copyConfig(String netconfTargetConfig, String newConfiguration)
+    boolean copyConfig(String targetConfiguration, String newConfiguration)
             throws NetconfException;
 
     /**
      * Deletes part of the specified configuration based on the filterSchema.
      *
-     * @param netconfTargetConfig the name of the configuration to delete
+     * @param targetConfiguration the name of the configuration to delete
      * @return true if the configuration was copied correctly
      * @throws NetconfException when there is a problem in the communication process on
      * the underlying connection
      */
-    boolean deleteConfig(DatastoreId netconfTargetConfig) throws NetconfException;
+    boolean deleteConfig(String targetConfiguration) throws NetconfException;
 
     /**
      * Starts subscription to the device's notifications.
@@ -227,22 +177,22 @@ public interface NetconfSession {
     /**
      * Locks the specified configuration.
      *
-     * @param datastore configuration datastore to be locked
+     * @param configType type of configuration to be locked
      * @return true if successful.
      * @throws NetconfException when there is a problem in the communication process on
      * the underlying connection
      */
-    boolean lock(DatastoreId datastore) throws NetconfException;
+    boolean lock(String configType) throws NetconfException;
 
     /**
      * Unlocks the specified configuration.
      *
-     * @param datastore configuration datastore to be unlocked
+     * @param configType type of configuration to be locked
      * @return true if successful.
      * @throws NetconfException when there is a problem in the communication process on
      * the underlying connection
      */
-    boolean unlock(DatastoreId datastore) throws NetconfException;
+    boolean unlock(String configType) throws NetconfException;
 
     /**
      * Locks the running configuration.
@@ -251,9 +201,7 @@ public interface NetconfSession {
      * @throws NetconfException when there is a problem in the communication process on
      * the underlying connection
      */
-    default boolean lock() throws NetconfException {
-        return lock(DatastoreId.RUNNING);
-    }
+    boolean lock() throws NetconfException;
 
     /**
      * Unlocks the running configuration.
@@ -262,9 +210,7 @@ public interface NetconfSession {
      * @throws NetconfException when there is a problem in the communication process on
      * the underlying connection
      */
-    default boolean unlock() throws NetconfException {
-        return unlock(DatastoreId.RUNNING);
-    }
+    boolean unlock() throws NetconfException;
 
     /**
      * Closes the Netconf session with the device.
@@ -284,38 +230,18 @@ public interface NetconfSession {
     String getSessionId();
 
     /**
-     * Gets the capabilities of the remote Netconf device associated to this
-     * session.
+     * Gets the capabilities of the Netconf server associated to this session.
      *
-     * @return Network capabilities as strings in a Set.
-     *
-     * @since 1.10.0
+     * @return Network capabilities as a string.
      */
-    Set<String> getDeviceCapabilitiesSet();
-
-    /**
-     * Checks the state of the underlying SSH session and connection
-     * and if necessary it reestablishes it.
-     * Should be implemented, providing a default here for retrocompatibility.
-     * @throws NetconfException when there is a problem in reestablishing
-     * the connection or the session to the device.
-     */
-    default void checkAndReestablish() throws NetconfException {
-        Logger log = LoggerFactory.getLogger(NetconfSession.class);
-        log.error("Not implemented/exposed by the underlying session implementation");
-    }
+    String getServerCapabilities();
 
     /**
      * Sets the ONOS side capabilities.
      *
-     * @param capabilities list of capabilities ONOS has.
-     *
-     * @since 1.10.0
+     * @param capabilities list of capabilities the device has.
      */
-    default void setOnosCapabilities(Iterable<String> capabilities) {
-        // default implementation should be removed in the future
-        // no-op
-    }
+    void setDeviceCapabilities(List<String> capabilities);
 
     /**
      * Remove a listener from the underlying stream handler implementation.
@@ -330,29 +256,5 @@ public interface NetconfSession {
      * @param listener event listener.
      */
     void removeDeviceOutputListener(NetconfDeviceOutputEventListener listener);
-
-    /**
-     * Read the connect timeout that this session was created with.
-     * @return timeout in seconds
-     */
-    default int timeoutConnectSec() {
-        return 0;
-    };
-
-    /**
-     * Read the reply timeout that this session was created with.
-     * @return timeout in seconds
-     */
-    default int timeoutReplySec() {
-        return 0;
-    };
-
-    /**
-     * Read the idle timeout that this session was created with.
-     * @return timeout in seconds
-     */
-    default int timeoutIdleSec() {
-        return 0;
-    };
 
 }

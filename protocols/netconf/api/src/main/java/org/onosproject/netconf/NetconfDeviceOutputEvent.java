@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,10 @@ package org.onosproject.netconf;
 
 import org.onosproject.event.AbstractEvent;
 
-import com.google.common.base.MoreObjects;
-
 import java.util.Optional;
 
 /**
- * Describes a NETCONF device related event.
+ * Describes network configuration event.
  */
 public final class NetconfDeviceOutputEvent extends
         AbstractEvent<NetconfDeviceOutputEvent.Type, Object> {
@@ -33,7 +31,7 @@ public final class NetconfDeviceOutputEvent extends
     private final NetconfDeviceInfo deviceInfo;
 
     /**
-     * Type of device related events.
+     * Type of network configuration events.
      */
     public enum Type {
         /**
@@ -55,13 +53,6 @@ public final class NetconfDeviceOutputEvent extends
          * Signifies that the device has encountered an error.
          */
         DEVICE_ERROR,
-
-        /**
-         * Signifies that the device has closed the session.
-         * ONOS will try to reopen it, if it fails again
-         * it will mark the device as unreachable.
-         */
-        SESSION_CLOSED,
 
     }
 
@@ -126,14 +117,5 @@ public final class NetconfDeviceOutputEvent extends
      */
     public Optional<Integer> getMessageID() {
         return messageID;
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                .add("messageID", messageID)
-                .add("deviceInfo", deviceInfo)
-                .add("messagePayload", messagePayload)
-                .toString();
     }
 }

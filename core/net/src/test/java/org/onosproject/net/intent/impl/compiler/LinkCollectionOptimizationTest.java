@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.onosproject.net.intent.impl.compiler;
 
 import com.google.common.collect.ImmutableSet;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.packet.Ethernet;
@@ -24,9 +25,7 @@ import org.onlab.packet.MplsLabel;
 import org.onlab.packet.VlanId;
 import org.onosproject.cfg.ComponentConfigAdapter;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.DeviceId;
 import org.onosproject.net.FilteredConnectPoint;
-import org.onosproject.net.domain.DomainService;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
@@ -48,10 +47,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.core.Is.is;
 import static org.onlab.packet.EthType.EtherType.IPV4;
-import static org.onosproject.net.NetTestTools.APP_ID;
-import static org.onosproject.net.domain.DomainId.LOCAL;
-import static org.onosproject.net.flow.criteria.Criterion.Type.MPLS_LABEL;
-import static org.onosproject.net.flow.criteria.Criterion.Type.VLAN_VID;
+import static org.onosproject.net.NetTestTools.*;
+import static org.onosproject.net.flow.criteria.Criterion.Type.*;
 import static org.onosproject.net.flow.instructions.L2ModificationInstruction.ModEtherInstruction;
 
 /**
@@ -68,11 +65,8 @@ public class LinkCollectionOptimizationTest extends AbstractLinkCollectionTest {
                 .andReturn(appId);
         sut.coreService = coreService;
 
-        domainService = createMock(DomainService.class);
-        expect(domainService.getDomain(anyObject(DeviceId.class))).andReturn(LOCAL).anyTimes();
-        sut.domainService = domainService;
-
-        super.setUp();
+        Intent.unbindIdGenerator(idGenerator);
+        Intent.bindIdGenerator(idGenerator);
 
         intentExtensionService = createMock(IntentExtensionService.class);
         intentExtensionService.registerCompiler(LinkCollectionIntent.class, sut);
@@ -92,7 +86,12 @@ public class LinkCollectionOptimizationTest extends AbstractLinkCollectionTest {
         LinkCollectionCompiler.optimizeInstructions = true;
         LinkCollectionCompiler.copyTtl = true;
 
-        replay(coreService, domainService, intentExtensionService);
+        replay(coreService, intentExtensionService);
+    }
+
+    @After
+    public void tearDown() {
+        Intent.unbindIdGenerator(idGenerator);
     }
 
     /**

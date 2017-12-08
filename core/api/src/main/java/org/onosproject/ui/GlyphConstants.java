@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,6 @@ public final class GlyphConstants {
     public static final String PORT_TABLE = "portTable";
     public static final String GROUP_TABLE = "groupTable";
     public static final String METER_TABLE = "meterTable";
-    public static final String PIPECONF_TABLE = "pipeconfTable";
 
     public static final String SUMMARY = "m_summary";
     public static final String DETAILS = "m_details";

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,14 +27,8 @@ import static org.hamcrest.Matchers.is;
  */
 public class DefaultMappingEntryTest {
 
-    private static final MappingKey MAPPING_KEY =
-                         new MappingTestMocks.MockMappingKey();
-    private static final MappingValue MAPPING_VALUE =
-                         new MappingTestMocks.MockMappingValue();
-
-    private final MappingEntry entry1 = makeMappingEntry(1);
-    private final MappingEntry sameAsEntry1 = makeMappingEntry(1);
-    private final MappingEntry entry2 = makeMappingEntry(2);
+    private static final MappingKey MAPPING_KEY = new DefaultMappingKey();
+    private static final MappingValue MAPPING_VALUE = new DefaultMappingValue();
 
     /**
      * Creates a new mapping entry from an unique value.
@@ -53,6 +47,10 @@ public class DefaultMappingEntryTest {
 
         return new DefaultMappingEntry(mapping, MappingEntry.MappingEntryState.ADDED);
     }
+
+    final MappingEntry entry1 = makeMappingEntry(1);
+    final MappingEntry sameAsEntry1 = makeMappingEntry(1);
+    final MappingEntry entry2 = makeMappingEntry(2);
 
     /**
      * Tests the equals, hashCode and toString methods using Guava EqualsTester.

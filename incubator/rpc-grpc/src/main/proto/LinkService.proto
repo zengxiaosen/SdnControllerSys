@@ -1,8 +1,7 @@
 syntax = "proto3";
 option java_package = "org.onosproject.grpc.net.link";
 
-import "net/link/LinkDescriptionProto.proto";
-import "net/ConnectPointProto.proto";
+import "Link.proto";
 
 package Link;
 
@@ -12,15 +11,15 @@ message Void {}
 message LinkDetectedMsg {
   // ProviderId scheme only
   string provider_id = 1;
-  net.link.LinkDescriptionProto link_description = 2;
+  LinkDescription link_description = 2;
 }
 
 message LinkVanishedMsg {
   // ProviderId scheme only
   string provider_id = 1;
   oneof subject {
-    net.link.LinkDescriptionProto link_description = 2;
-    net.ConnectPointProto connect_point = 3;
+    LinkDescription link_description = 2;
+    ConnectPoint connect_point = 3;
     string device_id = 4;
   }
 }

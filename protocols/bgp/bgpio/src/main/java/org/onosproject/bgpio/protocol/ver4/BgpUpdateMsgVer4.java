@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ public class BgpUpdateMsgVer4 implements BgpUpdateMsg {
     public static final int MIN_LEN_AFTER_WITHDRW_ROUTES = 2;
     public static final int MINIMUM_COMMON_HEADER_LENGTH = 19;
     public static final BgpType MSG_TYPE = BgpType.UPDATE;
-    private static byte[] marker = new byte[] {(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,
+    public static byte[] marker = new byte[] {(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,
                                               (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,
                                               (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,
                                               (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff};
@@ -246,14 +246,8 @@ public class BgpUpdateMsgVer4 implements BgpUpdateMsg {
                     }
                 }
 
-                if ((afi == Constants.AFI_FLOWSPEC_VALUE)
-                        || (afi == Constants.AFI_VALUE)) {
+                if ((afi == Constants.AFI_FLOWSPEC_VALUE) || (afi == Constants.AFI_VALUE)) {
                     //unfeasible route length
-                    cb.writeShort(0);
-                }
-
-                if ((afi == Constants.AFI_EVPN_VALUE)
-                        && (safi == Constants.SAFI_EVPN_VALUE)) {
                     cb.writeShort(0);
                 }
 

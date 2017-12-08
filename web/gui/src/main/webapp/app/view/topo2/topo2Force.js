@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,77 +23,133 @@
     'use strict';
 
     // injected refs
-    var $log, $loc, wss;
+    var $log,
+        wss;
 
-    var t2is, t2rs, t2ls, t2vs, t2bcs, t2ss, t2bgs, t2tbs, t2mss;
-    var svg, uplink, dim, opts, zoomer;
+    var t2is, t2rs, t2ls, t2vs, t2bcs, t2ss;
+    var svg, forceG, uplink, dim, opts, zoomer;
+
+    // D3 Selections
+    var node;
 
     // ========================== Helper Functions
 
-    function init(_svg_, _forceG_, _uplink_, _dim_, _zoomer_, _opts_) {
-
+    function init(_svg_, _forceG_, _uplink_, _dim_, zoomer, _opts_) {
         svg = _svg_;
+        forceG = _forceG_;
         uplink = _uplink_;
         dim = _dim_;
-        zoomer = _zoomer_;
         opts = _opts_;
 
-
-        t2bgs.init();
-        t2bgs.region = t2rs;
-        t2ls.init(svg, uplink, dim, zoomer, opts);
+        t2ls = t2ls(svg, forceG, uplink, dim, zoomer, opts);
         t2bcs.addLayout(t2ls);
-        t2ss.init(svg, zoomer);
-        t2ss.region = t2rs;
         t2rs.layout = t2ls;
-        t2mss.region = t2rs;
-        t2tbs.init();
-        navToBookmarkedRegion($loc.search().regionId);
+        t2ss.init(svg, zoomer);
     }
 
     function destroy() {
-        t2tbs.destroy();
         $log.debug('Destroy topo force layout');
     }
 
-    function navToBookmarkedRegion(regionId) {
-        $log.debug('navToBookmarkedRegion:', regionId);
-        if (regionId) {
-            wss.sendEvent('topo2navRegion', {
-                rid: regionId,
+    // ========================== Temporary Code (to be deleted later)
+
+    function request(dir, rid) {
+        wss.sendEvent('topo2navRegion', {
+            dir: dir,
+            rid: rid
+        });
+    }
+
+    function doTmpCurrentLayout(data) {
+        var topdiv = d3.select('#topo2tmp');
+        var parentRegion = data.parent;
+        var span = topdiv.select('.parentRegion').select('span');
+        span.text(parentRegion || '[no parent]');
+        span.classed('nav-me', Boolean(parentRegion));
+    }
+
+    function doTmpCurrentRegion(data) {
+        var topdiv = d3.select('#topo2tmp');
+        var span = topdiv.select('.thisRegion').select('span');
+        var div;
+
+        span.text(data.id);
+
+        div = topdiv.select('.subRegions').select('div');
+        data.subregions.forEach(function (r) {
+
+            function nav() {
+                request('down', r.id);
+            }
+
+            div.append('p')
+                .classed('nav-me', true)
+                .text(r.id)
+                .on('click', nav);
+        });
+
+        div = topdiv.select('.devices').select('div');
+        data.layerOrder.forEach(function (tag, idx) {
+            var devs = data.devices[idx];
+            devs.forEach(function (d) {
+                div.append('p')
+                    .text('[' + tag + '] ' + d.id);
             });
 
-            t2ls.createForceElements();
-            t2ls.transitionDownRegion();
-        }
+        });
+
+        div = topdiv.select('.hosts').select('div');
+        data.layerOrder.forEach(function (tag, idx) {
+            var hosts = data.hosts[idx];
+            hosts.forEach(function (h) {
+                div.append('p')
+                    .text('[' + tag + '] ' + h.id);
+            });
+        });
+
+        div = topdiv.select('.links').select('div');
+        var links = data.links;
+        links.forEach(function (lnk) {
+            div.append('p')
+                .text(lnk.id);
+        });
+    }
+
+    function doTmpPeerRegions(data) {
+
     }
 
     // ========================== Event Handlers
 
     function allInstances(data) {
         $log.debug('>> topo2AllInstances event:', data);
+        doTmpCurrentLayout(data);
         t2is.allInstances(data);
     }
 
     function currentLayout(data) {
         $log.debug('>> topo2CurrentLayout event:', data);
-        t2rs.clear();
         t2bcs.addBreadcrumb(data.crumbs);
-        t2bgs.addLayout(data);
     }
 
     function currentRegion(data) {
         $log.debug('>> topo2CurrentRegion event:', data);
-        t2rs.loaded('regionData', data);
+        doTmpCurrentRegion(data);
+        t2rs.addRegion(data);
+        t2ls.createForceLayout();
     }
 
     function topo2PeerRegions(data) {
         $log.debug('>> topo2PeerRegions event:', data);
-        t2rs.loaded('peers', data.peers);
+        doTmpPeerRegions(data);
+    }
+
+    function startDone(data) {
+        $log.debug('>> topo2StartDone event:', data);
     }
 
     function modelEvent(data) {
-        // $log.debug('>> topo2UiModelEvent event:', data);
+        $log.debug('>> topo2UiModelEvent event:', data);
 
         // TODO: Interpret the event and update our topo model state (if needed)
         // To Decide: Can we assume that the server will only send events
@@ -118,6 +174,25 @@
 
     // ========================== Main Service Definition
 
+    function showMastershipFor(id) {
+        suppressLayers(true);
+        node.each(function (n) {
+            if (n.master === id) {
+                n.el.classed('suppressedmax', false);
+            }
+        });
+    }
+
+    function supAmt(less) {
+        return less ? 'suppressed' : 'suppressedmax';
+    }
+
+    function suppressLayers(b, less) {
+        var cls = supAmt(less);
+        node.classed(cls, b);
+        // link.classed(cls, b);
+    }
+
     function newDim(_dim_) {
         dim = _dim_;
         t2vs.newDim(dim);
@@ -139,41 +214,37 @@
         update(t2rs.regionLinks());
     }
 
-    function resetNodeLocation() {
+    function resetAllLocations() {
+        var nodes = t2rs.regionNodes();
 
-        var hovered = t2rs.filterRegionNodes(function (model) {
-            return model.get('hovered');
+        angular.forEach(nodes, function (node) {
+            node.resetPosition();
         });
 
-        angular.forEach(hovered, function (model) {
-            model.resetPosition();
-        });
+        t2ls.update();
+        t2ls.tick();
     }
 
     function unpin() {
-
         var hovered = t2rs.filterRegionNodes(function (model) {
             return model.get('hovered');
         });
 
         angular.forEach(hovered, function (model) {
-            model.fix(false);
+            model.fixed = false;
+            model.el.classed('fixed', false);
         });
-
-        t2ls.start();
     }
 
     angular.module('ovTopo2')
     .factory('Topo2ForceService', [
-        '$log', '$location', 'WebSocketService', 'Topo2InstanceService',
+        '$log', 'WebSocketService', 'Topo2InstanceService',
         'Topo2RegionService', 'Topo2LayoutService', 'Topo2ViewService',
         'Topo2BreadcrumbService', 'Topo2ZoomService', 'Topo2SelectService',
-        'Topo2BackgroundService', 'Topo2ToolbarService', 'Topo2MastershipService',
-        function (_$log_, _$loc_, _wss_, _t2is_, _t2rs_, _t2ls_,
-            _t2vs_, _t2bcs_, zoomService, _t2ss_, _t2bgs_, _t2tbs_, _t2mss_) {
+        function (_$log_, _wss_, _t2is_, _t2rs_, _t2ls_,
+            _t2vs_, _t2bcs_, zoomService, _t2ss_) {
 
             $log = _$log_;
-            $loc = _$loc_;
             wss = _wss_;
             t2is = _t2is_;
             t2rs = _t2rs_;
@@ -181,15 +252,8 @@
             t2vs = _t2vs_;
             t2bcs = _t2bcs_;
             t2ss = _t2ss_;
-            t2bgs = _t2bgs_;
-            t2tbs = _t2tbs_;
-            t2mss = _t2mss_;
 
             var onZoom = function () {
-                if (!t2rs.isLoadComplete()) {
-                    return;
-                }
-
                 var nodes = [].concat(
                         t2rs.regionNodes(),
                         t2rs.regionLinks()
@@ -211,6 +275,7 @@
                 topo2AllInstances: allInstances,
                 topo2CurrentLayout: currentLayout,
                 topo2CurrentRegion: currentRegion,
+                topo2StartDone: startDone,
 
                 topo2UiModelEvent: modelEvent,
 
@@ -219,8 +284,8 @@
 
                 updateNodes: updateNodes,
                 updateLinks: updateLinks,
-                resetNodeLocation: resetNodeLocation,
-                unpin: unpin,
+                resetAllLocations: resetAllLocations,
+                unpin: unpin
             };
         }]);
 })();

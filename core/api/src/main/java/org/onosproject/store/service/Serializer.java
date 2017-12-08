@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,14 +44,6 @@ public interface Serializer {
     <T> T decode(byte[] bytes);
 
     /**
-     * Copies the specified object.
-     * @param object object to copy.
-     * @param <T> object type
-     * @return copied object
-     */
-    <T> T copy(T object);
-
-    /**
      * Creates a new Serializer instance from a KryoNamespace.
      *
      * @param kryo kryo namespace
@@ -68,11 +60,6 @@ public interface Serializer {
             @Override
             public <T> T decode(byte[] bytes) {
                 return kryo.deserialize(bytes);
-            }
-
-            @Override
-            public <T> T copy(T object) {
-                return kryo.run(k -> k.copy(object));
             }
         };
     }
@@ -109,11 +96,6 @@ public interface Serializer {
             @Override
             public <T> T decode(byte[] bytes) {
                 return namespace.deserialize(bytes);
-            }
-
-            @Override
-            public <T> T copy(T object) {
-                return namespace.run(kryo -> kryo.copy(object));
             }
         };
     }

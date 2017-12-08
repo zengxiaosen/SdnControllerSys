@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@ package org.onosproject.net.intent.impl.phase;
 
 import org.onosproject.net.intent.IntentData;
 import org.onosproject.net.intent.impl.IntentProcessor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
@@ -29,8 +27,6 @@ import static org.onosproject.net.intent.impl.phase.IntentProcessPhase.transferE
  * Represents a phase of requesting a withdraw of an intent.
  */
 final class WithdrawRequest implements IntentProcessPhase {
-
-    private static final Logger log = LoggerFactory.getLogger(WithdrawRequest.class);
 
     private final IntentProcessor processor;
     private final IntentData data;
@@ -61,8 +57,6 @@ final class WithdrawRequest implements IntentProcessPhase {
         if (!stored.isPresent() || stored.get().installables().isEmpty()) {
             switch (data.request()) {
                 case INSTALL_REQ:
-                    // illegal state?
-                    log.warn("{} was requested to withdraw during installation?", data.intent());
                     return Optional.of(new Failed(data));
                 case WITHDRAW_REQ:
                 default: //TODO "default" case should not happen

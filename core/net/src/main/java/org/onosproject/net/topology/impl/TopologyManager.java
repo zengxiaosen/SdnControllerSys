@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,26 +29,12 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
 import org.onosproject.net.provider.AbstractProviderService;
-import org.onosproject.net.topology.ClusterId;
-import org.onosproject.net.topology.GraphDescription;
-import org.onosproject.net.topology.LinkWeigher;
-import org.onosproject.net.topology.LinkWeight;
-import org.onosproject.net.topology.Topology;
-import org.onosproject.net.topology.TopologyCluster;
-import org.onosproject.net.topology.TopologyEvent;
-import org.onosproject.net.topology.TopologyGraph;
-import org.onosproject.net.topology.TopologyListener;
-import org.onosproject.net.topology.TopologyProvider;
-import org.onosproject.net.topology.TopologyProviderRegistry;
-import org.onosproject.net.topology.TopologyProviderService;
-import org.onosproject.net.topology.TopologyService;
-import org.onosproject.net.topology.TopologyStore;
-import org.onosproject.net.topology.TopologyStoreDelegate;
+import org.onosproject.net.topology.*;
 import org.slf4j.Logger;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -74,6 +60,7 @@ public class TopologyManager
     private static final String CLUSTER_NULL = "Topology cluster cannot be null";
     private static final String CONNECTION_POINT_NULL = "Connection point cannot be null";
     private static final String LINK_WEIGHT_NULL = "Link weight cannot be null";
+    private static HashSet<String> hs = new HashSet<String>();
 
     private final Logger log = getLogger(getClass());
 
@@ -84,6 +71,7 @@ public class TopologyManager
 
     @Activate
     public void activate() {
+
         store.setDelegate(delegate);
         eventDispatcher.addSink(TopologyEvent.class, listenerRegistry);
         log.info("Started");
@@ -147,13 +135,39 @@ public class TopologyManager
         return store.getGraph(topology);
     }
 
+
     @Override
-    public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst) {
+    public synchronized Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst) {
         checkPermission(TOPOLOGY_READ);
         checkNotNull(topology, TOPOLOGY_NULL);
         checkNotNull(src, DEVICE_ID_NULL);
         checkNotNull(dst, DEVICE_ID_NULL);
-        return store.getPaths(topology, src, dst);
+        log.info("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh开始执行算法");
+        Set<Path> result = store.getPaths(topology, src, dst);
+        log.info("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh算法执行结果");
+        log.info("对于源目分别是：" + src.toString() + "," + dst.toString());
+        log.info("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh得到了" + result.size() + "条path");
+        //hs.add(src.toString().trim());
+        //log.info("到目前为止hs的size: " + hs.size());
+        return result;
+        //return store.getPaths(topology, src, dst);
+    }
+
+    @Override
+    public synchronized Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs){
+        checkPermission(TOPOLOGY_READ);
+        checkNotNull(topology, TOPOLOGY_NULL);
+        checkNotNull(src, DEVICE_ID_NULL);
+        checkNotNull(dst, DEVICE_ID_NULL);
+        log.info("开始执行算法");
+        Set<Path> result = store.getPaths1(topology, src, dst, hs);
+        log.info("算法执行结果");
+        log.info("对于源目分别是：" + src.toString() + "," + dst.toString());
+        log.info("得到了" + result.size() + "条path");
+        //hs.add(src.toString().trim());
+        //log.info("到目前为止hs的size: " + hs.size());
+        return result;
+        //return store.getPaths(topology, src, dst);
     }
 
     @Override
@@ -170,35 +184,9 @@ public class TopologyManager
         checkNotNull(topology, TOPOLOGY_NULL);
         checkNotNull(src, DEVICE_ID_NULL);
         checkNotNull(dst, DEVICE_ID_NULL);
-        checkNotNull(weigher, LINK_WEIGHT_NULL);
+        checkNotNull(weigher, "Link weight cannot be null");
+
         return store.getPaths(topology, src, dst, weigher);
-    }
-
-    @Override
-    public Set<Path> getKShortestPaths(Topology topology, DeviceId src,
-                                       DeviceId dst, LinkWeigher weigher,
-                                       int maxPaths) {
-        checkPermission(TOPOLOGY_READ);
-
-        checkNotNull(topology, TOPOLOGY_NULL);
-        checkNotNull(src, DEVICE_ID_NULL);
-        checkNotNull(dst, DEVICE_ID_NULL);
-        checkNotNull(weigher, LINK_WEIGHT_NULL);
-        return store.getKShortestPaths(topology, src, dst, weigher, maxPaths);
-    }
-
-    @Override
-    public Stream<Path> getKShortestPaths(Topology topology,
-                                          DeviceId src,
-                                          DeviceId dst,
-                                          LinkWeigher weigher) {
-        checkPermission(TOPOLOGY_READ);
-
-        checkNotNull(topology, TOPOLOGY_NULL);
-        checkNotNull(src, DEVICE_ID_NULL);
-        checkNotNull(dst, DEVICE_ID_NULL);
-        checkNotNull(weigher, LINK_WEIGHT_NULL);
-        return store.getKShortestPaths(topology, src, dst, weigher);
     }
 
     @Override

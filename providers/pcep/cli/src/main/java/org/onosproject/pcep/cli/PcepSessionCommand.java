@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ package org.onosproject.pcep.cli;
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.onosproject.cli.AbstractShellCommand;
-import org.onosproject.pcep.server.PcepClientController;
-import org.onosproject.pcep.server.PcepErrorDetail;
-import org.onosproject.pcep.server.PcepErrorType;
+import org.onosproject.pcep.controller.PcepClientController;
+import org.onosproject.pcep.controller.PcepErrorDetail;
+import org.onosproject.pcep.controller.PcepErrorType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -190,7 +190,7 @@ public class PcepSessionCommand extends AbstractShellCommand {
                             sessionEstablishmentFailureMap =  pcepErrorDetail.sessionEstablishmentFailure();
                             Set<Integer> sessionFailureKeySet = sessionEstablishmentFailureMap.keySet();
                             for (Integer sessionFailureKey : sessionFailureKeySet) {
-                                if (sessionFailureKey.equals(pcepErrorValue)) {
+                                if (sessionFailureKey == pcepErrorValue) {
                                     System.out.print(sessionEstablishmentFailureMap.get(sessionFailureKey));
                                 }
                             }
@@ -200,7 +200,7 @@ public class PcepSessionCommand extends AbstractShellCommand {
                             unknownObjectMap =  pcepErrorDetail.unknownObject();
                             Set<Integer> unknownObjectKeySet = unknownObjectMap.keySet();
                             for (Integer unknownObjectKey : unknownObjectKeySet) {
-                                if (unknownObjectKey.equals(pcepErrorValue)) {
+                                if (unknownObjectKey == pcepErrorValue) {
                                     System.out.print(unknownObjectMap.get(unknownObjectKey));
                                 }
                             }
@@ -208,7 +208,7 @@ public class PcepSessionCommand extends AbstractShellCommand {
                             notSupportedObjectMap =  pcepErrorDetail.notSupportedObject();
                             Set<Integer> notSupportedObjectKeySet = notSupportedObjectMap.keySet();
                             for (Integer notSupportedObjectKey : notSupportedObjectKeySet) {
-                                if (notSupportedObjectKey.equals(pcepErrorValue)) {
+                                if (notSupportedObjectKey == pcepErrorValue) {
                                     System.out.print(notSupportedObjectMap.get(notSupportedObjectKey));
                                 }
                             }
@@ -216,7 +216,7 @@ public class PcepSessionCommand extends AbstractShellCommand {
                             policyViolationMap =  pcepErrorDetail.policyViolation();
                             Set<Integer> policyViolationKeySet = policyViolationMap.keySet();
                             for (Integer policyViolationKey : policyViolationKeySet) {
-                                if (policyViolationKey.equals(pcepErrorValue)) {
+                                if (policyViolationKey == pcepErrorValue) {
                                     System.out.print(policyViolationMap.get(policyViolationKey));
                                 }
                             }
@@ -224,7 +224,7 @@ public class PcepSessionCommand extends AbstractShellCommand {
                             mandatoryObjectMissingMap =  pcepErrorDetail.mandatoryObjectMissing();
                             Set<Integer> mandatoryObjectMissingKeySet = mandatoryObjectMissingMap.keySet();
                             for (Integer mandatoryObjectMissingKey : mandatoryObjectMissingKeySet) {
-                                if (mandatoryObjectMissingKey.equals(pcepErrorValue)) {
+                                if (mandatoryObjectMissingKey == pcepErrorValue) {
                                     System.out.print(mandatoryObjectMissingMap.get(mandatoryObjectMissingKey));
                                 }
                             }
@@ -238,7 +238,7 @@ public class PcepSessionCommand extends AbstractShellCommand {
                             receptionOfInvalidObjectMap =  pcepErrorDetail.receptionOfInvalidObject();
                             Set<Integer> receptionOfInvalidObjectKeySet = receptionOfInvalidObjectMap.keySet();
                             for (Integer receptionOfInvalidObjectKey : receptionOfInvalidObjectKeySet) {
-                                if (receptionOfInvalidObjectKey.equals(pcepErrorValue)) {
+                                if (receptionOfInvalidObjectKey == pcepErrorValue) {
                                     System.out.print(receptionOfInvalidObjectMap.get(receptionOfInvalidObjectKey));
                                 }
                             }
@@ -246,7 +246,7 @@ public class PcepSessionCommand extends AbstractShellCommand {
                             invalidOperationMap =  pcepErrorDetail.invalidOperation();
                             Set<Integer> invalidOperationKeySet = invalidOperationMap.keySet();
                             for (Integer invalidOperationKey : invalidOperationKeySet) {
-                                if (invalidOperationKey.equals(pcepErrorValue)) {
+                                if (invalidOperationKey == pcepErrorValue) {
                                     System.out.print(invalidOperationMap.get(invalidOperationKey));
                                 }
                             }

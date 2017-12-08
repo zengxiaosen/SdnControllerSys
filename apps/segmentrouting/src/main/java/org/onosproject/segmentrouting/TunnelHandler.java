@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import org.onosproject.net.Link;
 import org.onosproject.net.link.LinkService;
 import org.onosproject.segmentrouting.config.DeviceConfiguration;
 import org.onosproject.segmentrouting.grouphandler.DefaultGroupHandler;
-import org.onosproject.segmentrouting.grouphandler.DestinationSet;
+import org.onosproject.segmentrouting.grouphandler.NeighborSet;
 import org.onosproject.store.service.EventuallyConsistentMap;
 import org.slf4j.Logger;
 
@@ -222,9 +222,7 @@ public class TunnelHandler {
             deviceIds.add(config.getDeviceId(sid));
         }
         // For these NeighborSet isMpls is meaningless.
-        DestinationSet ns = new DestinationSet(false,
-                                         tunnel.labelIds().get(2),
-                                         DeviceId.NONE);
+        NeighborSet ns = new NeighborSet(deviceIds, false, tunnel.labelIds().get(2));
 
         // If the tunnel reuses any existing groups, then tunnel handler
         // should not remove the group.
@@ -234,7 +232,7 @@ public class TunnelHandler {
             tunnel.allowToRemoveGroup(true);
         }
 
-        return groupHandlerMap.get(deviceId).getNextObjectiveId(ns, null, null, true);
+        return groupHandlerMap.get(deviceId).getNextObjectiveId(ns, null, true);
     }
 
 }

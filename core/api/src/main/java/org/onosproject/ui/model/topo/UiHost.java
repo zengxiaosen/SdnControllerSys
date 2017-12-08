@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Foundation
+ *  Copyright 2016-present Open Networking Laboratory
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,17 +23,14 @@ import org.onosproject.net.PortNumber;
 import org.onosproject.net.region.RegionId;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Represents an end-station host.
  */
 public class UiHost extends UiNode {
 
-    private static final String HOST_CANNOT_BE_NULL = "Host cannot be null";
-
     private final UiTopology topology;
-    private final HostId hostId;
+    private final Host host;
 
     // Host location
     private DeviceId locDevice;
@@ -49,10 +46,13 @@ public class UiHost extends UiNode {
      * @param host     backing host
      */
     public UiHost(UiTopology topology, Host host) {
-        checkNotNull(host, HOST_CANNOT_BE_NULL);
         this.topology = topology;
-        this.hostId = host.id();
+        this.host = host;
     }
+
+//    @Override
+//    protected void destroy() {
+//    }
 
     @Override
     public String toString() {
@@ -69,7 +69,7 @@ public class UiHost extends UiNode {
      * @return host ID
      */
     public HostId id() {
-        return hostId;
+        return host.id();
     }
 
     /**
@@ -113,7 +113,7 @@ public class UiHost extends UiNode {
      * @return the backing host instance
      */
     public Host backingHost() {
-        return topology.services.host().getHost(hostId);
+        return host;
     }
 
     /**

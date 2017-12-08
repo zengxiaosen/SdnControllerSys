@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,12 @@
 package org.onosproject.config;
 
 
-import com.google.common.annotations.Beta;
-import org.onosproject.yang.model.ResourceId;
+import org.onosproject.config.model.ResourceId;
 import org.onosproject.event.AbstractEvent;
 
 /**
  * Describes a DynamicConfig change event.
  */
-@Beta
 public class DynamicConfigEvent extends AbstractEvent<DynamicConfigEvent.Type, ResourceId> {
 
     /**
@@ -50,12 +48,7 @@ public class DynamicConfigEvent extends AbstractEvent<DynamicConfigEvent.Type, R
         /**
          * Signifies that dynamic configuration instance was removed.
          */
-        NODE_DELETED,
-
-        /**
-         * Signifies an unknown and hence invalid store operation.
-         */
-        UNKNOWN_OPRN
+        NODE_DELETED
     }
 
     /**
@@ -67,17 +60,4 @@ public class DynamicConfigEvent extends AbstractEvent<DynamicConfigEvent.Type, R
     public DynamicConfigEvent(Type type, ResourceId path) {
         super(type, path);
     }
-
-    /**
-     * Returns ResourceId relative to root node.
-     * (=root will not be part of ResourceId returned)
-     *
-     * @return resource Id
-     */
-    @Override
-    public ResourceId subject() {
-        return super.subject();
-    }
-
-    // TODO add DataNode as event payload
 }

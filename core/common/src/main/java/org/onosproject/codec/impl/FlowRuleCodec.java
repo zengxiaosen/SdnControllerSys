@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,8 @@ import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.IndexTableId;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
-import org.onosproject.net.pi.runtime.PiTableId;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onlab.util.Tools.nullIsIllegal;
@@ -45,8 +43,6 @@ public final class FlowRuleCodec extends JsonCodec<FlowRule> {
     private static final String DEVICE_ID = "deviceId";
     private static final String TREATMENT = "treatment";
     private static final String SELECTOR = "selector";
-    private static final String ID = "id";
-    private static final String TABLE_NAME = "tableName";
     private static final String MISSING_MEMBER_MESSAGE =
                                 " member is required in FlowRule";
     public static final String REST_APP_ID = "org.onosproject.rest";
@@ -60,25 +56,24 @@ public final class FlowRuleCodec extends JsonCodec<FlowRule> {
         String strAppId = (appId == null) ? "<none>" : appId.name();
 
         final ObjectNode result = context.mapper().createObjectNode()
-                .put(ID, Long.toString(flowRule.id().value()))
-                .put(APP_ID, strAppId)
-                .put(PRIORITY, flowRule.priority())
-                .put(TIMEOUT, flowRule.timeout())
-                .put(IS_PERMANENT, flowRule.isPermanent())
-                .put(DEVICE_ID, flowRule.deviceId().toString())
-                .put(TABLE_ID, flowRule.tableId())
-                .put(TABLE_NAME, flowRule.table().toString());
+                .put("id", Long.toString(flowRule.id().value()))
+                .put("tableId", flowRule.tableId())
+                .put("appId", strAppId)
+                .put("priority", flowRule.priority())
+                .put("timeout", flowRule.timeout())
+                .put("isPermanent", flowRule.isPermanent())
+                .put("deviceId", flowRule.deviceId().toString());
 
         if (flowRule.treatment() != null) {
             final JsonCodec<TrafficTreatment> treatmentCodec =
                     context.codec(TrafficTreatment.class);
-            result.set(TREATMENT, treatmentCodec.encode(flowRule.treatment(), context));
+            result.set("treatment", treatmentCodec.encode(flowRule.treatment(), context));
         }
 
         if (flowRule.selector() != null) {
             final JsonCodec<TrafficSelector> selectorCodec =
                     context.codec(TrafficSelector.class);
-            result.set(SELECTOR, selectorCodec.encode(flowRule.selector(), context));
+            result.set("selector", selectorCodec.encode(flowRule.selector(), context));
         }
 
         return result;
@@ -114,13 +109,7 @@ public final class FlowRuleCodec extends JsonCodec<FlowRule> {
 
         JsonNode tableIdJson = json.get(TABLE_ID);
         if (tableIdJson != null) {
-            String tableId = tableIdJson.asText();
-            try {
-                int tid = Integer.parseInt(tableId);
-                resultBuilder.forTable(IndexTableId.of(tid));
-            } catch (NumberFormatException e) {
-                resultBuilder.forTable(PiTableId.of(tableId));
-            }
+            resultBuilder.forTable(tableIdJson.asInt());
         }
 
         DeviceId deviceId = DeviceId.deviceId(nullIsIllegal(json.get(DEVICE_ID),

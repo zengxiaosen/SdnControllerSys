@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1169,7 +1169,7 @@ public class OspfInterfaceImpl implements OspfInterface {
 
                     OspfLsa ospfLsa =
                             (OspfLsa) nbr.getPendingReTxList().get(((OspfAreaImpl) ospfArea).getLsaKey(lsRequest));
-                    if (ospfLsa != null) {
+                    if (lsRequest != null && ospfLsa != null) {
                         String isSame = ((OspfLsdbImpl) ospfArea.database()).isNewerOrSameLsa(
                                 lsRequest, (LsaHeader) ospfLsa);
                         if (isSame.equals("same")) {

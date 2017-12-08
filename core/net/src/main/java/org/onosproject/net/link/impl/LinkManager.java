@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,6 @@ import org.onosproject.net.link.LinkStoreDelegate;
 import org.onosproject.net.provider.AbstractProviderService;
 import org.slf4j.Logger;
 
-import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -248,36 +247,22 @@ public class LinkManager
             }
         }
 
-        /**
-         * Validates configuration against link configuration.
-         *
-         * @param linkDescription input
-         * @return description combined with configuration or null if disallowed
-         */
+        // returns a LinkDescription made from the union of the BasicLinkConfig
+        // annotations if it exists
         private LinkDescription validateLink(LinkDescription linkDescription) {
+            // TODO Investigate whether this can be made more efficient
             BasicLinkConfig cfg = networkConfigService.getConfig(linkKey(linkDescription.src(),
                                                                          linkDescription.dst()),
                                                                  BasicLinkConfig.class);
-            if (!isAllowed(cfg)) {
-                log.trace("Link {} is not allowed", linkDescription);
-                return null;
-            }
-
-            // test if bidirectional reverse configuration exists
-            BasicLinkConfig cfgRev = networkConfigService.getConfig(linkKey(linkDescription.dst(),
+            BasicLinkConfig cfgTwo = networkConfigService.getConfig(linkKey(linkDescription.dst(),
                                                                             linkDescription.src()),
                                                                     BasicLinkConfig.class);
-            LinkDescription description = linkDescription;
-            if (cfgRev != null && cfgRev.isBidirectional()) {
-                if (!cfgRev.isAllowed()) {
-                    log.trace("Link {} is not allowed (rev)", linkDescription);
-                    return null;
-                }
-                description = BasicLinkOperator.combine(cfgRev, description);
+            if (isAllowed(cfg) && isAllowed(cfgTwo)) {
+                return BasicLinkOperator.combine(cfg, linkDescription);
+            } else {
+                log.trace("Link " + linkDescription.toString() + " is not allowed");
+                return null;
             }
-
-            description = BasicLinkOperator.combine(cfg, description);
-            return description;
         }
 
         @Override
@@ -350,43 +335,32 @@ public class LinkManager
         @Override
         public void event(NetworkConfigEvent event) {
             LinkKey lk = (LinkKey) event.subject();
-            BasicLinkConfig cfg = (BasicLinkConfig) event.config().get();
+            BasicLinkConfig cfg = networkConfigService.getConfig(lk, BasicLinkConfig.class);
 
             log.debug("Detected link network config event {}", event.type());
 
             if (!isAllowed(cfg)) {
                 log.info("Kicking out links between {} and {}", lk.src(), lk.dst());
                 removeLink(lk.src(), lk.dst());
-                if (cfg.isBidirectional()) {
-                    removeLink(lk.dst(), lk.src());
-                }
+                removeLink(lk.dst(), lk.src());
                 return;
             }
-
-            doUpdate(lk.src(), lk.dst(), cfg);
-            if (cfg.isBidirectional()) {
-                doUpdate(lk.dst(), lk.src(), cfg);
-            }
-        }
-
-        private void doUpdate(ConnectPoint src, ConnectPoint dst, BasicLinkConfig cfg) {
-            Link link = getLink(src, dst);
-            LinkDescription desc;
-
+            Link link = getLink(lk.src(), lk.dst());
+            LinkDescription fldesc;
+            LinkDescription rldesc;
             if (link == null) {
-                // TODO Revisit this behaviour.
-                // config alone probably should not be adding a link,
-                // netcfg provider should be the one.
-                desc = BasicLinkOperator.descriptionOf(src, dst, cfg);
+                fldesc = BasicLinkOperator.descriptionOf(lk.src(), lk.dst(), cfg);
+                rldesc = BasicLinkOperator.descriptionOf(lk.dst(), lk.src(), cfg);
             } else {
-                desc = BasicLinkOperator.combine(cfg,
-                        BasicLinkOperator.descriptionOf(src, dst, link));
+                fldesc = BasicLinkOperator.combine(cfg,
+                            BasicLinkOperator.descriptionOf(lk.src(), lk.dst(), link));
+                rldesc = BasicLinkOperator.combine(cfg,
+                            BasicLinkOperator.descriptionOf(lk.dst(), lk.src(), link));
             }
-
-            ProviderId pid = Optional.ofNullable(link)
-                    .map(Link::providerId)
-                    .orElse(ProviderId.NONE);
-            store.createOrUpdateLink(pid, desc);
+            // XXX think of sane way to fetch the LinkProvider
+            store.createOrUpdateLink(ProviderId.NONE, fldesc);
+            store.createOrUpdateLink(ProviderId.NONE, rldesc);
         }
+
     }
 }

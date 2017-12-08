@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,13 @@
  */
 package org.onosproject.bgp.controller.impl;
 
+import java.util.Iterator;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.List;
+import java.util.ArrayList;
+
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onosproject.bgp.controller.BgpCfg;
@@ -26,13 +33,6 @@ import org.onosproject.bgp.controller.BgpPeerCfg;
 import org.onosproject.bgp.controller.impl.BgpControllerImpl.BgpPeerManagerImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
 
 /**
  * Provides BGP configuration of this BGP speaker.
@@ -60,7 +60,6 @@ public class BgpConfig implements BgpCfg {
     private BgpPeerManagerImpl peerManager;
     private BgpController bgpController;
     private boolean rpdCapability;
-    private boolean evpnCapability;
 
     /*
      * Constructor to initialize the values.
@@ -140,16 +139,6 @@ public class BgpConfig implements BgpCfg {
     @Override
     public void setFlowSpecRpdCapability(boolean rpdCapability) {
         this.rpdCapability = rpdCapability;
-    }
-
-    @Override
-    public boolean getEvpnCapability() {
-        return this.evpnCapability;
-    }
-
-    @Override
-    public void setEvpnCapability(boolean evpnCapability) {
-        this.evpnCapability = evpnCapability;
     }
 
     @Override

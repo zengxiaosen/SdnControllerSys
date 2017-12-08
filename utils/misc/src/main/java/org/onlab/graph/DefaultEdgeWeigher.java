@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,28 +36,14 @@ public class DefaultEdgeWeigher<V extends Vertex, E extends Edge<V>>
      */
     protected static final double NULL_WEIGHT_VALUE = 0;
 
-    /**
-     * Default weight based on hop count.
-     * {@value #HOP_WEIGHT_VALUE}
-     */
-    public static final ScalarWeight DEFAULT_HOP_WEIGHT =
-            new ScalarWeight(HOP_WEIGHT_VALUE);
-
-    /**
-     * Default initial weight.
-     * {@value #NULL_WEIGHT_VALUE}
-     */
-    public static final ScalarWeight DEFAULT_INITIAL_WEIGHT =
-            new ScalarWeight(NULL_WEIGHT_VALUE);
-
     @Override
     public Weight weight(E edge) {
-        return DEFAULT_HOP_WEIGHT;
+        return new ScalarWeight(HOP_WEIGHT_VALUE);
     }
 
     @Override
     public Weight getInitialWeight() {
-        return DEFAULT_INITIAL_WEIGHT;
+        return new ScalarWeight(NULL_WEIGHT_VALUE);
     }
 
     @Override

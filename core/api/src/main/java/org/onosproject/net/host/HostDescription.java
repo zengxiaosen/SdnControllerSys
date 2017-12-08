@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,18 +43,11 @@ public interface HostDescription extends Description {
     VlanId vlan();
 
     /**
-     * Returns the most recent location of the host on the network edge.
+     * Returns the location of the host on the network edge.
      *
-     * @return the most recent host location
+     * @return the network location
      */
     HostLocation location();
-
-    /**
-     * Returns all locations of the host on the network edge.
-     *
-     * @return all host locations
-     */
-    Set<HostLocation> locations();
 
     /**
      * Returns the IP address associated with this host's MAC.

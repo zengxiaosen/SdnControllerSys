@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ public class ClusterMetadataManager
         String metadataUri = System.getProperty("onos.cluster.metadata.uri");
         try {
             String protocol = metadataUri == null ? null : new URL(metadataUri).getProtocol();
-            if (protocol != null && (!"file".equals(protocol) && !"http".equals(protocol))) {
+            if (protocol != null && (!protocol.equals("file") && !protocol.equals("http"))) {
                 return getProvider(protocol);
             }
             // file provider supports both "file" and "http" uris

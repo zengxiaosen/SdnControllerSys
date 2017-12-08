@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.onlab.packet.Ethernet;
+import org.onlab.packet.Ip4Prefix;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.IpPrefix;
 import org.onlab.packet.MacAddress;
@@ -27,7 +28,7 @@ import org.onlab.packet.VlanId;
 import org.onlab.util.KryoNamespace;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.config.basics.McastConfig;
+import org.onosproject.incubator.net.config.basics.McastConfig;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Link;
@@ -68,7 +69,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkState;
-import static org.onosproject.segmentrouting.SegmentRoutingManager.INTERNAL_VLAN;
 
 /**
  * Handles multicast-related events.
@@ -253,7 +253,7 @@ public class McastHandler {
         }
 
         // Process the ingress device
-        addFilterToDevice(source.deviceId(), source.port(), assignedVlan(source), mcastIp);
+        addFilterToDevice(source.deviceId(), source.port(), assignedVlan(source));
 
         // When source and sink are on the same device
         if (source.deviceId().equals(sink.deviceId())) {
@@ -277,7 +277,7 @@ public class McastHandler {
             links.forEach(link -> {
                 addPortToDevice(link.src().deviceId(), link.src().port(), mcastIp,
                         assignedVlan(link.src().deviceId().equals(source.deviceId()) ? source : null));
-                addFilterToDevice(link.dst().deviceId(), link.dst().port(), assignedVlan(null), mcastIp);
+                addFilterToDevice(link.dst().deviceId(), link.dst().port(), assignedVlan(null));
             });
 
             // Process the egress device
@@ -344,7 +344,7 @@ public class McastHandler {
                     links.forEach(link -> {
                         addPortToDevice(link.src().deviceId(), link.src().port(), mcastIp,
                                 assignedVlan(link.src().deviceId().equals(source.deviceId()) ? source : null));
-                        addFilterToDevice(link.dst().deviceId(), link.dst().port(), assignedVlan(null), mcastIp);
+                        addFilterToDevice(link.dst().deviceId(), link.dst().port(), assignedVlan(null));
                     });
                     // Setup new transit mcast role
                     mcastRoleStore.put(new McastStoreKey(mcastIp,
@@ -365,7 +365,7 @@ public class McastHandler {
      * @param port ingress port number
      * @param assignedVlan assigned VLAN ID
      */
-    private void addFilterToDevice(DeviceId deviceId, PortNumber port, VlanId assignedVlan, IpAddress mcastIp) {
+    private void addFilterToDevice(DeviceId deviceId, PortNumber port, VlanId assignedVlan) {
         // Do nothing if the port is configured as suppressed
         ConnectPoint connectPoint = new ConnectPoint(deviceId, port);
         SegmentRoutingAppConfig appConfig = srManager.cfgService
@@ -375,14 +375,19 @@ public class McastHandler {
             return;
         }
 
+        // Reuse unicast VLAN if the port has subnet configured
+        Ip4Prefix portSubnet = srManager.deviceConfiguration.getPortIPv4Subnet(deviceId, port);
+        VlanId unicastVlan = srManager.getSubnetAssignedVlanId(deviceId, portSubnet);
+        final VlanId finalVlanId = (unicastVlan != null) ? unicastVlan : assignedVlan;
+
         FilteringObjective.Builder filtObjBuilder =
-                filterObjBuilder(deviceId, port, assignedVlan, mcastIp);
+                filterObjBuilder(deviceId, port, finalVlanId);
         ObjectiveContext context = new DefaultObjectiveContext(
                 (objective) -> log.debug("Successfully add filter on {}/{}, vlan {}",
-                        deviceId, port.toLong(), assignedVlan),
+                        deviceId, port.toLong(), finalVlanId),
                 (objective, error) ->
                         log.warn("Failed to add filter on {}/{}, vlan {}: {}",
-                                deviceId, port.toLong(), assignedVlan, error));
+                                deviceId, port.toLong(), finalVlanId, error));
         srManager.flowObjectiveService.filter(deviceId, filtObjBuilder.add(context));
     }
 
@@ -596,17 +601,9 @@ public class McastHandler {
     private ForwardingObjective.Builder fwdObjBuilder(IpAddress mcastIp,
             VlanId assignedVlan, int nextId) {
         TrafficSelector.Builder sbuilder = DefaultTrafficSelector.builder();
-        IpPrefix mcastPrefix = mcastIp.toIpPrefix();
-
-        if (mcastIp.isIp4()) {
-            sbuilder.matchEthType(Ethernet.TYPE_IPV4);
-            sbuilder.matchIPDst(mcastPrefix);
-        } else {
-            sbuilder.matchEthType(Ethernet.TYPE_IPV6);
-            sbuilder.matchIPv6Dst(mcastPrefix);
-        }
-
-
+        IpPrefix mcastPrefix = IpPrefix.valueOf(mcastIp, IpPrefix.MAX_INET_MASK_LENGTH);
+        sbuilder.matchEthType(Ethernet.TYPE_IPV4);
+        sbuilder.matchIPDst(mcastPrefix);
         TrafficSelector.Builder metabuilder = DefaultTrafficSelector.builder();
         metabuilder.matchVlanId(assignedVlan);
 
@@ -629,22 +626,14 @@ public class McastHandler {
      * @return filtering objective builder
      */
     private FilteringObjective.Builder filterObjBuilder(DeviceId deviceId, PortNumber ingressPort,
-            VlanId assignedVlan, IpAddress mcastIp) {
+            VlanId assignedVlan) {
         FilteringObjective.Builder filtBuilder = DefaultFilteringObjective.builder();
+        filtBuilder.withKey(Criteria.matchInPort(ingressPort))
+                .addCondition(Criteria.matchEthDstMasked(MacAddress.IPV4_MULTICAST,
+                        MacAddress.IPV4_MULTICAST_MASK))
+                .addCondition(Criteria.matchVlanId(egressVlan()))
+                .withPriority(SegmentRoutingService.DEFAULT_PRIORITY);
 
-        if (mcastIp.isIp4()) {
-            filtBuilder.withKey(Criteria.matchInPort(ingressPort))
-            .addCondition(Criteria.matchEthDstMasked(MacAddress.IPV4_MULTICAST,
-                    MacAddress.IPV4_MULTICAST_MASK))
-            .addCondition(Criteria.matchVlanId(egressVlan()))
-            .withPriority(SegmentRoutingService.DEFAULT_PRIORITY);
-        } else {
-            filtBuilder.withKey(Criteria.matchInPort(ingressPort))
-            .addCondition(Criteria.matchEthDstMasked(MacAddress.IPV6_MULTICAST,
-                     MacAddress.IPV6_MULTICAST_MASK))
-            .addCondition(Criteria.matchVlanId(egressVlan()))
-            .withPriority(SegmentRoutingService.DEFAULT_PRIORITY);
-        }
         TrafficTreatment tt = DefaultTrafficTreatment.builder()
                 .pushVlan().setVlanId(assignedVlan).build();
         filtBuilder.withMeta(tt);
@@ -774,11 +763,15 @@ public class McastHandler {
         }
         // Reuse unicast VLAN if the port has subnet configured
         if (cp != null) {
-            VlanId untaggedVlan = srManager.getUntaggedVlanId(cp);
-            return (untaggedVlan != null) ? untaggedVlan : INTERNAL_VLAN;
+            Ip4Prefix portSubnet = srManager.deviceConfiguration
+                    .getPortIPv4Subnet(cp.deviceId(), cp.port());
+            VlanId unicastVlan = srManager.getSubnetAssignedVlanId(cp.deviceId(), portSubnet);
+            if (unicastVlan != null) {
+                return unicastVlan;
+            }
         }
-        // Use DEFAULT_VLAN if none of the above matches
-        return SegmentRoutingManager.INTERNAL_VLAN;
+        // By default, use VLAN_NO_SUBNET
+        return VlanId.vlanId(SegmentRoutingManager.ASSIGNED_VLAN_NO_SUBNET);
     }
 
     /**

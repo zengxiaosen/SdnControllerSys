@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,29 +16,23 @@
 
 package org.onosproject.openflow.controller.impl;
 
-import static org.onlab.util.Tools.groupedThreads;
-
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
-import org.onlab.packet.IpAddress;
+
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.timeout.IdleStateAwareChannelHandler;
+import org.jboss.netty.handler.timeout.IdleStateEvent;
+import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.onosproject.openflow.controller.Dpid;
-import org.onosproject.openflow.controller.OpenFlowSession;
 import org.onosproject.openflow.controller.driver.OpenFlowSwitchDriver;
 import org.onosproject.openflow.controller.driver.SwitchStateException;
 import org.projectfloodlight.openflow.exceptions.OFParseError;
@@ -53,7 +47,6 @@ import org.projectfloodlight.openflow.protocol.OFEchoRequest;
 import org.projectfloodlight.openflow.protocol.OFErrorMsg;
 import org.projectfloodlight.openflow.protocol.OFErrorType;
 import org.projectfloodlight.openflow.protocol.OFExperimenter;
-import org.projectfloodlight.openflow.protocol.OFFactories;
 import org.projectfloodlight.openflow.protocol.OFFactory;
 import org.projectfloodlight.openflow.protocol.OFFeaturesReply;
 import org.projectfloodlight.openflow.protocol.OFFlowModFailedCode;
@@ -83,20 +76,11 @@ import org.projectfloodlight.openflow.types.U32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.handler.timeout.ReadTimeoutException;
-import io.netty.util.ReferenceCountUtil;
-
 /**
  * Channel handler deals with the switch connection and dispatches
  * switch messages to the appropriate locations.
  */
-class OFChannelHandler extends ChannelInboundHandlerAdapter
-    implements OpenFlowSession {
-
+class OFChannelHandler extends IdleStateAwareChannelHandler {
     private static final Logger log = LoggerFactory.getLogger(OFChannelHandler.class);
 
     private static final String RESET_BY_PEER = "Connection reset by peer";
@@ -105,21 +89,10 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
     private final Controller controller;
     private OpenFlowSwitchDriver sw;
     private long thisdpid; // channelHandler cached value of connected switch id
-
     private Channel channel;
-    private String channelId;
-
-
     // State needs to be volatile because the HandshakeTimeoutHandler
     // needs to check if the handshake is complete
     private volatile ChannelState state;
-
-    /**
-     * Timeout in ms to wait for meter feature reply.
-     */
-    private static final long METER_TIMEOUT = 60_000;
-
-    private volatile long lastStateChange = System.currentTimeMillis();
 
     // When a switch with a duplicate dpid is found (i.e we already have a
     // connected switch with the same dpid), the new switch is immediately
@@ -139,13 +112,7 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
 
     //Indicates the openflow version used by this switch
     protected OFVersion ofVersion;
-    protected OFFactory factory;
-
-    // deprecated in 1.10.0
-    @Deprecated
     protected OFFactory factory13;
-    // deprecated in 1.10.0
-    @Deprecated
     protected OFFactory factory10;
 
     /** transaction Ids to use during handshake. Since only one thread
@@ -154,49 +121,17 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
      */
     private int handshakeTransactionIds = -1;
 
-
-
-    private static final int MSG_READ_BUFFER = 5000;
-
-    /**
-     * OFMessage dispatch queue.
-     */
-    private final BlockingQueue<OFMessage> dispatchQueue =
-            new LinkedBlockingQueue<>(MSG_READ_BUFFER);
-
-    /**
-     * Single thread executor for OFMessage dispatching.
-     *
-     * Gets initialized on channelActive, shutdown on channelInactive.
-     */
-    private ExecutorService dispatcher;
-
-    /**
-     * Handle for dispatcher thread.
-     * <p>
-     * Should only be touched from the Channel I/O thread
-     */
-    private Future<?> dispatcherHandle = CompletableFuture.completedFuture(null);
-
-    /**
-     * Dispatch backlog.
-     * <p>
-     * Should only be touched from the Channel I/O thread
-     */
-    private final Deque<OFMessage> dispatchBacklog = new ArrayDeque<>();
-
     /**
      * Create a new unconnected OFChannelHandler.
      * @param controller parent controller
      */
     OFChannelHandler(Controller controller) {
-
         this.controller = controller;
         this.state = ChannelState.INIT;
         this.pendingPortStatusMsg = new CopyOnWriteArrayList<>();
         this.portDescReplies = new ArrayList<>();
-        factory13 = OFFactories.getFactory(OFVersion.OF_13);
-        factory10 = OFFactories.getFactory(OFVersion.OF_10);
+        factory13 = controller.getOFMessageFactory13();
+        factory10 = controller.getOFMessageFactory10();
         duplicateDpidFound = Boolean.FALSE;
     }
 
@@ -258,34 +193,31 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
                 // we are just checking the version number.
                 if (m.getVersion().getWireVersion() >= OFVersion.OF_13.getWireVersion()) {
                     log.debug("Received {} Hello from {} - switching to OF "
-                            + "version 1.3+", m.getVersion(),
-                            h.channel.remoteAddress());
-                    h.ofVersion = m.getVersion();
-                    h.factory = OFFactories.getFactory(h.ofVersion);
+                            + "version 1.3", m.getVersion(),
+                            h.channel.getRemoteAddress());
                     h.sendHandshakeHelloMessage();
+                    h.ofVersion = OFVersion.OF_13;
                 } else if (m.getVersion().getWireVersion() >= OFVersion.OF_10.getWireVersion()) {
                     log.debug("Received {} Hello from {} - switching to OF "
                             + "version 1.0", m.getVersion(),
-                            h.channel.remoteAddress());
-                    h.ofVersion = m.getVersion();
-                    h.factory = OFFactories.getFactory(h.ofVersion);
+                            h.channel.getRemoteAddress());
                     OFHello hi =
-                            h.factory.buildHello()
+                            h.factory10.buildHello()
                                     .setXid(h.handshakeTransactionIds--)
                                     .build();
-                    h.channel.writeAndFlush(Collections.singletonList(hi));
+                    h.channel.write(Collections.singletonList(hi));
+                    h.ofVersion = OFVersion.OF_10;
                 } else {
                     log.error("Received Hello of version {} from switch at {}. "
                             + "This controller works with OF1.0 and OF1.3 "
                             + "switches. Disconnecting switch ...",
-                            m.getVersion(), h.channel.remoteAddress());
+                            m.getVersion(), h.channel.getRemoteAddress());
                     h.channel.disconnect();
                     return;
                 }
                 h.sendHandshakeFeaturesRequestMessage();
                 h.setState(WAIT_FEATURES_REPLY);
             }
-
             @Override
             void processOFFeaturesReply(OFChannelHandler h, OFFeaturesReply  m)
                     throws IOException, SwitchStateException {
@@ -367,7 +299,7 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
                 if (m.getStatsType() != OFStatsType.PORT_DESC) {
                     log.warn("Expecting port description stats but received stats "
                             + "type {} from {}. Ignoring ...", m.getStatsType(),
-                            h.channel.remoteAddress());
+                            h.channel.getRemoteAddress());
                     return;
                 }
                 if (m.getFlags().contains(OFStatsReplyFlags.REPLY_MORE)) {
@@ -428,17 +360,8 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
                             m.getMissSendLen());
                 }
 
-                nextState(h);
-            }
-
-            /**
-             * Transition to next state based on OF version.
-             *
-             * @param h current channel handler
-             * @throws IOException
-             */
-            private void nextState(OFChannelHandler h) throws IOException {
-                if (h.ofVersion.getWireVersion() >= OFVersion.OF_13.getWireVersion()) {
+                // TODO should this check if 1.3 or later?
+                if (h.ofVersion == OFVersion.OF_13) {
                     // Meters were introduced in OpenFlow 1.3
                     h.sendMeterFeaturesRequest();
                     h.setState(WAIT_METER_FEATURES_REPLY);
@@ -469,19 +392,6 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
 
             @Override
             void processOFError(OFChannelHandler h, OFErrorMsg m) {
-                if (m.getErrType() == OFErrorType.BAD_REQUEST) {
-                    OFBadRequestErrorMsg badRequest = (OFBadRequestErrorMsg) m;
-                    if (badRequest.getCode() == OFBadRequestCode.BAD_TYPE) {
-                         log.debug("{} does not support GetConfig, moving on", h.getSwitchInfoString());
-                         try {
-                            nextState(h);
-                            return;
-                        } catch (IOException e) {
-                            log.error("Exception thrown transitioning to next", e);
-                            logErrorDisconnect(h, m);
-                        }
-                    }
-                }
                 logErrorDisconnect(h, m);
             }
 
@@ -519,21 +429,22 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
                 if (m.getStatsType() != OFStatsType.DESC) {
                     log.warn("Expecting Description stats but received stats "
                             + "type {} from {}. Ignoring ...", m.getStatsType(),
-                            h.channel.remoteAddress());
+                            h.channel.getRemoteAddress());
                     return;
                 }
                 OFDescStatsReply drep = (OFDescStatsReply) m;
                 log.info("Received switch description reply {} from switch at {}",
-                         drep, h.channel.remoteAddress());
+                         drep, h.channel.getRemoteAddress());
                 // Here is where we differentiate between different kinds of switches
                 h.sw = h.controller.getOFSwitchInstance(h.thisdpid, drep, h.ofVersion);
 
                 h.sw.setOFVersion(h.ofVersion);
                 h.sw.setFeaturesReply(h.featuresReply);
+                //h.sw.setPortDescReply(h.portDescReply);
                 h.sw.setPortDescReplies(h.portDescReplies);
                 h.sw.setMeterFeaturesReply(h.meterFeaturesReply);
                 h.sw.setConnected(true);
-                h.sw.setChannel(h);
+                h.sw.setChannel(h.channel);
 //                boolean success = h.sw.connectSwitch();
 //
 //                if (!success) {
@@ -663,20 +574,6 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
          * OpenFlow 1.3
          */
         WAIT_METER_FEATURES_REPLY(true) {
-
-            @Override
-            void processOFEchoRequest(OFChannelHandler h, OFEchoRequest m)
-                    throws IOException {
-                super.processOFEchoRequest(h, m);
-                if (System.currentTimeMillis() - h.lastStateChange > METER_TIMEOUT) {
-                    log.info("{} did not respond to MeterFeaturesRequest on time, " +
-                            "moving on without it.",
-                            h.getSwitchInfoString());
-                   h.sendHandshakeDescriptionStatsRequest();
-                   h.setState(WAIT_DESCRIPTION_STAT_REPLY);
-                }
-            }
-
             @Override
             void processOFError(OFChannelHandler h, OFErrorMsg m)
                     throws IOException {
@@ -1125,7 +1022,7 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
                 throws IOException, SwitchStateException {
             // we only expect hello in the WAIT_HELLO state
             log.warn("Received Hello outside WAIT_HELLO state; switch {} is not complaint.",
-                     h.channel.remoteAddress());
+                     h.channel.getRemoteAddress());
         }
 
         void processOFBarrierReply(OFChannelHandler h, OFBarrierReply m)
@@ -1137,15 +1034,17 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
                 throws IOException {
             if (h.ofVersion == null) {
                 log.error("No OF version set for {}. Not sending Echo REPLY",
-                        h.channel.remoteAddress());
+                        h.channel.getRemoteAddress());
                 return;
             }
-            OFEchoReply reply = h.factory
-                    .buildEchoReply()
-                    .setXid(m.getXid())
-                    .setData(m.getData())
-                    .build();
-            h.channel.writeAndFlush(Collections.singletonList(reply));
+            OFFactory factory = (h.ofVersion == OFVersion.OF_13) ?
+                    h.controller.getOFMessageFactory13() : h.controller.getOFMessageFactory10();
+                    OFEchoReply reply = factory
+                            .buildEchoReply()
+                            .setXid(m.getXid())
+                            .setData(m.getData())
+                            .build();
+                    h.channel.write(Collections.singletonList(reply));
         }
 
         void processOFEchoReply(OFChannelHandler h, OFEchoReply m)
@@ -1227,28 +1126,11 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
     //*************************
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx)
-            throws Exception {
-
-        channel = ctx.channel();
+    public void channelConnected(ChannelHandlerContext ctx,
+            ChannelStateEvent e) throws Exception {
+        channel = e.getChannel();
         log.info("New switch connection from {}",
-                 channel.remoteAddress());
-
-        SocketAddress address = channel.remoteAddress();
-        if (address instanceof InetSocketAddress) {
-            final InetSocketAddress inetAddress = (InetSocketAddress) address;
-            final IpAddress ipAddress = IpAddress.valueOf(inetAddress.getAddress());
-            if (ipAddress.isIp4()) {
-                channelId = ipAddress.toString() + ':' + inetAddress.getPort();
-            } else {
-                channelId = '[' + ipAddress.toString() + "]:" + inetAddress.getPort();
-            }
-        } else {
-            channelId = channel.toString();
-        }
-
-        dispatcher = Executors.newSingleThreadExecutor(groupedThreads("onos/of/dispatcher", channelId, log));
-
+                channel.getRemoteAddress());
         /*
             hack to wait for the switch to tell us what it's
             max version is. This is not spec compliant and should
@@ -1259,89 +1141,81 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx)
-            throws Exception {
-
+    public void channelDisconnected(ChannelHandlerContext ctx,
+            ChannelStateEvent e) throws Exception {
         log.info("Switch disconnected callback for sw:{}. Cleaning up ...",
-                 getSwitchInfoString());
-
-        if (dispatcher != null) {
-            dispatcher.shutdown();
+                getSwitchInfoString());
+        if (thisdpid != 0) {
+            if (!duplicateDpidFound) {
+                // if the disconnected switch (on this ChannelHandler)
+                // was not one with a duplicate-dpid, it is safe to remove all
+                // state for it at the controller. Notice that if the disconnected
+                // switch was a duplicate-dpid, calling the method below would clear
+                // all state for the original switch (with the same dpid),
+                // which we obviously don't want.
+                log.info("{}:removal called", getSwitchInfoString());
+                if (sw != null) {
+                    sw.removeConnectedSwitch();
+                }
+            } else {
+                // A duplicate was disconnected on this ChannelHandler,
+                // this is the same switch reconnecting, but the original state was
+                // not cleaned up - XXX check liveness of original ChannelHandler
+                log.info("{}:duplicate found", getSwitchInfoString());
+                duplicateDpidFound = Boolean.FALSE;
+            }
+        } else {
+            log.warn("no dpid in channelHandler registered for "
+                    + "disconnected switch {}", getSwitchInfoString());
         }
-
-         if (thisdpid != 0) {
-             if (!duplicateDpidFound) {
-                 // if the disconnected switch (on this ChannelHandler)
-                 // was not one with a duplicate-dpid, it is safe to remove all
-                 // state for it at the controller. Notice that if the disconnected
-                 // switch was a duplicate-dpid, calling the method below would clear
-                 // all state for the original switch (with the same dpid),
-                 // which we obviously don't want.
-                 log.info("{}:removal called", getSwitchInfoString());
-                 if (sw != null) {
-                     sw.removeConnectedSwitch();
-                 }
-             } else {
-                 // A duplicate was disconnected on this ChannelHandler,
-                 // this is the same switch reconnecting, but the original state was
-                 // not cleaned up - XXX check liveness of original ChannelHandler
-                 log.info("{}:duplicate found", getSwitchInfoString());
-                 duplicateDpidFound = Boolean.FALSE;
-             }
-         } else {
-             log.warn("no dpid in channelHandler registered for "
-                     + "disconnected switch {}", getSwitchInfoString());
-         }
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx,
-                                Throwable cause)
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
-
-        if (cause instanceof ReadTimeoutException) {
+        if (e.getCause() instanceof ReadTimeoutException) {
             // switch timeout
             log.error("Disconnecting switch {} due to read timeout",
                     getSwitchInfoString());
-            ctx.channel().close();
-        } else if (cause instanceof HandshakeTimeoutException) {
+            ctx.getChannel().close();
+        } else if (e.getCause() instanceof HandshakeTimeoutException) {
             log.error("Disconnecting switch {}: failed to complete handshake",
                     getSwitchInfoString());
-            ctx.channel().close();
-        } else if (cause instanceof ClosedChannelException) {
+            ctx.getChannel().close();
+        } else if (e.getCause() instanceof ClosedChannelException) {
             log.debug("Channel for sw {} already closed", getSwitchInfoString());
-        } else if (cause instanceof IOException) {
-            if (!cause.getMessage().equals(RESET_BY_PEER) &&
-                    !cause.getMessage().equals(BROKEN_PIPE)) {
+        } else if (e.getCause() instanceof IOException) {
+            if (!e.getCause().getMessage().equals(RESET_BY_PEER) &&
+                    !e.getCause().getMessage().equals(BROKEN_PIPE)) {
                 log.error("Disconnecting switch {} due to IO Error: {}",
-                          getSwitchInfoString(), cause.getMessage());
+                          getSwitchInfoString(), e.getCause().getMessage());
                 if (log.isDebugEnabled()) {
                     // still print stack trace if debug is enabled
-                    log.debug("StackTrace for previous Exception: ", cause);
+                    log.debug("StackTrace for previous Exception: ", e.getCause());
                 }
             }
-            ctx.channel().close();
-        } else if (cause instanceof SwitchStateException) {
+            ctx.getChannel().close();
+        } else if (e.getCause() instanceof SwitchStateException) {
             log.error("Disconnecting switch {} due to switch state error: {}",
-                    getSwitchInfoString(), cause.getMessage());
+                    getSwitchInfoString(), e.getCause().getMessage());
             if (log.isDebugEnabled()) {
                 // still print stack trace if debug is enabled
-                log.debug("StackTrace for previous Exception: ", cause);
+                log.debug("StackTrace for previous Exception: ", e.getCause());
             }
-            ctx.channel().close();
-        } else if (cause instanceof OFParseError) {
+            ctx.getChannel().close();
+        } else if (e.getCause() instanceof OFParseError) {
             log.error("Disconnecting switch "
                     + getSwitchInfoString() +
                     " due to message parse failure",
-                    cause);
-            ctx.channel().close();
-        } else if (cause instanceof RejectedExecutionException) {
+                    e.getCause());
+            ctx.getChannel().close();
+        } else if (e.getCause() instanceof RejectedExecutionException) {
             log.warn("Could not process message: queue full");
         } else {
             log.error("Error while processing message from switch "
                     + getSwitchInfoString()
-                    + "state " + this.state, cause);
-            ctx.channel().close();
+                    + "state " + this.state, e.getCause());
+            ctx.getChannel().close();
         }
     }
 
@@ -1350,51 +1224,35 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
         return getSwitchInfoString();
     }
 
-    protected void channelIdle(ChannelHandlerContext ctx,
-                               IdleStateEvent e)
+    @Override
+    public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e)
             throws Exception {
+        OFFactory factory = (ofVersion == OFVersion.OF_13) ? factory13 : factory10;
         OFMessage m = factory.buildEchoRequest().build();
         log.debug("Sending Echo Request on idle channel: {}",
-                  ctx.channel());
-        ctx.write(Collections.singletonList(m), ctx.voidPromise());
+                e.getChannel().getPipeline().getLast());
+        e.getChannel().write(Collections.singletonList(m));
         // XXX S some problems here -- echo request has no transaction id, and
         // echo reply is not correlated to the echo request.
         state.processIdle(this);
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx,
-                                   Object evt)
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
+        if (e.getMessage() instanceof List) {
+            @SuppressWarnings("unchecked")
+            List<OFMessage> msglist = (List<OFMessage>) e.getMessage();
 
-        if (evt instanceof IdleStateEvent) {
-            channelIdle(ctx, (IdleStateEvent) evt);
-        }
 
-        super.userEventTriggered(ctx, evt);
-    }
-
-    // SimpleChannelInboundHandler without dependency to TypeParameterMatcher
-    @Override
-    public void channelRead(ChannelHandlerContext ctx,
-                            Object msg) throws Exception {
-
-        boolean release = true;
-        try {
-            if (msg instanceof OFMessage) {
-                // channelRead0 inlined
-                state.processOFMessage(this, (OFMessage) msg);
-            } else {
-                release = false;
-                ctx.fireChannelRead(msg);
+            for (OFMessage ofm : msglist) {
+                // Do the actual packet processing
+                state.processOFMessage(this, ofm);
             }
-        } finally {
-            if (release) {
-                ReferenceCountUtil.release(msg);
-            }
+        } else {
+            state.processOFMessage(this, (OFMessage) e.getMessage());
         }
     }
-
 
 
 
@@ -1411,63 +1269,7 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
     }
 
     private void dispatchMessage(OFMessage m) {
-
-        if (dispatchBacklog.isEmpty()) {
-            if (!dispatchQueue.offer(m)) {
-                // queue full
-                channel.config().setAutoRead(false);
-                // put it on the head of backlog
-                dispatchBacklog.addFirst(m);
-                return;
-            }
-        } else {
-            dispatchBacklog.addLast(m);
-        }
-
-        while (!dispatchBacklog.isEmpty()) {
-            OFMessage msg = dispatchBacklog.pop();
-
-            if (!dispatchQueue.offer(msg)) {
-                // queue full
-                channel.config().setAutoRead(false);
-                // put it back to the head of backlog
-                dispatchBacklog.addFirst(msg);
-                return;
-            }
-        }
-
-
-        if (dispatcherHandle.isDone()) {
-            // dispatcher terminated for some reason, restart
-
-            dispatcherHandle = dispatcher.submit(() -> {
-                try {
-                    List<OFMessage> msgs = new ArrayList<>();
-                    for (;;) {
-                        // wait for new message
-                        OFMessage msg = dispatchQueue.take();
-                        sw.handleMessage(msg);
-
-                        while (dispatchQueue.drainTo(msgs, MSG_READ_BUFFER) > 0) {
-                            if (!channel.config().isAutoRead()) {
-                                channel.config().setAutoRead(true);
-                            }
-                            msgs.forEach(sw::handleMessage);
-                            msgs.clear();
-                        }
-
-                        if (!channel.config().isAutoRead()) {
-                            channel.config().setAutoRead(true);
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    // interrupted. gracefully shutting down
-                    return;
-                }
-
-            });
-        }
+        sw.handleMessage(m);
     }
 
     /**
@@ -1480,10 +1282,10 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
             return sw.toString();
         }
         String channelString;
-        if (channel == null || channel.remoteAddress() == null) {
+        if (channel == null || channel.getRemoteAddress() == null) {
             channelString = "?";
         } else {
-            channelString = channel.remoteAddress().toString();
+            channelString = channel.getRemoteAddress().toString();
         }
         String dpidString;
         if (featuresReply == null) {
@@ -1501,7 +1303,6 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
      */
     private void setState(ChannelState state) {
         this.state = state;
-        this.lastStateChange = System.currentTimeMillis();
     }
 
     /**
@@ -1512,23 +1313,17 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
         // The OF protocol requires us to start things off by sending the highest
         // version of the protocol supported.
 
-        // bitmap represents OF1.0, OF1.3, OF1.4, and OF1.5
+        // bitmap represents OF1.0 (ofp_version=0x01) and OF1.3 (ofp_version=0x04)
         // see Sec. 7.5.1 of the OF1.3.4 spec
-        U32 bitmap = U32.ofRaw((0b1 << OFVersion.OF_10.getWireVersion()) |
-                               (0b1 << OFVersion.OF_13.getWireVersion()) |
-                               (0b1 << OFVersion.OF_14.getWireVersion()) |
-                               (0b1 << OFVersion.OF_15.getWireVersion()));
-        OFVersion version = Optional.ofNullable(ofVersion).orElse(OFVersion.OF_13);
-        OFHelloElem hem = OFFactories.getFactory(version)
-                .buildHelloElemVersionbitmap()
+        U32 bitmap = U32.ofRaw(0x00000012);
+        OFHelloElem hem = factory13.buildHelloElemVersionbitmap()
                 .setBitmaps(Collections.singletonList(bitmap))
                 .build();
-        OFMessage.Builder mb = OFFactories.getFactory(version)
-                .buildHello()
+        OFMessage.Builder mb = factory13.buildHello()
                 .setXid(this.handshakeTransactionIds--)
                 .setElements(Collections.singletonList(hem));
-        log.info("Sending {} Hello to {}", version, channel.remoteAddress());
-        channel.writeAndFlush(Collections.singletonList(mb.build()));
+        log.info("Sending OF_13 Hello to {}", channel.getRemoteAddress());
+        channel.write(Collections.singletonList(mb.build()));
     }
 
     /**
@@ -1536,11 +1331,11 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
      * @throws IOException
      */
     private void sendHandshakeFeaturesRequestMessage() throws IOException {
-        log.debug("Sending FEATURES_REQUEST to {}", channel.remoteAddress());
+        OFFactory factory = (ofVersion == OFVersion.OF_13) ? factory13 : factory10;
         OFMessage m = factory.buildFeaturesRequest()
                 .setXid(this.handshakeTransactionIds--)
                 .build();
-        channel.writeAndFlush(Collections.singletonList(m));
+        channel.write(Collections.singletonList(m));
     }
 
     /**
@@ -1549,7 +1344,8 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
      * @throws IOException
      */
     private void sendHandshakeSetConfig() throws IOException {
-        log.debug("Sending CONFIG_REQUEST to {}", channel.remoteAddress());
+        OFFactory factory = (ofVersion == OFVersion.OF_13) ? factory13 : factory10;
+        //log.debug("Sending CONFIG_REQUEST to {}", channel.getRemoteAddress());
         List<OFMessage> msglist = new ArrayList<>(3);
 
         // Ensure we receive the full packet via PacketIn
@@ -1578,7 +1374,7 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
                 .setXid(this.handshakeTransactionIds--)
                 .build();
         msglist.add(gcr);
-        channel.writeAndFlush(msglist);
+        channel.write(msglist);
     }
 
     /**
@@ -1587,12 +1383,12 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
      */
     private void sendHandshakeDescriptionStatsRequest() throws IOException {
         // Get Description to set switch-specific flags
-        log.debug("Sending DESC_STATS_REQUEST to {}", channel.remoteAddress());
+        OFFactory factory = (ofVersion == OFVersion.OF_13) ? factory13 : factory10;
         OFDescStatsRequest dreq = factory
                 .buildDescStatsRequest()
                 .setXid(handshakeTransactionIds--)
                 .build();
-        channel.writeAndFlush(Collections.singletonList(dreq));
+        channel.write(Collections.singletonList(dreq));
     }
 
     /**
@@ -1602,60 +1398,25 @@ class OFChannelHandler extends ChannelInboundHandlerAdapter
      */
     private void sendMeterFeaturesRequest() throws IOException {
         // Get meter features including the MaxMeters value available for the device
-        OFFactory factory = OFFactories.getFactory(ofVersion);
-        log.debug("Sending METER_FEATURES_REQUEST to {}", channel.remoteAddress());
+        OFFactory factory = (ofVersion == OFVersion.OF_13) ? factory13 : factory10;
         OFMeterFeaturesStatsRequest mfreq = factory
                 .buildMeterFeaturesStatsRequest()
                 .setXid(handshakeTransactionIds--)
                 .build();
-        channel.writeAndFlush(Collections.singletonList(mfreq));
+        channel.write(Collections.singletonList(mfreq));
     }
 
     private void sendHandshakeOFPortDescRequest() throws IOException {
-        log.debug("Sending OF_PORT_DESC_REQUEST to {}", channel.remoteAddress());
-        // Get port description for 1.3+ switch
-        OFPortDescStatsRequest preq = factory
+        // Get port description for 1.3 switch
+        OFPortDescStatsRequest preq = factory13
                 .buildPortDescStatsRequest()
                 .setXid(handshakeTransactionIds--)
                 .build();
-        channel.writeAndFlush(Collections.singletonList(preq));
+        channel.write(Collections.singletonList(preq));
     }
 
     ChannelState getStateForTesting() {
         return state;
-    }
-
-
-    @Override
-    public boolean isActive() {
-        if (channel != null) {
-            return channel.isActive();
-        }
-        return false;
-    }
-
-    @Override
-    public void closeSession() {
-        if (channel != null) {
-            channel.close();
-        }
-    }
-
-    @Override
-    public boolean sendMsg(Iterable<OFMessage> msgs) {
-        if (channel.isActive()) {
-            channel.writeAndFlush(msgs, channel.voidPromise());
-            return true;
-        } else {
-            log.warn("Dropping messages for switch {} because channel is not connected: {}",
-                     getSwitchInfoString(), msgs);
-            return false;
-        }
-    }
-
-    @Override
-    public CharSequence sessionInfo() {
-        return channelId;
     }
 
 }

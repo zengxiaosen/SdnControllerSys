@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,11 +34,7 @@ public class DeviceRemoveCommand extends AbstractShellCommand {
 
     @Override
     protected void execute() {
-        try {
-            get(DeviceAdminService.class).removeDevice(DeviceId.deviceId(uri));
-        } catch (IllegalStateException e) {
-            print("There was some issue in removing device, please try again");
-        }
+        get(DeviceAdminService.class).removeDevice(DeviceId.deviceId(uri));
     }
 
 }

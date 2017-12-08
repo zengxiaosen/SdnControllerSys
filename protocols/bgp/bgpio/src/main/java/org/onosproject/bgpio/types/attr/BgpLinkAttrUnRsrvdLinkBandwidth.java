@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ public class BgpLinkAttrUnRsrvdLinkBandwidth implements BgpValueType {
     public static final int NO_OF_BITS = 8;
     public static final int NO_OF_PRIORITY = 8;
 
-    private short sType;
+    public short sType;
 
     /* ISIS administrative group */
     private List<Float> maxUnResBandwidth = new ArrayList<Float>();

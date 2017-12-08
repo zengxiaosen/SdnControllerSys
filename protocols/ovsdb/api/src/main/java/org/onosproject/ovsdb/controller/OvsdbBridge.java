@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,6 @@ public final class OvsdbBridge {
     private final List<ControllerInfo> controllers;
 
     /* Adds more properties */
-    private final Optional<String> datapathType;
 
     /* other optional configs */
     private final Map<String, String> otherConfigs;
@@ -56,17 +55,14 @@ public final class OvsdbBridge {
      * @param name name of the bridge
      * @param failMode openflow controller fail mode policy
      * @param controllers list of openflow controllers
-     * @param datapathType ovs datapath_type
      * @param otherConfigs other configs
      */
     private OvsdbBridge(String name, Optional<FailMode> failMode,
                        List<ControllerInfo> controllers,
-                       Optional<String> datapathType,
                        Map<String, String> otherConfigs) {
         this.name = checkNotNull(name);
         this.failMode = failMode;
         this.controllers = controllers;
-        this.datapathType = datapathType;
         this.otherConfigs = otherConfigs;
     }
 
@@ -95,15 +91,6 @@ public final class OvsdbBridge {
      */
     public Optional<FailMode> failMode() {
         return failMode;
-    }
-
-    /**
-     * Returns OVSDB datapath Type of the bridge.
-     *
-     * @return datapath type
-     */
-    public Optional<String> datapathType() {
-        return datapathType;
     }
 
     /**
@@ -147,7 +134,6 @@ public final class OvsdbBridge {
                 .add("bridgeName", name)
                 .add("failMode", failMode)
                 .add("controllers", controllers)
-                .add("datapathType", datapathType)
                 .add("otherConfigs", otherConfigs)
                 .toString();
     }
@@ -178,7 +164,6 @@ public final class OvsdbBridge {
         private String name;
         private Optional<FailMode> failMode = Optional.empty();
         private List<ControllerInfo> controllers = Lists.newArrayList();
-        private Optional<String> datapathType = Optional.empty();
         private Map<String, String> otherConfigs = Maps.newHashMap();
 
         private Builder() {
@@ -197,9 +182,7 @@ public final class OvsdbBridge {
                 otherConfigs.put(DISABLE_INBAND,
                                  bridgeDesc.disableInBand().get().toString());
             }
-            if (bridgeDesc.datapathType().isPresent()) {
-                this.datapathType = bridgeDesc.datapathType();
-            }
+
             this.name = bridgeDesc.name();
             this.failMode = bridgeDesc.failMode();
             this.controllers = Lists.newArrayList(bridgeDesc.controllers());
@@ -211,7 +194,7 @@ public final class OvsdbBridge {
          * @return ovsdb bridge
          */
         public OvsdbBridge build() {
-            return new OvsdbBridge(name, failMode, controllers, datapathType, otherConfigs);
+            return new OvsdbBridge(name, failMode, controllers, otherConfigs);
         }
 
         /**
@@ -277,17 +260,6 @@ public final class OvsdbBridge {
          */
         public Builder datapathId(String datapathId) {
             otherConfigs.put(DATAPATH_ID, datapathId);
-            return this;
-        }
-
-        /**
-         * Returns OVSDB bridge builder with a given datapath type.
-         *
-         * @param datapathType datapath Type
-         * @return ovsdb bridge builder
-         */
-        public Builder datapathType(String datapathType) {
-            this.datapathType = Optional.ofNullable(datapathType);
             return this;
         }
 

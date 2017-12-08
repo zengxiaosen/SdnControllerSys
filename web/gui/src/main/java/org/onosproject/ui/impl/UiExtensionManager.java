@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +15,15 @@
  */
 package org.onosproject.ui.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.BooleanNode;
-import com.fasterxml.jackson.databind.node.DoubleNode;
-import com.fasterxml.jackson.databind.node.IntNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.LongNode;
-import com.fasterxml.jackson.databind.node.NullNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.ShortNode;
-import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import java.math.BigInteger;
+import java.security.SecureRandom;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -52,29 +44,32 @@ import org.onosproject.ui.UiMessageHandlerFactory;
 import org.onosproject.ui.UiPreferencesService;
 import org.onosproject.ui.UiSessionToken;
 import org.onosproject.ui.UiTokenService;
-import org.onosproject.ui.UiTopo2OverlayFactory;
 import org.onosproject.ui.UiTopoMap;
 import org.onosproject.ui.UiTopoMapFactory;
 import org.onosproject.ui.UiTopoOverlayFactory;
 import org.onosproject.ui.UiView;
 import org.onosproject.ui.UiViewHidden;
-import org.onosproject.ui.impl.topo.Topo2TrafficMessageHandler;
 import org.onosproject.ui.impl.topo.Topo2ViewMessageHandler;
-import org.onosproject.ui.impl.topo.Traffic2Overlay;
-import org.onosproject.ui.lion.LionBundle;
-import org.onosproject.ui.lion.LionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigInteger;
-import java.security.SecureRandom;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.BooleanNode;
+import com.fasterxml.jackson.databind.node.DoubleNode;
+import com.fasterxml.jackson.databind.node.IntNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.LongNode;
+import com.fasterxml.jackson.databind.node.NullNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.ShortNode;
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import static com.google.common.collect.ImmutableList.of;
 import static java.util.stream.Collectors.toSet;
@@ -83,7 +78,6 @@ import static org.onosproject.security.AppPermission.Type.UI_READ;
 import static org.onosproject.security.AppPermission.Type.UI_WRITE;
 import static org.onosproject.ui.UiView.Category.NETWORK;
 import static org.onosproject.ui.UiView.Category.PLATFORM;
-import static org.onosproject.ui.impl.lion.BundleStitcher.generateBundles;
 
 /**
  * Manages the user interface extensions.
@@ -107,27 +101,7 @@ public class UiExtensionManager
     private static final int IDX_USER = 0;
     private static final int IDX_KEY = 1;
 
-    private static final String LION_BASE = "/org/onosproject/ui/lion";
-
-    private static final String[] LION_TAGS = {
-            // framework component localization
-            "core.fw.Mast",
-            "core.fw.Nav",
-            "core.fw.QuickHelp",
-
-            // view component localization
-            "core.view.App",
-            "core.view.Cluster",
-            "core.view.Topo",
-
-            // TODO: More to come...
-    };
-
-
     private final Logger log = LoggerFactory.getLogger(getClass());
-
-    // First thing to do is to set the locale (before creating core extension).
-    private final Locale runtimeLocale = LionUtils.setupRuntimeLocale();
 
     // List of all extensions
     private final List<UiExtension> extensions = Lists.newArrayList();
@@ -162,44 +136,29 @@ public class UiExtensionManager
             Executors.newSingleThreadExecutor(
                     Tools.groupedThreads("onos/ui-ext-manager", "event-handler", log));
 
-    private LionBundle navLion;
-
-
-    private String lionNavText(String id) {
-        return navLion.getValue("nav_item_" + id);
-    }
-
-    private UiView mkView(UiView.Category cat, String id, String iconId) {
-        return new UiView(cat, id, lionNavText(id), iconId);
-    }
-
+    // Creates core UI extension
     private UiExtension createCoreExtension() {
-        List<LionBundle> lionBundles = generateBundles(LION_BASE, LION_TAGS);
-
-        navLion = lionBundles.stream()
-                .filter(f -> f.id().equals("core.fw.Nav")).findFirst().get();
-
         List<UiView> coreViews = of(
-                mkView(PLATFORM, "app", "nav_apps"),
-                mkView(PLATFORM, "settings", "nav_settings"),
-                mkView(PLATFORM, "cluster", "nav_cluster"),
-                mkView(PLATFORM, "processor", "nav_processors"),
-                mkView(PLATFORM, "partition", "nav_partitions"),
+                new UiView(PLATFORM, "app", "Applications", "nav_apps"),
+                new UiView(PLATFORM, "settings", "Settings", "nav_settings"),
+                new UiView(PLATFORM, "cluster", "Cluster Nodes", "nav_cluster"),
+                new UiView(PLATFORM, "processor", "Packet Processors", "nav_processors"),
+                new UiView(PLATFORM, "partition", "Partitions", "nav_partitions"),
+                new UiView(NETWORK, "topo", "Topology", "nav_topo"),
 
-                mkView(NETWORK, "topo", "nav_topo"),
-                mkView(NETWORK, "topo2", "nav_topo2"),
-                mkView(NETWORK, "device", "nav_devs"),
+                // FIXME: leave commented out for now, while still under development
+                // (remember to also comment out inclusions in index.html)
+//                new UiView(NETWORK, "topo2", "New-Topo"),
 
+                new UiView(NETWORK, "device", "Devices", "nav_devs"),
                 new UiViewHidden("flow"),
                 new UiViewHidden("port"),
                 new UiViewHidden("group"),
                 new UiViewHidden("meter"),
-                new UiViewHidden("pipeconf"),
-
-                mkView(NETWORK, "link", "nav_links"),
-                mkView(NETWORK, "host", "nav_hosts"),
-                mkView(NETWORK, "intent", "nav_intents"),
-                mkView(NETWORK, "tunnel", "nav_tunnels")
+                new UiView(NETWORK, "link", "Links", "nav_links"),
+                new UiView(NETWORK, "host", "Hosts", "nav_hosts"),
+                new UiView(NETWORK, "intent", "Intents", "nav_intents"),
+                new UiView(NETWORK, "tunnel", "Tunnels", "nav_tunnels")
         );
 
         UiMessageHandlerFactory messageHandlerFactory =
@@ -207,7 +166,6 @@ public class UiExtensionManager
                         new UserPreferencesMessageHandler(),
                         new TopologyViewMessageHandler(),
                         new Topo2ViewMessageHandler(),
-                        new Topo2TrafficMessageHandler(),
                         new MapSelectorMessageHandler(),
                         new DeviceViewMessageHandler(),
                         new LinkViewMessageHandler(),
@@ -222,19 +180,12 @@ public class UiExtensionManager
                         new ClusterViewMessageHandler(),
                         new ProcessorViewMessageHandler(),
                         new TunnelViewMessageHandler(),
-                        new PartitionViewMessageHandler(),
-                        new PipeconfViewMessageHandler()
+                        new PartitionViewMessageHandler()
                 );
 
         UiTopoOverlayFactory topoOverlayFactory =
                 () -> ImmutableList.of(
-                        new TrafficOverlay(),
-                        new ProtectedIntentOverlay()
-                );
-
-        UiTopo2OverlayFactory topo2OverlayFactory =
-                () -> ImmutableList.of(
-                        new Traffic2Overlay()
+                        new TrafficOverlay()
                 );
 
         UiTopoMapFactory topoMapFactory =
@@ -257,24 +208,22 @@ public class UiExtensionManager
                 );
 
         return new UiExtension.Builder(CL, coreViews)
-                .lionBundles(lionBundles)
                 .messageHandlerFactory(messageHandlerFactory)
                 .topoOverlayFactory(topoOverlayFactory)
-                .topo2OverlayFactory(topo2OverlayFactory)
                 .topoMapFactory(topoMapFactory)
                 .resourcePath(CORE)
                 .build();
     }
 
-
     @Activate
     public void activate() {
         Serializer serializer = Serializer.using(KryoNamespaces.API,
-                     ObjectNode.class, ArrayNode.class,
-                     JsonNodeFactory.class, LinkedHashMap.class,
-                     TextNode.class, BooleanNode.class,
-                     LongNode.class, DoubleNode.class, ShortNode.class,
-                     IntNode.class, NullNode.class, UiSessionToken.class);
+
+                ObjectNode.class, ArrayNode.class,
+                JsonNodeFactory.class, LinkedHashMap.class,
+                TextNode.class, BooleanNode.class,
+                LongNode.class, DoubleNode.class, ShortNode.class,
+                IntNode.class, NullNode.class, UiSessionToken.class);
 
         prefsConsistentMap = storageService.<String, ObjectNode>consistentMapBuilder()
                 .withName(ONOS_USER_PREFERENCES)
@@ -292,7 +241,6 @@ public class UiExtensionManager
         tokens = tokensConsistentMap.asJavaMap();
 
         register(core);
-
         log.info("Started");
     }
 
@@ -321,8 +269,7 @@ public class UiExtensionManager
     public synchronized void unregister(UiExtension extension) {
         checkPermission(UI_WRITE);
         extensions.remove(extension);
-        extension.views().stream()
-                .map(UiView::id).collect(toSet()).forEach(views::remove);
+        extension.views().stream().map(UiView::id).collect(toSet()).forEach(views::remove);
         UiWebSocketServlet.sendToAll(GUI_REMOVED, null);
     }
 
@@ -339,11 +286,6 @@ public class UiExtensionManager
     }
 
     @Override
-    public synchronized LionBundle getNavLionBundle() {
-        return navLion;
-    }
-
-    @Override
     public Set<String> getUserNames() {
         ImmutableSet.Builder<String> builder = ImmutableSet.builder();
         prefs.keySet().forEach(k -> builder.add(userName(k)));
@@ -351,22 +293,17 @@ public class UiExtensionManager
     }
 
     @Override
-    public Map<String, ObjectNode> getPreferences(String username) {
+    public Map<String, ObjectNode> getPreferences(String userName) {
         ImmutableMap.Builder<String, ObjectNode> builder = ImmutableMap.builder();
         prefs.entrySet().stream()
-                .filter(e -> e.getKey().startsWith(username + SLASH))
+                .filter(e -> e.getKey().startsWith(userName + SLASH))
                 .forEach(e -> builder.put(keyName(e.getKey()), e.getValue()));
         return builder.build();
     }
 
     @Override
-    public ObjectNode getPreference(String username, String key) {
-        return prefs.get(key(username, key));
-    }
-
-    @Override
-    public void setPreference(String username, String key, ObjectNode value) {
-        prefs.put(key(username, key), value);
+    public void setPreference(String userName, String preference, ObjectNode value) {
+        prefs.put(key(userName, preference), value);
     }
 
     // =====================================================================

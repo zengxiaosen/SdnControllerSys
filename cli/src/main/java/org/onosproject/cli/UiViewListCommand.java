@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,10 +25,10 @@ import org.onosproject.ui.UiExtensionService;
 import java.util.List;
 
 /**
- * Lists all registered UI views.
+ * Lists all UI views.
  */
 @Command(scope = "onos", name = "ui-views",
-        description = "Lists all registered UI views")
+        description = "Lists all UI views")
 public class UiViewListCommand extends AbstractShellCommand {
 
     private static final String FMT = "id=%s, category=%s, label=%s, icon=%s";
@@ -40,7 +40,7 @@ public class UiViewListCommand extends AbstractShellCommand {
             print("%s", json(service.getExtensions()));
         } else {
             service.getExtensions().forEach(ext -> ext.views()
-                    .forEach(v -> print(FMT, v.id(), v.category(),
+                    .forEach(v -> print(FMT, v.id(), v.category().label(),
                                         v.label(), v.iconId())));
         }
     }
@@ -51,7 +51,7 @@ public class UiViewListCommand extends AbstractShellCommand {
         extensions.forEach(ext -> ext.views()
                 .forEach(v -> node.add(mapper.createObjectNode()
                                                .put("id", v.id())
-                                               .put("category", v.category().toString())
+                                               .put("category", v.category().label())
                                                .put("label", v.label())
                                                .put("icon", v.iconId()))));
         return node;

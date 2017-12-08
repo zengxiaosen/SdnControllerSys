@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,6 +80,9 @@ public class GetFlowStatisticsCommand extends AbstractShellCommand {
 
     @Override
     protected void execute() {
+        for (int i=0; i<50; i++){
+            log.info("到底走了没有啊。。。。。。。。。。。。。");
+        }
         DeviceService deviceService = get(DeviceService.class);
         FlowStatisticService flowStatsService = get(FlowStatisticService.class);
 
@@ -252,15 +255,15 @@ public class GetFlowStatisticsCommand extends AbstractShellCommand {
     private FlowEntry.FlowLiveType getFlowLiveType(String liveType) {
         String liveTypeUC = liveType.toUpperCase();
 
-        if ("IMMEDIATE".equals(liveTypeUC)) {
+        if (liveTypeUC.equals("IMMEDIATE")) {
             return FlowEntry.FlowLiveType.IMMEDIATE;
-        } else if ("SHORT".equals(liveTypeUC)) {
+        } else if (liveTypeUC.equals("SHORT")) {
             return FlowEntry.FlowLiveType.SHORT;
-        } else if ("MID".equals(liveTypeUC)) {
+        } else if (liveTypeUC.equals("MID")) {
             return FlowEntry.FlowLiveType.MID;
-        } else if ("LONG".equals(liveTypeUC)) {
+        } else if (liveTypeUC.equals("LONG")) {
             return FlowEntry.FlowLiveType.LONG;
-        } else if ("UNKNOWN".equals(liveTypeUC)) {
+        } else if (liveTypeUC.equals("UNKNOWN")) {
             return FlowEntry.FlowLiveType.UNKNOWN;
         } else {
             return null; // flow live type error
@@ -276,19 +279,19 @@ public class GetFlowStatisticsCommand extends AbstractShellCommand {
     private Instruction.Type getInstructionType(String instType) {
         String instTypeUC = instType.toUpperCase();
 
-        if ("OUTPUT".equals(instTypeUC)) {
+        if (instTypeUC.equals("OUTPUT")) {
             return Instruction.Type.OUTPUT;
-        } else if ("GROUP".equals(instTypeUC)) {
+        } else if (instTypeUC.equals("GROUP")) {
             return Instruction.Type.GROUP;
-        } else if ("L0MODIFICATION".equals(instTypeUC)) {
+        } else if (instTypeUC.equals("L0MODIFICATION")) {
             return Instruction.Type.L0MODIFICATION;
-        } else if ("L2MODIFICATION".equals(instTypeUC)) {
+        } else if (instTypeUC.equals("L2MODIFICATION")) {
             return Instruction.Type.L2MODIFICATION;
-        } else if ("TABLE".equals(instTypeUC)) {
+        } else if (instTypeUC.equals("TABLE")) {
             return Instruction.Type.TABLE;
-        } else if ("L3MODIFICATION".equals(instTypeUC)) {
+        } else if (instTypeUC.equals("L3MODIFICATION")) {
             return Instruction.Type.L3MODIFICATION;
-        } else if ("METADATA".equals(instTypeUC)) {
+        } else if (instTypeUC.equals("METADATA")) {
             return Instruction.Type.METADATA;
         } else {
              return null; // instruction type error
@@ -309,6 +312,10 @@ public class GetFlowStatisticsCommand extends AbstractShellCommand {
     }
 
     private void printPortSummaryLoad(ConnectPoint cp, SummaryFlowEntryWithLoad summaryFlowLoad) {
+        for(int i=0;i< 10; i++){
+            log.info("print load.........................");
+        }
+
         print("  deviceId/Port=%s/%s, Total=%s, Immediate=%s, Short=%s, Mid=%s, Long=%s, Unknown=%s",
                 cp.elementId(),
                 cp.port(),

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,16 +59,9 @@ public interface Host extends Element {
      * Returns the most recent host location where the host attaches to the
      * network edge.
      *
-     * @return the most recent host location
+     * @return host location
      */
     HostLocation location();
-
-    /**
-     * Returns all host locations where the host attaches to the network edge.
-     *
-     * @return all host locations
-     */
-    Set<HostLocation> locations();
 
     /**
      * Returns true if configured by NetworkConfiguration.
@@ -80,3 +73,4 @@ public interface Host extends Element {
     // TODO: explore capturing list of recent locations to aid in mobility
 
 }
+

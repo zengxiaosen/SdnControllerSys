@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,12 @@
  */
 package org.onosproject.lisp.ctl.impl;
 
-import com.google.common.collect.ImmutableList;
 import org.onlab.packet.IpAddress;
-import org.onosproject.lisp.ctl.LispRouter;
-import org.onosproject.lisp.ctl.LispRouterFactory;
-import org.onosproject.lisp.ctl.impl.util.LispMapUtil;
 import org.onosproject.lisp.msg.authentication.LispAuthenticationConfig;
 import org.onosproject.lisp.msg.protocols.DefaultLispInfoReply.DefaultInfoReplyBuilder;
 import org.onosproject.lisp.msg.protocols.DefaultLispInfoRequest.DefaultInfoRequestBuilder;
 import org.onosproject.lisp.msg.protocols.DefaultLispMapNotify.DefaultNotifyBuilder;
 import org.onosproject.lisp.msg.protocols.DefaultLispMapRegister.DefaultRegisterBuilder;
-import org.onosproject.lisp.msg.protocols.DefaultLispMapRequest.DefaultRequestBuilder;
 import org.onosproject.lisp.msg.protocols.LispEidRecord;
 import org.onosproject.lisp.msg.protocols.LispInfoReply;
 import org.onosproject.lisp.msg.protocols.LispInfoReply.InfoReplyBuilder;
@@ -33,11 +28,8 @@ import org.onosproject.lisp.msg.protocols.LispInfoRequest;
 import org.onosproject.lisp.msg.protocols.LispInfoRequest.InfoRequestBuilder;
 import org.onosproject.lisp.msg.protocols.LispMapNotify;
 import org.onosproject.lisp.msg.protocols.LispMapNotify.NotifyBuilder;
-import org.onosproject.lisp.msg.protocols.LispMapRecord;
 import org.onosproject.lisp.msg.protocols.LispMapRegister;
 import org.onosproject.lisp.msg.protocols.LispMapRegister.RegisterBuilder;
-import org.onosproject.lisp.msg.protocols.LispMapRequest;
-import org.onosproject.lisp.msg.protocols.LispMapRequest.RequestBuilder;
 import org.onosproject.lisp.msg.protocols.LispMessage;
 import org.onosproject.lisp.msg.types.LispAfiAddress;
 import org.onosproject.lisp.msg.types.LispIpv4Address;
@@ -51,8 +43,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
 
 import static org.onlab.packet.IpAddress.valueOf;
 import static org.onosproject.lisp.msg.authentication.LispAuthenticationKeyEnum.valueOf;
@@ -73,9 +63,8 @@ public final class LispMapServer {
     private static final String FAILED_TO_FORMULATE_NAT_MSG =
                                 "Fails during formulate NAT address.";
 
-    private boolean enableSmr = false;
 
-    private LispMappingDatabase mapDb = LispExpireMapDatabase.getInstance();
+    private LispMappingDatabase mapDb = LispMappingDatabase.getInstance();
     private LispAuthenticationConfig authConfig = LispAuthenticationConfig.getInstance();
 
     // non-instantiable (except for our Singleton)
@@ -84,15 +73,6 @@ public final class LispMapServer {
 
     static LispMapServer getInstance() {
         return SingletonHelper.INSTANCE;
-    }
-
-    /**
-     * Enable LISP Map server sends SMR(Solicit Map Request) message.
-     *
-     * @param enable whether enable or disable sending SMR
-     */
-    public void enableSmr(boolean enable) {
-        this.enableSmr = enable;
     }
 
     /**
@@ -115,19 +95,7 @@ public final class LispMapServer {
                                 new LispEidRecord(mapRecord.getMaskLength(),
                                                   mapRecord.getEidPrefixAfi());
 
-            LispMapRecord oldMapRecord = mapDb.getMapRecordByEidRecord(eidRecord,
-                    register.isProxyMapReply());
-            if (oldMapRecord == null) {
-                mapDb.putMapRecord(eidRecord, mapRecord, register.isProxyMapReply());
-            } else {
-                if (oldMapRecord.getMapVersionNumber() <= mapRecord.getMapVersionNumber()) {
-                    mapDb.putMapRecord(eidRecord, mapRecord, register.isProxyMapReply());
-
-                    if (enableSmr) {
-                        sendSmrMessage(eidRecord);
-                    }
-                }
-            }
+            mapDb.putMapRecord(eidRecord, mapRecord, register.isProxyMapReply());
         });
 
         // we only acknowledge back to ETR when want-map-notify bit is set to true
@@ -249,50 +217,6 @@ public final class LispMapServer {
         LispInfoRequest authRequest = requestBuilder.build();
 
         return Arrays.equals(authRequest.getAuthData(), request.getAuthData());
-    }
-
-    /**
-     * Sends SMR (Solicit Map Request) to their subscribers.
-     *
-     * @param eidRecord the updated EID
-     */
-    private void sendSmrMessage(LispEidRecord eidRecord) {
-
-        RequestBuilder builder = new DefaultRequestBuilder();
-
-        LispAfiAddress msAddress = null;
-        try {
-            msAddress = new LispIpv4Address(IpAddress.valueOf(InetAddress.getLocalHost()));
-        } catch (UnknownHostException e) {
-            log.warn("Source EID is not found, {}", e.getMessage());
-        }
-
-        LispMapRequest msg = builder.withIsSmr(true)
-                .withIsSmrInvoked(true)
-                .withIsProbe(false)
-                .withIsPitr(false)
-                .withIsAuthoritative(false)
-                .withIsMapDataPresent(false)
-                .withSourceEid(msAddress)
-                .withEidRecords(ImmutableList.of(eidRecord))
-                .build();
-
-        LispRouterFactory routerFactory = LispRouterFactory.getInstance();
-        Collection<LispRouter> routers = routerFactory.getRouters();
-        routers.forEach(router -> {
-            if (isInEidRecordRange(eidRecord, router.getEidRecords())) {
-                router.sendMessage(msg);
-            }
-        });
-    }
-
-    private boolean isInEidRecordRange(LispEidRecord originalRecord, List<LispEidRecord> records) {
-
-        for (LispEidRecord record : records) {
-            return LispMapUtil.isInRange(record, originalRecord) ||
-                    LispMapUtil.isInRange(originalRecord, record);
-        }
-        return false;
     }
 
     /**

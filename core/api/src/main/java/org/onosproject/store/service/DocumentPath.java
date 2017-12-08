@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,39 +16,23 @@
 
 package org.onosproject.store.service;
 
-import com.google.common.collect.Comparators;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
-
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 /**
  * Unique key for nodes in the {@link DocumentTree}.
  */
 public class DocumentPath implements Comparable<DocumentPath> {
-
-    /** Default path separator. */
-    public static final String DEFAULT_SEPARATOR = "|";
-
-    /** Default path separator regex. */
-    public static final String DEFAULT_SEPARATOR_RE = "\\|";
-
-    // TODO: Add means to set the path separator and separator ERE.
-    private static String pathSeparator = DEFAULT_SEPARATOR;
-    private static String pathSeparatorRE = DEFAULT_SEPARATOR_RE;
-
-    /** Root document tree path. */
-    public static final DocumentPath ROOT = DocumentPath.from("root");
 
     private final List<String> pathElements = Lists.newArrayList();
 
@@ -58,7 +42,7 @@ public class DocumentPath implements Comparable<DocumentPath> {
      * @param pathElements list of path elements
      */
     private DocumentPath(List<String> pathElements) {
-        checkNotNull(pathElements);
+        Preconditions.checkNotNull(pathElements);
         this.pathElements.addAll(pathElements);
     }
 
@@ -74,15 +58,16 @@ public class DocumentPath implements Comparable<DocumentPath> {
      * @throws IllegalDocumentNameException if both parameters are null or name contains an illegal character ('.')
      */
     public DocumentPath(String nodeName, DocumentPath parentPath) {
-        checkNotNull(nodeName, "Node name cannot be null");
-        if (nodeName.contains(pathSeparator)) {
-            throw new IllegalDocumentNameException("'" + pathSeparator + "'" +
-                    " are not allowed in names.");
+        if (nodeName.contains(".")) {
+            throw new IllegalDocumentNameException(
+                    "Periods are not allowed in names.");
         }
         if (parentPath != null) {
             pathElements.addAll(parentPath.pathElements());
         }
-        pathElements.add(nodeName);
+        if (nodeName != null) {
+            pathElements.add(nodeName);
+        }
         if (pathElements.isEmpty()) {
             throw new IllegalDocumentNameException("A document path must contain at" +
                                                    "least one non-null" +
@@ -97,40 +82,7 @@ public class DocumentPath implements Comparable<DocumentPath> {
      * @return {@code DocumentPath} instance
      */
     public static DocumentPath from(String path) {
-        return new DocumentPath(Arrays.asList(path.split(pathSeparatorRE)));
-    }
-
-    /**
-     * Creates a new {@code DocumentPath} from a list of path elements.
-     *
-     * @param elements path elements
-     * @return {@code DocumentPath} instance
-     */
-    public static DocumentPath from(String... elements) {
-        return from(Arrays.asList(elements));
-    }
-
-    /**
-     * Creates a new {@code DocumentPath} from a list of path elements.
-     *
-     * @param elements path elements
-     * @return {@code DocumentPath} instance
-     */
-    public static DocumentPath from(List<String> elements) {
-        return new DocumentPath(elements);
-    }
-
-    /**
-     * Creates a new {@code DocumentPath} from a list of path elements.
-     *
-     * @param elements path elements
-     * @param child child element
-     * @return {@code DocumentPath} instance
-     */
-    public static DocumentPath from(List<String> elements, String child) {
-        elements = new ArrayList<>(elements);
-        elements.add(child);
-        return from(elements);
+        return new DocumentPath(Arrays.asList(path.split("\\.")));
     }
 
     /**
@@ -227,7 +179,7 @@ public class DocumentPath implements Comparable<DocumentPath> {
         while (iter.hasNext()) {
             stringBuilder.append(iter.next());
             if (iter.hasNext()) {
-                stringBuilder.append(pathSeparator);
+                stringBuilder.append(".");
             }
         }
         return stringBuilder.toString();
@@ -235,7 +187,19 @@ public class DocumentPath implements Comparable<DocumentPath> {
 
     @Override
     public int compareTo(DocumentPath that) {
-        return Comparators.lexicographical(Comparator.<String>naturalOrder())
-                .compare(this.pathElements, that.pathElements);
+        int shorterLength = this.pathElements.size() > that.pathElements.size()
+                ? that.pathElements.size() : this.pathElements.size();
+        for (int i = 0; i < shorterLength; i++) {
+            if (this.pathElements.get(i).compareTo(that.pathElements.get(i)) != 0) {
+                return this.pathElements.get(i).compareTo(that.pathElements.get(i));
+            }
+        }
+        if (this.pathElements.size() > that.pathElements.size()) {
+            return 1;
+        } else if (that.pathElements.size() > this.pathElements.size()) {
+            return -1;
+        } else {
+            return 0;
+        }
     }
 }

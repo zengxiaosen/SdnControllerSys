@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,13 @@
  */
 package org.onosproject.store.primitives.resources.impl;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import io.atomix.Atomix;
+import io.atomix.AtomixClient;
+import io.atomix.resource.ResourceType;
+
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.UUID;
@@ -23,43 +30,48 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.util.concurrent.Uninterruptibles;
-import io.atomix.protocols.raft.proxy.RaftProxy;
-import io.atomix.protocols.raft.service.RaftService;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.onlab.util.Tools;
 import org.onosproject.store.service.Task;
 import org.onosproject.store.service.WorkQueueStats;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * Unit tests for {@link AtomixWorkQueue}.
  */
-public class AtomixWorkQueueTest extends AtomixTestBase<AtomixWorkQueue> {
+public class AtomixWorkQueueTest extends AtomixTestBase {
+
     private static final Duration DEFAULT_PROCESSING_TIME = Duration.ofMillis(100);
     private static final byte[] DEFAULT_PAYLOAD = "hello world".getBytes();
 
-    @Override
-    protected RaftService createService() {
-        return new AtomixWorkQueueService();
+    @BeforeClass
+    public static void preTestSetup() throws Throwable {
+        createCopycatServers(1);
+    }
+
+    @AfterClass
+    public static void postTestCleanup() throws Exception {
+        clearTests();
     }
 
     @Override
-    protected AtomixWorkQueue createPrimitive(RaftProxy proxy) {
-        return new AtomixWorkQueue(proxy);
+    protected ResourceType resourceType() {
+        return new ResourceType(AtomixWorkQueue.class);
     }
 
     @Test
     public void testAdd() throws Throwable {
         String queueName = UUID.randomUUID().toString();
-        AtomixWorkQueue queue1 = newPrimitive(queueName);
+        Atomix atomix1 = createAtomixClient();
+        AtomixWorkQueue queue1 = atomix1.getResource(queueName, AtomixWorkQueue.class).join();
         byte[] item = DEFAULT_PAYLOAD;
         queue1.addOne(item).join();
 
-        AtomixWorkQueue queue2 = newPrimitive(queueName);
+        Atomix atomix2 = createAtomixClient();
+        AtomixWorkQueue queue2 = atomix2.getResource(queueName, AtomixWorkQueue.class).join();
         byte[] task2 = DEFAULT_PAYLOAD;
         queue2.addOne(task2).join();
 
@@ -72,7 +84,8 @@ public class AtomixWorkQueueTest extends AtomixTestBase<AtomixWorkQueue> {
     @Test
     public void testAddMultiple() throws Throwable {
         String queueName = UUID.randomUUID().toString();
-        AtomixWorkQueue queue1 = newPrimitive(queueName);
+        Atomix atomix1 = createAtomixClient();
+        AtomixWorkQueue queue1 = atomix1.getResource(queueName, AtomixWorkQueue.class).join();
         byte[] item1 = DEFAULT_PAYLOAD;
         byte[] item2 = DEFAULT_PAYLOAD;
         queue1.addMultiple(Arrays.asList(item1, item2)).join();
@@ -86,11 +99,13 @@ public class AtomixWorkQueueTest extends AtomixTestBase<AtomixWorkQueue> {
     @Test
     public void testTakeAndComplete() throws Throwable {
         String queueName = UUID.randomUUID().toString();
-        AtomixWorkQueue queue1 = newPrimitive(queueName);
+        Atomix atomix1 = createAtomixClient();
+        AtomixWorkQueue queue1 = atomix1.getResource(queueName, AtomixWorkQueue.class).join();
         byte[] item1 = DEFAULT_PAYLOAD;
         queue1.addOne(item1).join();
 
-        AtomixWorkQueue queue2 = newPrimitive(queueName);
+        Atomix atomix2 = createAtomixClient();
+        AtomixWorkQueue queue2 = atomix2.getResource(queueName, AtomixWorkQueue.class).join();
         Task<byte[]> removedTask = queue2.take().join();
 
         WorkQueueStats stats = queue2.stats().join();
@@ -113,11 +128,13 @@ public class AtomixWorkQueueTest extends AtomixTestBase<AtomixWorkQueue> {
     @Test
     public void testUnexpectedClientClose() throws Throwable {
         String queueName = UUID.randomUUID().toString();
-        AtomixWorkQueue queue1 = newPrimitive(queueName);
+        Atomix atomix1 = createAtomixClient();
+        AtomixWorkQueue queue1 = atomix1.getResource(queueName, AtomixWorkQueue.class).join();
         byte[] item1 = DEFAULT_PAYLOAD;
         queue1.addOne(item1).join();
 
-        AtomixWorkQueue queue2 = newPrimitive(queueName);
+        AtomixClient atomix2 = createAtomixClient();
+        AtomixWorkQueue queue2 = atomix2.getResource(queueName, AtomixWorkQueue.class).join();
         queue2.take().join();
 
         WorkQueueStats stats = queue1.stats().join();
@@ -125,7 +142,7 @@ public class AtomixWorkQueueTest extends AtomixTestBase<AtomixWorkQueue> {
         assertEquals(1, stats.totalInProgress());
         assertEquals(0, stats.totalCompleted());
 
-        queue2.proxy.close().join();
+        atomix2.close().join();
 
         stats = queue1.stats().join();
         assertEquals(1, stats.totalPending());
@@ -136,13 +153,15 @@ public class AtomixWorkQueueTest extends AtomixTestBase<AtomixWorkQueue> {
     @Test
     public void testAutomaticTaskProcessing() throws Throwable {
         String queueName = UUID.randomUUID().toString();
-        AtomixWorkQueue queue1 = newPrimitive(queueName);
+        Atomix atomix1 = createAtomixClient();
+        AtomixWorkQueue queue1 = atomix1.getResource(queueName, AtomixWorkQueue.class).join();
         Executor executor = Executors.newSingleThreadExecutor();
 
         CountDownLatch latch1 = new CountDownLatch(1);
         queue1.registerTaskProcessor(s -> latch1.countDown(), 2, executor);
 
-        AtomixWorkQueue queue2 = newPrimitive(queueName);
+        AtomixClient atomix2 = createAtomixClient();
+        AtomixWorkQueue queue2 = atomix2.getResource(queueName, AtomixWorkQueue.class).join();
         byte[] item1 = DEFAULT_PAYLOAD;
         queue2.addOne(item1).join();
 
@@ -170,11 +189,13 @@ public class AtomixWorkQueueTest extends AtomixTestBase<AtomixWorkQueue> {
     @Test
     public void testDestroy() {
         String queueName = UUID.randomUUID().toString();
-        AtomixWorkQueue queue1 = newPrimitive(queueName);
+        Atomix atomix1 = createAtomixClient();
+        AtomixWorkQueue queue1 = atomix1.getResource(queueName, AtomixWorkQueue.class).join();
         byte[] item = DEFAULT_PAYLOAD;
         queue1.addOne(item).join();
 
-        AtomixWorkQueue queue2 = newPrimitive(queueName);
+        Atomix atomix2 = createAtomixClient();
+        AtomixWorkQueue queue2 = atomix2.getResource(queueName, AtomixWorkQueue.class).join();
         byte[] task2 = DEFAULT_PAYLOAD;
         queue2.addOne(task2).join();
 
@@ -194,7 +215,8 @@ public class AtomixWorkQueueTest extends AtomixTestBase<AtomixWorkQueue> {
     @Test
     public void testCompleteAttemptWithIncorrectSession() {
         String queueName = UUID.randomUUID().toString();
-        AtomixWorkQueue queue1 = newPrimitive(queueName);
+        Atomix atomix1 = createAtomixClient();
+        AtomixWorkQueue queue1 = atomix1.getResource(queueName, AtomixWorkQueue.class).join();
         byte[] item = DEFAULT_PAYLOAD;
         queue1.addOne(item).join();
 
@@ -202,7 +224,8 @@ public class AtomixWorkQueueTest extends AtomixTestBase<AtomixWorkQueue> {
         String taskId = task.taskId();
 
         // Create another client and get a handle to the same queue.
-        AtomixWorkQueue queue2 = newPrimitive(queueName);
+        Atomix atomix2 = createAtomixClient();
+        AtomixWorkQueue queue2 = atomix2.getResource(queueName, AtomixWorkQueue.class).join();
 
         // Attempt completing the task with new client and verify task is not completed
         queue2.complete(taskId).join();

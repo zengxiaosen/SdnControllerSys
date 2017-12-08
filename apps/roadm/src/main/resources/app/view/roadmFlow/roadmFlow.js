@@ -7,8 +7,6 @@
     var DELETE_FLOW_REQ = "roadmDeleteFlowRequest";
     var CREATE_FLOW_REQ = "roadmCreateFlowRequest";
     var CREATE_FLOW_RESP = "roadmCreateFlowResponse";
-    var SHOW_ITEMS_REQ = "roadmShowFlowItemsRequest";
-    var SHOW_ITEMS_RESP = "roadmShowFlowItemsResponse";
 
     // injected references
     var $log, $scope, $location, fs, tbs, wss, ns;
@@ -24,19 +22,6 @@
                 flowId: flow.id,
                 attenuation: targetVal
             });
-    }
-
-    function queryShowItems() {
-        wss.sendEvent(SHOW_ITEMS_REQ,
-            {
-                devId: $scope.devId,
-            });
-    }
-    
-    function showItemsCb(data) {
-        $scope.showChannel = data.showChannel;
-        $scope.showAttenuation = data.showAttenuation;
-        $scope.$apply();
     }
 
     function attenuationCb(data) {
@@ -70,13 +55,13 @@
             $scope.addFlowTip = 'Create a flow';
             $scope.deviceTip = 'Show device table';
             $scope.flowTip = 'Show flow view for this device';
-            $scope.portTip = 'Show port view for this device';
+            $scope.groupTip = 'Show group view for this device';
+            $scope.meterTip = 'Show meter view for selected device';
 
             $scope.showFlowForm = false;
 
             var handlers = {};
             handlers[SET_ATT_RESP] = attenuationCb;
-            handlers[SHOW_ITEMS_RESP] = showItemsCb;
             wss.bindHandlers(handlers);
 
             params = $location.search();
@@ -97,8 +82,6 @@
             $scope.hideFlowForm = function () {
                 $scope.showFlowForm = false;
             }
-
-            $scope.queryShowItems = queryShowItems;
 
             $scope.setAttenuation = setAttenuation;
 
@@ -166,7 +149,7 @@
             controller: function($scope, $timeout) {
                 $scope.enableEdit = function() {
                     // connection must support attenuation to be editable
-                    if ($scope.currItem.hasAttenuation === 'true' && $scope.editMode === false) {
+                    if ($scope.editMode === false) {
                         // Ensure that the entry being edited remains the same even
                         // if the table entries are shifted around.
                         $scope.targetItem = $scope.currItem;
@@ -245,7 +228,7 @@
         //this.flow.outPort = 2;
         this.flow.spacing = this.spacings[1];
         //this.flow.multiplier = 0;
-        this.flow.channelFrequency = "";
+        this.flow.includeAttenuation = true;
         this.flow.attenuation = 0;
 
         var parent = this;
@@ -267,18 +250,15 @@
                 parent.spacingMessage = data.spacing.message;
                 parent.spacingError = true;
             }
-            if ($scope.includeChannel)
-            {
-                if (!data.multiplier.valid) {
-                    parent.multiplierMessage = data.multiplier.message;
-                    parent.multiplierError = true;
-                }
-                if (!data.channelAvailable.valid) {
-                    parent.channelMessage = data.channelAvailable.message;
-                    parent.channelError = true;
-                }
+            if (!data.multiplier.valid) {
+                parent.multiplierMessage = data.multiplier.message;
+                parent.multiplierError = true;
             }
-            if ($scope.includeAttenuation && !data.attenuation.valid) {
+            if (!data.channelAvailable.valid) {
+                parent.channelMessage = data.channelAvailable.message;
+                parent.channelError = true;
+            }
+            if (data.includeAttenuation && !data.attenuation.valid) {
                 parent.attenuationMessage = data.attenuation.message;
                 parent.attenuationError = true;
             }
@@ -290,6 +270,7 @@
         var handlers = {}
         handlers[CREATE_FLOW_RESP] = createFlowCb;
         wss.bindHandlers(handlers);
+
         this.createFlow = function(connection) {
             this.clearErrors();
 
@@ -314,12 +295,12 @@
                 this.outPortError = true;
                 error = true;
             }
-            if ($scope.includeChannel && !isInteger(connection.multiplier)) {
+            if (!isInteger(connection.multiplier)) {
                 this.multiplierMessage = notIntegerError;
                 this.multiplierError = true;
                 error = true;
             }
-            if ($scope.includeAttenuation && !isInteger(connection.attenuation)) {
+            if (connection.includeAttenuation && !isInteger(connection.attenuation)) {
                 this.attenuationMessage = notIntegerError;
                 this.attenuationError = true;
                 error = true;

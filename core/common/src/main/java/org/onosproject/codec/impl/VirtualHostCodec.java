@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ public class VirtualHostCodec extends JsonCodec<VirtualHost> {
     static final String MAC_ADDRESS = "mac";
     static final String VLAN = "vlan";
     static final String IP_ADDRESSES = "ipAddresses";
-    static final String HOST_LOCATION = "locations";
+    static final String HOST_LOCATION = "location";
 
     private static final String NULL_OBJECT_MSG = "VirtualHost cannot be null";
     private static final String MISSING_MEMBER_MSG = " member is required in VirtualHost";
@@ -71,12 +71,7 @@ public class VirtualHostCodec extends JsonCodec<VirtualHost> {
             jsonIpAddresses.add(ipAddress.toString());
         }
         result.set(IP_ADDRESSES, jsonIpAddresses);
-
-        final ArrayNode jsonLocations = result.putArray("locations");
-        for (final HostLocation location : vHost.locations()) {
-            jsonLocations.add(locationCodec.encode(location, context));
-        }
-        result.set("locations", jsonLocations);
+        result.set(HOST_LOCATION, locationCodec.encode(vHost.location(), context));
 
         return result;
     }
@@ -90,15 +85,10 @@ public class VirtualHostCodec extends JsonCodec<VirtualHost> {
         NetworkId nId = NetworkId.networkId(Long.parseLong(extractMember(NETWORK_ID, json)));
         MacAddress mac = MacAddress.valueOf(json.get("mac").asText());
         VlanId vlanId = VlanId.vlanId((short) json.get("vlan").asInt(VlanId.UNTAGGED));
-
-        Set<HostLocation> locations = new HashSet<>();
-        JsonNode locationNodes = json.get("locations");
-        locationNodes.forEach(locationNode -> {
-            PortNumber portNumber = PortNumber.portNumber(locationNode.get("port").asText());
-            DeviceId deviceId = DeviceId.deviceId(locationNode.get("elementId").asText());
-            locations.add(new HostLocation(deviceId, portNumber, 0));
-        });
-
+        JsonNode locationNode = json.get("location");
+        PortNumber portNumber = PortNumber.portNumber(locationNode.get("port").asText());
+        DeviceId deviceId = DeviceId.deviceId(locationNode.get("elementId").asText());
+        HostLocation hostLocation = new HostLocation(deviceId, portNumber, 0);
         HostId id = HostId.hostId(mac, vlanId);
 
         Iterator<JsonNode> ipStrings = json.get("ipAddresses").elements();
@@ -107,7 +97,7 @@ public class VirtualHostCodec extends JsonCodec<VirtualHost> {
             ips.add(IpAddress.valueOf(ipStrings.next().asText()));
         }
 
-        return new DefaultVirtualHost(nId, id, mac, vlanId, locations, ips);
+        return new DefaultVirtualHost(nId, id, mac, vlanId, hostLocation, ips);
     }
 
     /**

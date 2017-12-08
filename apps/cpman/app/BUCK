@@ -1,9 +1,5 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
-    '//lib:JACKSON',
-    '//lib:METRICS',
-    '//lib:KRYO',
-    '//lib:joda-time',
     '//lib:org.apache.karaf.shell.console',
     '//lib:javax.ws.rs-api',
     '//lib:rrd4j',
@@ -31,15 +27,15 @@ osgi_jar_with_tests (
     deps = COMPILE_DEPS,
     test_deps = TEST_DEPS,
     web_context = '/onos/cpman',
-    api_title = 'Control Plane Manager API',
+    api_title = 'Control Plane Manager App API',
     api_version = '1.0',
-    api_description = 'REST API for Control Plane Manager',
+    api_description = 'REST API for Control Plane Manager App',
     api_package = 'org.onosproject.cpman.rest',
 )
 
 onos_app (
     app_name = 'org.onosproject.cpman',
-    title = 'Control Plane Manager',
+    title = 'Control Plane Manager application',
     category = 'Monitoring',
     url = 'http://onosproject.org',
     description = 'Control Plane Management application for monitoring the health of the ONOS cluster',

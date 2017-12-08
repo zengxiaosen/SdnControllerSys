@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,16 +30,7 @@ public enum OduSignalType {
     ODU2(10_000),
     ODU2e(10_000),
     ODU3(40_000),
-    ODU4(100_000),
-    ODUC1(100_000),
-    ODUC2(200_000),
-    ODUC3(300_000),
-    ODUC4(400_000),
-    ODUC5(500_000),
-    ODUC6(600_000),
-    ODUC7(700_000),
-    ODUC8(800_000),
-    ODUC9(900_000);
+    ODU4(100_000);
 
     private final long bitRate;
 

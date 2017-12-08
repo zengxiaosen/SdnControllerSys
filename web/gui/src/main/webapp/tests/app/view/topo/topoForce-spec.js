@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,14 +41,11 @@ describe('factory: view/topo/topoForce.js', function() {
 
             'updateDeviceColors', 'toggleHosts',
             'togglePorts', 'toggleOffline',
-            'cycleDeviceLabels', 'cycleHostLabels', 'unpin',
-            'showMastership', 'showBadLinks', 'setNodeScale',
+            'cycleDeviceLabels', 'unpin', 'showMastership', 'showBadLinks',
 
             'resetAllLocations', 'addDevice', 'updateDevice', 'removeDevice',
             'addHost', 'updateHost', 'moveHost', 'removeHost',
-            'addLink', 'updateLink', 'removeLink', 'topoStartDone',
-
-            'setLionBundle',
+            'addLink', 'updateLink', 'removeLink', 'topoStartDone'
         ])).toBeTruthy();
     });
 

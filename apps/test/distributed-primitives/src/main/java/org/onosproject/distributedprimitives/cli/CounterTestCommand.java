@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,21 +54,21 @@ public class CounterTestCommand extends AbstractShellCommand {
     protected void execute() {
         StorageService storageService = get(StorageService.class);
         atomicCounter = storageService.getAsyncAtomicCounter(counter).asAtomicCounter();
-        if ("get".equals(operation)) {
+        if (operation.equals("get")) {
             print("%d", atomicCounter.get());
-        } else if ("set".equals(operation)) {
+        } else if (operation.equals("set")) {
             atomicCounter.set(value1);
-        } else if ("incrementAndGet".equals(operation)) {
+        } else if (operation.equals("incrementAndGet")) {
             print("%d", atomicCounter.incrementAndGet());
-        } else if ("getAndIncrement".equals(operation)) {
+        } else if (operation.equals("getAndIncrement")) {
             print("%d", atomicCounter.getAndIncrement());
-        } else if ("getAndAdd".equals(operation)) {
+        } else if (operation.equals("getAndAdd")) {
             print("%d", atomicCounter.getAndAdd(value1));
-        } else if ("addAndGet".equals(operation)) {
+        } else if (operation.equals("addAndGet")) {
             print("%d", atomicCounter.addAndGet(value1));
-        } else if ("compareAndSet".equals(operation)) {
+        } else if (operation.equals("compareAndSet")) {
             print("%b", atomicCounter.compareAndSet(value1, value2));
-        } else if ("destroy".equals(operation)) {
+        } else if (operation.equals("destroy")) {
             atomicCounter.destroy();
         }
     }

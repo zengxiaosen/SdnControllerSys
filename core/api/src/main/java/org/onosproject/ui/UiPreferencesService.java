@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,22 +42,12 @@ public interface UiPreferencesService {
     Map<String, ObjectNode> getPreferences(String userName);
 
     /**
-     * Returns the named preference for the specified user.
-     * If no such preferences exist, null will be returned.
-     *
-     * @param username user name
-     * @param key      preference key
-     * @return named preference
-     */
-    ObjectNode getPreference(String username, String key);
-
-    /**
      * Sets the named preference for the specified user.
      *
-     * @param username user name
-     * @param key      preference key
-     * @param value    preference value
+     * @param userName   user name
+     * @param preference name of the user preference
+     * @param value      preference value
      */
-    void setPreference(String username, String key, ObjectNode value);
+    void setPreference(String userName, String preference, ObjectNode value);
 
 }

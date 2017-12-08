@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,18 @@
  */
 package org.onosproject.provider.host.impl;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.onlab.junit.TestUtils;
 import org.onlab.osgi.ComponentContextAdapter;
 import org.onlab.packet.ARP;
 import org.onlab.packet.ChassisId;
 import org.onlab.packet.DHCP;
-import org.onlab.packet.DHCP6;
-import org.onlab.packet.dhcp.Dhcp6ClientIdOption;
-import org.onlab.packet.dhcp.Dhcp6Duid;
-import org.onlab.packet.dhcp.Dhcp6IaAddressOption;
-import org.onlab.packet.dhcp.Dhcp6IaNaOption;
-import org.onlab.packet.dhcp.Dhcp6Option;
-import org.onlab.packet.dhcp.DhcpOption;
+import org.onlab.packet.DHCPOption;
+import org.onlab.packet.DHCPPacketType;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.ICMP6;
 import org.onlab.packet.IPv4;
@@ -51,9 +44,6 @@ import org.onosproject.cfg.ComponentConfigAdapter;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.core.DefaultApplicationId;
-import org.onosproject.net.intf.Interface;
-import org.onosproject.net.intf.InterfaceListener;
-import org.onosproject.net.intf.InterfaceService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DefaultDevice;
 import org.onosproject.net.DefaultHost;
@@ -71,7 +61,6 @@ import org.onosproject.net.host.HostProvider;
 import org.onosproject.net.host.HostProviderRegistry;
 import org.onosproject.net.host.HostProviderService;
 import org.onosproject.net.host.HostServiceAdapter;
-import org.onosproject.net.host.InterfaceIpAddress;
 import org.onosproject.net.packet.DefaultInboundPacket;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContextAdapter;
@@ -97,6 +86,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.onlab.packet.VlanId.vlanId;
 import static org.onosproject.net.Device.Type.SWITCH;
 import static org.onosproject.net.DeviceId.deviceId;
@@ -120,7 +110,6 @@ public class HostLocationProviderTest {
     private static final String DEV6 = "of:6";
 
     private static final VlanId VLAN = vlanId();
-    private static final VlanId VLAN_100 = VlanId.vlanId("100");
 
     // IPv4 Host
     private static final MacAddress MAC = MacAddress.valueOf("00:00:11:00:00:01");
@@ -134,10 +123,6 @@ public class HostLocationProviderTest {
             new DefaultHost(PROVIDER_ID, hostId(MAC), MAC,
                     VLAN, LOCATION,
                     ImmutableSet.of(IP_ADDRESS));
-    private static final DefaultHost HOST_VLAN_100 =
-            new DefaultHost(PROVIDER_ID, hostId(MAC, VLAN_100), MAC,
-                            VLAN_100, LOCATION,
-                            ImmutableSet.of(IP_ADDRESS));
 
     // IPv6 Host
     private static final MacAddress MAC2 = MacAddress.valueOf("00:00:22:00:00:02");
@@ -157,25 +142,13 @@ public class HostLocationProviderTest {
     private static final byte[] IP3 = new byte[]{10, 0, 0, 2};
     private static final IpAddress IP_ADDRESS3 =
             IpAddress.valueOf(IpAddress.Version.INET, IP3);
+
     private static final HostLocation LOCATION3 =
             new HostLocation(deviceId(DEV1), portNumber(INPORT2), 0L);
     private static final DefaultHost HOST3 =
             new DefaultHost(PROVIDER_ID, hostId(MAC3), MAC3,
                     VLAN, LOCATION3,
                     ImmutableSet.of(IP_ADDRESS3));
-
-    // DHCP6 Server
-    private static final MacAddress DHCP6_SERVER_MAC = MacAddress.valueOf("00:00:44:00:00:04");
-    private static final IpAddress DHCP6_SERVER_IP =
-            IpAddress.valueOf("2000::1:1000");
-
-    // Gateway information for relay agent
-    private static final InterfaceIpAddress GW_IFACE_ADDR = InterfaceIpAddress.valueOf("10.0.1.1/32");
-    private static final Interface GW_IFACE = new Interface("gateway",
-                                                                    LOCATION,
-                                                                    ImmutableList.of(GW_IFACE_ADDR),
-                                                                    null,
-                                                                    VLAN_100);
 
     private static final ComponentContextAdapter CTX_FOR_REMOVE =
             new ComponentContextAdapter() {
@@ -201,7 +174,6 @@ public class HostLocationProviderTest {
     private final TestDeviceService deviceService = new TestDeviceService();
     private final TestHostService hostService = new TestHostService();
     private final TestPacketService packetService = new TestPacketService();
-    private final TestInterfaceService interfaceService = new TestInterfaceService();
 
     private PacketProcessor testProcessor;
     private CoreService coreService;
@@ -212,6 +184,7 @@ public class HostLocationProviderTest {
 
     @Before
     public void setUp() {
+
         coreService = createMock(CoreService.class);
         expect(coreService.registerApplication(appId.name()))
                 .andReturn(appId).anyTimes();
@@ -225,7 +198,6 @@ public class HostLocationProviderTest {
         provider.packetService = packetService;
         provider.deviceService = deviceService;
         provider.hostService = hostService;
-        provider.interfaceService = interfaceService;
 
         provider.activate(CTX_FOR_NO_REMOVE);
 
@@ -284,12 +256,12 @@ public class HostLocationProviderTest {
         Device device = new DefaultDevice(ProviderId.NONE, deviceId(DEV1), SWITCH,
                                           "m", "h", "s", "n", new ChassisId(0L));
         deviceService.listener.event(new DeviceEvent(DEVICE_REMOVED, device));
-        assertEquals("incorrect remove count", 2, providerService.locationRemoveCount);
+        assertEquals("incorrect remove count", 2, providerService.removeCount);
 
         device = new DefaultDevice(ProviderId.NONE, deviceId(DEV4), SWITCH,
                                           "m", "h", "s", "n", new ChassisId(0L));
         deviceService.listener.event(new DeviceEvent(DEVICE_REMOVED, device));
-        assertEquals("incorrect remove count", 3, providerService.locationRemoveCount);
+        assertEquals("incorrect remove count", 3, providerService.removeCount);
     }
 
     @Test
@@ -301,12 +273,12 @@ public class HostLocationProviderTest {
         Device device = new DefaultDevice(ProviderId.NONE, deviceId(DEV1), SWITCH,
                                           "m", "h", "s", "n", new ChassisId(0L));
         deviceService.listener.event(new DeviceEvent(DEVICE_AVAILABILITY_CHANGED, device));
-        assertEquals("incorrect remove count", 2, providerService.locationRemoveCount);
+        assertEquals("incorrect remove count", 2, providerService.removeCount);
 
         device = new DefaultDevice(ProviderId.NONE, deviceId(DEV4), SWITCH,
                                           "m", "h", "s", "n", new ChassisId(0L));
         deviceService.listener.event(new DeviceEvent(DEVICE_AVAILABILITY_CHANGED, device));
-        assertEquals("incorrect remove count", 3, providerService.locationRemoveCount);
+        assertEquals("incorrect remove count", 3, providerService.removeCount);
     }
 
     @Test
@@ -319,13 +291,13 @@ public class HostLocationProviderTest {
                                           "m", "h", "s", "n", new ChassisId(0L));
         deviceService.listener.event(new DeviceEvent(PORT_UPDATED, device,
                 new DefaultPort(device, portNumber(INPORT), false)));
-        assertEquals("incorrect remove count", 1, providerService.locationRemoveCount);
+        assertEquals("incorrect remove count", 1, providerService.removeCount);
 
         device = new DefaultDevice(ProviderId.NONE, deviceId(DEV4), SWITCH,
                                           "m", "h", "s", "n", new ChassisId(0L));
         deviceService.listener.event(new DeviceEvent(PORT_UPDATED, device,
                 new DefaultPort(device, portNumber(INPORT), false)));
-        assertEquals("incorrect remove count", 2, providerService.locationRemoveCount);
+        assertEquals("incorrect remove count", 2, providerService.removeCount);
     }
 
     /**
@@ -364,9 +336,8 @@ public class HostLocationProviderTest {
      */
     @Test
     public void receiveDhcp() {
-        TestUtils.setField(provider, "useDhcp", true);
         // DHCP Request
-        testProcessor.process(new TestDhcpRequestPacketContext(DEV1, VLAN));
+        testProcessor.process(new TestDhcpRequestPacketContext(DEV1));
         assertThat("receiveDhcpRequest. One host description expected",
                 providerService.descriptions.size(), is(1));
         // Should learn the MAC and location of DHCP client
@@ -380,62 +351,20 @@ public class HostLocationProviderTest {
         testProcessor.process(new TestDhcpAckPacketContext(DEV1));
         assertThat("receiveDhcpAck. Two additional host descriptions expected",
                 providerService.descriptions.size(), is(3));
-
-        // Should also learn the MAC, location of DHCP server
+        // Should learn the IP of DHCP client
         HostDescription descr2 = providerService.descriptions.get(1);
-        assertThat(descr2.location(), is(LOCATION3));
-        assertThat(descr2.hwAddress(), is(MAC3));
-        assertThat(descr2.ipAddress().size(), is(0));
+        assertThat(descr2.location(), is(LOCATION));
+        assertThat(descr2.hwAddress(), is(MAC));
+        assertThat(descr2.ipAddress().size(), is(1));
+        assertTrue(descr2.ipAddress().contains(IP_ADDRESS));
         assertThat(descr2.vlan(), is(VLAN));
-
-        // Should update the IP address of the client.
-        HostDescription descr3 = providerService.descriptions.get(2);
-        assertThat(descr3.location(), is(LOCATION));
-        assertThat(descr3.hwAddress(), is(MAC));
-        assertThat(descr3.ipAddress().size(), is(1));
-        IpAddress ip = descr3.ipAddress().iterator().next();
-        assertThat(ip, is(IP_ADDRESS.getIp4Address()));
-        assertThat(descr3.vlan(), is(VLAN));
-    }
-
-    /**
-     * When receiving DHCPv6 REQUEST, update MAC, location of client.
-     * When receiving DHCPv6 ACK, update MAC, location of server and IP of client.
-     */
-    @Test
-    public void receiveDhcp6() {
-        TestUtils.setField(provider, "useDhcp6", true);
-        // DHCP Request
-        testProcessor.process(new TestDhcp6RequestPacketContext(DEV4, VLAN));
-        assertThat("receiveDhcpRequest. One host description expected",
-                   providerService.descriptions.size(), is(1));
-        // Should learn the MAC and location of DHCP client
-        HostDescription descr = providerService.descriptions.get(0);
-        assertThat(descr.location(), is(LOCATION2));
-        assertThat(descr.hwAddress(), is(MAC2));
-        assertThat(descr.ipAddress().size(), is(0));
-        assertThat(descr.vlan(), is(VLAN));
-
-        // DHCP Ack
-        testProcessor.process(new TestDhcp6AckPacketContext(DEV1));
-        assertThat("receiveDhcpAck. Two additional host descriptions expected",
-                   providerService.descriptions.size(), is(3));
-
         // Should also learn the MAC, location of DHCP server
-        HostDescription descr2 = providerService.descriptions.get(1);
-        assertThat(descr2.location(), is(LOCATION3));
-        assertThat(descr2.hwAddress(), is(DHCP6_SERVER_MAC));
-        assertThat(descr2.ipAddress().size(), is(0));
-        assertThat(descr2.vlan(), is(VLAN));
-
-        // Should update the IP address of the DHCP client.
         HostDescription descr3 = providerService.descriptions.get(2);
-        assertThat(descr3.location(), is(LOCATION2));
-        assertThat(descr3.hwAddress(), is(MAC2));
-        assertThat(descr3.ipAddress().size(), is(1));
-        IpAddress ip = descr3.ipAddress().iterator().next();
-        assertThat(ip, is(IP_ADDRESS2.getIp6Address()));
+        assertThat(descr3.location(), is(LOCATION3));
+        assertThat(descr3.hwAddress(), is(MAC3));
+        assertThat(descr3.ipAddress().size(), is(0));
         assertThat(descr3.vlan(), is(VLAN));
+
     }
 
     /**
@@ -554,15 +483,11 @@ public class HostLocationProviderTest {
             implements HostProviderService {
 
         List<HostDescription> descriptions = Lists.newArrayList();
-        int hostRemoveCount;
-        int ipRemoveCount;
-        int locationRemoveCount;
+        int removeCount;
 
         public void clear() {
             descriptions.clear();
-            hostRemoveCount = 0;
-            ipRemoveCount = 0;
-            locationRemoveCount = 0;
+            removeCount = 0;
         }
 
         protected TestHostProviderService(HostProvider provider) {
@@ -576,17 +501,11 @@ public class HostLocationProviderTest {
 
         @Override
         public void hostVanished(HostId hostId) {
-            hostRemoveCount++;
+            removeCount++;
         }
 
         @Override
         public void removeIpFromHost(HostId hostId, IpAddress ipAddress) {
-            ipRemoveCount++;
-        }
-
-        @Override
-        public void removeLocationFromHost(HostId hostId, HostLocation location) {
-            locationRemoveCount++;
         }
 
     }
@@ -671,26 +590,23 @@ public class HostLocationProviderTest {
                                             ByteBuffer.wrap(eth.serialize()));
         }
     }
-
     /**
      * Generates DHCP REQUEST packet.
      */
     private class TestDhcpRequestPacketContext extends PacketContextAdapter {
         private final String deviceId;
-        private final VlanId vlanId;
 
-        public TestDhcpRequestPacketContext(String deviceId, VlanId vlanId) {
+        public TestDhcpRequestPacketContext(String deviceId) {
             super(0, null, null, false);
             this.deviceId = deviceId;
-            this.vlanId = vlanId;
         }
 
         @Override
         public InboundPacket inPacket() {
             byte[] dhcpMsgType = new byte[1];
-            dhcpMsgType[0] = (byte) DHCP.MsgType.DHCPREQUEST.getValue();
+            dhcpMsgType[0] = (byte) DHCPPacketType.DHCPREQUEST.getValue();
 
-            DhcpOption dhcpOption = new DhcpOption();
+            DHCPOption dhcpOption = new DHCPOption();
             dhcpOption.setCode(DHCP.DHCPOptionCode.OptionCode_MessageType.getValue());
             dhcpOption.setData(dhcpMsgType);
             dhcpOption.setLength((byte) 1);
@@ -707,7 +623,7 @@ public class HostLocationProviderTest {
             ipv4.setSourceAddress(IP_ADDRESS.toString());
             Ethernet eth = new Ethernet();
             eth.setEtherType(Ethernet.TYPE_IPV4)
-                    .setVlanID(this.vlanId.toShort())
+                    .setVlanID(VLAN.toShort())
                     .setSourceMACAddress(MAC)
                     .setDestinationMACAddress(MAC3)
                     .setPayload(ipv4);
@@ -732,19 +648,16 @@ public class HostLocationProviderTest {
         @Override
         public InboundPacket inPacket() {
             byte[] dhcpMsgType = new byte[1];
-            dhcpMsgType[0] = (byte) DHCP.MsgType.DHCPACK.getValue();
+            dhcpMsgType[0] = (byte) DHCPPacketType.DHCPACK.getValue();
 
-            DhcpOption dhcpOption = new DhcpOption();
+            DHCPOption dhcpOption = new DHCPOption();
             dhcpOption.setCode(DHCP.DHCPOptionCode.OptionCode_MessageType.getValue());
             dhcpOption.setData(dhcpMsgType);
             dhcpOption.setLength((byte) 1);
-
             DHCP dhcp = new DHCP();
-            dhcp.setOptions(ImmutableList.of(dhcpOption));
-
+            dhcp.setOptions(Collections.singletonList(dhcpOption));
             dhcp.setClientHardwareAddress(MAC.toBytes());
             dhcp.setYourIPAddress(IP_ADDRESS.getIp4Address().toInt());
-
             UDP udp = new UDP();
             udp.setPayload(dhcp);
             udp.setSourcePort(UDP.DHCP_SERVER_PORT);
@@ -763,118 +676,6 @@ public class HostLocationProviderTest {
                     portNumber(INPORT2));
             return new DefaultInboundPacket(receivedFrom, eth,
                     ByteBuffer.wrap(eth.serialize()));
-        }
-    }
-
-    /**
-     * Generates DHCPv6 REQUEST packet.
-     */
-    private class TestDhcp6RequestPacketContext extends PacketContextAdapter {
-        private final String deviceId;
-        private final VlanId vlanId;
-
-        public TestDhcp6RequestPacketContext(String deviceId, VlanId vlanId) {
-            super(0, null, null, false);
-            this.deviceId = deviceId;
-            this.vlanId = vlanId;
-        }
-
-        @Override
-        public InboundPacket inPacket() {
-
-            DHCP6 dhcp6 = new DHCP6();
-            dhcp6.setMsgType(DHCP6.MsgType.REQUEST.value());
-            List<Dhcp6Option> options = Lists.newArrayList();
-
-            // IA address
-            Dhcp6IaAddressOption iaAddressOption = new Dhcp6IaAddressOption();
-            iaAddressOption.setIp6Address(IP_ADDRESS2.getIp6Address());
-
-            // IA NA
-            Dhcp6IaNaOption iaNaOption = new Dhcp6IaNaOption();
-            iaNaOption.setOptions(ImmutableList.of(iaAddressOption));
-            options.add(iaNaOption);
-
-            dhcp6.setOptions(options);
-
-            UDP udp = new UDP();
-            udp.setPayload(dhcp6);
-            udp.setSourcePort(UDP.DHCP_V6_CLIENT_PORT);
-            udp.setDestinationPort(UDP.DHCP_V6_SERVER_PORT);
-            IPv6 ipv6 = new IPv6();
-            ipv6.setPayload(udp);
-            ipv6.setDestinationAddress(Ip6Address.ZERO.toOctets());
-            ipv6.setSourceAddress(Ip6Address.ZERO.toOctets());
-            ipv6.setNextHeader(IPv6.PROTOCOL_UDP);
-            Ethernet eth = new Ethernet();
-            eth.setEtherType(Ethernet.TYPE_IPV6)
-                    .setVlanID(this.vlanId.toShort())
-                    .setSourceMACAddress(MAC2)
-                    .setDestinationMACAddress(DHCP6_SERVER_MAC)
-                    .setPayload(ipv6);
-            ConnectPoint receivedFrom = new ConnectPoint(deviceId(deviceId),
-                                                         portNumber(INPORT));
-            return new DefaultInboundPacket(receivedFrom, eth,
-                                            ByteBuffer.wrap(eth.serialize()));
-        }
-    }
-
-    /**
-     * Generates DHCPv6 ACK packet.
-     */
-    private class TestDhcp6AckPacketContext extends PacketContextAdapter {
-        private final String deviceId;
-
-        public TestDhcp6AckPacketContext(String deviceId) {
-            super(0, null, null, false);
-            this.deviceId = deviceId;
-        }
-
-        @Override
-        public InboundPacket inPacket() {
-            DHCP6 dhcp6 = new DHCP6();
-            dhcp6.setMsgType(DHCP6.MsgType.REPLY.value());
-            List<Dhcp6Option> options = Lists.newArrayList();
-
-            // IA address
-            Dhcp6IaAddressOption iaAddressOption = new Dhcp6IaAddressOption();
-            iaAddressOption.setIp6Address(IP_ADDRESS2.getIp6Address());
-
-            // IA NA
-            Dhcp6IaNaOption iaNaOption = new Dhcp6IaNaOption();
-            iaNaOption.setOptions(ImmutableList.of(iaAddressOption));
-            options.add(iaNaOption);
-
-            // Client ID
-            Dhcp6Duid duid = new Dhcp6Duid();
-            duid.setDuidType(Dhcp6Duid.DuidType.DUID_LLT);
-            duid.setHardwareType((short) 1);
-            duid.setDuidTime(0);
-            duid.setLinkLayerAddress(MAC2.toBytes());
-            Dhcp6ClientIdOption clientIdOption = new Dhcp6ClientIdOption();
-            clientIdOption.setDuid(duid);
-            options.add(clientIdOption);
-            dhcp6.setOptions(options);
-
-            UDP udp = new UDP();
-            udp.setPayload(dhcp6);
-            udp.setSourcePort(UDP.DHCP_V6_CLIENT_PORT);
-            udp.setDestinationPort(UDP.DHCP_V6_SERVER_PORT);
-            IPv6 ipv6 = new IPv6();
-            ipv6.setPayload(udp);
-            ipv6.setDestinationAddress(Ip6Address.ZERO.toOctets());
-            ipv6.setSourceAddress(Ip6Address.ZERO.toOctets());
-            ipv6.setNextHeader(IPv6.PROTOCOL_UDP);
-            Ethernet eth = new Ethernet();
-            eth.setEtherType(Ethernet.TYPE_IPV6)
-                    .setVlanID(VLAN.toShort())
-                    .setSourceMACAddress(DHCP6_SERVER_MAC)
-                    .setDestinationMACAddress(MAC2)
-                    .setPayload(ipv6);
-            ConnectPoint receivedFrom = new ConnectPoint(deviceId(deviceId),
-                                                         portNumber(INPORT2));
-            return new DefaultInboundPacket(receivedFrom, eth,
-                                            ByteBuffer.wrap(eth.serialize()));
         }
     }
 
@@ -1151,60 +952,9 @@ public class HostLocationProviderTest {
                 return HOST2;
             } else if (hostId.equals(HostId.hostId(MAC3, VLAN))) {
                 return HOST3;
-            } else if (hostId.equals(HostId.hostId(MAC, VLAN_100))) {
-                return HOST_VLAN_100;
             }
             return null;
         }
-    }
 
-    private class TestInterfaceService implements InterfaceService {
-        @Override
-        public Set<Interface> getInterfaces() {
-            return null;
-        }
-
-        @Override
-        public Interface getInterfaceByName(ConnectPoint connectPoint, String name) {
-            return null;
-        }
-
-        @Override
-        public Set<Interface> getInterfacesByPort(ConnectPoint port) {
-            return null;
-        }
-
-        public Set<Interface> getInterfacesByIp(IpAddress ip) {
-            if (ip.equals(GW_IFACE_ADDR.ipAddress())) {
-                return ImmutableSet.of(GW_IFACE);
-            } else {
-                return ImmutableSet.of();
-            }
-        }
-
-        @Override
-        public Set<Interface> getInterfacesByVlan(VlanId vlan) {
-            return null;
-        }
-
-        @Override
-        public Interface getMatchingInterface(IpAddress ip) {
-            return null;
-        }
-
-        @Override
-        public Set<Interface> getMatchingInterfaces(IpAddress ip) {
-            return null;
-        }
-
-        @Override
-        public void addListener(InterfaceListener listener) {
-
-        }
-
-        @Override
-        public void removeListener(InterfaceListener listener) {
-
-        }
     }
 }

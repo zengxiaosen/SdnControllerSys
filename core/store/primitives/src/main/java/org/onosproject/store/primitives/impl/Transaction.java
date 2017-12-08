@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package org.onosproject.store.primitives.impl;
 
+// CHECKSTYLE:OFF
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,8 +26,6 @@ import org.onosproject.store.service.Transactional;
 import org.onosproject.store.service.Version;
 import org.onosproject.store.service.TransactionContext;
 import org.onosproject.store.service.TransactionException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkState;
@@ -107,7 +106,6 @@ public class Transaction<T> {
     private static final String TX_INACTIVE_ERROR = "transaction is not active";
     private static final String TX_UNPREPARED_ERROR = "transaction has not been prepared";
 
-    protected final Logger log = LoggerFactory.getLogger(getClass());
     protected final TransactionId transactionId;
     protected final Transactional<T> transactionalObject;
     private final AtomicBoolean open = new AtomicBoolean();
@@ -194,11 +192,9 @@ public class Transaction<T> {
      * @return a completable future to be completed once the transaction has been started
      */
     public CompletableFuture<Version> begin() {
-        log.debug("Beginning transaction {} for {}", transactionId, transactionalObject);
         open();
         return transactionalObject.begin(transactionId).thenApply(lock -> {
             this.lock = lock;
-            log.trace("Transaction lock acquired: {}", lock);
             return lock;
         });
     }
@@ -217,7 +213,6 @@ public class Transaction<T> {
     public CompletableFuture<Boolean> prepare(List<T> updates) {
         checkOpen();
         checkActive();
-        log.debug("Preparing transaction {} for {}", transactionId, transactionalObject);
         Version lock = this.lock;
         checkState(lock != null, TX_INACTIVE_ERROR);
         setState(State.PREPARING);
@@ -240,7 +235,6 @@ public class Transaction<T> {
     public CompletableFuture<Boolean> prepareAndCommit(List<T> updates) {
         checkOpen();
         checkActive();
-        log.debug("Preparing and committing transaction {} for {}", transactionId, transactionalObject);
         Version lock = this.lock;
         checkState(lock != null, TX_INACTIVE_ERROR);
         setState(State.PREPARING);
@@ -262,7 +256,6 @@ public class Transaction<T> {
     public CompletableFuture<Void> commit() {
         checkOpen();
         checkPrepared();
-        log.debug("Committing transaction {} for {}", transactionId, transactionalObject);
         setState(State.COMMITTING);
         return transactionalObject.commit(transactionId).thenRun(() -> {
             setState(State.COMMITTED);
@@ -279,7 +272,6 @@ public class Transaction<T> {
     public CompletableFuture<Void> rollback() {
         checkOpen();
         checkPrepared();
-        log.debug("Rolling back transaction {} for {}", transactionId, transactionalObject);
         setState(State.ROLLING_BACK);
         return transactionalObject.rollback(transactionId).thenRun(() -> {
             setState(State.ROLLED_BACK);

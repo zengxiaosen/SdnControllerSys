@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,11 +54,11 @@ public class TestAllocateResource extends AbstractShellCommand {
     private int nIntendId = 42;
 
 
-    @Argument(index = 0, name = "deviceId", description = "Device ID",
+    @Argument(index = 0, name = "deviceIdString", description = "Device ID",
             required = true, multiValued = false)
     String deviceIdStr = null;
 
-    @Argument(index = 1, name = "portNumber", description = "PortNumber",
+    @Argument(index = 1, name = "portNumberString", description = "PortNumber",
             required = true, multiValued = false)
     String portNumberStr = null;
 
@@ -85,7 +85,7 @@ public class TestAllocateResource extends AbstractShellCommand {
 
     private OchSignal createLambda(int i) {
         return new OchSignal(GridType.FLEX,
-                             ChannelSpacing.CHL_6P25GHZ,
+                             ChannelSpacing.CHL_12P5GHZ,
                              i,
                              1);
     }

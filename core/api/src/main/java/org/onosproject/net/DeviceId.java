@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,17 +23,29 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * Immutable representation of a device identity.
  */
-public final class DeviceId extends ElementId {
+public  class DeviceId extends ElementId {
 
     /**
      * Represents either no device, or an unspecified device.
      */
+
+
     public static final DeviceId NONE = deviceId("none:none");
 
     private static final int DEVICE_ID_MAX_LENGTH = 1024;
 
     private final URI uri;
     private final String str;
+
+    private String layer;
+
+    public String getLayer() {
+        return layer;
+    }
+
+    public void setLayer(String layer) {
+        this.layer = layer;
+    }
 
     // Public construction is prohibited
     private DeviceId(URI uri) {

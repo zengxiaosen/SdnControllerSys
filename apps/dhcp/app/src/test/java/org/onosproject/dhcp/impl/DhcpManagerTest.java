@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.packet.DHCP;
-import org.onlab.packet.dhcp.DhcpOption;
+import org.onlab.packet.DHCPOption;
+import org.onlab.packet.DHCPPacketType;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.Ip4Address;
@@ -33,7 +34,6 @@ import org.onosproject.dhcp.DhcpStore;
 import org.onosproject.dhcp.IpAssignment;
 import org.onosproject.net.Host;
 import org.onosproject.net.HostId;
-import org.onosproject.net.HostLocation;
 import org.onosproject.net.config.NetworkConfigRegistryAdapter;
 import org.onosproject.net.host.HostDescription;
 import org.onosproject.net.host.HostProvider;
@@ -108,7 +108,7 @@ public class DhcpManagerTest {
      */
     @Test
     public void testDiscover() {
-        Ethernet reply = constructDhcpPacket(DHCP.MsgType.DHCPDISCOVER);
+        Ethernet reply = constructDhcpPacket(DHCPPacketType.DHCPDISCOVER);
         sendPacket(reply);
     }
 
@@ -117,7 +117,7 @@ public class DhcpManagerTest {
      */
     @Test
     public void testRequest() {
-        Ethernet reply = constructDhcpPacket(DHCP.MsgType.DHCPREQUEST);
+        Ethernet reply = constructDhcpPacket(DHCPPacketType.DHCPREQUEST);
         sendPacket(reply);
     }
 
@@ -140,7 +140,7 @@ public class DhcpManagerTest {
      * @param packetType DHCP Message Type
      * @return Ethernet packet
      */
-    private Ethernet constructDhcpPacket(DHCP.MsgType packetType) {
+    private Ethernet constructDhcpPacket(DHCPPacketType packetType) {
 
         // Ethernet Frame.
         Ethernet ethReply = new Ethernet();
@@ -173,8 +173,8 @@ public class DhcpManagerTest {
         dhcpReply.setHardwareAddressLength((byte) 6);
 
         // DHCP Options.
-        DhcpOption option = new DhcpOption();
-        List<DhcpOption> optionList = new ArrayList<>();
+        DHCPOption option = new DHCPOption();
+        List<DHCPOption> optionList = new ArrayList<>();
 
         // DHCP Message Type.
         option.setCode(DHCP.DHCPOptionCode.OptionCode_MessageType.getValue());
@@ -184,7 +184,7 @@ public class DhcpManagerTest {
         optionList.add(option);
 
         // DHCP Requested IP.
-        option = new DhcpOption();
+        option = new DHCPOption();
         option.setCode(DHCP.DHCPOptionCode.OptionCode_RequestedIP.getValue());
         option.setLength((byte) 4);
         optionData = Ip4Address.valueOf(EXPECTED_IP).toOctets();
@@ -192,7 +192,7 @@ public class DhcpManagerTest {
         optionList.add(option);
 
         // End Option.
-        option = new DhcpOption();
+        option = new DHCPOption();
         option.setCode(DHCP.DHCPOptionCode.OptionCode_END.getValue());
         option.setLength((byte) 1);
         optionList.add(option);
@@ -357,10 +357,6 @@ public class DhcpManagerTest {
 
         }
 
-        @Override
-        public void removeLocationFromHost(HostId hostId, HostLocation location) {
-
-        }
     }
 
     /**

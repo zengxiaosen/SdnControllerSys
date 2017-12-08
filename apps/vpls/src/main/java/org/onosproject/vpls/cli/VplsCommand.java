@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,26 +15,23 @@
  */
 package org.onosproject.vpls.cli;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.onosproject.cli.AbstractShellCommand;
-import org.onosproject.net.intf.Interface;
-import org.onosproject.net.intf.InterfaceService;
+import org.onosproject.incubator.net.intf.Interface;
 import org.onosproject.net.EncapsulationType;
-import org.onosproject.vpls.api.VplsData;
-import org.onosproject.vpls.api.Vpls;
-import org.onosproject.vpls.api.VplsData.VplsState;
+import org.onosproject.vpls.config.VplsConfigService;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static org.onosproject.vpls.api.VplsData.VplsState.*;
-
 
 /**
  * CLI to interact with the VPLS application.
@@ -42,8 +39,6 @@ import static org.onosproject.vpls.api.VplsData.VplsState.*;
 @Command(scope = "onos", name = "vpls",
         description = "Manages the VPLS application")
 public class VplsCommand extends AbstractShellCommand {
-    private static final Set<VplsState> CHANGING_STATE =
-            ImmutableSet.of(ADDING, REMOVING, UPDATING);
 
     // Color codes and style
     private static final String BOLD = "\u001B[1m";
@@ -90,8 +85,7 @@ public class VplsCommand extends AbstractShellCommand {
                     " not found" + RESET;
 
     private static final String VPLS_DISPLAY = "VPLS name: " + BOLD +
-            "%s" + RESET + "\nAssociated interfaces: %s\nEncapsulation: %s\n" +
-            "State: %s";
+            "%s" + RESET + "\nAssociated interfaces: %s\nEncapsulation: %s";
 
     private static final String VPLS_NOT_FOUND =
             COLOR_ERROR + "VPLS " + BOLD + "%s" + RESET + COLOR_ERROR +
@@ -99,13 +93,15 @@ public class VplsCommand extends AbstractShellCommand {
 
     private static final String IFACE_NOT_ASSOCIATED =
             COLOR_ERROR + "Interface " + BOLD + "%s" + RESET + COLOR_ERROR +
-                    " cannot be removed from VPLS " + BOLD + "%s" + RESET + ".";
+                    " cannot be removed from VPLS " + BOLD + "%s" + RESET +
+                    COLOR_ERROR + ". The interface is associated to another" +
+                    "VPLS (" + BOLD + "%s" + RESET + COLOR_ERROR + ")" + RESET;
 
-    protected static Vpls vpls;
-    protected static InterfaceService interfaceService;
+    private static VplsConfigService vplsConfigService =
+            get(VplsConfigService.class);
 
     @Argument(index = 0, name = "command", description = "Command name (add-if|" +
-            "create|delete|list|rem-if|set-encap|show)",
+            "clean|create|delete|list|rem-if|set-encap|show)",
             required = true, multiValued = false)
     String command = null;
 
@@ -120,18 +116,14 @@ public class VplsCommand extends AbstractShellCommand {
 
     @Override
     protected void execute() {
-        if (vpls == null) {
-            vpls = get(Vpls.class);
-        }
-        if (interfaceService == null) {
-            interfaceService = get(InterfaceService.class);
-        }
-
         VplsCommandEnum enumCommand = VplsCommandEnum.enumFromString(command);
         if (enumCommand != null) {
             switch (enumCommand) {
                 case ADD_IFACE:
                     addIface(vplsName, optArg);
+                    break;
+                case CLEAN:
+                    clean();
                     break;
                 case CREATE:
                     create(vplsName);
@@ -151,9 +143,6 @@ public class VplsCommand extends AbstractShellCommand {
                 case SHOW:
                     show(vplsName);
                     break;
-                case CLEAN:
-                    cleanVpls();
-                    break;
                 default:
                     print(VPLS_COMMAND_NOT_FOUND, command);
             }
@@ -168,7 +157,7 @@ public class VplsCommand extends AbstractShellCommand {
      * @param vplsName the name of the VLPS
      * @param ifaceName the name of the interface to add
      */
-    protected void addIface(String vplsName, String ifaceName) {
+    private void addIface(String vplsName, String ifaceName) {
         if (vplsName == null) {
             print(INSERT_VPLS_NAME);
             return;
@@ -177,29 +166,28 @@ public class VplsCommand extends AbstractShellCommand {
             print(INSERT_INTERFACE);
             return;
         }
-
-        Interface iface = getInterface(ifaceName);
-        VplsData vplsData = vpls.getVpls(vplsName);
-
-        if (vplsData == null) {
+        if (!vplsExists(vplsName)) {
             print(VPLS_NOT_FOUND, vplsName);
             return;
         }
-        if (CHANGING_STATE.contains(vplsData.state())) {
-            // when a VPLS is updating, we shouldn't try modify it.
-            print("VPLS %s still updating, please wait it finished", vplsData.name());
-            return;
-        }
-        if (iface == null) {
+        if (!ifaceExists(ifaceName)) {
             print(IFACE_NOT_FOUND, ifaceName);
             return;
         }
-        if (isIfaceAssociated(iface)) {
+        if (isIfaceAssociated(ifaceName)) {
             print(IFACE_ALREADY_ASSOCIATED,
-                  ifaceName, getVplsByInterface(iface).name());
+                  ifaceName, vplsNameFromIfaceName(ifaceName));
             return;
         }
-        vpls.addInterface(vplsData, iface);
+
+        vplsConfigService.addIface(vplsName, ifaceName);
+    }
+
+    /**
+     * Cleans the VPLS configuration.
+     */
+    private void clean() {
+        vplsConfigService.cleanVplsConfig();
     }
 
     /**
@@ -207,17 +195,16 @@ public class VplsCommand extends AbstractShellCommand {
      *
      * @param vplsName the name of the VLPS
      */
-    protected void create(String vplsName) {
+    private void create(String vplsName) {
         if (vplsName == null || vplsName.isEmpty()) {
             print(INSERT_VPLS_NAME);
             return;
         }
-        VplsData vplsData = vpls.getVpls(vplsName);
-        if (vplsData != null) {
+        if (vplsExists(vplsName)) {
             print(VPLS_ALREADY_EXISTS, vplsName);
             return;
         }
-        vpls.createVpls(vplsName, EncapsulationType.NONE);
+        vplsConfigService.addVpls(vplsName, Sets.newHashSet(), null);
     }
 
     /**
@@ -225,31 +212,23 @@ public class VplsCommand extends AbstractShellCommand {
      *
      * @param vplsName the name of the VLPS
      */
-    protected void delete(String vplsName) {
+    private void delete(String vplsName) {
         if (vplsName == null) {
             print(INSERT_VPLS_NAME);
             return;
         }
-        VplsData vplsData = vpls.getVpls(vplsName);
-        if (vplsData == null) {
+        if (!vplsExists(vplsName)) {
             print(VPLS_NOT_FOUND, vplsName);
             return;
         }
-        if (CHANGING_STATE.contains(vplsData.state())) {
-            // when a VPLS is updating, we shouldn't try modify it.
-            print("VPLS %s still updating, please wait it finished", vplsData.name());
-            return;
-        }
-        vpls.removeVpls(vplsData);
+        vplsConfigService.removeVpls(vplsName);
     }
 
     /**
      * Lists the configured VPLSs.
      */
-    protected void list() {
-        List<String> vplsNames = vpls.getAllVpls().stream()
-                .map(VplsData::name)
-                .collect(Collectors.toList());
+    private void list() {
+        List<String> vplsNames = Lists.newArrayList(vplsConfigService.vplsNames());
         Collections.sort(vplsNames);
 
         vplsNames.forEach(vpls -> {
@@ -263,7 +242,7 @@ public class VplsCommand extends AbstractShellCommand {
      * @param vplsName the name of the VLPS
      * @param ifaceName the name of the interface to remove
      */
-    protected void removeIface(String vplsName, String ifaceName) {
+    private void removeIface(String vplsName, String ifaceName) {
         if (vplsName == null) {
             print(INSERT_VPLS_NAME);
             return;
@@ -272,26 +251,20 @@ public class VplsCommand extends AbstractShellCommand {
             print(INSERT_INTERFACE);
             return;
         }
-        VplsData vplsData = vpls.getVpls(vplsName);
-        Interface iface = getInterface(ifaceName);
-        if (vplsData == null) {
+        if (!vplsExists(vplsName)) {
             print(VPLS_NOT_FOUND, vplsName);
             return;
         }
-        if (CHANGING_STATE.contains(vplsData.state())) {
-            // when a VPLS is updating, we shouldn't try modify it.
-            print("VPLS %s still updating, please wait it finished", vplsData.name());
-            return;
-        }
-        if (iface == null) {
+        if (!ifaceExists(ifaceName)) {
             print(IFACE_NOT_FOUND, ifaceName);
             return;
         }
-        if (!vplsData.interfaces().contains(iface)) {
-            print(IFACE_NOT_ASSOCIATED, ifaceName, vplsName);
+        String vplsNameFromIfaceName = vplsNameFromIfaceName(ifaceName);
+        if (!vplsNameFromIfaceName.equals(vplsName)) {
+            print(IFACE_NOT_ASSOCIATED, ifaceName, vplsName, vplsNameFromIfaceName);
             return;
         }
-        vpls.removeInterface(vplsData, iface);
+        vplsConfigService.removeIface(ifaceName);
     }
 
     /**
@@ -300,7 +273,7 @@ public class VplsCommand extends AbstractShellCommand {
      * @param vplsName the name of the VPLS
      * @param encap the encapsulation type
      */
-    protected void setEncap(String vplsName, String encap) {
+    private void setEncap(String vplsName, String encap) {
         if (vplsName == null) {
             print(INSERT_VPLS_NAME);
             return;
@@ -309,8 +282,7 @@ public class VplsCommand extends AbstractShellCommand {
             print(INSERT_ENCAP_TYPE);
             return;
         }
-        VplsData vplsData = vpls.getVpls(vplsName);
-        if (vplsData == null) {
+        if (!vplsExists(vplsName)) {
             print(VPLS_NOT_FOUND, vplsName);
             return;
         }
@@ -320,7 +292,7 @@ public class VplsCommand extends AbstractShellCommand {
             print(ENCAP_NOT_FOUND, encap);
             return;
         }
-        vpls.setEncapsulationType(vplsData, encapType);
+        vplsConfigService.setEncap(vplsName, encap);
     }
 
     /**
@@ -328,88 +300,113 @@ public class VplsCommand extends AbstractShellCommand {
      *
      * @param vplsName the name of the VPLS
      */
-    protected void show(String vplsName) {
+    private void show(String vplsName) {
+        List<String> vplsNames = Lists.newArrayList(vplsConfigService.vplsNames());
+        Collections.sort(vplsNames);
+
+        Map<String, EncapsulationType> encapByVplsName =
+                vplsConfigService.encapByVplsName();
+
         if (!isNullOrEmpty(vplsName)) {
             // A VPLS name is provided. Check first if the VPLS exists
-            VplsData vplsData = vpls.getVpls(vplsName);
-            if (vplsData != null) {
-                Set<String> ifaceNames = vplsData.interfaces().stream()
-                        .map(Interface::name)
-                        .collect(Collectors.toSet());
+            if (vplsExists(vplsName)) {
                 print(VPLS_DISPLAY,
                       vplsName,
-                      ifaceNames,
-                      vplsData.encapsulationType().toString(),
-                      vplsData.state());
+                      ifacesFromVplsName(vplsName).toString(),
+                      encapByVplsName.get(vplsName).toString());
             } else {
                 print(VPLS_NOT_FOUND, vplsName);
             }
         } else {
-            Collection<VplsData> vplses = vpls.getAllVpls();
             // No VPLS names are provided. Display all VPLSs configured
             print(SEPARATOR);
-            vplses.forEach(vplsData -> {
-                Set<String> ifaceNames = vplsData.interfaces().stream()
-                        .map(Interface::name)
-                        .collect(Collectors.toSet());
+            vplsNames.forEach(v -> {
                 print(VPLS_DISPLAY,
-                      vplsData.name(),
-                      ifaceNames,
-                      vplsData.encapsulationType().toString(),
-                      vplsData.state());
+                      v,
+                      ifacesFromVplsName(v).toString(),
+                      encapByVplsName.get(v).toString());
                 print(SEPARATOR);
             });
         }
     }
 
     /**
-     * Remove all VPLS.
+     * States if a VPLS exists or not.
+     *
+     * @param vplsName the name of the VPLS
+     * @return true if the VPLS exists; false otherwise
      */
-    protected void cleanVpls() {
-        vpls.removeAllVpls();
+    private static boolean vplsExists(String vplsName) {
+        return vplsConfigService.vplsNames().contains(vplsName);
     }
 
+    /**
+     * States if an interface is defined or not in the system.
+     *
+     * @param ifaceName the name of the interface
+     * @return true if the interface is defined; false otherwise
+     */
+    private static boolean ifaceExists(String ifaceName) {
+        return vplsConfigService.allIfaces()
+                .stream()
+                .anyMatch(iface -> iface.name().equals(ifaceName));
+    }
 
     /**
      * States if an interface is already associated to a VPLS.
      *
-     * @param iface the interface
+     * @param ifaceName the name of the interface
      * @return true if the interface is already associated to a VPLS; false
      * otherwise
      */
-    private static boolean isIfaceAssociated(Interface iface) {
-        return vpls.getAllVpls()
+    private static boolean isIfaceAssociated(String ifaceName) {
+        return vplsConfigService.ifaces()
                 .stream()
-                .map(VplsData::interfaces)
-                .flatMap(Collection::stream)
-                .anyMatch(iface::equals);
+                .anyMatch(iface -> iface.name().equals(ifaceName));
     }
 
     /**
-     * Gets a network interface by given interface name.
+     * Returns the name of a VPLS, given the name of an interface associated to
+     * it.
      *
-     * @param interfaceName the interface name
-     * @return the network interface
+     * @param ifaceName the name of the interface
+     * @return the name of the VPLS that has the interface configured; null if
+     * the interface does not exist or is not associated to any VPLS
      */
-    private Interface getInterface(String interfaceName) {
-        // FIXME: only returns first interface it found
-        // multiple interface with same name not support
-        return interfaceService.getInterfaces().stream()
-                .filter(iface -> iface.name().equals(interfaceName))
-                .findFirst()
-                .orElse(null);
+    private static String vplsNameFromIfaceName(String ifaceName) {
+        String vplsName = null;
+
+        Optional<String> optVplsName = vplsConfigService.ifacesByVplsName()
+                .entries()
+                .stream()
+                .filter((entry -> entry.getValue().name().equals(ifaceName)))
+                .map(Map.Entry::getKey)
+                .findFirst();
+
+        if (optVplsName.isPresent()) {
+            vplsName = optVplsName.get();
+        }
+
+        return vplsName;
     }
 
     /**
-     * Gets a VPLS related to the network interface.
+     * Returns a list of interfaces associated to a VPLS, given a VPLS name.
      *
-     * @param iface the network interface
-     * @return the VPLS related to the network interface
+     * @param vplsName the name of the VPLS
+     * @return the set of interfaces associated to the given VPLS; null if the
+     * VPLS is not found
      */
-    private VplsData getVplsByInterface(Interface iface) {
-        return vpls.getAllVpls().stream()
-                .filter(vplsData -> vplsData.interfaces().contains(iface))
-                .findFirst()
-                .orElse(null);
+    private static Set<String> ifacesFromVplsName(String vplsName) {
+        if (!vplsExists(vplsName)) {
+            return null;
+        }
+        SetMultimap<String, Interface> ifacesByVplsName =
+                vplsConfigService.ifacesByVplsName();
+        Set<String> ifaceNames = Sets.newHashSet();
+
+        ifacesByVplsName.get(vplsName).forEach(iface -> ifaceNames.add(iface.name()));
+
+        return ifaceNames;
     }
 }

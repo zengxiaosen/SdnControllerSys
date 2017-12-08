@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,9 @@ import org.onlab.packet.ipv6.HopByHopOptions;
 import org.onlab.packet.ipv6.IExtensionHeader;
 import org.onlab.packet.ipv6.Routing;
 
-import com.google.common.collect.ImmutableMap;
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -54,17 +53,19 @@ public class IPv6 extends IP implements IExtensionHeader {
     public static final byte LINK_LOCAL_1 = (byte) 0x80;
 
     public static final Map<Byte, Deserializer<? extends IPacket>> PROTOCOL_DESERIALIZER_MAP =
-            ImmutableMap.<Byte, Deserializer<? extends IPacket>>builder()
-                .put(IPv6.PROTOCOL_ICMP6, ICMP6.deserializer())
-                .put(IPv6.PROTOCOL_TCP, TCP.deserializer())
-                .put(IPv6.PROTOCOL_UDP, UDP.deserializer())
-                .put(IPv6.PROTOCOL_HOPOPT, HopByHopOptions.deserializer())
-                .put(IPv6.PROTOCOL_ROUTING, Routing.deserializer())
-                .put(IPv6.PROTOCOL_FRAG, Fragment.deserializer())
-                .put(IPv6.PROTOCOL_ESP, EncapSecurityPayload.deserializer())
-                .put(IPv6.PROTOCOL_AH, Authentication.deserializer())
-                .put(IPv6.PROTOCOL_DSTOPT, DestinationOptions.deserializer())
-                .build();
+            new HashMap<>();
+
+    static {
+        IPv6.PROTOCOL_DESERIALIZER_MAP.put(IPv6.PROTOCOL_ICMP6, ICMP6.deserializer());
+        IPv6.PROTOCOL_DESERIALIZER_MAP.put(IPv6.PROTOCOL_TCP, TCP.deserializer());
+        IPv6.PROTOCOL_DESERIALIZER_MAP.put(IPv6.PROTOCOL_UDP, UDP.deserializer());
+        IPv6.PROTOCOL_DESERIALIZER_MAP.put(IPv6.PROTOCOL_HOPOPT, HopByHopOptions.deserializer());
+        IPv6.PROTOCOL_DESERIALIZER_MAP.put(IPv6.PROTOCOL_ROUTING, Routing.deserializer());
+        IPv6.PROTOCOL_DESERIALIZER_MAP.put(IPv6.PROTOCOL_FRAG, Fragment.deserializer());
+        IPv6.PROTOCOL_DESERIALIZER_MAP.put(IPv6.PROTOCOL_ESP, EncapSecurityPayload.deserializer());
+        IPv6.PROTOCOL_DESERIALIZER_MAP.put(IPv6.PROTOCOL_AH, Authentication.deserializer());
+        IPv6.PROTOCOL_DESERIALIZER_MAP.put(IPv6.PROTOCOL_DSTOPT, DestinationOptions.deserializer());
+    }
 
     protected byte version;
     protected byte trafficClass;
@@ -235,6 +236,39 @@ public class IPv6 extends IP implements IExtensionHeader {
         return data;
     }
 
+    @Override
+    public IPacket deserialize(final byte[] data, final int offset,
+                               final int length) {
+        final ByteBuffer bb = ByteBuffer.wrap(data, offset, length);
+        int iscratch;
+
+        iscratch = bb.getInt();
+        this.version = (byte) (iscratch >> 28 & 0xf);
+        this.trafficClass = (byte) (iscratch >> 20 & 0xff);
+        this.flowLabel = iscratch & 0xfffff;
+        this.payloadLength = bb.getShort();
+        this.nextHeader = bb.get();
+        this.hopLimit = bb.get();
+        bb.get(this.sourceAddress, 0, Ip6Address.BYTE_LENGTH);
+        bb.get(this.destinationAddress, 0, Ip6Address.BYTE_LENGTH);
+
+        Deserializer<? extends IPacket> deserializer;
+        if (IPv6.PROTOCOL_DESERIALIZER_MAP.containsKey(this.nextHeader)) {
+            deserializer = IPv6.PROTOCOL_DESERIALIZER_MAP.get(this.nextHeader);
+        } else {
+            deserializer = Data.deserializer();
+        }
+        try {
+            this.payload = deserializer.deserialize(data, bb.position(),
+                                                    bb.limit() - bb.position());
+            this.payload.setParent(this);
+        } catch (DeserializationException e) {
+            return this;
+        }
+
+        return this;
+    }
+
     /*
      * (non-Javadoc)
      *
@@ -333,12 +367,8 @@ public class IPv6 extends IP implements IExtensionHeader {
             } else {
                 deserializer = Data.deserializer();
             }
-
-            int remainingLength = bb.limit() - bb.position();
-            int payloadLength = ipv6.payloadLength;
-            int bytesToRead = (payloadLength <= remainingLength) ?
-                    payloadLength : remainingLength;
-            ipv6.payload = deserializer.deserialize(data, bb.position(), bytesToRead);
+            ipv6.payload = deserializer.deserialize(data, bb.position(),
+                                               bb.limit() - bb.position());
             ipv6.payload.setParent(ipv6);
 
             return ipv6;

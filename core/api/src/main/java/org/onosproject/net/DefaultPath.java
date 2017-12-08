@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,7 +110,7 @@ public class DefaultPath extends DefaultLink implements Path {
                 .add("dst", dst())
                 .add("type", type())
                 .add("state", state())
-                .add("expected", isExpected())
+                .add("durable", isDurable())
                 .add("links", links)
                 .add("cost", cost)
                 .toString();

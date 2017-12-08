@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -33,6 +31,8 @@ import org.apache.felix.scr.annotations.Modified;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
@@ -41,8 +41,8 @@ import org.onosproject.net.flow.CompletedBatchOperation;
 import org.onosproject.net.flow.DefaultTableStatisticsEntry;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchEntry;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
+import org.onosproject.net.flow.FlowRuleBatchEntry;
+import org.onosproject.net.flow.FlowRuleBatchOperation;
 import org.onosproject.net.flow.FlowRuleExtPayLoad;
 import org.onosproject.net.flow.FlowRuleProvider;
 import org.onosproject.net.flow.FlowRuleProviderRegistry;
@@ -240,16 +240,16 @@ public class OpenFlowRuleProvider extends AbstractProvider
             // NewAdaptiveFlowStatsCollector Constructor
             NewAdaptiveFlowStatsCollector fsc =
                     new NewAdaptiveFlowStatsCollector(driverService, sw, flowPollFrequency);
-            stopCollectorIfNeeded(afsCollectors.put(new Dpid(sw.getId()), fsc));
             fsc.start();
+            stopCollectorIfNeeded(afsCollectors.put(new Dpid(sw.getId()), fsc));
         } else {
             FlowStatsCollector fsc = new FlowStatsCollector(timer, sw, flowPollFrequency);
-            stopCollectorIfNeeded(simpleCollectors.put(new Dpid(sw.getId()), fsc));
             fsc.start();
+            stopCollectorIfNeeded(simpleCollectors.put(new Dpid(sw.getId()), fsc));
         }
         TableStatisticsCollector tsc = new TableStatisticsCollector(timer, sw, flowPollFrequency);
-        stopCollectorIfNeeded(tableStatsCollectors.put(new Dpid(sw.getId()), tsc));
         tsc.start();
+        stopCollectorIfNeeded(tableStatsCollectors.put(new Dpid(sw.getId()), tsc));
     }
 
     private void stopCollectorIfNeeded(SwitchDataCollector collector) {
@@ -565,7 +565,8 @@ public class OpenFlowRuleProvider extends AbstractProvider
                 return null;
             }
 
-            ByteBuf bb = Unpooled.wrappedBuffer(msg.getData().getData());
+            ChannelBuffer bb = ChannelBuffers.wrappedBuffer(
+                    msg.getData().getData());
 
             if (bb.readableBytes() < MIN_EXPECTED_BYTE_LEN) {
                 log.debug("Wrong length: Expected to be >= {}, was: {}",

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import org.apache.felix.scr.annotations.ReferenceCardinality;
 /**
  * Basis for components which need to export listener mechanism.
  */
-@Component
+@Component(componentAbstract = true)
 public abstract class AbstractListenerManager<E extends Event, L extends EventListener<E>>
     implements ListenerService<E, L> {
 

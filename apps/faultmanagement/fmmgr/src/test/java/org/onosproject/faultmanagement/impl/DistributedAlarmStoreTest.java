@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onosproject.incubator.net.faultmanagement.alarm.Alarm;
-import org.onosproject.incubator.net.faultmanagement.alarm.AlarmId;
 import org.onosproject.incubator.net.faultmanagement.alarm.DefaultAlarm;
 import org.onosproject.net.DeviceId;
 import org.onosproject.store.service.TestStorageService;
@@ -34,9 +33,7 @@ import static org.junit.Assert.assertTrue;
 public class DistributedAlarmStoreTest {
     private DistributedAlarmStore alarmStore;
     private static final DeviceId DEVICE_ID = DeviceId.deviceId("foo:bar");
-    private static final String UNIQUE_ID_1 = "unique_id_1";
-    private static final AlarmId A_ID = AlarmId.alarmId(DEVICE_ID, UNIQUE_ID_1);
-    private static final DefaultAlarm ALARM_A = new DefaultAlarm.Builder(A_ID,
+    private static final DefaultAlarm ALARM_A = new DefaultAlarm.Builder(
             DEVICE_ID, "aaa", Alarm.SeverityLevel.CRITICAL, 0).build();
 
     /**
@@ -64,7 +61,7 @@ public class DistributedAlarmStoreTest {
      */
     @Test
     public void basics() {
-        alarmStore.createOrUpdateAlarm(ALARM_A);
+        alarmStore.setAlarm(ALARM_A);
         assertTrue("There should be one alarm in the set.",
                    alarmStore.getAlarms().contains(ALARM_A));
         assertTrue("The same alarm should be returned.",

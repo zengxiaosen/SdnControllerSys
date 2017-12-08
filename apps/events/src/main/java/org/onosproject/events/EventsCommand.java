@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import org.onosproject.mastership.MastershipEvent;
 import org.onosproject.net.Link;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.host.HostEvent;
-import org.onosproject.net.intent.IntentEvent;
 import org.onosproject.net.link.LinkEvent;
 import org.onosproject.net.topology.Topology;
 import org.onosproject.net.topology.TopologyEvent;
@@ -79,7 +78,7 @@ public class EventsCommand
             required = false)
     private boolean topology = false;
 
-    @Option(name = "--host", aliases = "-h",
+    @Option(name = "--host", aliases = "-t",
             description = "Include HostEvent",
             required = false)
     private boolean host = false;
@@ -88,11 +87,6 @@ public class EventsCommand
             description = "Include ClusterEvent",
             required = false)
     private boolean cluster = false;
-
-    @Option(name = "--intent", aliases = "-i",
-            description = "Include IntentEvent",
-            required = false)
-    private boolean intent = false;
 
     @Option(name = "--max-events", aliases = "-n",
             description = "Maximum number of events to print",
@@ -106,7 +100,7 @@ public class EventsCommand
 
         Stream<Event<?, ?>> events = eventHistoryService.history().stream();
 
-        boolean dumpAll = all || !(mastership || device || link || topology || host || cluster || intent);
+        boolean dumpAll = all || !(mastership || device || link || topology || host);
 
         if (!dumpAll) {
             Predicate<Event<?, ?>> filter = (defaultIs) -> false;
@@ -128,9 +122,6 @@ public class EventsCommand
             }
             if (cluster) {
                 filter = filter.or(evt -> evt instanceof ClusterEvent);
-            }
-            if (intent) {
-                filter = filter.or(evt -> evt instanceof IntentEvent);
             }
 
             events = events.filter(filter);

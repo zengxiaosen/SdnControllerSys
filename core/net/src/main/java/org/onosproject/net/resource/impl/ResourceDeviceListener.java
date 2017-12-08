@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -145,7 +145,7 @@ final class ResourceDeviceListener implements DeviceListener {
         executor.execute(() -> {
             boolean success = adminService.register(Resources.discrete(device.id()).resource());
             if (!success) {
-                log.error("Failed to register Device: {}", device.id());
+                log.warn("Failed to register Device: {}", device.id());
             }
         });
     }
@@ -161,16 +161,14 @@ final class ResourceDeviceListener implements DeviceListener {
     private void registerPortResource(Device device, Port port) {
         Resource portPath = Resources.discrete(device.id(), port.number()).resource();
         executor.execute(() -> {
-            if (!adminService.register(portPath)) {
-                log.error("Failed to register Port: {}", portPath.id());
-            }
+            adminService.register(portPath);
 
             queryBandwidth(device.id(), port.number())
                 .map(bw -> portPath.child(Bandwidth.class, bw.bps()))
                 .map(adminService::register)
                 .ifPresent(success -> {
                    if (!success) {
-                       log.error("Failed to register Bandwidth for {}", portPath.id());
+                       log.warn("Failed to register Bandwidth for {}", portPath.id());
                    }
                 });
 
@@ -181,7 +179,7 @@ final class ResourceDeviceListener implements DeviceListener {
                         .map(portPath::child)
                         .collect(Collectors.toList()));
                 if (!success) {
-                    log.error("Failed to register VLAN IDs for {}", portPath.id());
+                    log.warn("Failed to register VLAN IDs for {}", portPath.id());
                 }
             }
 
@@ -192,7 +190,7 @@ final class ResourceDeviceListener implements DeviceListener {
                         .map(portPath::child)
                         .collect(Collectors.toList()));
                 if (!success) {
-                    log.error("Failed to register MPLS Labels for {}", portPath.id());
+                    log.warn("Failed to register MPLS Labels for {}", portPath.id());
                 }
             }
 
@@ -203,7 +201,7 @@ final class ResourceDeviceListener implements DeviceListener {
                         .map(portPath::child)
                         .collect(Collectors.toList()));
                 if (!success) {
-                    log.error("Failed to register lambdas for {}", portPath.id());
+                    log.warn("Failed to register lambdas for {}", portPath.id());
                 }
             }
 
@@ -214,7 +212,7 @@ final class ResourceDeviceListener implements DeviceListener {
                         .map(portPath::child)
                         .collect(Collectors.toList()));
                 if (!success) {
-                    log.error("Failed to register tributary slots for {}", portPath.id());
+                    log.warn("Failed to register tributary slots for {}", portPath.id());
                 }
             }
         });
@@ -283,7 +281,7 @@ final class ResourceDeviceListener implements DeviceListener {
             if (query != null) {
                 return query.queryLambdas(port).stream()
                         .flatMap(ResourceDeviceListener::toResourceGrid)
-                        .collect(ImmutableSet.toImmutableSet());
+                        .collect(Collectors.toSet());
             } else {
                 return Collections.emptySet();
             }

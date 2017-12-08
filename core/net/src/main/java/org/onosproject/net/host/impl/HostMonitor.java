@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +15,25 @@
  */
 package org.onosproject.net.host.impl;
 
+import org.jboss.netty.util.Timeout;
+import org.jboss.netty.util.TimerTask;
 import org.onlab.packet.ARP;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.IPv6;
-import org.onlab.packet.Ip4Address;
-import org.onlab.packet.Ip6Address;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.VlanId;
 import org.onlab.packet.ndp.NeighborSolicitation;
-import org.onlab.util.SharedScheduledExecutors;
-import org.onosproject.net.intf.InterfaceService;
+import org.onlab.util.Timer;
+import org.onosproject.incubator.net.intf.Interface;
+import org.onosproject.incubator.net.intf.InterfaceService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Host;
 import org.onosproject.net.edge.EdgePortService;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.host.HostProvider;
+import org.onosproject.net.host.InterfaceIpAddress;
 import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.OutboundPacket;
 import org.onosproject.net.packet.PacketService;
@@ -44,7 +46,6 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -55,7 +56,7 @@ import java.util.concurrent.TimeUnit;
  * probe for hosts that have not yet been detected (specified by IP address).
  * </p>
  */
-public class HostMonitor implements Runnable {
+public class HostMonitor implements TimerTask {
 
     private Logger log = LoggerFactory.getLogger(getClass());
 
@@ -72,7 +73,7 @@ public class HostMonitor implements Runnable {
     private static final byte[] ZERO_MAC_ADDRESS = MacAddress.ZERO.toBytes();
     private long probeRate = DEFAULT_PROBE_RATE;
 
-    private ScheduledFuture<?> timeout;
+    private Timeout timeout;
 
     /**
      * Creates a new host monitor.
@@ -103,9 +104,8 @@ public class HostMonitor implements Runnable {
      * @param ip IP address of the host to monitor
      */
     void addMonitoringFor(IpAddress ip) {
-        if (monitoredAddresses.add(ip)) {
-            probe(ip);
-        }
+        monitoredAddresses.add(ip);
+        probe(ip);
     }
 
     /**
@@ -123,7 +123,7 @@ public class HostMonitor implements Runnable {
     void start() {
         synchronized (this) {
             if (timeout == null) {
-                timeout = SharedScheduledExecutors.newTimeout(this, 0, TimeUnit.MILLISECONDS);
+                timeout = Timer.getTimer().newTimeout(this, 0, TimeUnit.MILLISECONDS);
             }
         }
     }
@@ -133,7 +133,7 @@ public class HostMonitor implements Runnable {
      */
     void shutdown() {
         synchronized (this) {
-            timeout.cancel(true);
+            timeout.cancel();
             timeout = null;
         }
     }
@@ -156,11 +156,11 @@ public class HostMonitor implements Runnable {
     }
 
     @Override
-    public void run() {
+    public void run(Timeout timeout) throws Exception {
         monitoredAddresses.forEach(this::probe);
 
         synchronized (this) {
-            this.timeout = SharedScheduledExecutors.newTimeout(this, probeRate, TimeUnit.MILLISECONDS);
+            this.timeout = Timer.getTimer().newTimeout(this, probeRate, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -187,35 +187,30 @@ public class HostMonitor implements Runnable {
      * @param targetIp IP address to send the request for
      */
     private void sendRequest(IpAddress targetIp) {
-        interfaceService.getMatchingInterfaces(targetIp).forEach(intf -> {
-            if (!edgePortService.isEdgePoint(intf.connectPoint())) {
-                log.warn("Aborting attempt to send probe out non-edge port: {}", intf);
-                return;
+        Interface intf = interfaceService.getMatchingInterface(targetIp);
+
+        if (intf == null) {
+            return;
+        }
+
+        if (!edgePortService.isEdgePoint(intf.connectPoint())) {
+            log.warn("Attempt to send probe out non-edge port: {}", intf);
+            return;
+        }
+
+        for (InterfaceIpAddress ia : intf.ipAddressesList()) {
+            if (ia.subnetAddress().contains(targetIp)) {
+                sendProbe(intf.connectPoint(), targetIp, ia.ipAddress(),
+                        intf.mac(), intf.vlan());
             }
-
-            intf.ipAddressesList().stream()
-                    .filter(ia -> ia.subnetAddress().contains(targetIp))
-                    .forEach(ia -> {
-                        MacAddress probeMac = intf.mac();
-                        IpAddress probeIp = !probeMac.equals(MacAddress.ONOS) ?
-                                ia.ipAddress() :
-                                (ia.ipAddress().isIp4() ? Ip4Address.ZERO : Ip6Address.ZERO);
-                        sendProbe(intf.connectPoint(), targetIp, probeIp, probeMac, intf.vlan());
-
-                        // account for use-cases where tagged-vlan config is used
-                        if (!intf.vlanTagged().isEmpty()) {
-                            intf.vlanTagged().forEach(tag -> {
-                                sendProbe(intf.connectPoint(), targetIp, probeIp, probeMac, tag);
-                            });
-                        }
-                    });
-        });
+        }
     }
 
-    public void sendProbe(ConnectPoint connectPoint, IpAddress targetIp, IpAddress sourceIp,
-                          MacAddress sourceMac, VlanId vlan) {
-        log.debug("Sending probe for target:{} out of intf:{} vlan:{}", targetIp, connectPoint, vlan);
-
+    public void sendProbe(ConnectPoint connectPoint,
+                          IpAddress targetIp,
+                          IpAddress sourceIp,
+                          MacAddress sourceMac,
+                          VlanId vlan) {
         Ethernet probePacket;
 
         if (targetIp.isIp4()) {

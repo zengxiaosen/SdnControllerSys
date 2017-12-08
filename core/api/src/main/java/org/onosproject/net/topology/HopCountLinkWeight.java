@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,12 @@ import static org.onosproject.net.Link.Type.INDIRECT;
  * being as expensive as traversing the entire graph to assume the worst.
  */
 public class HopCountLinkWeight implements LinkWeight {
-    private final int indirectLinkCost;
+    //private final int indirectLinkCost;
+    private int indirectLinkCost;
+
+    public int getIndirectLinkCost() {
+        return indirectLinkCost;
+    }
 
     /**
      * Creates a new hop-count weight.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Source/Dest key type LCAF address class.
  * <p>
  * Source destination key type is defined in draft-ietf-lisp-lcaf-22
- * https://tools.ietf.org/html/draft-ietf-lisp-lcaf-22#page-20
+ * https://tools.ietf.org/html/draft-ietf-lisp-lcaf-22#page-19
  *
  * <pre>
  * {@literal

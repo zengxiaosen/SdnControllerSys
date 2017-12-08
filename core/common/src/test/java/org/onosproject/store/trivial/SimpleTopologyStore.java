@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,18 +108,27 @@ public class SimpleTopologyStore
 
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst) {
+        for(int i=0; i<10; i++){
+            log.info("1是不是被调用了SimpleTopologyStore。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
+        }
         return defaultTopology(topology).getPaths(src, dst);
     }
 
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst,
                               LinkWeight weight) {
+        for(int i=0; i<10; i++){
+            log.info("2是不是被调用了SimpleTopologyStore。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
+        }
         return getPaths(topology, src, dst, adapt(weight));
     }
 
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src,
                               DeviceId dst, LinkWeigher weigher) {
+        for(int i=0; i<10; i++){
+            log.info("3是不是被调用了SimpleTopologyStore。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
+        }
         return defaultTopology(topology).getPaths(src, dst, weigher);
     }
 

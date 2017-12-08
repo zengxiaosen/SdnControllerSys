@@ -7,6 +7,7 @@
 
     // constants
     var detailsReq = 'roadmDeviceDetailsRequest';
+
     angular.module('ovRoadmDevice', [])
         .controller('OvRoadmDeviceCtrl',
         ['$log', '$scope', '$location', 'TableBuilderService', 'WebSocketService',
@@ -18,8 +19,6 @@
                 $loc = _$loc_;
                 wss = _wss_;
                 ns = _ns_;
-                
-                $scope.showFlowIcon = true;
 
                 // query for if a certain device needs to be highlighted
                 var params = $loc.search();
@@ -32,16 +31,6 @@
                     scope: $scope,
                     tag: 'roadmDevice'
                 });
-
-                $scope.queryShowItems = function (tabRow) {
-                    // hide:OPTICAL_AMPLIFIER,FIBER_SWITCH, show:ROADM
-                    if (tabRow['type'] == 'ROADM') {
-                        $scope.showFlowIcon = true;
-                    } else {
-                        $scope.showFlowIcon = false;
-                    }
-                    $scope.$apply();
-                 }
 
                 $scope.nav = function (path) {
                     if ($scope.selId) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,6 @@ import org.slf4j.Logger;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -110,18 +109,13 @@ public class DistributedAlarmStore
     public Collection<Alarm> getAlarms(DeviceId deviceId) {
         //FIXME: this is expensive, need refactoring when core maps provide different indexes.
         return ImmutableSet.copyOf(alarmsMap.values().stream()
-                                           .filter(alarm -> alarm.deviceId().equals(deviceId))
-                                           .collect(Collectors.toSet()));
+                .filter(alarm -> alarm.deviceId().equals(deviceId))
+                .collect(Collectors.toSet()));
     }
 
     @Override
-    public void createOrUpdateAlarm(Alarm alarm) {
-        Alarm existing = alarmsMap.get(alarm.id());
-        if (Objects.equals(existing, alarm)) {
-            log.info("Received identical alarm, no operation needed on {}", alarm.id());
-        } else {
-            alarms.put(alarm.id(), alarm);
-        }
+    public void setAlarm(Alarm alarm) {
+        alarms.put(alarm.id(), alarm);
     }
 
     @Override
@@ -142,7 +136,7 @@ public class DistributedAlarmStore
                     alarm = mapEvent.newValue().value();
                     break;
                 case UPDATE:
-                    type = AlarmEvent.Type.UPDATED;
+                    type = AlarmEvent.Type.CREATED;
                     alarm = mapEvent.newValue().value();
                     break;
                 case REMOVE:

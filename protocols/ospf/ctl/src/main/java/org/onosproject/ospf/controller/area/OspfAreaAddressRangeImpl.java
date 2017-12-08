@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@ import org.onosproject.ospf.controller.OspfAreaAddressRange;
  */
 public class OspfAreaAddressRangeImpl implements OspfAreaAddressRange {
 
-    private Ip4Address ipAddress;
-    private String mask;
-    private boolean advertise;
+    public Ip4Address ipAddress;
+    public String mask;
+    public boolean advertise;
 
     /**
      * Gets the IP address.

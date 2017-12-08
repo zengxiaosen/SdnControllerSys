@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import org.onosproject.bgp.controller.BgpLocalRib;
 import org.onosproject.bgp.controller.BgpNodeListener;
 import org.onosproject.bgp.controller.BgpPeer;
 import org.onosproject.bgp.controller.BgpPeerManager;
-import org.onosproject.bgp.controller.BgpRouteListener;
 import org.onosproject.bgpio.exceptions.BgpParseException;
 import org.onosproject.bgpio.protocol.BgpMessage;
 import org.onosproject.bgpio.protocol.BgpUpdateMsg;
@@ -70,7 +69,6 @@ public class BgpControllerImpl implements BgpController {
     private LinkedList<String> closedExceptionList = new LinkedList<String>();
     private Map<String, List<String>> activeSessionExceptionMap = new TreeMap<>();
     private Map<String, List<String>> closedSessionExceptionMap = new TreeMap<>();
-    protected Set<BgpRouteListener> bgpRouteListener = new CopyOnWriteArraySet<>();
 
     @Override
     public void activeSessionExceptionAdd(String peerId, String exception) {
@@ -111,21 +109,6 @@ public class BgpControllerImpl implements BgpController {
     @Override
     public Map<String, List<String>> closedSessionMap() {
         return closedSessionExceptionMap;
-    }
-
-    @Override
-    public void addRouteListener(BgpRouteListener listener) {
-        this.bgpRouteListener.add(listener);
-    }
-
-    @Override
-    public void removeRouteListener(BgpRouteListener listener) {
-        this.bgpRouteListener.remove(listener);
-    }
-
-    @Override
-    public Set<BgpRouteListener> routeListener() {
-        return bgpRouteListener;
     }
 
     @Activate
@@ -180,60 +163,46 @@ public class BgpControllerImpl implements BgpController {
         BgpPeer peer = getPeer(bgpId);
 
         switch (msg.getType()) {
-            case OPEN:
-                // TODO: Process Open message
-                break;
-            case KEEP_ALIVE:
-                // TODO: Process keepalive message
-                break;
-            case NOTIFICATION:
-                // TODO: Process notificatoin message
-                break;
-            case UPDATE:
-                BgpUpdateMsg updateMsg = (BgpUpdateMsg) msg;
-                List<BgpValueType> pathAttr = updateMsg.bgpPathAttributes().pathAttributes();
-                if (pathAttr == null) {
-                    log.debug("llPathAttr is null, cannot process update message");
-                    break;
-                }
-                Iterator<BgpValueType> listIterator = pathAttr.iterator();
-                boolean isLinkstate = false;
-                boolean isEvpn = false;
+        case OPEN:
+            // TODO: Process Open message
+            break;
+        case KEEP_ALIVE:
+            // TODO: Process keepalive message
+            break;
+        case NOTIFICATION:
+            // TODO: Process notificatoin message
+            break;
+        case UPDATE:
+            BgpUpdateMsg updateMsg = (BgpUpdateMsg) msg;
+            List<BgpValueType> pathAttr = updateMsg.bgpPathAttributes().pathAttributes();
+            if (pathAttr == null) {
+               log.debug("llPathAttr is null, cannot process update message");
+               break;
+            }
+            Iterator<BgpValueType> listIterator = pathAttr.iterator();
+            boolean isLinkstate = false;
 
-                while (listIterator.hasNext()) {
-                    BgpValueType attr = listIterator.next();
-                    if (attr instanceof MpReachNlri) {
-                        MpReachNlri mpReach = (MpReachNlri) attr;
-                        if (mpReach.bgpFlowSpecNlri() == null
-                                && mpReach.bgpEvpnNlri() == null) {
-                            isLinkstate = true;
-                        }
-                        if (mpReach.bgpEvpnNlri() != null) {
-                            isEvpn = true;
-                        }
-                    } else if (attr instanceof MpUnReachNlri) {
-                        MpUnReachNlri mpUnReach = (MpUnReachNlri) attr;
-                        if (mpUnReach.bgpFlowSpecNlri() == null
-                                && mpUnReach.bgpEvpnNlri() == null) {
-                            isLinkstate = true;
-                        }
-                        if (mpUnReach.bgpEvpnNlri() != null) {
-                            isEvpn = true;
-                        }
+            while (listIterator.hasNext()) {
+                BgpValueType attr = listIterator.next();
+                if (attr instanceof MpReachNlri) {
+                    MpReachNlri mpReach = (MpReachNlri) attr;
+                    if (mpReach.bgpFlowSpecNlri() == null) {
+                        isLinkstate = true;
+                    }
+                } else if (attr instanceof MpUnReachNlri) {
+                    MpUnReachNlri mpUnReach = (MpUnReachNlri) attr;
+                    if (mpUnReach.bgpFlowSpecNlri() == null) {
+                        isLinkstate = true;
                     }
                 }
-                if (isLinkstate) {
-                    peer.buildAdjRibIn(pathAttr);
-                }
-                if (isEvpn) {
-                    for (BgpRouteListener listener : bgpRouteListener) {
-                        listener.processRoute(bgpId, updateMsg);
-                    }
-                }
-                break;
-            default:
-                // TODO: Process other message
-                break;
+            }
+            if (isLinkstate) {
+                peer.buildAdjRibIn(pathAttr);
+            }
+            break;
+        default:
+            // TODO: Process other message
+            break;
         }
     }
 

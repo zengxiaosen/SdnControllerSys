@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,15 +53,15 @@ public class PcepEndPointsObjectVer1 implements PcepEndPointsObject {
     static final byte END_POINTS_OBJ_CLASS = 4;
     static final byte END_POINTS_OBJECT_VERSION = 1;
     static final short END_POINTS_OBJ_MINIMUM_LENGTH = 12;
-    static byte endPointObjType;
+    public static byte endPointObjType;
 
     static final PcepObjectHeader DEFAULT_END_POINTS_OBJECT_HEADER = new PcepObjectHeader(END_POINTS_OBJ_CLASS,
             END_POINTS_OBJ_TYPE, PcepObjectHeader.REQ_OBJ_OPTIONAL_PROCESS, PcepObjectHeader.RSP_OBJ_PROCESSED,
             END_POINTS_OBJ_MINIMUM_LENGTH);
 
     private PcepObjectHeader endPointsObjHeader;
-    int sourceIpAddress;
-    int destIpAddress;
+    public int sourceIpAddress;
+    public int destIpAddress;
 
     /**
      * Constructor to initialize all variables.

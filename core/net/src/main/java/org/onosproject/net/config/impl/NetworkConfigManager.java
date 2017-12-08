@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,6 @@ public class NetworkConfigManager
 
     // Inventory of configuration factories
     private final Map<ConfigKey, ConfigFactory> factories = Maps.newConcurrentMap();
-    private final Map<ConfigKey, Integer> factoryCounters = Maps.newConcurrentMap();
 
     // Secondary indices to retrieve subject and config classes by keys
     private final Map<String, SubjectFactory> subjectClasses = Maps.newConcurrentMap();
@@ -98,36 +97,24 @@ public class NetworkConfigManager
     @SuppressWarnings("unchecked")
     public void registerConfigFactory(ConfigFactory configFactory) {
         checkNotNull(configFactory, NULL_FACTORY_MSG);
-        if (factoryCounters.containsKey(key(configFactory))) {
-            factoryCounters.replace(key(configFactory), (factoryCounters.get(key(configFactory)) + 1));
-        } else {
-            factories.put(key(configFactory), configFactory);
-            factoryCounters.put(key(configFactory), 1);
+        factories.put(key(configFactory), configFactory);
+        configClasses.put(identifier(configFactory), configFactory.configClass());
 
-            configClasses.put(identifier(configFactory), configFactory.configClass());
+        SubjectFactory subjectFactory = configFactory.subjectFactory();
+        subjectClasses.putIfAbsent(subjectFactory.subjectClassKey(), subjectFactory);
+        subjectClassKeys.putIfAbsent(subjectFactory.subjectClass(), subjectFactory);
 
-            SubjectFactory subjectFactory = configFactory.subjectFactory();
-            subjectClasses.putIfAbsent(subjectFactory.subjectClassKey(), subjectFactory);
-            subjectClassKeys.putIfAbsent(subjectFactory.subjectClass(), subjectFactory);
-
-            store.addConfigFactory(configFactory);
-        }
+        store.addConfigFactory(configFactory);
     }
 
     @Override
     public void unregisterConfigFactory(ConfigFactory configFactory) {
         checkNotNull(configFactory, NULL_FACTORY_MSG);
-        Integer factoryCounter = factoryCounters.get(key(configFactory));
-        if (factoryCounter > 1) {
-            factoryCounters.replace(key(configFactory), (factoryCounter - 1));
-        } else {
-            factoryCounters.remove(key(configFactory));
-            factories.remove(key(configFactory));
-            configClasses.remove(identifier(configFactory));
+        factories.remove(key(configFactory));
+        configClasses.remove(identifier(configFactory));
 
-            // Note that we are deliberately not removing subject factory key bindings.
-            store.removeConfigFactory(configFactory);
-        }
+        // Note that we are deliberately not removing subject factory key bindings.
+        store.removeConfigFactory(configFactory);
     }
 
     @Override

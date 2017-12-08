@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +60,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 import static org.junit.Assert.*;
 import static org.onosproject.net.Device.Type.SWITCH;
@@ -316,11 +315,6 @@ public class OpenFlowDeviceProviderTest {
 
         @Override
         public void write(Dpid dpid, OFMessage msg) {
-        }
-
-        @Override
-        public CompletableFuture<OFMessage> writeResponse(Dpid dpid, OFMessage msg) {
-            return null;
         }
 
         @Override

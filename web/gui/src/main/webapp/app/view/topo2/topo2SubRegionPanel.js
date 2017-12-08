@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,27 +35,14 @@
     function formatSubRegionData(data) {
         return {
             title: data.get('name'),
-            propLabels: {
-                '-': '-',
-                'id': 'Id',
-                'nodeType': 'Type',
-                'nDevs': '# Devices',
-                'nHosts': '# Hosts',
-            },
-            propValues: {
-                '-': '-',
-                'id': data.get('id'),
-                'nodeType': data.get('nodeType'),
-                'nDevs': data.get('nDevs'),
-                'nHosts': data.get('nHosts'),
-            },
-            propOrder: [
-                'id',
-                'nodeType',
-                '-',
-                'nDevs',
-                'nHosts',
-            ],
+            propOrder: ['Id', 'Type', '-', 'Number of Devices', 'Number of Hosts'],
+            props: {
+                '-': '',
+                'Id': data.get('id'),
+                'Type': data.get('nodeType'),
+                'Number of Devices': data.get('nDevs'),
+                'Number of Hosts': data.get('nHosts')
+            }
         };
     }
 
@@ -66,7 +53,7 @@
     }
 
     function render() {
-        subRegionPanel.show();
+        subRegionPanel.el.show();
         subRegionPanel.emptyRegions();
 
         var svg = subRegionPanel.appendToHeader('div')
@@ -82,7 +69,7 @@
     }
 
     function show() {
-        subRegionPanel.show();
+        subRegionPanel.el.show();
     }
 
     function hide() {
@@ -116,9 +103,9 @@
                 hide: hide,
                 toggle: toggle,
                 destroy: destroy,
-                isVisible: function () { return subRegionPanel.isVisible(); },
+                isVisible: function () { return subRegionPanel.isVisible(); }
             };
-        },
+        }
     ]);
 
 })();

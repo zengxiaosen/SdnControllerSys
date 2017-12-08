@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
+import org.onosproject.net.intent.Constraint;
 import org.onosproject.net.intent.ResourceContext;
 
 import java.util.Collections;
@@ -35,7 +36,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Constraint that evaluates elements passed through in order.
  */
 @Beta
-public final class WaypointConstraint extends PathViabilityConstraint {
+public class WaypointConstraint implements Constraint {
 
     private final List<DeviceId> waypoints;
 
@@ -57,6 +58,13 @@ public final class WaypointConstraint extends PathViabilityConstraint {
 
     public List<DeviceId> waypoints() {
         return waypoints;
+    }
+
+    // doesn't use LinkResourceService
+    @Override
+    public double cost(Link link, ResourceContext context) {
+        // Always consider the number of hops
+        return 1;
     }
 
     // doesn't use LinkResourceService

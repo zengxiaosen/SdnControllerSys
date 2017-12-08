@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,100 +15,110 @@
  */
 package org.onosproject.ofagent.api;
 
-import org.onosproject.incubator.net.virtual.NetworkId;
-import org.onosproject.net.ConnectPoint;
-import org.onosproject.net.DeviceId;
+import io.netty.channel.Channel;
 import org.onosproject.net.Port;
-import org.onosproject.net.PortNumber;
-import org.onosproject.net.device.PortStatistics;
-import org.onosproject.net.flow.FlowEntry;
-import org.onosproject.net.flow.TableStatisticsEntry;
-import org.onosproject.net.group.Group;
-
-import java.util.List;
-import java.util.Set;
+import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.packet.InboundPacket;
+import org.projectfloodlight.openflow.protocol.OFMessage;
 
 /**
- * Service for providing virtual OpenFlow switch information.
+ * Service providing OpenFlow switch operations.
  */
 public interface OFSwitchService {
 
     /**
-     * Returns all openflow switches that OF agent service manages.
-     *
-     * @return set of openflow switches; empty set if no openflow switches exist
+     * Handles the switch starts.
      */
-    Set<OFSwitch> ofSwitches();
+    void started();
 
     /**
-     * Returns all openflow switches for the specified network.
-     *
-     * @param networkId network id
-     * @return set of openflow switches; empty set if no devices exist on the network
+     * Handles the switch stops.
      */
-    Set<OFSwitch> ofSwitches(NetworkId networkId);
+    void stopped();
 
     /**
-     * Returns openflow switch for the specified device in the specified network.
+     * Processes a new port of the switch.
+     * It sends out FEATURE_REPLY message to the controllers.
      *
-     * @param networkId network id
-     * @param deviceId device id
-     * @return openflow switch; null if none exists
+     * @param port virtual port
      */
-    OFSwitch ofSwitch(NetworkId networkId, DeviceId deviceId);
+    void processPortAdded(Port port);
 
     /**
-     * Returns all ports of the specified device in the specified network.
+     * Processes port link down.
+     * It sends out PORT_STATUS asynchronous message to the controllers.
      *
-     * @param networkId network id
-     * @param deviceId device id
-     * @return set of ports; empty set if no ports exist for the specified device
+     * @param port virtual port
      */
-    Set<Port> ports(NetworkId networkId, DeviceId deviceId);
+    void processPortDown(Port port);
 
     /**
-     * Returns all port statistics of the specified device in the specified network.
+     * Processes port link down.
+     * It sends out PORT_STATUS asynchronous message to the controllers.
      *
-     * @param networkId network id
-     * @param deviceId device id
-     * @return list of port statistics; empty list if none exists for the specified device
+     * @param port virtual port
      */
-    List<PortStatistics> getPortStatistics(NetworkId networkId, DeviceId deviceId);
+    void processPortUp(Port port);
 
     /**
-     * Returns all flow entries of the specified device in the specified network.
+     * Processes flow removed.
+     * It sends out FLOW_REMOVED asynchronous message to the controllers.
      *
-     * @param networkId network id
-     * @param deviceId device id
-     * @return list of flow entries; empty list if none exists for the specified device
+     * @param flowRule removed flow rule
      */
-    List<FlowEntry> getFlowEntries(NetworkId networkId, DeviceId deviceId);
+    void processFlowRemoved(FlowRule flowRule);
 
     /**
-     * Returns all flow table statistics of the specified device in the specified network.
+     * Processes packet in.
+     * It sends out PACKET_IN asynchronous message to the controllers.
      *
-     * @param networkId network id
-     * @param deviceId device id
-     * @return list of flow table statistics; empty list if none exists for the specified device
+     * @param packet inbound packet
      */
-    List<TableStatisticsEntry> getFlowTableStatistics(NetworkId networkId, DeviceId deviceId);
+    void processPacketIn(InboundPacket packet);
 
     /**
-     * Returns all groups associated with the specified device in the specified network.
+     * Processes commands from the controllers that modify the state of the switch.
+     * Possible message types include PACKET_OUT, FLOW_MOD, GROUP_MOD,
+     * PORT_MOD, TABLE_MOD. These types of messages can be denied based on a
+     * role of the request controller.
      *
-     * @param networkId network id
-     * @param deviceId device id
-     * @return list of  groups; empty list if none exists for the specified device
+     * @param channel received channel
+     * @param msg     command message received
      */
-    List<Group> getGroups(NetworkId networkId, DeviceId deviceId);
+    void processControllerCommand(Channel channel, OFMessage msg);
 
     /**
-     * Returns neighbour port of the specified port in the specified network.
+     * Processes a stats request from the controllers.
+     * Targeted message type is MULTIPART_REQUEST with FLOW, PORT, GROUP,
+     * GROUP_DESC subtypes.
      *
-     * @param networkId network id
-     * @param deviceId device id
-     * @param portNumber port number
-     * @return connect point; null if none exists
+     * @param channel received channel
+     * @param msg     stats request message received
      */
-    ConnectPoint neighbour(NetworkId networkId, DeviceId deviceId, PortNumber portNumber);
+    void processStatsRequest(Channel channel, OFMessage msg);
+
+    /**
+     * Processes a role request from the controllers.
+     * Targeted message type is ROLE_REQUEST.
+     *
+     * @param channel received channel
+     * @param msg     role request message received
+     */
+    void processRoleRequest(Channel channel, OFMessage msg);
+
+    /**
+     * Processes a features request from the controllers.
+     *
+     * @param channel received channel
+     * @param msg     received features request
+     */
+    void processFeaturesRequest(Channel channel, OFMessage msg);
+
+    /**
+     * Processes LLDP packets from the controller.
+     *
+     * @param channel received channel
+     * @param msg     packet out message with lldp
+     */
+    void processLldp(Channel channel, OFMessage msg);
 }

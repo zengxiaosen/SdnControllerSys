@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,17 +32,7 @@ public class MeterEvent extends AbstractEvent<MeterEvent.Type, Meter> {
         /**
          * A meter removal was requested.
          */
-        METER_REM_REQ,
-
-        /**
-         * A meter was finally added to device.
-         */
-        METER_ADDED,
-
-        /**
-         * A meter was finally removed from device.
-         */
-        METER_REMOVED
+        METER_REM_REQ
     }
 
 

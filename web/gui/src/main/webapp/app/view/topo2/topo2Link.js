@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,7 @@
 (function () {
     'use strict';
 
-    var $log, Collection, Model, ts, sus, t2zs, t2vs, t2lps,
-        fn, ps, t2mss, t2ts;
+    var $log, Collection, Model, ts, sus, t2zs, t2vs, t2lps, fn;
 
     var linkLabelOffset = '0.35em';
 
@@ -32,6 +31,8 @@
             .domain([1, 12])
             .range([widthRatio, 12 * widthRatio])
             .clamp(true),
+        allLinkTypes = 'direct optical tunnel UiDeviceLink',
+        allLinkSubTypes = 'not-permitted',
         labelDim = 30;
 
     // configuration
@@ -39,16 +40,16 @@
         light: {
             baseColor: '#939598',
             inColor: '#66f',
-            outColor: '#f00',
+            outColor: '#f00'
         },
         dark: {
             // TODO : theme
             baseColor: '#939598',
             inColor: '#66f',
-            outColor: '#f00',
+            outColor: '#f00'
         },
         inWidth: 12,
-        outWidth: 10,
+        outWidth: 10
     };
 
     function createLink() {
@@ -62,8 +63,8 @@
                 x1: 0,
                 y1: 0,
                 x2: 0,
-                y2: 0,
-            },
+                y2: 0
+            }
             // functions to aggregate dual link state
             // extra: link.extra
         });
@@ -109,18 +110,13 @@
 
         return {
             source: sourceNode,
-            target: targetNode,
+            target: targetNode
         };
     }
 
     function createLinkCollection(data, _region) {
 
         var LinkModel = Model.extend({
-            initialize: function () {
-                this.super = this.constructor.__super__;
-                this.super.initialize.apply(this, arguments);
-                this.createLink();
-            },
             region: _region,
             createLink: createLink,
             linkEndPoints: linkEndPoints,
@@ -133,10 +129,8 @@
                     this.get('type'),
                     {
                         enhanced: this.get('enhanced'),
-                        selected: this.get('selected'),
-                        suppressedmax: this.get('mastership'),
-                    },
-                    (this.linkLabel) ? this.linkLabel.linkLabelCSSClass() : null
+                        selected: this.get('selected')
+                    }
                 );
             },
             expected: function () {
@@ -156,7 +150,6 @@
                 // Update class names when the model changes
                 if (this.el) {
                     this.el.attr('class', this.svgClassName());
-                    this.setScale();
                 }
             },
             enhance: function () {
@@ -167,21 +160,21 @@
                     this.set('enhanced', true);
                     point = this.locatePortLabel();
                     angular.extend(point, {
-                        id: 'topo2-port-tgt',
-                        num: this.get('portB'),
+                        id: 'topo-port-tgt',
+                        num: this.get('portB')
                     });
                     data.push(point);
 
                     if (this.get('portA')) {
                         point = this.locatePortLabel(1);
                         angular.extend(point, {
-                            id: 'topo2-port-src',
-                            num: this.get('portA'),
+                            id: 'topo-port-src',
+                            num: this.get('portA')
                         });
                         data.push(point);
                     }
 
-                    var entering = d3.select('.topo2-portLabels')
+                    var entering = d3.select('#topo-portLabels')
                         .selectAll('.portLabel')
                         .data(data)
                         .enter().append('g')
@@ -211,64 +204,7 @@
             },
             unenhance: function () {
                 this.set('enhanced', false);
-                d3.select('.topo2-portLabels').selectAll('.portLabel').remove();
-                this.setScale();
-            },
-            amt: function (numLinks, index) {
-                var bbox = this.get('source').el.node().getBBox(),
-                    gap = bbox.width / 4;
-                return (index - ((numLinks - 1) / 2)) * gap;
-            },
-            defaultPosition: function () {
-                return {
-                    x1: this.get('source').x,
-                    y1: this.get('source').y,
-                    x2: this.get('target').x,
-                    y2: this.get('target').y,
-                };
-            },
-            calcMovement: function (amt, flipped) {
-                var pos = this.defaultPosition(),
-                    mult = flipped ? -amt : amt,
-                    dx = pos.x2 - pos.x1,
-                    dy = pos.y2 - pos.y1,
-                    length = Math.sqrt((dx * dx) + (dy * dy));
-
-                return {
-                    x1: pos.x1 + (mult * dy / length),
-                    y1: pos.y1 + (mult * -dx / length),
-                    x2: pos.x2 + (mult * dy / length),
-                    y2: pos.y2 + (mult * -dx / length),
-                };
-            },
-            setPosition: function () {
-                var multiline = this.get('multiline');
-                if (multiline) {
-                    var offsetAmt = this.amt(multiline.deviceLinks, multiline.index);
-                    this.set('position', this.calcMovement(offsetAmt));
-                } else {
-                    this.set('position', this.defaultPosition());
-                }
-
-                if (this.get('enhanced')) {
-                    this.updatePortPosition();
-                }
-
-                if (this.el) {
-                    this.el.attr(this.get('position'));
-                }
-
-                if (this.linkLabel) {
-                    this.linkLabel.setPosition();
-                }
-            },
-            updatePortPosition: function () {
-                var sourcePos = this.locatePortLabel(1),
-                    targetPos = this.locatePortLabel();
-                d3.select('#topo2-port-src')
-                    .attr('transform', sus.translate(sourcePos.x, sourcePos.y));
-                d3.select('#topo2-port-tgt')
-                    .attr('transform', sus.translate(targetPos.x, targetPos.y));
+                d3.select('#topo-portLabels').selectAll('.portLabel').remove();
             },
             getSelected: function () {
                 return this.collection.filter(function (m) {
@@ -276,14 +212,22 @@
                 });
             },
             select: function () {
-                this.set({ 'selected': true });
+
+                // TODO: if single selection clear selected devices, hosts, sub-regions
+                var s = Boolean(this.get('selected'));
+                // Clear all selected Items
+                _.each(this.collection.models, function (m) {
+                    m.set('selected', false);
+                });
+
+                this.set('selected', !s);
+                this.showDetails();
+
                 return this.getSelected();
             },
             deselect: function () {
-                this.set({
-                    'selected': false,
-                    'enhanced': false,
-                });
+                this.set('selected', false);
+                this.set('enhanced', false);
             },
             showDetails: function () {
                 var selected = this.getSelected();
@@ -295,6 +239,7 @@
                 }
             },
             locatePortLabel: function (src) {
+
                 var offset = 32 / (labelDim * t2zs.scale()),
                     sourceX = this.get('position').x1,
                     sourceY = this.get('position').y1,
@@ -315,86 +260,63 @@
 
                 return { x: k * dx + nearX, y: k * dy + nearY };
             },
+            restyleLinkElement: function (immediate) {
+                // this fn's job is to look at raw links and decide what svg classes
+                // need to be applied to the line element in the DOM
+                var th = ts.theme(),
+                    el = this.el,
+                    type = this.get('type'),
+                    online = this.online(),
+                    modeCls = this.expected() ? '-inactive' : 'not-permitted',
+                    delay = immediate ? 0 : 1000;
+
+                // NOTE: understand why el is sometimes undefined on addLink events...
+                // Investigated:
+                // el is undefined when it's a reverse link that is being added.
+                // updateLinks (which sets ldata.el) isn't called before this is called.
+                // Calling _updateLinks in addLinkUpdate fixes it, but there might be
+                // a more efficient way to fix it.
+                if (el && !el.empty()) {
+                    el.classed('link', true);
+                    el.classed(allLinkSubTypes, false);
+                    el.classed(modeCls, !online);
+                    el.classed(allLinkTypes, false);
+                    if (type) {
+                        el.classed(type, true);
+                    }
+                    el.transition()
+                        .duration(delay)
+                        .attr('stroke', linkConfig[th].baseColor);
+
+                    this.setScale();
+                }
+            },
             onEnter: function (el) {
-                var link = d3.select(el),
-                    th = ts.theme(),
-                    delay = 1000;
+                var link = d3.select(el);
 
                 this.el = link;
+                this.restyleLinkElement();
 
-                link.transition()
-                    .duration(delay)
-                    .attr('stroke', linkConfig[th].baseColor);
-
-                this.setVisibility();
-                this.setScale();
-            },
-            linkWidth: function () {
-                var width = widthRatio;
-                if (this.get('enhanced')) { width = 3.5; }
-                if (this.linkLabel) {
-                    var scale = d3.scale.ordinal()
-                            .rangeRoundPoints([4, 8]),
-                        label = this.linkLabel.get('label').split(' ');
-
-                    switch (t2ts.selectedTrafficOverlay()) {
-                        case 'flowStatsBytes':
-                            scale.domain(['KB', 'MB', 'GB']);
-                            width = scale(label[1]);
-                            break;
-                        case 'portStatsBitSec':
-                            scale.domain(['Kbps', 'Mbps', 'Gbps']);
-                            width = scale(label[1]);
-                            break;
-                        case 'portStatsPktSec':
-                            scale = d3.scale.linear()
-                                .domain([1, 10, 100, 1000, 10000])
-                                .range(d3.range(3.5, 9))
-                                .clamp(true);
-                            width = scale(parseInt(label[0]));
-                    }
+                if (this.get('type') === 'hostLink') {
+                    // sus.visible(link, api.showHosts());
                 }
-
-                return width;
             },
             setScale: function () {
-
-                if (!this.el) return;
-
-                var linkWidthRatio = this.linkWidth();
-
-                var width = linkScale(linkWidthRatio) / t2zs.scale();
-                this.el.attr('stroke-width', width + 'px');
+                var width = linkScale(widthRatio) / t2zs.scale();
+                this.el.style('stroke-width', width + 'px');
 
                 var labelScale = labelDim / (labelDim * t2zs.scale());
 
-                d3.select('.topo2-portLabels')
+                d3.select('#topo-portLabels')
                     .selectAll('.portLabel')
                     .selectAll('*')
                     .style('transform', 'scale(' + labelScale + ')');
 
-                this.setPosition();
-
-                if (this.linkLabel) {
-                    this.linkLabel.setScale();
-                }
             },
             update: function () {
                 if (this.get('enhanced')) {
                     this.enhance();
                 }
-            },
-            setVisibility: function () {
-
-                if (this.get('type') !== 'UiEdgeLink') {
-                    return;
-                }
-
-                var visible = ps.getPrefs('topo2_prefs')['hosts'];
-                this.el.style('visibility', visible ? 'visible' : 'hidden');
-            },
-            displayMastership: function () {
-                this.set({ mastership: t2mss.mastership() !== null });
             },
             remove: function () {
 
@@ -407,11 +329,11 @@
                     .transition()
                     .delay(1000)
                     .style('opacity', 0);
-            },
+            }
         });
 
         var LinkCollection = Collection.extend({
-            model: LinkModel,
+            model: LinkModel
         });
 
         return new LinkCollection(data);
@@ -425,10 +347,9 @@
     .factory('Topo2LinkService', [
         '$log', 'Topo2Collection', 'Topo2Model',
         'ThemeService', 'SvgUtilService', 'Topo2ZoomService',
-        'Topo2ViewService', 'Topo2LinkPanelService', 'FnService', 'PrefsService',
-        'Topo2MastershipService', 'Topo2TrafficService',
+        'Topo2ViewService', 'Topo2LinkPanelService', 'FnService',
         function (_$log_, _c_, _Model_, _ts_, _sus_,
-            _t2zs_, _t2vs_, _t2lps_, _fn_, _ps_, _t2mss_, _t2ts_) {
+            _t2zs_, _t2vs_, _t2lps_, _fn_) {
 
             $log = _$log_;
             ts = _ts_;
@@ -439,13 +360,10 @@
             Model = _Model_;
             t2lps = _t2lps_;
             fn = _fn_;
-            ps = _ps_;
-            t2mss = _t2mss_;
-            t2ts = _t2ts_;
 
             return {
-                createLinkCollection: createLinkCollection,
+                createLinkCollection: createLinkCollection
             };
-        },
+        }
     ]);
 })();

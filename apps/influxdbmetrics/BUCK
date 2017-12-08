@@ -1,6 +1,5 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
-    '//lib:METRICS',
     '//lib:org.apache.karaf.shell.console',
     '//lib:metrics-influxdb',
     '//lib:influxdb-java',
@@ -10,7 +9,6 @@ COMPILE_DEPS = [
     '//lib:okio',
     '//lib:gson',
     '//cli:onos-cli',
-    '//lib:joda-time',
 ]
 
 EXCLUDED_BUNDLES = [
@@ -33,7 +31,7 @@ osgi_jar_with_tests (
 )
 
 onos_app (
-    title = 'InfluxDB Report and Query',
+    title = 'InfluxDB Report and Query App',
     category = 'Monitoring',
     url = 'http://onosproject.org',
     description = 'Performance metric service reporter and retriever for influxDB.',

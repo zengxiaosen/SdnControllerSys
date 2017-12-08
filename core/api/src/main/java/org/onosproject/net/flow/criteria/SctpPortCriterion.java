@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,22 +24,7 @@ import java.util.Objects;
  */
 public final class SctpPortCriterion implements Criterion {
     private final TpPort sctpPort;
-    private final TpPort mask;
     private final Type type;
-
-    /**
-     * Constructor.
-     *
-     * @param sctpPort the SCTP port to match
-     * @param mask the mask for the SCTP port
-     * @param type the match type. Should be either Type.SCTP_SRC_MASKED or
-     * Type.SCTP_SRC_DST_MASKED
-     */
-    SctpPortCriterion(TpPort sctpPort, TpPort mask, Type type) {
-        this.sctpPort = sctpPort;
-        this.mask = mask;
-        this.type = type;
-    }
 
     /**
      * Constructor.
@@ -49,7 +34,8 @@ public final class SctpPortCriterion implements Criterion {
      * Type.SCTP_DST
      */
     SctpPortCriterion(TpPort sctpPort, Type type) {
-        this(sctpPort, null, type);
+        this.sctpPort = sctpPort;
+        this.type = type;
     }
 
     @Override
@@ -66,25 +52,14 @@ public final class SctpPortCriterion implements Criterion {
         return this.sctpPort;
     }
 
-    /**
-     * Gets the mask for the SCTP port to match.
-     *
-     * @return the SCTP port mask, null if not specified
-     */
-    public TpPort mask() {
-        return this.mask;
-    }
-
     @Override
     public String toString() {
-        return (mask != null) ?
-                type().toString() + SEPARATOR + sctpPort + "/" + mask :
-                type().toString() + SEPARATOR + sctpPort;
+        return type().toString() + SEPARATOR + sctpPort;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type.ordinal(), sctpPort, mask);
+        return Objects.hash(type().ordinal(), sctpPort);
     }
 
     @Override
@@ -95,7 +70,6 @@ public final class SctpPortCriterion implements Criterion {
         if (obj instanceof SctpPortCriterion) {
             SctpPortCriterion that = (SctpPortCriterion) obj;
             return Objects.equals(sctpPort, that.sctpPort) &&
-                    Objects.equals(mask, that.mask) &&
                     Objects.equals(type, that.type);
         }
         return false;

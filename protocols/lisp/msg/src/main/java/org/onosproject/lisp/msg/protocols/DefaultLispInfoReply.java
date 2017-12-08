@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ public final class DefaultLispInfoReply extends DefaultLispInfo implements LispI
      * @param eidPrefix      EID prefix
      * @param natLcafAddress NAT LCAF address
      */
-    DefaultLispInfoReply(boolean infoReply, long nonce, short keyId, short authDataLength,
+    protected DefaultLispInfoReply(boolean infoReply, long nonce, short keyId, short authDataLength,
                                    byte[] authData, int ttl, byte maskLength,
                                    LispAfiAddress eidPrefix, LispNatLcafAddress natLcafAddress) {
         super(infoReply, nonce, keyId, authDataLength, authData, ttl, maskLength, eidPrefix);
@@ -249,19 +249,16 @@ public final class DefaultLispInfoReply extends DefaultLispInfo implements LispI
             LispNatLcafAddress natLcafAddress = (LispNatLcafAddress)
                     new LcafAddressReader().readFrom(byteBuf);
 
-            if (lispInfo != null) {
-                return new DefaultInfoReplyBuilder()
-                        .withIsInfoReply(lispInfo.isInfoReply())
-                        .withNonce(lispInfo.getNonce())
-                        .withKeyId(lispInfo.getKeyId())
-                        .withAuthDataLength(lispInfo.getAuthDataLength())
-                        .withAuthData(lispInfo.getAuthData())
-                        .withTtl(lispInfo.getTtl())
-                        .withMaskLength(lispInfo.getMaskLength())
-                        .withEidPrefix(lispInfo.getPrefix())
-                        .withNatLcafAddress(natLcafAddress).build();
-            }
-            return null;
+            return new DefaultInfoReplyBuilder()
+                    .withIsInfoReply(lispInfo.isInfoReply())
+                    .withNonce(lispInfo.getNonce())
+                    .withKeyId(lispInfo.getKeyId())
+                    .withAuthDataLength(lispInfo.getAuthDataLength())
+                    .withAuthData(lispInfo.getAuthData())
+                    .withTtl(lispInfo.getTtl())
+                    .withMaskLength(lispInfo.getMaskLength())
+                    .withEidPrefix(lispInfo.getPrefix())
+                    .withNatLcafAddress(natLcafAddress).build();
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import org.onosproject.net.behaviour.PipelinerContext;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceListener;
 import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.driver.DefaultDriverProviderService;
 import org.onosproject.net.driver.DriverHandler;
 import org.onosproject.net.driver.DriverService;
 import org.onosproject.net.flow.FlowRuleService;
@@ -117,6 +118,12 @@ public class FlowObjectiveCompositionManager implements FlowObjectiveService {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowObjectiveStore flowObjectiveStore;
+
+    // Note: This must remain an optional dependency to allow re-install of default drivers.
+    // Note: For now disabled until we can move to OPTIONAL_UNARY dependency
+    // @Reference(cardinality = ReferenceCardinality.OPTIONAL_UNARY, policy = ReferencePolicy.DYNAMIC)
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DefaultDriverProviderService defaultDriverService;
 
     private final FlowObjectiveStoreDelegate delegate = new InternalStoreDelegate();
 
@@ -275,10 +282,16 @@ public class FlowObjectiveCompositionManager implements FlowObjectiveService {
 
     // Retrieves the device pipeline behaviour from the cache.
     private Pipeliner getDevicePipeliner(DeviceId deviceId) {
-        return pipeliners.get(deviceId);
+        Pipeliner pipeliner = pipeliners.get(deviceId);
+        return pipeliner;
     }
 
     private void setupPipelineHandler(DeviceId deviceId) {
+        if (defaultDriverService == null) {
+            // We're not ready to go to work yet.
+            return;
+        }
+
         // Attempt to lookup the handler in the cache
         DriverHandler handler = driverHandlers.get(deviceId);
         if (handler == null) {
@@ -432,13 +445,8 @@ public class FlowObjectiveCompositionManager implements FlowObjectiveService {
     }
 
     @Override
-    public List<String> getPendingFlowObjectives() {
-        // TODO Implementation deferred as this is an experimental component.
-        return ImmutableList.of();
-    }
-
-    @Override
     public List<String> getPendingNexts() {
+        // TODO Implementation deferred as this is an experimental component.
         return ImmutableList.of();
     }
 }

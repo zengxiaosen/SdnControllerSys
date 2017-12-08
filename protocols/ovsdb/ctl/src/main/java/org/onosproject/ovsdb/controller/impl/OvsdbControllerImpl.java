@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -342,7 +342,7 @@ public class OvsdbControllerImpl implements OvsdbController {
         OvsdbSet ofPortSet = (OvsdbSet) intf.getOpenFlowPortColumn().data();
         @SuppressWarnings("unchecked")
         Set<Integer> ofPorts = ofPortSet.set();
-        if (ofPorts == null || ofPorts.isEmpty()) {
+        while (ofPorts == null || ofPorts.isEmpty()) {
             log.debug("The ofport is null in {}", intf.getName());
             return -1;
         }

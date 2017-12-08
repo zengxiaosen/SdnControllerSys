@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,91 +25,49 @@
         'ngCookies',
         'onosUtil',
         'onosSvg',
-        'onosRemote',
+        'onosRemote'
     ];
 
     // references to injected services
-    var $scope, $log, $loc, $timeout,
+    var $scope, $log, $loc, $timeout, $cookies,
         fs, ks, zs, gs, ms, sus, flash, wss, ps, th, tds, t3s, tes, tfs, tps,
-        tis, tms, tss, tls, tos, fltr, ttbs, tspr, tov;
+        tis, tms, tss, tls, tts, tos, fltr, ttbs, tspr, ttip, tov;
 
     // DOM elements
     var ovtopo, svg, defs, zoomLayer, mapG, spriteG, forceG, noDevsLayer;
 
     // Internal state
-    var zoomer,
-        actionMap,
-        topoLion = function (x) { return '#' + x + '#'; }; // func replaced later
+    var zoomer, actionMap;
 
     // --- Short Cut Keys ------------------------------------------------
 
     function setUpKeys(overlayKeys) {
         // key bindings need to be made after the services have been injected
         // thus, deferred to here...
-
-        // we need functions that can be invoked after LION bundle loaded
-        function togInst() { return topoLion('tbtt_tog_instances'); }
-        function togSumm() { return topoLion('tbtt_tog_summary'); }
-        function togUseDet() { return topoLion('tbtt_tog_use_detail'); }
-
-        function togHost() { return topoLion('tbtt_tog_host'); }
-        function togOff() { return topoLion('tbtt_tog_offline'); }
-        function togPortHi() { return topoLion('tbtt_tog_porthi'); }
-
-        function showBad() { return topoLion('tbtt_bad_links'); }
-        function togMap() { return topoLion('tbtt_tog_map'); }
-        function selMap() { return topoLion('tbtt_sel_map'); }
-        function togSpr() { return topoLion('tbtt_tog_sprite'); }
-
-        function rstLoc() { return topoLion('tbtt_reset_loc'); }
-        function togOb() { return topoLion('tbtt_tog_oblique'); }
-        function cycLayer() { return topoLion('tbtt_cyc_layers'); }
-        function cycDev() { return topoLion('tbtt_cyc_dev_labs'); }
-        function cycHost() { return topoLion('tbtt_cyc_host_labs'); }
-
-        function unpin() { return topoLion('tbtt_unpin_node'); }
-        function rzoom() { return topoLion('tbtt_reset_zoom'); }
-        function togtb() { return topoLion('tbtt_tog_toolbar'); }
-        function eqmaster() { return topoLion('tbtt_eq_master'); }
-
-        function uiClick() { return topoLion('click'); }
-        function uiShClick() { return topoLion('shift_click'); }
-        function uiDrag() { return topoLion('drag'); }
-        function uiCmdScr() { return topoLion('cmd_scroll'); }
-        function uiCmdDrag() { return topoLion('cmd_drag'); }
-
-        function uiClickTxt() { return topoLion('qh_gest_click'); }
-        function uiShClickTxt() { return topoLion('qh_gest_shift_click'); }
-        function uiDragTxt() { return topoLion('qh_gest_drag'); }
-        function uiCmdScrTxt() { return topoLion('qh_gest_cmd_scroll'); }
-        function uiCmdDragTxt() { return topoLion('qh_gest_cmd_drag'); }
-
         actionMap = {
-            I: [toggleInstances, togInst],
-            O: [toggleSummary, togSumm],
-            D: [toggleUseDetailsFlag, togUseDet],
+            I: [toggleInstances, 'Toggle ONOS instances panel'],
+            O: [toggleSummary, 'Toggle ONOS summary panel'],
+            D: [toggleUseDetailsFlag, 'Disable / enable details panel'],
 
-            H: [toggleHosts, togHost],
-            M: [toggleOffline, togOff],
-            P: [togglePorts, togPortHi],
+            H: [toggleHosts, 'Toggle host visibility'],
+            M: [toggleOffline, 'Toggle offline visibility'],
+            P: [togglePorts, 'Toggle Port Highlighting'],
+            dash: [tfs.showBadLinks, 'Show bad links'],
+            B: [toggleMap, 'Toggle background geo map'],
+            G: [openMapSelection, 'Select background geo map'],
+            S: [toggleSprites, 'Toggle sprite layer'],
 
-            dash: [tfs.showBadLinks, showBad],
-            B: [toggleMap, togMap],
-            G: [openMapSelection, selMap],
-            S: [toggleSprites, togSpr],
+            X: [tfs.resetAllLocations, 'Reset node locations'],
+            Z: [tos.toggleOblique, 'Toggle oblique view (Experimental)'],
+            N: [fltr.clickAction, 'Cycle node layers'],
+            L: [tfs.cycleDeviceLabels, 'Cycle device labels'],
+            U: [tfs.unpin, 'Unpin node (hover mouse over)'],
+            R: [resetZoom, 'Reset pan / zoom'],
+            dot: [ttbs.toggleToolbar, 'Toggle Toolbar'],
 
-            X: [tfs.resetAllLocations, rstLoc],
-            Z: [tos.toggleOblique, togOb],
-            N: [fltr.clickAction, cycLayer],
-            L: [tfs.cycleDeviceLabels, cycDev],
-            'shift-L': [tfs.cycleHostLabels, cycHost],
+            E: [equalizeMasters, 'Equalize mastership roles'],
 
-            U: [tfs.unpin, unpin],
-            R: [resetZoom, rzoom],
-            dot: [ttbs.toggleToolbar, togtb],
-            E: [equalizeMasters, eqmaster],
-
-            // -- instance color palette debug
+            //-- instance color palette debug
             // 9: function () { sus.cat7().testCard(svg); },
 
             // topology overlay selections
@@ -124,10 +82,10 @@
             _keyListener: ttbs.keyListener,
 
             _helpFormat: [
-                ['I', 'O', 'D', 'H', 'M', 'P', 'dash', 'B', 'G', 'S'],
-                ['X', 'Z', 'N', 'L', 'shift-L', 'U', 'R', '-', 'E', '-', 'dot'],
-                [], // this column reserved for overlay actions
-            ],
+                ['I', 'O', 'D', 'H', 'M', 'P', 'dash', 'B', 'G', 'S' ],
+                ['X', 'Z', 'N', 'L', 'U', 'R', '-', 'E', '-', 'dot'],
+                []   // this column reserved for overlay actions
+            ]
         };
 
         if (fs.isO(overlayKeys)) {
@@ -137,11 +95,11 @@
         ks.keyBindings(actionMap);
 
         ks.gestureNotes([
-            [uiClick, uiClickTxt],
-            [uiShClick, uiShClickTxt],
-            [uiDrag, uiDragTxt],
-            [uiCmdScr, uiCmdScrTxt],
-            [uiCmdDrag, uiCmdDragTxt],
+            ['click', 'Select the item and show details'],
+            ['shift-click', 'Toggle selection state'],
+            ['drag', 'Reposition (and pin) device / host'],
+            ['cmd-scroll', 'Zoom in / out'],
+            ['cmd-drag', 'Pan']
         ]);
     }
 
@@ -193,14 +151,14 @@
 
     function _togSvgLayer(x, G, tag, what) {
         var on = (x === 'keyev') ? !sus.visible(G) : !!x,
-            verb = on ? topoLion('show') : topoLion('hide');
+            verb = on ? 'Show' : 'Hide';
         sus.visible(G, on);
         updatePrefsState(tag, on);
         flash.flash(verb + ' ' + what);
     }
 
     function toggleMap(x) {
-        _togSvgLayer(x, mapG, 'bg', topoLion('fl_background_map'));
+        _togSvgLayer(x, mapG, 'bg', 'background map');
     }
 
     function openMapSelection() {
@@ -208,23 +166,23 @@
     }
 
     function toggleSprites(x) {
-        _togSvgLayer(x, spriteG, 'spr', topoLion('fl_sprite_layer'));
+        _togSvgLayer(x, spriteG, 'spr', 'sprite layer');
     }
 
     function resetZoom() {
         zoomer.reset();
-        flash.flash(topoLion('fl_pan_zoom_reset'));
+        flash.flash('Pan and zoom reset');
     }
 
     function equalizeMasters() {
         wss.sendEvent('equalizeMasters');
-        flash.flash(topoLion('fl_eq_masters'));
+        flash.flash('Equalizing master roles');
     }
 
     function handleEscape() {
         if (tis.showMaster()) {
             // if an instance is selected, cancel the affinity mapping
-            tis.cancelAffinity();
+            tis.cancelAffinity()
 
         } else if (tov.hooks.escape()) {
             // else if the overlay consumed the ESC event...
@@ -275,7 +233,7 @@
     function setUpToolbar() {
         ttbs.init({
             getActionEntry: getActionEntry,
-            setUpKeys: setUpKeys,
+            setUpKeys: setUpKeys
         });
         ttbs.createToolbar();
     }
@@ -300,12 +258,10 @@
         var sc = zoomer.scale(),
             tr = zoomer.translate();
 
-        ps.setPrefs('topo_zoom', { tx: tr[0], ty: tr[1], sc: sc });
+        ps.setPrefs('topo_zoom', {tx:tr[0], ty:tr[1], sc:sc});
 
         // keep the map lines constant width while zooming
         mapG.style('stroke-width', (2.0 / sc) + 'px');
-
-        tfs.setNodeScale(sc);
     }
 
     function setUpZoom() {
@@ -314,7 +270,7 @@
             svg: svg,
             zoomLayer: zoomLayer,
             zoomEnabled: zoomEnabled,
-            zoomCallback: zoomCallback,
+            zoomCallback: zoomCallback
         });
     }
 
@@ -326,36 +282,26 @@
 
     // --- Background Map ------------------------------------------------
 
-    function recenterLabel(g) {
-        var box = g.node().getBBox();
-
-        box.x -= box.width/2;
-        box.y -= box.height/2;
-        g.attr('transform', sus.translate(box.x, box.y));
-    }
-
     function setUpNoDevs() {
-        var g;
-
+        var g, box;
         noDevsLayer = svg.append('g').attr({
             id: 'topo-noDevsLayer',
-            transform: sus.translate(500, 500),
+            transform: sus.translate(500,500)
         });
         // Note, SVG viewbox is '0 0 1000 1000', defined in topo.html.
         // We are translating this layer to have its origin at the center
 
         g = noDevsLayer.append('g');
         gs.addGlyph(g, 'bird', 100).attr('class', 'noDevsBird');
-        g.append('text').text('').attr({ x: 120, y: 80 });
-        recenterLabel(g);
+        g.append('text').text('No devices are connected')
+            .attr({ x: 120, y: 80});
+
+        box = g.node().getBBox();
+        box.x -= box.width/2;
+        box.y -= box.height/2;
+        g.attr('transform', sus.translate(box.x, box.y));
+
         showNoDevs(true);
-    }
-
-    function lionNoDevs() {
-        var g = d3.select('#topo-noDevsLayer g');
-
-        g.select('text').text(topoLion('no_devices_are_connected'));
-        recenterLabel(g);
     }
 
     function showNoDevs(b) {
@@ -399,7 +345,7 @@
 
         australia: function (c) {
             return c.properties.adm0_a3 === 'AUS';
-        },
+        }
     };
 
     var tintOn = 0,
@@ -408,19 +354,19 @@
         light: {
             sea: 'aliceblue',
             land: 'white',
-            outline: '#ddd',
+            outline: '#ddd'
         },
         dark: {
             sea: '#001830',
             land: '#232331',
-            outline: '#3a3a3a',
-        },
+            outline: '#3a3a3a'
+        }
     };
 
     function shading() {
         return tintOn ? {
             palette: shadePalette[th.theme()],
-            flip: shadeFlip,
+            flip: shadeFlip
         } : '';
     }
 
@@ -437,7 +383,7 @@
                 mapid: 'usa',
                 mapscale: 1,
                 mapfilepath: '*continental_us',
-                tint: 'off',
+                tint: 'off'
             },
             $loc.search()
         );
@@ -461,7 +407,7 @@
         if (mapG.empty()) {
             mapG = zoomLayer.append('g').attr('id', 'topo-map');
         } else {
-            mapG.each(function (d, i) {
+            mapG.each(function(d,i) {
                 d3.selectAll(this.childNodes).remove();
             });
         }
@@ -473,13 +419,13 @@
             promise = ms.loadMapRegionInto(mapG, {
                 countryFilter: cfilter,
                 adjustScale: mapScale,
-                shading: shading(),
+                shading: shading()
             });
         } else {
 
             promise = ms.loadMapInto(mapG, mapFilePath, mapId, {
                 adjustScale: mapScale,
-                shading: shading(),
+                shading: shading()
             });
         }
 
@@ -488,7 +434,7 @@
     }
 
     function mapReshader() {
-        $log.debug('... Re-shading map ...');
+        $log.debug('... Re-shading map ...')
         ms.reshade(shading());
     }
 
@@ -511,7 +457,7 @@
         var prefs = ps.getPrefs('topo_sprites', { sprites: '' }, $loc.search()),
             sprId = prefs.sprites;
 
-        spriteG = zoomLayer.append('g').attr('id', 'topo-sprites');
+        spriteG = zoomLayer.append ('g').attr('id', 'topo-sprites');
         if (sprId) {
             ps.setPrefs('topo_sprites', prefs);
             tspr.loadSprites(spriteG, defs, sprId);
@@ -546,7 +492,6 @@
         toggleMap(prefsState.bg);
         toggleSprites(prefsState.spr);
         t3s.setDevLabIndex(prefsState.dlbls);
-        t3s.setHostLabIndex(prefsState.hlbls);
         flash.enable(true);
     }
 
@@ -586,28 +531,22 @@
     // --- Controller Definition -----------------------------------------
 
     angular.module('ovTopo', moduleDependencies)
-        .controller('OvTopoCtrl',
-            ['$scope', '$log', '$location', '$timeout', '$cookies',
-            'FnService', 'MastService', 'KeyService', 'ZoomService',
+        .controller('OvTopoCtrl', ['$scope', '$log', '$location', '$timeout',
+            '$cookies', 'FnService', 'MastService', 'KeyService', 'ZoomService',
             'GlyphService', 'MapService', 'SvgUtilService', 'FlashService',
             'WebSocketService', 'PrefsService', 'ThemeService',
-            'TopoDialogService', 'TopoD3Service', 'TopoEventService',
-            'TopoForceService', 'TopoPanelService', 'TopoInstService',
-            'TopoSelectService', 'TopoLinkService', 'TopoTrafficService',
-            'TopoObliqueService', 'TopoFilterService', 'TopoToolbarService',
-            'TopoMapService', 'TopoSpriteService', 'TooltipService',
-            'TopoOverlayService', 'LionService',
+            'TopoDialogService', 'TopoD3Service',
+            'TopoEventService', 'TopoForceService', 'TopoPanelService',
+            'TopoInstService', 'TopoSelectService', 'TopoLinkService',
+            'TopoTrafficService', 'TopoObliqueService', 'TopoFilterService',
+            'TopoToolbarService', 'TopoMapService', 'TopoSpriteService',
+            'TooltipService', 'TopoOverlayService',
 
-                function (_$scope_, _$log_, _$loc_, _$timeout_, _$cookies_,
-                  _fs_, mast, _ks_, _zs_,
-                  _gs_, _ms_, _sus_, _flash_,
-                  _wss_, _ps_, _th_,
+        function (_$scope_, _$log_, _$loc_, _$timeout_, _$cookies_, _fs_, mast, _ks_,
+                  _zs_, _gs_, _ms_, _sus_, _flash_, _wss_, _ps_, _th_,
                   _tds_, _t3s_, _tes_,
-                  _tfs_, _tps_, _tis_,
-                  _tss_, _tls_, _tts_,
-                  _tos_, _fltr_, _ttbs_,
-                  _tms_, _tspr_, _ttip_,
-                  _tov_, lion) {
+                  _tfs_, _tps_, _tis_, _tss_, _tls_, _tts_, _tos_, _fltr_,
+                  _ttbs_, _tms_, _tspr_, _ttip_, _tov_) {
 
             var params = _$loc_.search(),
                 selOverlay = params.overlayId,
@@ -620,13 +559,14 @@
                     zoomLayer: function () { return zoomLayer; },
                     zoomer: function () { return zoomer; },
                     opacifyMap: opacifyMap,
-                    topoStartDone: topoStartDone,
+                    topoStartDone: topoStartDone
                 };
 
             $scope = _$scope_;
             $log = _$log_;
             $loc = _$loc_;
             $timeout = _$timeout_;
+            $cookies = _$cookies_;
             fs = _fs_;
             ks = _ks_;
             zs = _zs_;
@@ -647,18 +587,20 @@
             tps = _tps_;
             tis = _tis_;
             tms = _tms_;
+            tss = _tss_;
             tls = _tls_;
+            tts = _tts_;
             tos = _tos_;
             fltr = _fltr_;
             ttbs = _ttbs_;
             tspr = _tspr_;
+            ttip = _ttip_;
             tov = _tov_;
-            tss = _tss_;
 
             tms.start({
                 toggleMap: toggleMap,
                 currentMap: currentMap,
-                setMap: setMap,
+                setMap: setMap
             });
 
             // pull intent data from the query string...
@@ -667,7 +609,7 @@
                     key: params.key,
                     appId: params.appId,
                     appName: params.appName,
-                    intentType: params.intentType,
+                    intentType: params.intentType
                 };
             }
 
@@ -703,7 +645,7 @@
             setUpNoDevs();
             setUpMap().then(
                 function (proj) {
-                    var z = ps.getPrefs('topo_zoom', { tx: 0, ty: 0, sc: 1 });
+                    var z = ps.getPrefs('topo_zoom', { tx:0, ty:0, sc:1 });
                     zoomer.panZoom([z.tx, z.ty], z.sc);
                     $log.debug('** Zoom restored:', z);
 
@@ -713,23 +655,6 @@
                     toggleMap(prefsState.bg);
                     flash.enable(true);
                     mapShader(true);
-
-                    // piggyback off the deferred map loading to load the
-                    // localization bundle after the uber bundle has arrived...
-                    $scope.lion = lion.bundle('core.view.Topo');
-                    topoLion = $scope.lion;
-                    $log.debug('Loaded Topo LION Bundle:', topoLion);
-
-                    // insert localized text into already established
-                    // DOM elements...
-                    lionNoDevs();
-
-                    // pass lion bundle function ref to other topo modules
-                    tfs.setLionBundle(topoLion);
-                    tis.setLionBundle(topoLion);
-                    tms.setLionBundle(topoLion);
-                    tps.setLionBundle(topoLion);
-                    ttbs.setLionBundle(topoLion);
 
                     // now we have the map projection, we are ready for
                     //  the server to send us device/host data...

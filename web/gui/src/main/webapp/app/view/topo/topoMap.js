@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,18 +23,17 @@
     'use strict';
 
     // injected refs
-    var $log, wss, tds, delegate;
+    var $log, $loc, fs, flash, wss, tds, delegate;
 
     // constants
     var mapRequest = 'mapSelectorRequest';
 
     // internal state
-    var order, maps, map, mapItems, msgHandlers;
+    var order, maps, map, mapItems, tintCheck, msgHandlers;
 
-    // function to be replaced by the localization bundle function
-    var topoLion = function (x) {
-        return '#tmap#' + x + '#';
-    };
+    // === ---------------------------
+    // === Helper functions
+
 
     // === ---------------------------
     // === Main API functions
@@ -61,15 +60,15 @@
             mapid: map.id,
             mapscale: map.scale,
             mapfilepath: map.filePath,
-            tint: 'off',
+            tint: 'off'
             // tint: tintCheck.property('checked') ? 'on' : 'off'
         };
         setMap(p);
-        // $log.debug('Dialog OK button clicked');
+        $log.debug('Dialog OK button clicked');
     }
 
     function dClose() {
-        // $log.debug('Dialog Close button clicked (or Esc pressed)');
+        $log.debug('Dialog Close button clicked (or Esc pressed)');
     }
 
     function selectMap() {
@@ -81,7 +80,6 @@
         var content = tds.createDiv('map-list'),
             form = content.append('form'),
             current = currentMap();
-
         map = maps[current.mapid];
         mapItems = form.append('select').on('change', selectMap);
         order.forEach(function (id) {
@@ -92,6 +90,15 @@
                     .text(m.description);
         });
 
+/*
+        var p = form.append('p');
+        tintCheck = p.append('input').attr('type', 'checkbox').attr('name', 'tint');
+        if (current.tint == 'on') {
+            tintCheck.attr('checked', 'true');
+        }
+        p.append('span').text('Enable map tint');
+*/
+        
         return content;
     }
 
@@ -100,10 +107,10 @@
         order = data.order;
         maps = data.maps;
         tds.openDialog()
-            .setTitle(topoLion('title_select_map'))
+            .setTitle('Select Map')
             .addContent(createListContent())
-            .addOk(dOk, topoLion('ok'))
-            .addCancel(dClose, topoLion('close'))
+            .addOk(dOk, 'OK')
+            .addCancel(dClose, 'Close')
             .bindKeys();
     }
 
@@ -119,24 +126,24 @@
         delegate.setMap(map);
     }
 
-    // invoked after the localization bundle has been received from the server
-    function setLionBundle(bundle) {
-        topoLion = bundle;
-    }
     // === -----------------------------------------------------
     // === MODULE DEFINITION ===
 
     angular.module('ovTopo')
     .factory('TopoMapService',
-        ['$log', 'WebSocketService', 'TopoDialogService',
+        ['$log', '$location', 'FnService', 'FlashService', 'WebSocketService',
+            'TopoDialogService',
 
-        function (_$log_, _wss_, _tds_) {
+        function (_$log_, _$loc_, _fs_, _flash_, _wss_, _tds_) {
             $log = _$log_;
+            $loc = _$loc_;
+            fs = _fs_;
+            flash = _flash_;
             wss = _wss_;
             tds = _tds_;
 
             msgHandlers = {
-                mapSelectorResponse: handleMapResponse,
+                mapSelectorResponse: handleMapResponse
             };
 
             return {
@@ -147,9 +154,7 @@
                 openMapSelection: openMapSelection,
                 closeMapSelection: closeMapSelection,
                 start: start,
-                stop: stop,
-
-                setLionBundle: setLionBundle,
+                stop: stop
             };
         }]);
 

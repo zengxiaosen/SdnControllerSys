@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@
 (function () {
     'use strict';
 
+    var $log, fs;
+
     var halfRoot2 = 0.7071;
 
     // given some value, s, returns an integer between -s/2 and s/2
@@ -37,10 +39,13 @@
     angular.module('onosUtil')
         .factory('RandomService', ['$log', 'FnService',
 
-        function () {
+        function (_$log_, _fs_) {
+            $log = _$log_;
+            fs = _fs_;
+
             return {
                 spread: spread,
-                randDim: randDim,
+                randDim: randDim
             };
         }]);
 }());

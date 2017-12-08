@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,11 +87,6 @@ public interface Instruction {
          * Signifies that the traffic should be modified in L4 way.
          */
         L4MODIFICATION,
-
-        /**
-         * Signifies that a protocol-independent instruction will be used.
-         */
-        PROTOCOL_INDEPENDENT,
 
         /**
          * Signifies that an extension instruction will be used.

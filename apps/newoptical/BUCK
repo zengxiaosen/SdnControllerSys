@@ -1,7 +1,5 @@
 COMPILE_DEPS = [
   '//lib:CORE_DEPS',
-  '//lib:JACKSON',
-  '//lib:KRYO',
   '//core/store/serializers:onos-core-serializers',
   '//lib:org.apache.karaf.shell.console',
   '//cli:onos-cli',
@@ -10,7 +8,6 @@ COMPILE_DEPS = [
 
 TEST_DEPS = [
   '//lib:TEST_ADAPTERS',
-  '//utils/osgi:onlab-osgi-tests',
 ]
 
 osgi_jar_with_tests (
@@ -19,8 +16,8 @@ osgi_jar_with_tests (
 )
 
 onos_app (
-  title = 'Packet/Optical Use-Case',
-  category = 'Optical',
+  title = 'Packet/Optical Use-Case App',
+  category = 'Traffic Steering',
   url = 'http://onosproject.org',
   description = 'Packet/Optical use-case application.',
   required_apps = [ 'org.onosproject.optical-model' ],

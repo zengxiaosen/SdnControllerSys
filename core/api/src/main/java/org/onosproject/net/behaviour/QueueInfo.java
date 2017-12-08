@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,8 @@ package org.onosproject.net.behaviour;
 import com.google.common.primitives.UnsignedInteger;
 
 /**
- * @deprecated in Junco Release (1.9.1), Use QueueDescription instead
- * {@link org.onosproject.net.behaviour.QueueDescription}
+ * Represents a dataplane queue.
  */
-@Deprecated
 public class QueueInfo {
 
     public enum Type {

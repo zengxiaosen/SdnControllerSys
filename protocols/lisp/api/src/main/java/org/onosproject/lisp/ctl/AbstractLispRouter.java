@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,8 @@
 package org.onosproject.lisp.ctl;
 
 import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
 import io.netty.channel.Channel;
 import org.onlab.packet.IpAddress;
-import org.onosproject.lisp.msg.protocols.LispEidRecord;
 import org.onosproject.lisp.msg.protocols.LispMessage;
 import org.onosproject.net.Device;
 import org.slf4j.Logger;
@@ -27,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.List;
 
 /**
  * An abstract representation of a LISP router.
@@ -48,7 +45,6 @@ public abstract class AbstractLispRouter implements LispRouter {
     private boolean subscribed;
     private LispRouterId routerId;
     private LispRouterAgent agent;
-    private List<LispEidRecord> records;
 
     /**
      * A default constructor.
@@ -93,6 +89,7 @@ public abstract class AbstractLispRouter implements LispRouter {
         return connected;
     }
 
+
     @Override
     public final boolean isSubscribed() {
         return subscribed;
@@ -134,7 +131,6 @@ public abstract class AbstractLispRouter implements LispRouter {
 
     @Override
     public final boolean connectRouter() {
-        setConnected(true);
         return this.agent.addConnectedRouter(routerId, this);
     }
 
@@ -142,16 +138,6 @@ public abstract class AbstractLispRouter implements LispRouter {
     public final void disconnectRouter() {
         setConnected(false);
         channel.close();
-    }
-
-    @Override
-    public List<LispEidRecord> getEidRecords() {
-        return records;
-    }
-
-    @Override
-    public void setEidRecords(List<LispEidRecord> records) {
-        this.records = ImmutableList.copyOf(records);
     }
 
     @Override

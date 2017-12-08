@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,9 @@
 package org.onosproject.provider.nil;
 
 import com.google.common.collect.Sets;
-
-import io.netty.util.Timeout;
-import io.netty.util.TimerTask;
-
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timeout;
+import org.jboss.netty.util.TimerTask;
 import org.onlab.util.Timer;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
@@ -27,8 +26,8 @@ import org.onosproject.net.flow.CompletedBatchOperation;
 import org.onosproject.net.flow.DefaultFlowEntry;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchEntry;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
+import org.onosproject.net.flow.FlowRuleBatchEntry;
+import org.onosproject.net.flow.FlowRuleBatchOperation;
 import org.onosproject.net.flow.FlowRuleProvider;
 import org.onosproject.net.flow.FlowRuleProviderService;
 import org.slf4j.Logger;
@@ -53,6 +52,7 @@ class NullFlowRuleProvider extends NullProviders.AbstractNullProvider
 
     private FlowRuleProviderService providerService;
 
+    private HashedWheelTimer timer = Timer.getTimer();
     private Timeout timeout;
 
     /**
@@ -62,7 +62,7 @@ class NullFlowRuleProvider extends NullProviders.AbstractNullProvider
      */
     void start(FlowRuleProviderService providerService) {
         this.providerService = providerService;
-        timeout = Timer.newTimeout(new StatisticTask(), 5, TimeUnit.SECONDS);
+        timeout = timer.newTimeout(new StatisticTask(), 5, TimeUnit.SECONDS);
     }
 
     /**
@@ -126,7 +126,7 @@ class NullFlowRuleProvider extends NullProviders.AbstractNullProvider
                         flowTable.getOrDefault(devId, Collections.emptySet());
                 providerService.pushFlowMetrics(devId, entries);
             }
-            timeout = to.timer().newTimeout(to.task(), 5, TimeUnit.SECONDS);
+            timeout = timer.newTimeout(to.getTask(), 5, TimeUnit.SECONDS);
         }
     }
 }

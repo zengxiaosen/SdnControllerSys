@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -139,7 +139,7 @@ public final class NextObjectiveCodec extends JsonCodec<NextObjective> {
                 break;
             default:
                 throw new IllegalArgumentException("The requested type " + typeStr +
-                " is not defined for NextObjective.");
+                " is not defined for FilteringObjective.");
         }
 
         // decode treatments
@@ -172,7 +172,7 @@ public final class NextObjectiveCodec extends JsonCodec<NextObjective> {
                 break;
             default:
                 throw new IllegalArgumentException("The requested operation " + opStr +
-                " is not defined for NextObjective.");
+                " is not defined for FilteringObjective.");
         }
 
         return nextObjective;

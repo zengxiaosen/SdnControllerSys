@@ -1,17 +1,11 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
-    '//lib:ONOS_YANG',
-    '//lib:JACKSON',
     '//lib:jersey-client',
     '//lib:jersey-server',
     '//lib:javax.ws.rs-api',
-    '//incubator/api:onos-incubator-api',
-    '//lib:COMPILE',
+    '//utils/rest:onlab-rest',
     '//core/store/serializers:onos-core-serializers',
     '//apps/restconf/api:onos-apps-restconf-api',
-    '//apps/restconf/utils:onos-apps-restconf-utils',
-    '//apps/config:onos-apps-config',
-    '//lib:onos-yang-runtime',
 ]
 
 osgi_jar_with_tests (

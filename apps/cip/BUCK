@@ -7,7 +7,7 @@ osgi_jar_with_tests (
 )
 
 onos_app (
-    title = 'Cluster IP Alias',
+    title = 'Cluster IP alias App',
     category = 'Utility',
     url = 'http://onosproject.org',
     description = 'ONOS Cluster IP alias application.',

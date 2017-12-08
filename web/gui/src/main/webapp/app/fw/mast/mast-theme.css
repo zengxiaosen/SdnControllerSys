@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,34 +18,68 @@
  ONOS GUI -- Masthead (theme) -- CSS file
  */
 
-#mast {
+.light #mast {
+    background-color: #231f20;
+}
+.dark #mast {
+    /* TODO: dark theme */
     background-color: #231f20;
 }
 
-#mast .nav-menu-button:hover {
+
+.light #mast .nav-menu-button:hover {
+    background-color: #888;
+}
+.dark #mast .nav-menu-button:hover {
     background-color: #888;
 }
 
-#mast-right a {
+
+.light #mast-right a {
+    color: #009fdb;
+}
+.dark #mast-right a {
+    /* TODO: dark theme */
     color: #009fdb;
 }
 
-#mast nav  {
+.light #mast nav  {
     color: #009fdb;
 }
+
+.dark #mast nav  {
+    /* TODO: dark theme */
+    color: #009fdb;
+}
+
 
 /* Theme styles for drop down menu */
 
-#mast .dropdown {
+.light #mast .dropdown {
+    background-color: #231f20;
+    border: 1px solid #dddddd;
+}
+.dark #mast .dropdown {
+    /* TODO: dark theme */
     background-color: #231f20;
     border: 1px solid #dddddd;
 }
 
-#mast .dropdown a {
+.light #mast .dropdown a {
+    color: #009fdb;
+    border-bottom: solid #444 1px;
+}
+.dark #mast .dropdown a {
+    /* TODO: dark theme */
     color: #009fdb;
     border-bottom: solid #444 1px;
 }
 
-#mast .dropdown a:hover {
+.light #mast .dropdown a:hover {
+    color: #fff;
+}
+
+.dark #mast .dropdown a:hover {
+    /* TODO: dark theme */
     color: #fff;
 }

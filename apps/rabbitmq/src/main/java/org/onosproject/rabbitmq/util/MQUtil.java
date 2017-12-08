@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,7 +144,7 @@ public final class MQUtil {
         jo.addProperty(SWITCH_ID, pkt.receivedFrom().deviceId().toString());
         jo.addProperty(IN_PORT, pkt.receivedFrom().port().name());
         jo.addProperty(LOGICAL, pkt.receivedFrom().port().isLogical());
-        jo.addProperty(RECEIVED, new Date(context.time()).toString());
+        jo.addProperty(RECIEVED, new Date(context.time()).toString());
         jo.addProperty(MSG_TYPE, PKT_TYPE);
         // parse ethernet
         jo.addProperty(SUB_MSG_TYPE,

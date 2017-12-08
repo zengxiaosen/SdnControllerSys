@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -211,9 +211,9 @@ public class DefaultTl1Controller implements Tl1Controller {
         Channel channel = device.channel();
         if (channel != null) {
             channel.close();
-            msgMap.remove(channel);
         }
 
+        msgMap.remove(channel);
         device.disconnect();
         tl1Listeners.forEach(l -> l.deviceDisconnected(deviceId));
     }

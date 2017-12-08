@@ -1,6 +1,5 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
-    '//lib:KRYO',
     '//lib:org.apache.karaf.shell.console',
     '//cli:onos-cli',
     '//utils/rest:onlab-rest',
@@ -13,8 +12,8 @@ osgi_jar_with_tests (
 )
 
 onos_app (
-    title = 'Messaging Performance Test',
-    category = 'Test Utility',
+    title = 'Messaging Performance Test App',
+    category = 'Test',
     url = 'http://onosproject.org',
     description = 'Messaging performance test application.',
 )

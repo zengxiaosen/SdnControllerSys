@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonArray;
 import com.eclipsesource.json.JsonObject;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
@@ -36,17 +35,9 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.MastershipRole;
 import org.onosproject.net.Port;
 import org.onosproject.net.device.DeviceService;
-import org.onosproject.net.driver.DriverService;
-import org.onosproject.net.driver.DefaultDriver;
-import org.onosproject.net.driver.TestBehaviourImpl;
-import org.onosproject.net.driver.TestBehaviour;
-import org.onosproject.net.driver.TestBehaviourTwo;
-import org.onosproject.net.driver.TestBehaviourTwoImpl;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.client.WebTarget;
-
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.easymock.EasyMock.createMock;
@@ -70,13 +61,6 @@ import static org.onosproject.net.PortNumber.portNumber;
  */
 public class DevicesResourceTest extends ResourceTest {
     DeviceService mockDeviceService;
-    DriverService mockDriverService;
-    DefaultDriver driver = new DefaultDriver("ovs", new ArrayList<>(), "Circus", "lux", "1.2a",
-            ImmutableMap.of(TestBehaviour.class,
-                    TestBehaviourImpl.class,
-                    TestBehaviourTwo.class,
-                    TestBehaviourTwoImpl.class),
-            ImmutableMap.of("foo", "bar"));
 
     /**
      * Hamcrest matcher to check that an device representation in JSON matches
@@ -115,7 +99,6 @@ public class DevicesResourceTest extends ResourceTest {
 
             // check HW version field
             String jsonHwVersion = jsonDevice.get("hw").asString();
-
             if (!jsonHwVersion.equals(device.hwVersion())) {
                 reason = "hw Version " + device.hwVersion();
                 return false;
@@ -229,7 +212,7 @@ public class DevicesResourceTest extends ResourceTest {
     @Before
     public void setUpMocks() {
         mockDeviceService = createMock(DeviceService.class);
-        mockDriverService = createMock(DriverService.class);
+
         expect(mockDeviceService.isAvailable(isA(DeviceId.class)))
                 .andReturn(true)
                 .anyTimes();
@@ -237,14 +220,12 @@ public class DevicesResourceTest extends ResourceTest {
                 .andReturn(MastershipRole.MASTER)
                 .anyTimes();
 
-
         // Register the services needed for the test
         CodecManager codecService =  new CodecManager();
         codecService.activate();
         ServiceDirectory testDirectory =
                 new TestServiceDirectory()
                         .add(DeviceService.class, mockDeviceService)
-                        .add(DriverService.class, mockDriverService)
                         .add(CodecService.class, codecService);
 
         BaseResource.setServiceDirectory(testDirectory);
@@ -286,22 +267,6 @@ public class DevicesResourceTest extends ResourceTest {
 
         replay(mockDeviceService);
 
-        expect(mockDriverService.getDriver(did("dev1")))
-                .andReturn(driver)
-                .anyTimes();
-
-        expect(mockDriverService.getDriver(did("dev2")))
-                .andReturn(driver)
-                .anyTimes();
-
-        expect(mockDriverService.getDriver(did("dev3")))
-                .andReturn(driver)
-                .anyTimes();
-
-        replay(mockDriverService);
-
-
-
         WebTarget wt = target();
         String response = wt.path("devices").request().get(String.class);
         assertThat(response, containsString("{\"devices\":["));
@@ -330,14 +295,11 @@ public class DevicesResourceTest extends ResourceTest {
         String deviceIdString = "testdevice";
         DeviceId deviceId = did(deviceIdString);
         Device device = device(deviceIdString);
+
         expect(mockDeviceService.getDevice(deviceId))
                 .andReturn(device)
                 .once();
         replay(mockDeviceService);
-        expect(mockDriverService.getDriver(deviceId))
-                .andReturn(driver)
-                .anyTimes();
-        replay(mockDriverService);
 
         WebTarget wt = target();
         String response = wt.path("devices/" + deviceId).request().get(String.class);
@@ -355,7 +317,6 @@ public class DevicesResourceTest extends ResourceTest {
         DeviceId deviceId = did(deviceIdString);
         Device device = device(deviceIdString);
 
-
         Port port1 = new DefaultPort(device, portNumber(1), true);
         Port port2 = new DefaultPort(device, portNumber(2), true);
         Port port3 = new DefaultPort(device, portNumber(3), true);
@@ -369,12 +330,6 @@ public class DevicesResourceTest extends ResourceTest {
                 .andReturn(ports)
                 .once();
         replay(mockDeviceService);
-
-        expect(mockDriverService.getDriver(deviceId))
-                .andReturn(driver)
-                .anyTimes();
-        replay(mockDriverService);
-
 
         WebTarget wt = target();
         String response =

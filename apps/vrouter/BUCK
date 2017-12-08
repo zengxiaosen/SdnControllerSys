@@ -14,7 +14,7 @@ osgi_jar (
 )
 
 onos_app (
-    title = 'Virtual Router',
+    title = 'Virtual Router App',
     category = 'Traffic Steering',
     url = 'http://onosproject.org',
     included_bundles = BUNDLES,

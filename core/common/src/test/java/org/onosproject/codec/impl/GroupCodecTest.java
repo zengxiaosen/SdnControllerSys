@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onosproject.codec.JsonCodec;
 import org.onosproject.core.CoreService;
-import org.onosproject.core.GroupId;
+import org.onosproject.core.DefaultGroupId;
 import org.onosproject.net.NetTestTools;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -84,12 +84,12 @@ public class GroupCodecTest {
         GroupBuckets bucketsIndirect = new GroupBuckets(ImmutableList.of(bucket2));
 
         DefaultGroup group = new DefaultGroup(
-                new GroupId(1),
+                new DefaultGroupId(1),
                 NetTestTools.did("d1"),
                 ALL,
                 buckets);
         DefaultGroup group1 = new DefaultGroup(
-                new GroupId(2),
+                new DefaultGroupId(2),
                 NetTestTools.did("d2"),
                 INDIRECT,
                 bucketsIndirect);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,10 @@
  */
 package org.onlab.util;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.UnsignedLongs;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.slf4j.Logger;
+import static java.nio.file.Files.delete;
+import static java.nio.file.Files.walkFileTree;
+import static org.onlab.util.GroupedThreadFactory.groupedThreadFactory;
+import static org.slf4j.LoggerFactory.getLogger;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,10 +51,13 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static java.nio.file.Files.delete;
-import static java.nio.file.Files.walkFileTree;
-import static org.onlab.util.GroupedThreadFactory.groupedThreadFactory;
-import static org.slf4j.LoggerFactory.getLogger;
+import org.slf4j.Logger;
+
+import com.google.common.base.Charsets;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.UnsignedLongs;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Miscellaneous utility methods.
@@ -241,17 +242,6 @@ public abstract class Tools {
      */
     public static String toHex(long value, int width) {
         return Strings.padStart(UnsignedLongs.toString(value, 16), width, '0');
-    }
-
-    /**
-     * Returns a string encoding in hex of the given long value with prefix
-     * '0x'.
-     *
-     * @param value long value to encode as hex string
-     * @return hex string
-     */
-    public static String toHexWithPrefix(long value) {
-        return "0x" + Long.toHexString(value);
     }
 
     /**
@@ -672,10 +662,6 @@ public abstract class Tools {
             CompletableFuture<T> future,
             Executor orderedExecutor,
             Executor threadPoolExecutor) {
-        if (future.isDone()) {
-            return future;
-        }
-
         BlockingAwareFuture<T> newFuture = new BlockingAwareFuture<T>();
         future.whenComplete((result, error) -> {
             Runnable completer = () -> {

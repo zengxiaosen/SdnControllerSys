@@ -20,7 +20,7 @@ export_file (
 
 genrule(
   name = 'onos-karaf',
-  srcs = glob(['bin/*', 'etc/*', 'init/*', 'runtime/bin/*']),
+  srcs = glob(['bin/*', 'etc/*', 'init/*']),
   bash = '$(location :onos-prep-karaf) $OUT $(location %s) %s $(location %s)'\
             % (KARAF, ONOS_VERSION, BRANDING),
   out = 'karaf.zip',
@@ -39,17 +39,9 @@ staged_apps = ['$(location %s)' % a for a in APPS]
 sources = [ '$(location :onos-features)', ]
 sources += staged_repos + staged_apps
 
-tar_file(
-  name = 'onos-package-runtime',
-  srcs = glob(['runtime/bin/*']),
-  root = 'tools/package',
-  out = 'package-runtime.tar.gz',
-  visibility = [ 'PUBLIC' ],
-)
-
 genrule(
   name = 'onos-package',
-  srcs = glob(['bin/*', 'etc/*', 'init/*', 'config/*', 'runtime/bin/*']),
+  srcs = glob(['bin/*', 'etc/*', 'init/*', 'config/*']),
   out = 'onos.tar.gz',
   bash = '$(exe //buck-tools:onos-stage) $OUT ' + ONOS_VERSION + ' $(location :onos-karaf) ' + ' '.join(sources),
   visibility = [ 'PUBLIC' ],

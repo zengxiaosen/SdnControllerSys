@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -160,7 +160,7 @@ public class DevicePortStatsCommand extends AbstractShellCommand {
     private void printPortStatsDeltaTable(DeviceId deviceId, Iterable<PortStatistics> portStats) {
         final String formatDeltaTable = "|%5s | %7s | %7s |  %7s | %7s | %7s | %7s |  %7s | %7s |%9s |";
         print("+---------------------------------------------------------------------------------------------------+");
-        print("| DeviceId = %-86s |", deviceId);
+        print("| DeviceId = %s                                                                    |", deviceId);
         print("|---------------------------------------------------------------------------------------------------|");
         print("|      | Receive                                | Transmit                               | Time [s] |");
         print("| Port | Packets |  Bytes  | Rate bps |   Drop  | Packets |  Bytes  | Rate bps |   Drop  | Interval |");
@@ -175,8 +175,8 @@ public class DevicePortStatsCommand extends AbstractShellCommand {
             }
             float duration = ((float) stat.durationSec()) +
                     (((float) stat.durationNano()) / TimeUnit.SECONDS.toNanos(1));
-            float rateRx = duration > 0 ? stat.bytesReceived() * 8 / duration : 0;
-            float rateTx = duration > 0 ? stat.bytesSent() * 8 / duration : 0;
+            float rateRx = stat.bytesReceived() * 8 / duration;
+            float rateTx = stat.bytesSent() * 8 / duration;
             print(formatDeltaTable, stat.port(),
                   humanReadable(stat.packetsReceived()),
                   humanReadable(stat.bytesReceived()),

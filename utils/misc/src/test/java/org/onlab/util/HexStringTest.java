@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,14 @@ package org.onlab.util;
 
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import com.esotericsoftware.minlog.Log;
+
+import junit.framework.TestCase;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+
+import static org.junit.Assert.fail;
 
 /**
  * Test of the Hexstring.
@@ -33,7 +38,7 @@ public class HexStringTest {
         String dpidStr = "00:00:00:23:20:2d:16:71";
         long dpid = HexString.toLong(dpidStr);
         String testStr = HexString.toHexString(dpid);
-        assertEquals(dpidStr, testStr);
+        TestCase.assertEquals(dpidStr, testStr);
     }
 
     @Test
@@ -41,7 +46,7 @@ public class HexStringTest {
         String dpidStr = "3e:1f:01:fc:72:8c:63:31";
         long valid = 0x3e1f01fc728c6331L;
         long testLong = HexString.toLong(dpidStr);
-        assertEquals(valid, testLong);
+        TestCase.assertEquals(valid, testLong);
     }
 
     @Test
@@ -49,7 +54,7 @@ public class HexStringTest {
         String dpidStr = "ca:7c:5e:d1:64:7a:95:9b";
         long valid = -3856102927509056101L;
         long testLong = HexString.toLong(dpidStr);
-        assertEquals(valid, testLong);
+        TestCase.assertEquals(valid, testLong);
     }
 
     @Test
@@ -62,17 +67,21 @@ public class HexStringTest {
         byte[] testBytesNoSep = HexString.fromHexString(dpidStrNoSep, null);
         byte[] testBytesUCase = HexString.fromHexString(dpidStr.toUpperCase());
         byte[] testBytesUCaseNoSep = HexString.fromHexString(dpidStrNoSep.toUpperCase(), null);
-        assertArrayEquals(validBytes, testBytes);
-        assertArrayEquals(validBytes, testBytesNoSep);
-        assertArrayEquals(validBytes, testBytesUCase);
-        assertArrayEquals(validBytes, testBytesUCaseNoSep);
+        TestCase.assertTrue(Arrays.equals(validBytes, testBytes));
+        TestCase.assertTrue(Arrays.equals(validBytes, testBytesNoSep));
+        TestCase.assertTrue(Arrays.equals(validBytes, testBytesUCase));
+        TestCase.assertTrue(Arrays.equals(validBytes, testBytesUCaseNoSep));
     }
 
-    @Test(expected = NumberFormatException.class)
+    @Test
     public void testToLongError() {
         String dpidStr = "09:08:07:06:05:04:03:02:01";
-        HexString.toLong(dpidStr);
-        fail("HexString.toLong() should have thrown a NumberFormatException");
+        try {
+            HexString.toLong(dpidStr);
+            fail("HexString.toLong() should have thrown a NumberFormatException");
+        } catch (NumberFormatException expected) {
+            Log.info("HexString.toLong() have thrown a NumberFormatException");
+        }
     }
 
     @Test
@@ -80,17 +89,18 @@ public class HexStringTest {
         byte[] dpid = {0, 0, 0, 0, 0, 0, 0, -1 };
         String valid = "00:00:00:00:00:00:00:ff";
         String testString = HexString.toHexString(dpid);
-        assertEquals(valid, testString);
-
-        String validNoSep = "00000000000000ff";
-        assertEquals(validNoSep, HexString.toHexString(dpid, null));
+        TestCase.assertEquals(valid, testString);
     }
 
-    @Test(expected = NumberFormatException.class)
+    @Test
     public void testFromHexStringError() {
         String invalidStr = "00:00:00:00:00:00:ffff";
-        HexString.fromHexString(invalidStr);
-        fail("HexString.fromHexString() should have thrown a NumberFormatException");
+        try {
+            HexString.fromHexString(invalidStr);
+            fail("HexString.fromHexString() should have thrown a NumberFormatException");
+        } catch (NumberFormatException expected) {
+            Log.info("HexString.toLong() have thrown a NumberFormatException");
+        }
     }
 }
 

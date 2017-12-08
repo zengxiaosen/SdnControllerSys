@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import java.util.Optional;
  * Default implementation of mirroring description entity.
  */
 @Beta
-public final class DefaultMirroringDescription extends AbstractDescription
+public class DefaultMirroringDescription extends AbstractDescription
     implements MirroringDescription {
 
     private final MirroringName mirroringName;

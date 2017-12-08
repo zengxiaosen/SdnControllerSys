@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,82 +16,78 @@
 
 package org.onosproject.openflow.controller.impl;
 
-import static org.slf4j.LoggerFactory.getLogger;
-
 import java.util.concurrent.TimeUnit;
 
-import org.slf4j.Logger;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.util.Timeout;
+import org.jboss.netty.util.Timer;
+import org.jboss.netty.util.TimerTask;
 
 /**
  * Trigger a timeout if a switch fails to complete handshake soon enough.
  */
 public class HandshakeTimeoutHandler
-    extends ChannelDuplexHandler {
-
-    private static final Logger log = getLogger(HandshakeTimeoutHandler.class);
+    extends SimpleChannelUpstreamHandler {
+    static final HandshakeTimeoutException EXCEPTION =
+            new HandshakeTimeoutException();
 
     final OFChannelHandler channelHandler;
-    final long timeoutMillis;
-    volatile long deadline;
+    final Timer timer;
+    final long timeoutNanos;
+    volatile Timeout timeout;
 
     public HandshakeTimeoutHandler(OFChannelHandler channelHandler,
+                                   Timer timer,
                                    long timeoutSeconds) {
         super();
         this.channelHandler = channelHandler;
-        this.timeoutMillis = TimeUnit.SECONDS.toMillis(timeoutSeconds);
-        this.deadline = System.currentTimeMillis() + timeoutMillis;
+        this.timer = timer;
+        this.timeoutNanos = TimeUnit.SECONDS.toNanos(timeoutSeconds);
+
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        if (timeoutMillis > 0) {
-            // set Handshake deadline
-            deadline = System.currentTimeMillis() + timeoutMillis;
-        }
-        super.channelActive(ctx);
-    }
-
-    @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
-        checkTimeout(ctx);
-        super.read(ctx);
-    }
-
-    @Override
-    public void write(ChannelHandlerContext ctx, Object msg,
-                      ChannelPromise promise)
+    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
-        checkTimeout(ctx);
-        super.write(ctx, msg, promise);
+        if (timeoutNanos > 0) {
+            timeout = timer.newTimeout(new HandshakeTimeoutTask(ctx),
+                                       timeoutNanos, TimeUnit.NANOSECONDS);
+        }
+        ctx.sendUpstream(e);
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx,
-                                   Object evt)
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
-
-        // expecting idle event
-        checkTimeout(ctx);
-        super.userEventTriggered(ctx, evt);
+        if (timeout != null) {
+            timeout.cancel();
+            timeout = null;
+        }
     }
 
-    void checkTimeout(ChannelHandlerContext ctx) {
-        if (channelHandler.isHandshakeComplete()) {
-            // handshake complete, Handshake monitoring timeout no-longer needed
-            ctx.channel().pipeline().remove(this);
-            return;
+    private final class HandshakeTimeoutTask implements TimerTask {
+
+        private final ChannelHandlerContext ctx;
+
+        HandshakeTimeoutTask(ChannelHandlerContext ctx) {
+            this.ctx = ctx;
         }
 
-        if (!ctx.channel().isActive()) {
-            return;
-        }
+        @Override
+        public void run(Timeout t) throws Exception {
+            if (t.isCancelled()) {
+                return;
+            }
 
-        if (System.currentTimeMillis() > deadline) {
-            log.info("Handshake time out {}", channelHandler);
-            ctx.fireExceptionCaught(new HandshakeTimeoutException());
+            if (!ctx.getChannel().isOpen()) {
+                return;
+            }
+            if (!channelHandler.isHandshakeComplete()) {
+                Channels.fireExceptionCaught(ctx, EXCEPTION);
+            }
         }
     }
 }

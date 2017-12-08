@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.onlab.junit.ImmutableClassChecker.assertThatClassIsImmutable;
 
 
 /**
@@ -54,34 +53,12 @@ public class DefaultApplicationDescriptionTest {
     public static final List<String> FEATURES = ImmutableList.of("foo", "bar");
     public static final List<String> APPS = ImmutableList.of("fifi");
 
-    /**
-     * Checks that the DefaultApplicationDescription class is immutable.
-     */
-    @Test
-    public void testImmutability() {
-        assertThatClassIsImmutable(DefaultApplicationDescription.class);
-    }
-
     @Test
     public void basics() {
         ApplicationDescription app =
-            DefaultApplicationDescription.builder()
-                .withName(APP_NAME)
-                .withVersion(VER)
-                .withTitle(TITLE)
-                .withDescription(DESC)
-                .withOrigin(ORIGIN)
-                .withCategory(CATEGORY)
-                .withUrl(URL)
-                .withReadme(README)
-                .withIcon(ICON)
-                .withRole(ROLE)
-                .withPermissions(PERMS)
-                .withFeaturesRepo(FURL)
-                .withFeatures(FEATURES)
-                .withRequiredApps(APPS)
-                .build();
-
+                new DefaultApplicationDescription(APP_NAME, VER, TITLE, DESC, ORIGIN,
+                                                  CATEGORY, URL, README, ICON,
+                                                  ROLE, PERMS, FURL, FEATURES, APPS);
         assertEquals("incorrect id", APP_NAME, app.name());
         assertEquals("incorrect version", VER, app.version());
         assertEquals("incorrect title", TITLE, app.title());

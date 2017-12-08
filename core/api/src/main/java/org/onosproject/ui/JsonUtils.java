@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,25 @@ public final class JsonUtils {
     /**
      * Composes a message structure for the given message type and payload.
      *
+     * @param type    event type
+     * @param sid     sequence ID
+     * @param payload event payload
+     * @return the object node representation
+     */
+    @Deprecated
+    public static ObjectNode envelope(String type, long sid, ObjectNode payload) {
+        ObjectNode event = MAPPER.createObjectNode();
+        event.put("event", type);
+        if (sid > 0) {
+            event.put("sid", sid);
+        }
+        event.set("payload", payload);
+        return event;
+    }
+
+    /**
+     * Composes a message structure for the given message type and payload.
+     *
      * @param type    message type
      * @param payload message payload
      * @return the object node representation
@@ -53,6 +72,18 @@ public final class JsonUtils {
      */
     public static String eventType(ObjectNode event) {
         return string(event, "event", "unknown");
+    }
+
+    /**
+     * Returns the sequence identifier from the specified event, or 0 (zero)
+     * if the "sid" property does not exist.
+     *
+     * @param event message event
+     * @return extracted sequence identifier
+     */
+    @Deprecated
+    public static long sid(ObjectNode event) {
+        return number(event, "sid");
     }
 
     /**

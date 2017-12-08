@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,29 +25,22 @@ import org.onosproject.cluster.ClusterService;
 import org.onosproject.cluster.ControllerNode;
 import org.onosproject.ui.GlyphConstants;
 import org.onosproject.ui.UiConnection;
-import org.onosproject.ui.UiExtension;
 import org.onosproject.ui.UiExtensionService;
 import org.onosproject.ui.UiMessageHandler;
 import org.onosproject.ui.UiMessageHandlerFactory;
 import org.onosproject.ui.UiSessionToken;
 import org.onosproject.ui.UiTokenService;
-import org.onosproject.ui.UiTopo2OverlayFactory;
 import org.onosproject.ui.UiTopoLayoutService;
 import org.onosproject.ui.UiTopoOverlayFactory;
 import org.onosproject.ui.impl.topo.Topo2Jsonifier;
-import org.onosproject.ui.impl.topo.Topo2OverlayCache;
-import org.onosproject.ui.impl.topo.Topo2TrafficMessageHandler;
-import org.onosproject.ui.impl.topo.Topo2ViewMessageHandler;
 import org.onosproject.ui.impl.topo.UiTopoSession;
 import org.onosproject.ui.impl.topo.model.UiSharedTopologyModel;
-import org.onosproject.ui.lion.LionBundle;
 import org.onosproject.ui.model.topo.UiTopoLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -59,6 +52,7 @@ public class UiWebSocket
     private static final Logger log = LoggerFactory.getLogger(UiWebSocket.class);
 
     private static final String EVENT = "event";
+    private static final String SID = "sid";
     private static final String PAYLOAD = "payload";
     private static final String UNKNOWN = "unknown";
     private static final String AUTHENTICATION = "authentication";
@@ -70,10 +64,6 @@ public class UiWebSocket
     private static final String CLUSTER_NODES = "clusterNodes";
     private static final String USER = "user";
     private static final String BOOTSTRAP = "bootstrap";
-
-    private static final String UBERLION = "uberlion";
-    private static final String LION = "lion";
-    private static final String LOCALE = "locale";
 
     private static final String TOPO = "topo";
 
@@ -96,9 +86,6 @@ public class UiWebSocket
 
     private Map<String, UiMessageHandler> handlers;
     private TopoOverlayCache overlayCache;
-    private Topo2OverlayCache overlay2Cache;
-
-    private Map<String, LionBundle> lionBundleMap;
 
     private UiSessionToken sessionToken;
 
@@ -113,12 +100,16 @@ public class UiWebSocket
         this.directory = directory;
         this.userName = userName;
 
-        Topo2Jsonifier t2json = new Topo2Jsonifier(directory, userName);
+        Topo2Jsonifier t2json = new Topo2Jsonifier(directory);
         UiSharedTopologyModel sharedModel = directory.get(UiSharedTopologyModel.class);
         UiTopoLayoutService layoutService = directory.get(UiTopoLayoutService.class);
 
         sharedModel.injectJsonifier(t2json);
         topoSession = new UiTopoSession(this, t2json, sharedModel, layoutService);
+
+        // FIXME: this is temporary to prevent unhandled events being set to GUI...
+        //         while Topo2 is still under development
+        topoSession.enableEvent(false);
         sessionToken = null;
     }
 
@@ -146,14 +137,6 @@ public class UiWebSocket
     public void setCurrentView(String viewId) {
         currentView = viewId;
         topoSession.enableEvent(viewId.equals(TOPO));
-    }
-
-    private ObjectNode objectNode() {
-        return mapper.createObjectNode();
-    }
-
-    private ArrayNode arrayNode() {
-        return mapper.createArrayNode();
     }
 
     /**
@@ -204,7 +187,6 @@ public class UiWebSocket
             topoSession.init();
             createHandlersAndOverlays();
             sendBootstrapData();
-            sendUberLionBundle();
             log.info("GUI client connected -- user <{}>", userName);
 
         } catch (ServiceNotFoundException e) {
@@ -217,18 +199,15 @@ public class UiWebSocket
 
     @Override
     public synchronized void onClose(int closeCode, String message) {
-        try {
-            tokenService().revokeToken(sessionToken);
-            log.info("Session token revoked");
-        } catch (ServiceNotFoundException e) {
-            log.error("Unable to reference UiTokenService");
-        }
+        tokenService().revokeToken(sessionToken);
+        log.info("Session token revoked");
+
         sessionToken = null;
 
         topoSession.destroy();
         destroyHandlersAndOverlays();
         log.info("GUI client disconnected [close-code={}, message={}]",
-                 closeCode, message);
+                closeCode, message);
     }
 
     @Override
@@ -278,9 +257,9 @@ public class UiWebSocket
 
     @Override
     public synchronized void sendMessage(String type, ObjectNode payload) {
-        ObjectNode message = objectNode();
+        ObjectNode message = mapper.createObjectNode();
         message.put(EVENT, type);
-        message.set(PAYLOAD, payload != null ? payload : objectNode());
+        message.set(PAYLOAD, payload != null ? payload : mapper.createObjectNode());
         sendMessage(message);
     }
 
@@ -289,55 +268,34 @@ public class UiWebSocket
         log.debug("Creating handlers and overlays...");
         handlers = new HashMap<>();
         overlayCache = new TopoOverlayCache();
-        overlay2Cache = new Topo2OverlayCache();
 
-        Map<Class<?>, UiMessageHandler> handlerInstances = new HashMap<>();
         UiExtensionService service = directory.get(UiExtensionService.class);
-        lionBundleMap = generateLionMap(service);
-
         service.getExtensions().forEach(ext -> {
             UiMessageHandlerFactory factory = ext.messageHandlerFactory();
             if (factory != null) {
                 factory.newHandlers().forEach(handler -> {
                     try {
                         handler.init(this, directory);
-                        injectLionBundles(handler, lionBundleMap);
                         handler.messageTypes().forEach(type -> handlers.put(type, handler));
-                        handlerInstances.put(handler.getClass(), handler);
 
+                        // need to inject the overlay cache into topology message handler
+                        // TODO: code for Topo2ViewMessageHandler required here
+                        if (handler instanceof TopologyViewMessageHandler) {
+                            ((TopologyViewMessageHandler) handler).setOverlayCache(overlayCache);
+                        }
                     } catch (Exception e) {
                         log.warn("Unable to setup handler {} due to", handler, e);
                     }
                 });
             }
-            registerOverlays(ext);
-        });
 
-        handlerCrossConnects(handlerInstances);
-
-        log.debug("#handlers = {}, #overlays = {}",
-                  handlers.size(), overlayCache.size());
-    }
-
-    private Map<String, LionBundle> generateLionMap(UiExtensionService service) {
-        Map<String, LionBundle> bundles = new HashMap<>();
-        service.getExtensions().forEach(ext -> {
-            ext.lionBundles().forEach(lb -> bundles.put(lb.id(), lb));
-        });
-        return bundles;
-    }
-
-    private void injectLionBundles(UiMessageHandler handler,
-                                   Map<String, LionBundle> lionBundleMap) {
-        handler.requiredLionBundles().forEach(lbid -> {
-            LionBundle lb = lionBundleMap.get(lbid);
-            if (lb != null) {
-                handler.cacheLionBundle(lb);
-            } else {
-                log.warn("handler {}: Lion bundle {} non existent!",
-                         handler.getClass().getName(), lbid);
+            UiTopoOverlayFactory overlayFactory = ext.topoOverlayFactory();
+            if (overlayFactory != null) {
+                overlayFactory.newOverlays().forEach(overlayCache::add);
             }
         });
+
+        log.debug("#handlers = {}, #overlays = {}", handlers.size(), overlayCache.size());
     }
 
     private void authenticate(String type, ObjectNode message) {
@@ -360,44 +318,9 @@ public class UiWebSocket
     }
 
     private ObjectNode notAuthorized(UiSessionToken token) {
-        return objectNode()
+        return mapper.createObjectNode()
                 .put("message", "invalid authentication token")
                 .put("badToken", token.toString());
-    }
-
-    private void registerOverlays(UiExtension ext) {
-        UiTopoOverlayFactory overlayFactory = ext.topoOverlayFactory();
-        if (overlayFactory != null) {
-            overlayFactory.newOverlays().forEach(overlayCache::add);
-        }
-
-        UiTopo2OverlayFactory overlay2Factory = ext.topo2OverlayFactory();
-        if (overlay2Factory != null) {
-            overlay2Factory.newOverlays().forEach(overlay2Cache::add);
-        }
-    }
-
-    private void handlerCrossConnects(Map<Class<?>, UiMessageHandler> handlers) {
-        TopologyViewMessageHandler topomh = (TopologyViewMessageHandler)
-                handlers.get(TopologyViewMessageHandler.class);
-        if (topomh != null) {
-            topomh.setOverlayCache(overlayCache);
-        }
-
-        Topo2ViewMessageHandler topo2mh = (Topo2ViewMessageHandler)
-                handlers.get(Topo2ViewMessageHandler.class);
-        if (topo2mh != null) {
-            topo2mh.setOverlayCache(overlay2Cache);
-
-            // We also need a link to Topo2Traffic
-            Topo2TrafficMessageHandler topo2traffic = (Topo2TrafficMessageHandler)
-                    handlers.get(Topo2TrafficMessageHandler.class);
-            if (topo2traffic != null) {
-                topo2mh.setTrafficHandler(topo2traffic);
-            } else {
-                log.error("No topo2 traffic handler found");
-            }
-        }
     }
 
     // Destroys message handlers.
@@ -410,10 +333,6 @@ public class UiWebSocket
             overlayCache.destroy();
             overlayCache = null;
         }
-        if (overlay2Cache != null) {
-            overlay2Cache.destroy();
-            overlay2Cache = null;
-        }
     }
 
     // Sends initial information (username and cluster member information)
@@ -421,43 +340,29 @@ public class UiWebSocket
     // fail-over to an alternate cluster member if necessary.
     private void sendBootstrapData() {
         ClusterService service = directory.get(ClusterService.class);
-        ArrayNode instances = arrayNode();
+        ArrayNode instances = mapper.createArrayNode();
 
         for (ControllerNode node : service.getNodes()) {
-            ObjectNode instance = objectNode()
+            ObjectNode instance = mapper.createObjectNode()
                     .put(ID, node.id().toString())
                     .put(IP, node.ip().toString())
                     .put(GlyphConstants.UI_ATTACHED,
-                         node.equals(service.getLocalNode()));
+                            node.equals(service.getLocalNode()));
             instances.add(instance);
         }
 
-        ObjectNode payload = objectNode();
+        ObjectNode payload = mapper.createObjectNode();
         payload.set(CLUSTER_NODES, instances);
         payload.put(USER, userName);
         sendMessage(BOOTSTRAP, payload);
     }
 
     private UiTokenService tokenService() {
-        return directory.get(UiTokenService.class);
-    }
-
-    // sends the collated localization bundle data up to the client.
-    private void sendUberLionBundle() {
-        UiExtensionService service = directory.get(UiExtensionService.class);
-        ObjectNode lion = objectNode();
-
-        service.getExtensions().forEach(ext -> {
-            ext.lionBundles().forEach(lb -> {
-                ObjectNode lionMap = objectNode();
-                lb.getItems().forEach(item -> lionMap.put(item.key(), item.value()));
-                lion.set(lb.id(), lionMap);
-            });
-        });
-
-        ObjectNode payload = objectNode();
-        payload.set(LION, lion);
-        payload.put(LOCALE, Locale.getDefault().toString());
-        sendMessage(UBERLION, payload);
+        UiTokenService service = directory.get(UiTokenService.class);
+        if (service == null) {
+            log.error("Unable to reference UiTokenService");
+        }
+        return service;
     }
 }
+

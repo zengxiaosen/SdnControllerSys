@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 package org.onosproject.net.device;
 
-import org.onosproject.net.PortNumber;
-
 /**
  * Statistics of a port.
  */
@@ -26,17 +24,8 @@ public interface PortStatistics {
      * Returns the port number.
      *
      * @return port number
-     * @deprecated ONOS 1.12 Magpie please use portNumber()
      */
-    @Deprecated
     int  port();
-
-    /**
-     * Returns the port number.
-     *
-     * @return port number
-     */
-    PortNumber portNumber();
 
     /**
      * Returns the number of packets received.

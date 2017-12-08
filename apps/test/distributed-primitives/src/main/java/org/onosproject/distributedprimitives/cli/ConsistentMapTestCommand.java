@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,31 +65,31 @@ public class ConsistentMapTestCommand extends AbstractShellCommand {
                                     .withName(name)
                                     .withSerializer(Serializer.using(KryoNamespaces.BASIC))
                                     .build();
-        if ("get".equals(operation)) {
+        if (operation.equals("get")) {
             print(map.get(arg1));
-        } else if ("put".equals(operation)) {
+        } else if (operation.equals("put")) {
             print(map.put(arg1, arg2));
-        } else if ("size".equals(operation)) {
+        } else if (operation.equals("size")) {
             print("%d", map.size());
-        } else if ("isEmpty".equals(operation)) {
+        } else if (operation.equals("isEmpty")) {
             print("%b", map.isEmpty());
-        } else if ("putIfAbsent".equals(operation)) {
+        } else if (operation.equals("putIfAbsent")) {
             print(map.putIfAbsent(arg1, arg2));
-        } else if ("putAndGet".equals(operation)) {
+        } else if (operation.equals("putAndGet")) {
             print(map.putAndGet(arg1, arg2));
-        } else if ("clear".equals(operation)) {
+        } else if (operation.equals("clear")) {
             map.clear();
-        } else if ("remove".equals(operation)) {
+        } else if (operation.equals("remove")) {
             if (arg2 == null) {
                 print(map.remove(arg1));
             } else {
                 print("%b", map.remove(arg1, arg2));
             }
-        } else if ("containsKey".equals(operation)) {
+        } else if (operation.equals("containsKey")) {
             print("%b", map.containsKey(arg1));
-        } else if ("containsValue".equals(operation)) {
+        } else if (operation.equals("containsValue")) {
             print("%b", map.containsValue(arg1));
-        } else if ("replace".equals(operation)) {
+        } else if (operation.equals("replace")) {
             if (arg3 == null) {
                 print(map.replace(arg1, arg2));
             } else {

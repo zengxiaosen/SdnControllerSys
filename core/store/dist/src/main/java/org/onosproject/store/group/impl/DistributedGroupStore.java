@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import org.onlab.util.KryoNamespace;
 import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.cluster.ClusterService;
 import org.onosproject.cluster.NodeId;
+import org.onosproject.core.DefaultGroupId;
 import org.onosproject.core.GroupId;
 import org.onosproject.mastership.MastershipService;
 import org.onosproject.net.DeviceId;
@@ -110,10 +111,9 @@ public class DistributedGroupStore
 
     private static final boolean GARBAGE_COLLECT = false;
     private static final int GC_THRESH = 6;
-    private static final boolean ALLOW_EXTRANEOUS_GROUPS = true;
 
     private final int dummyId = 0xffffffff;
-    private final GroupId dummyGroupId = new GroupId(dummyId);
+    private final GroupId dummyGroupId = new DefaultGroupId(dummyId);
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ClusterCommunicationService clusterCommunicator;
@@ -162,9 +162,6 @@ public class DistributedGroupStore
             label = "Number of rounds for group garbage collection")
     private int gcThresh = GC_THRESH;
 
-    @Property(name = "allowExtraneousGroups", boolValue = ALLOW_EXTRANEOUS_GROUPS,
-            label = "Allow groups in switches not installed by ONOS")
-    private boolean allowExtraneousGroups = ALLOW_EXTRANEOUS_GROUPS;
 
     @Activate
     public void activate(ComponentContext context) {
@@ -213,7 +210,6 @@ public class DistributedGroupStore
         groupStoreEntriesByKey.addListener(mapListener);
         log.debug("Current size of groupstorekeymap:{}",
                   groupStoreEntriesByKey.size());
-        synchronizeGroupStoreEntries();
 
         log.debug("Creating GroupStoreId Map From GroupStoreKey Map");
         matchGroupEntries();
@@ -258,13 +254,9 @@ public class DistributedGroupStore
 
             s = get(properties, "gcThresh");
             gcThresh = isNullOrEmpty(s) ? GC_THRESH : Integer.parseInt(s.trim());
-
-            s = get(properties, "allowExtraneousGroups");
-            allowExtraneousGroups = isNullOrEmpty(s) ? ALLOW_EXTRANEOUS_GROUPS : Boolean.parseBoolean(s.trim());
         } catch (Exception e) {
             gcThresh = GC_THRESH;
             garbageCollect = GARBAGE_COLLECT;
-            allowExtraneousGroups = ALLOW_EXTRANEOUS_GROUPS;
         }
     }
 
@@ -283,16 +275,6 @@ public class DistributedGroupStore
         for (Entry<GroupStoreKeyMapKey, StoredGroupEntry> entry : groupStoreEntriesByKey.asJavaMap().entrySet()) {
             StoredGroupEntry group = entry.getValue();
             getGroupIdTable(entry.getKey().deviceId()).put(group.id(), group);
-        }
-    }
-
-
-    private void synchronizeGroupStoreEntries() {
-        Map<GroupStoreKeyMapKey, StoredGroupEntry> groupEntryMap = groupStoreEntriesByKey.asJavaMap();
-        for (Entry<GroupStoreKeyMapKey, StoredGroupEntry> entry : groupEntryMap.entrySet()) {
-            StoredGroupEntry value = entry.getValue();
-            ConcurrentMap<GroupId, StoredGroupEntry> groupIdTable = getGroupIdTable(value.deviceId());
-            groupIdTable.put(value.id(), value);
         }
     }
 
@@ -406,12 +388,12 @@ public class DistributedGroupStore
         int freeId = groupIdGen.incrementAndGet();
 
         while (true) {
-            Group existing = getGroup(deviceId, new GroupId(freeId));
+            Group existing = getGroup(deviceId, new DefaultGroupId(freeId));
             if (existing == null) {
                 existing = (
                         extraneousGroupEntriesById.get(deviceId) != null) ?
                         extraneousGroupEntriesById.get(deviceId).
-                                get(new GroupId(freeId)) :
+                                get(new DefaultGroupId(freeId)) :
                         null;
             }
             if (existing != null) {
@@ -446,10 +428,10 @@ public class DistributedGroupStore
             log.debug("storeGroupDescription: Device {} local role is not MASTER",
                       groupDesc.deviceId());
             if (mastershipService.getMasterFor(groupDesc.deviceId()) == null) {
-                log.debug("No Master for device {}..."
-                                  + "Queuing Group ADD request",
+                log.error("No Master for device {}..."
+                                  + "Can not perform add group operation",
                           groupDesc.deviceId());
-                addToPendingAudit(groupDesc);
+                //TODO: Send Group operation failure event
                 return;
             }
             GroupStoreMessage groupOp = GroupStoreMessage.
@@ -481,28 +463,13 @@ public class DistributedGroupStore
         storeGroupDescriptionInternal(groupDesc);
     }
 
-    private void addToPendingAudit(GroupDescription groupDesc) {
-        Integer groupIdVal = groupDesc.givenGroupId();
-        GroupId groupId = (groupIdVal != null) ? new GroupId(groupIdVal) : dummyGroupId;
-        addToPendingKeyTable(new DefaultGroup(groupId, groupDesc));
-    }
-
-    private void addToPendingKeyTable(StoredGroupEntry group) {
-        group.setState(GroupState.WAITING_AUDIT_COMPLETE);
-        Map<GroupStoreKeyMapKey, StoredGroupEntry> pendingKeyTable =
-                getPendingGroupKeyTable();
-        pendingKeyTable.put(new GroupStoreKeyMapKey(group.deviceId(),
-                        group.appCookie()),
-                group);
-    }
-
     private Group getMatchingExtraneousGroupbyId(DeviceId deviceId, Integer groupId) {
         ConcurrentMap<GroupId, Group> extraneousMap =
                 extraneousGroupEntriesById.get(deviceId);
         if (extraneousMap == null) {
             return null;
         }
-        return extraneousMap.get(new GroupId(groupId));
+        return extraneousMap.get(new DefaultGroupId(groupId));
     }
 
     private Group getMatchingExtraneousGroupbyBuckets(DeviceId deviceId,
@@ -633,12 +600,12 @@ public class DistributedGroupStore
         GroupId id = null;
         if (groupDesc.givenGroupId() == null) {
             // Get a new group identifier
-            id = new GroupId(getFreeGroupIdValue(groupDesc.deviceId()));
+            id = new DefaultGroupId(getFreeGroupIdValue(groupDesc.deviceId()));
         } else {
             // we need to use the identifier passed in by caller, but check if
             // already used
             Group existing = getGroup(groupDesc.deviceId(),
-                                      new GroupId(groupDesc.givenGroupId()));
+                                      new DefaultGroupId(groupDesc.givenGroupId()));
             if (existing != null) {
                 log.warn("Group already exists with the same id: 0x{} in dev:{} "
                                  + "but with different key: {} (request gkey: {})",
@@ -648,7 +615,7 @@ public class DistributedGroupStore
                          groupDesc.appCookie());
                 return;
             }
-            id = new GroupId(groupDesc.givenGroupId());
+            id = new DefaultGroupId(groupDesc.givenGroupId());
         }
         // Create a group entry object
         StoredGroupEntry group = new DefaultGroup(id, groupDesc);
@@ -1083,22 +1050,21 @@ public class DistributedGroupStore
                  existing.deviceId(),
                  operation.failureCode());
         if (operation.failureCode() == GroupOperation.GroupMsgErrorCode.GROUP_EXISTS) {
+            log.warn("Current extraneous groups in device:{} are: {}",
+                     deviceId,
+                     getExtraneousGroups(deviceId));
             if (operation.buckets().equals(existing.buckets())) {
-                if (existing.state() == GroupState.PENDING_ADD ||
-                        existing.state() == GroupState.PENDING_ADD_RETRY) {
+                if (existing.state() == GroupState.PENDING_ADD) {
                     log.info("GROUP_EXISTS: GroupID and Buckets match for group in pending "
                                      + "add state - moving to ADDED for group {} in device {}",
                              existing.id(), deviceId);
                     addOrUpdateGroupEntry(existing);
                     return;
                 } else {
-                    log.warn("GROUP_EXISTS: GroupId and Buckets match but existing"
-                            + "group in state: {}", existing.state());
+                    log.warn("GROUP EXISTS: Group ID matched but buckets did not. "
+                                     + "Operation: {} Existing: {}", operation.buckets(),
+                             existing.buckets());
                 }
-            } else {
-                log.warn("GROUP EXISTS: Group ID matched but buckets did not. "
-                        + "Operation: {} Existing: {}", operation.buckets(),
-                        existing.buckets());
             }
         }
         switch (operation.opType()) {
@@ -1403,11 +1369,7 @@ public class DistributedGroupStore
                 log.debug("Group AUDIT: extraneous group {} exists in data plane for device {}",
                           group.id(), deviceId);
                 extraneousStoredEntries.remove(group);
-                if (allowExtraneousGroups) {
-                    extraneousGroup(group);
-                } else {
-                    notifyDelegate(new GroupEvent(Type.GROUP_REMOVE_REQUESTED, group));
-                }
+                extraneousGroup(group);
             }
         }
         for (Group group : storedGroupEntries) {

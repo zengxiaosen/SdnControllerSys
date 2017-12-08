@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,24 +15,26 @@
  */
 package org.onosproject.incubator.rpc.grpc;
 
-import com.google.common.annotations.Beta;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.RemovalNotification;
-import io.grpc.stub.StreamObserver;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.cache.RemovalListeners.asynchronous;
+import static org.onosproject.net.DeviceId.deviceId;
+import static org.onosproject.net.LinkKey.linkKey;
+
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.lang3.tuple.Pair;
+import org.onosproject.grpc.net.Link.ConnectPoint.ElementIdCase;
+import org.onosproject.grpc.net.Link.LinkType;
 import org.onosproject.grpc.net.link.LinkProviderServiceRpcGrpc.LinkProviderServiceRpcImplBase;
 import org.onosproject.grpc.net.link.LinkService.LinkDetectedMsg;
 import org.onosproject.grpc.net.link.LinkService.LinkVanishedMsg;
 import org.onosproject.grpc.net.link.LinkService.Void;
-import org.onosproject.grpc.net.link.models.LinkDescriptionProtoOuterClass.LinkDescriptionProto;
-import org.onosproject.grpc.net.link.models.LinkEnumsProto.LinkTypeProto;
-import org.onosproject.grpc.net.models.ConnectPointProtoOuterClass.ConnectPointProto;
-import org.onosproject.grpc.net.models.ConnectPointProtoOuterClass.ConnectPointProto.ElementIdCase;
-import org.onosproject.incubator.protobuf.models.ProtobufUtils;
+import org.onosproject.incubator.protobuf.net.ProtobufUtils;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.Link.Type;
+import org.onosproject.net.Link;
 import org.onosproject.net.LinkKey;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.SparseAnnotations;
@@ -42,14 +44,12 @@ import org.onosproject.net.link.LinkProviderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalNotification;
+import com.google.common.annotations.Beta;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.cache.RemovalListeners.asynchronous;
-import static org.onosproject.net.DeviceId.deviceId;
-import static org.onosproject.net.LinkKey.linkKey;
+import io.grpc.stub.StreamObserver;
 
 // Only single instance will be created and bound to gRPC LinkProviderService
 /**
@@ -174,7 +174,7 @@ final class LinkProviderServiceServerProxy
      * @param connectPoint gRPC message.
      * @return {@link ConnectPoint}
      */
-    private ConnectPoint translate(ConnectPointProto connectPoint) {
+    private ConnectPoint translate(org.onosproject.grpc.net.Link.ConnectPoint connectPoint) {
         checkArgument(connectPoint.getElementIdCase() == ElementIdCase.DEVICE_ID,
                       "Only DeviceId supported.");
         return new ConnectPoint(deviceId(connectPoint.getDeviceId()),
@@ -187,10 +187,10 @@ final class LinkProviderServiceServerProxy
      * @param linkDescription gRPC message
      * @return {@link LinkDescription}
      */
-    private LinkDescription translate(LinkDescriptionProto linkDescription) {
+    private LinkDescription translate(org.onosproject.grpc.net.Link.LinkDescription linkDescription) {
         ConnectPoint src = translate(linkDescription.getSrc());
         ConnectPoint dst = translate(linkDescription.getDst());
-        Type type = translate(linkDescription.getType());
+        Link.Type type = translate(linkDescription.getType());
         SparseAnnotations annotations = ProtobufUtils.asAnnotations(linkDescription.getAnnotations());
         return new DefaultLinkDescription(src, dst, type, annotations);
     }
@@ -199,26 +199,26 @@ final class LinkProviderServiceServerProxy
      * Translates gRPC message to corresponding ONOS object.
      *
      * @param type gRPC message enum
-     * @return {@link Type Link.Type}
+     * @return {@link org.onosproject.net.Link.Type Link.Type}
      */
-    private Type translate(LinkTypeProto type) {
+    private Link.Type translate(LinkType type) {
         switch (type) {
         case DIRECT:
-            return Type.DIRECT;
+            return Link.Type.DIRECT;
         case EDGE:
-            return Type.EDGE;
+            return Link.Type.EDGE;
         case INDIRECT:
-            return Type.INDIRECT;
+            return Link.Type.INDIRECT;
         case OPTICAL:
-            return Type.INDIRECT;
+            return Link.Type.INDIRECT;
         case TUNNEL:
-            return Type.TUNNEL;
+            return Link.Type.TUNNEL;
         case VIRTUAL:
-            return Type.VIRTUAL;
+            return Link.Type.VIRTUAL;
 
         case UNRECOGNIZED:
         default:
-            return Type.DIRECT;
+            return Link.Type.DIRECT;
         }
     }
 

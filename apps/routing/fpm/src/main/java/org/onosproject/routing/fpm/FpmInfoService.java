@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,13 @@
 
 package org.onosproject.routing.fpm;
 
+import java.net.SocketAddress;
 import java.util.Map;
 
 /**
- * Provides information about the FPM route receiver module.
+ * Created by jono on 2/2/16.
  */
 public interface FpmInfoService {
 
-    /**
-     * Returns the FPM peers that are currently connected.
-     *
-     * @return a map of FPM peer with related information
-     */
-    Map<FpmPeer, FpmPeerInfo> peers();
+    Map<SocketAddress, Long> peers();
 }

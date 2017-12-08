@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package org.onosproject.drivers.fujitsu;
 
-
-import org.onosproject.netconf.DatastoreId;
 
 public interface FujitsuNetconfSessionListenerTest {
 
@@ -36,21 +34,8 @@ public interface FujitsuNetconfSessionListenerTest {
      * @param mode                selected mode to change the configuration
      * @param newConfiguration    configuration to set
      * @return true if everuthing as expected
-     * @deprecated - 1.10.0 Kingfisher use method overload that accepts
-     * org.onosproject.netconf.TargetConfig enum parameter instead
      */
-    @Deprecated
     boolean verifyEditConfig(String targetConfiguration, String mode, String newConfiguration);
-
-    /**
-     * Verify editConfig request arguments.
-     *
-     * @param targetConfiguration the targetConfiguration to change
-     * @param mode                selected mode to change the configuration
-     * @param newConfiguration    configuration to set
-     * @return true if everuthing as expected
-     */
-    boolean verifyEditConfig(DatastoreId targetConfiguration, String mode, String newConfiguration);
 
     /**
      * Verify get request arguments.

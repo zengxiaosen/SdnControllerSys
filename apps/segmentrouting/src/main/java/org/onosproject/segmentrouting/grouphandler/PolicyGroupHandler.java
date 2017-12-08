@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -199,7 +199,7 @@ public class PolicyGroupHandler extends DefaultGroupHandler {
                     tBuilder.setOutput(bucketId.outPort())
                             .setEthDst(neighborEthDst)
                             .setEthSrc(nodeMacAddr);
-                    if (bucketId.label() != DestinationSet.NO_EDGE_LABEL) {
+                    if (bucketId.label() != NeighborSet.NO_EDGE_LABEL) {
                         tBuilder.pushMpls()
                             .setMpls(MplsLabel.mplsLabel(bucketId.label()));
                     }

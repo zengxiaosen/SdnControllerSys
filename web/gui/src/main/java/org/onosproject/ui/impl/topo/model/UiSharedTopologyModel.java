@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Foundation
+ *  Copyright 2016-present Open Networking Laboratory
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -67,15 +67,12 @@ import org.onosproject.ui.model.topo.UiClusterMember;
 import org.onosproject.ui.model.topo.UiDevice;
 import org.onosproject.ui.model.topo.UiDeviceLink;
 import org.onosproject.ui.model.topo.UiHost;
-import org.onosproject.ui.model.topo.UiLinkId;
-import org.onosproject.ui.model.topo.UiModelEvent;
 import org.onosproject.ui.model.topo.UiRegion;
 import org.onosproject.ui.model.topo.UiSynthLink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
@@ -302,17 +299,6 @@ public final class UiSharedTopologyModel
      */
     public List<UiSynthLink> getSynthLinks(RegionId regionId) {
         return cache.getSynthLinks(regionId);
-    }
-
-    /**
-     * Returns the synthetic links associated with the specified region,
-     * mapped by original link id.
-     *
-     * @param regionId region ID
-     * @return map of synthetic links for that region
-     */
-    public Map<UiLinkId, UiSynthLink> relevantSynthLinks(RegionId regionId) {
-        return cache.relevantSynthLinks(regionId);
     }
 
     // =====================================================================

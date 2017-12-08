@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
  */
 
 /*
- ONOS GUI -- Widget -- Table Builder Service
+ ONOS GUI -- Widget -- Table Service
  */
 (function () {
     'use strict';
 
     // injected refs
-    var $log, $interval, fs, wss, ls;
+    var $log, $interval, $timeout, fs, wss, ls;
 
     // constants
     var refreshInterval = 2000;
@@ -39,13 +39,6 @@
     //          Note: query is always an object (empty or containing properties)
     //                 it comes from $location.search()
 
-    // Additional Notes:
-    //   When sending a request for table data, the $scope will be checked
-    //   for a .payloadParams object which, if it exists, will be merged into
-    //   the event payload. By modifying this object (via toggle buttons, or
-    //   other user interaction) additional parameters / state can be passed
-    //   to the server in the data request.
-
     function buildTable(o) {
         var handlers = {},
             root = o.tag + 's',
@@ -61,12 +54,11 @@
         o.scope.changedData = [];
         o.scope.sortParams = o.sortParams || {};
         o.scope.autoRefresh = true;
-        o.scope.autoRefreshTip = o.lion_toggle_auto_refresh || 'Toggle auto refresh';
+        o.scope.autoRefreshTip = 'Toggle auto refresh';
 
         // === websocket functions --------------------
-
-        // === Table Data Response
-        function tableDataResponseCb(data) {
+        // response
+        function respCb(data) {
             ls.stop();
             o.scope.tableData = data[root];
             o.scope.annots = data.annots;
@@ -87,42 +79,35 @@
             }
             o.scope.$apply();
         }
-        handlers[resp] = tableDataResponseCb;
+        handlers[resp] = respCb;
         wss.bindHandlers(handlers);
 
-        // === Table Data Request
-        function requestTableData() {
-            var sortParams = o.scope.sortParams,
-                pp = fs.isO(o.scope.payloadParams),
-                payloadParams = pp || {},
-                p = angular.extend({}, sortParams, payloadParams, o.query);
-
+        // request
+        function sortCb(params) {
+            var p = angular.extend({}, params, o.query);
             if (wss.isConnected()) {
-                if (fs.debugOn('table')) {
-                    $log.debug('Table data REQUEST:', req, p);
-                }
                 wss.sendEvent(req, p);
                 ls.start();
             }
         }
-        o.scope.sortCallback = requestTableData;
+        o.scope.sortCallback = sortCb;
 
 
-        // === Row Selected
-        function rowSelectionCb($event, selRow) {
+        // === selecting a row functions ----------------
+        function selCb($event, selRow) {
             var selId = selRow[idKey];
             o.scope.selId = (o.scope.selId === selId) ? null : selId;
             onSel && onSel($event, selRow);
         }
-        o.scope.selectCallback = rowSelectionCb;
+        o.scope.selectCallback = selCb;
 
-        // === autoRefresh functions
+        // === autoRefresh functions ------------------
         function fetchDataIfNotWaiting() {
             if (!ls.waiting()) {
                 if (fs.debugOn('widget')) {
                     $log.debug('Refreshing ' + root + ' page');
                 }
-                requestTableData();
+                sortCb(o.scope.sortParams);
             }
         }
 
@@ -143,35 +128,32 @@
         }
         o.scope.toggleRefresh = toggleRefresh;
 
-        // === Cleanup on destroyed scope
+        // === Cleanup on destroyed scope -----------------
         o.scope.$on('$destroy', function () {
             wss.unbindHandlers(handlers);
             stopRefresh();
             ls.stop();
         });
 
-        requestTableData();
+        sortCb(o.scope.sortParams);
         startRefresh();
-
-        return {
-            forceRefesh: requestTableData,
-        };
     }
 
     angular.module('onosWidget')
         .factory('TableBuilderService',
-        ['$log', '$interval', 'FnService', 'WebSocketService',
+        ['$log', '$interval', '$timeout', 'FnService', 'WebSocketService',
             'LoadingService',
 
-            function (_$log_, _$interval_, _fs_, _wss_, _ls_) {
+            function (_$log_, _$interval_, _$timeout_, _fs_, _wss_, _ls_) {
                 $log = _$log_;
                 $interval = _$interval_;
+                $timeout = _$timeout_;
                 fs = _fs_;
                 wss = _wss_;
                 ls = _ls_;
 
                 return {
-                    buildTable: buildTable,
+                    buildTable: buildTable
                 };
             }]);
 

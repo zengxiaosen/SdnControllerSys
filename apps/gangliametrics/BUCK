@@ -1,6 +1,5 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
-    '//lib:METRICS',
     '//lib:gmetric4j',
     '//lib:metrics-ganglia',
     '//lib:remotetea-oncrpc',
@@ -17,7 +16,7 @@ osgi_jar_with_tests (
 )
 
 onos_app (
-    title = 'Ganglia Report and Query',
+    title = 'Ganglia Report and Query App',
     category = 'Monitoring',
     url = 'http://onosproject.org',
     description = 'Performance metric service reporter',

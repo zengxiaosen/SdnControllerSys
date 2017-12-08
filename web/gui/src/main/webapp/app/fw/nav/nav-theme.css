@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,21 +18,39 @@
  ONOS GUI -- Navigation (theme) -- CSS file
  */
 
-#nav {
+.light #nav {
+    background-color: #231f20;
+}
+.dark #nav {
+    /* TODO: dark theme */
     background-color: #231f20;
 }
 
-#nav .nav-hdr {
+.light #nav .nav-hdr {
+    color: #716b6a;
+    background-color: #3c3a3a;
+}
+.dark #nav .nav-hdr {
+    /* TODO: dark theme */
     color: #716b6a;
     background-color: #3c3a3a;
 }
 
-#nav a {
+.light #nav a {
+    color: #c7c7c0;
+    border-bottom: solid #3c3a3a 1px;
+}
+.dark #nav a {
+    /* TODO: dark theme */
     color: #c7c7c0;
     border-bottom: solid #3c3a3a 1px;
 }
 
-#nav a:hover {
+.light #nav a:hover {
+    color: #ffffff;
+}
+.dark #nav a:hover {
+    /* TODO: dark theme */
     color: #ffffff;
 }
 

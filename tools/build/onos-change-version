@@ -33,9 +33,9 @@ sed -i "" -E "s/features\/.*\/xml/features\/$NEW_VERSION\/xml/" $ONOS_ROOT/tools
 sed -i "" -E "s/ -Dversion=.*\"/ -Dversion=$NEW_VERSION\"/" $ONOS_ROOT/tools/test/bin/onos-archetypes-test
 sed -i "" -E "s/ONOS_POM_VERSION=.*\"/ONOS_POM_VERSION=\"$NEW_VERSION\"/" $ONOS_ROOT/tools/build/envDefaults
 
-# Augment fallback version in VersionManager
+# Augment fallback version in CoreManager
 sed -i "" -E "s/Version\.version\(\"[^\"]*\"\)/Version.version(\"$NEW_VERSION\")/" \
-   $ONOS_ROOT/core/net/src/main/java/org/onosproject/core/impl/VersionManager.java
+   $ONOS_ROOT/core/net/src/main/java/org/onosproject/core/impl/CoreManager.java
 
 # Augment the version in archetypes tree.
 mvn -f tools/package/archetypes/pom.xml versions:set -DnewVersion=$NEW_VERSION versions:commit
@@ -44,10 +44,6 @@ for atype in api bundle cli rest ui uitab uitopo; do
     sed -i "" -E "1,/<onos.version>/s/<onos.version>[^<]*</<onos.version>$NEW_VERSION</g" $pom
 done
 sed -i "" -E "s/-DarchetypeVersion=[^\"]*/-DarchetypeVersion=$NEW_VERSION/g" $ONOS_ROOT/tools/test/bin/onos-archetypes-test
-
-# Fix the onos-build-conf version
-sed -i "" -E "s/\<onos-build-conf.version\>.*\<.onos-build-conf.version\>/\<onos-build-conf.version\>$NEW_VERSION\<\/onos-build-conf.version\>/g" $ONOS_ROOT/lib/pom.xml
-mvn -f tools/build/conf/pom.xml versions:set -DnewVersion=$NEW_VERSION versions:commit
 
 # Version the BUCK artifacts
 sed -i "" -E "s/ONOS_VERSION.*/ONOS_VERSION = '$NEW_VERSION'/" onos.defs

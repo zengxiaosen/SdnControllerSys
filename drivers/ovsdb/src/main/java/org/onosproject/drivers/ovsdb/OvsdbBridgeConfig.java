@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,6 @@
 package org.onosproject.drivers.ovsdb;
 
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.onlab.packet.IpAddress;
 import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.DeviceId;
@@ -31,6 +24,7 @@ import org.onosproject.net.PortNumber;
 import org.onosproject.net.behaviour.BridgeConfig;
 import org.onosproject.net.behaviour.BridgeDescription;
 import org.onosproject.net.behaviour.BridgeName;
+import org.onosproject.net.behaviour.ControllerInfo;
 import org.onosproject.net.behaviour.DefaultBridgeDescription;
 import org.onosproject.net.device.DefaultPortDescription;
 import org.onosproject.net.device.PortDescription;
@@ -42,6 +36,13 @@ import org.onosproject.ovsdb.controller.OvsdbController;
 import org.onosproject.ovsdb.controller.OvsdbNodeId;
 import org.onosproject.ovsdb.controller.OvsdbPort;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 
 /**
  * The implementation of BridageConfig.
@@ -49,6 +50,49 @@ import org.onosproject.ovsdb.controller.OvsdbPort;
 public class OvsdbBridgeConfig extends AbstractHandlerBehaviour
         implements BridgeConfig {
 
+    @Deprecated
+    @Override
+    public void addBridge(BridgeName bridgeName) {
+        BridgeDescription bridgeDesc = DefaultBridgeDescription.builder()
+                .name(bridgeName.name())
+                .build();
+
+        addBridge(bridgeDesc);
+    }
+
+    @Deprecated
+    @Override
+    public void addBridge(BridgeName bridgeName, String dpid, String exPortName) {
+        BridgeDescription bridgeDesc = DefaultBridgeDescription.builder()
+                .name(bridgeName.name())
+                .failMode(BridgeDescription.FailMode.SECURE)
+                .datapathId(dpid)
+                .disableInBand()
+                .enableLocalController()
+                .build();
+
+        addBridge(bridgeDesc);
+
+        OvsdbClientService client = getOvsdbClientService(handler());
+        if (client == null) {
+            return;
+        }
+        client.createPort(bridgeName.name(), exPortName);
+    }
+
+    @Deprecated
+    @Override
+    public boolean addBridge(BridgeName bridgeName, String dpid, List<ControllerInfo> controllers) {
+        BridgeDescription bridgeDesc = DefaultBridgeDescription.builder()
+                .name(bridgeName.name())
+                .failMode(BridgeDescription.FailMode.SECURE)
+                .datapathId(dpid)
+                .disableInBand()
+                .controllers(controllers)
+                .build();
+
+        return addBridge(bridgeDesc);
+    }
 
     @Override
     public boolean addBridge(BridgeDescription bridgeDesc) {

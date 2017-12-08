@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,20 +64,10 @@
 #flow-details-panel h2 {
     display: inline-block;
     margin: 8px 0;
-    font-size: 16pt;
-    font-weight: lighter;
-}
-
-#flow-details-panel h3 {
-    display: inline-block;
-    margin: 8px 0;
-    font-size: 11pt;
-    font-variant: small-caps;
-    text-transform: uppercase;
 }
 
 #flow-details-panel .top-content table {
-    font-size: 10pt;
+    font-size: 12pt;
 }
 
 #flow-details-panel td.label {

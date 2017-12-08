@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,12 @@ package org.onosproject.drivers.fujitsu;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.onosproject.netconf.DatastoreId;
+
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.onosproject.drivers.fujitsu.FujitsuVoltXmlUtilityMock.*;
-import static org.onosproject.netconf.DatastoreId.RUNNING;
 
 /**
  * Unit tests for methods of FujitsuVoltPonLinkConfig.
@@ -226,21 +225,6 @@ public class FujitsuVoltPonLinkConfigTest {
         }
 
         @Override
-        public boolean verifyEditConfig(DatastoreId target, String mode, String request) {
-            boolean result;
-
-            assertTrue("Incorrect target", target.equals(RUNNING));
-            assertNull("Incorrect mode", mode);
-
-            request = request.replaceAll(TEST_DUPLICATE_SPACES_REGEX, TEST_SPACE);
-            assertTrue("Does not contain:" + TEST_VOLT_NAMESPACE,
-                    request.contains(TEST_VOLT_NAMESPACE));
-            result = verifyEditConfigRequest(request);
-            assertTrue("XML verification failure", result);
-            return result;
-        }
-
-        @Override
         public boolean verifyEditConfig(String target, String mode, String request) {
             boolean result;
 
@@ -249,7 +233,7 @@ public class FujitsuVoltPonLinkConfigTest {
 
             request = request.replaceAll(TEST_DUPLICATE_SPACES_REGEX, TEST_SPACE);
             assertTrue("Does not contain:" + TEST_VOLT_NAMESPACE,
-                       request.contains(TEST_VOLT_NAMESPACE));
+                    request.contains(TEST_VOLT_NAMESPACE));
             result = verifyEditConfigRequest(request);
             assertTrue("XML verification failure", result);
             return result;

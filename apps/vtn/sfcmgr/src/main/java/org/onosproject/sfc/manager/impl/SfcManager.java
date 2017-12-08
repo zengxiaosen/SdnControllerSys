@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -148,11 +148,11 @@ public class SfcManager implements SfcService {
 
         nshSpiPortChainMap = storageService.<PortChainId, Integer>eventuallyConsistentMapBuilder()
                 .withName("nshSpiPortChainMap").withSerializer(serializer)
-                .withTimestampProvider((k, v) -> new WallClockTimestamp()).build();
+                .withTimestampProvider((k, v) ->new WallClockTimestamp()).build();
 
         portChainFiveTupleMap = storageService.<PortChainId, List<FiveTuple>>eventuallyConsistentMapBuilder()
                 .withName("portChainFiveTupleMap").withSerializer(serializer)
-                .withTimestampProvider((k, v) -> new WallClockTimestamp()).build();
+                .withTimestampProvider((k, v) ->new WallClockTimestamp()).build();
 
         nshSpiIdFreeList = storageService.<Integer>setBuilder()
                 .withName("nshSpiIdDeletedList")
@@ -379,7 +379,7 @@ public class SfcManager implements SfcService {
          * Find the port chain for the received packet.
          *
          * @param fiveTuple five tuple info from the packet
-         * @return portChainId id of port chain, null if portChain is not found
+         * @return portChainId id of port chain
          */
         private PortChainId findPortChainFromFiveTuple(FiveTuple fiveTuple) {
 
@@ -388,7 +388,6 @@ public class SfcManager implements SfcService {
             Iterable<PortChain> portChains = portChainService.getPortChains();
             if (portChains == null) {
                 log.error("Could not retrive port chain list");
-                return null;
             }
 
             // Identify the port chain to which the packet belongs
@@ -407,11 +406,11 @@ public class SfcManager implements SfcService {
                     boolean match = false;
                     // Check whether protocol is set in flow classifier
                     if (flowClassifier.protocol() != null) {
-                        if (("TCP".equalsIgnoreCase(flowClassifier.protocol())
+                        if ((flowClassifier.protocol().equalsIgnoreCase("TCP")
                                 && fiveTuple.protocol() == IPv4.PROTOCOL_TCP)
-                                || ("UDP".equalsIgnoreCase(flowClassifier.protocol())
+                                || (flowClassifier.protocol().equalsIgnoreCase("UDP")
                                         && fiveTuple.protocol() == IPv4.PROTOCOL_UDP)
-                                        || ("ICMP".equalsIgnoreCase(flowClassifier.protocol())
+                                        || (flowClassifier.protocol().equalsIgnoreCase("ICMP")
                                                 && fiveTuple.protocol() == IPv4.PROTOCOL_ICMP)) {
                             match = true;
                         } else {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.Set;
 
+import static java.lang.Long.parseLong;
 import static org.onosproject.incubator.net.faultmanagement.alarm.AlarmId.alarmId;
 
 /**
@@ -122,7 +123,7 @@ public class AlarmTableMessageHandler extends UiMessageHandler {
         private void populateRow(TableModel.Row row, Alarm alarm) {
             log.debug("populateRow: row = {} alarm = {}", row, alarm);
 
-            row.cell(ID, alarm.id())
+            row.cell(ID, alarm.id().fingerprint())
                     .cell(DEVICE_ID_STR, alarm.deviceId())
                     .cell(DESCRIPTION, alarm.description())
                     .cell(SOURCE, alarm.source())
@@ -143,7 +144,7 @@ public class AlarmTableMessageHandler extends UiMessageHandler {
             log.debug("payload = {}", payload);
 
             String id = string(payload, ID, "(none)");
-            Alarm alarm = AlarmServiceUtil.lookupAlarm(alarmId(id));
+            Alarm alarm = AlarmServiceUtil.lookupAlarm(alarmId(parseLong(id)));
             ObjectNode rootNode = objectNode();
             ObjectNode data = objectNode();
             rootNode.set(DETAILS, data);
@@ -155,13 +156,13 @@ public class AlarmTableMessageHandler extends UiMessageHandler {
             } else {
                 rootNode.put(RESULT, "Found item with id '" + id + "'");
 
-                data.put(ID, alarm.id().toString());
+                data.put(ID, alarm.id().fingerprint());
                 data.put(DESCRIPTION, alarm.description());
                 data.put(DEVICE_ID_STR, alarm.deviceId().toString());
                 data.put(SOURCE, alarm.source().toString());
                 long timeRaised = alarm.timeRaised();
                 data.put(TIME_RAISED,
-                         formatTime(timeRaised)
+                        formatTime(timeRaised)
                 );
                 data.put(TIME_UPDATED, formatTime(alarm.timeUpdated()));
                 data.put(TIME_CLEARED, formatTime(alarm.timeCleared()));

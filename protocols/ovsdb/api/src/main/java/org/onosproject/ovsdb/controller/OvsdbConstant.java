@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,6 @@ public final class OvsdbConstant {
     /** Port table. */
     public static final String PORT = "Port";
     public static final String INTERFACES = "interfaces";
-    public static final String PORT_QOS = "qos";
 
     /** Interface table. */
     public static final String INTERFACE = "Interface";
@@ -71,26 +70,6 @@ public final class OvsdbConstant {
     /** Mirror table. */
     public static final String MIRROR = "Mirror";
 
-    /* Qos table */
-    public static final String QOS = "QoS";
-    public static final String QUEUES = "queues";
-    public static final String CIR = "cir";
-    public static final String CBS = "cbs";
-    public static final String QOS_EXTERNAL_ID_KEY = "onos-qos-id";
-    public static final String QOS_TYPE_PREFIX = "linux-";
-    public static final String QOS_EGRESS_POLICER = "egress-policer";
-
-    /* Queue table */
-    public static final String QUEUE = "Queue";
-    public static final String MIN_RATE = "min-rate";
-    public static final String MAX_RATE = "max-rate";
-    public static final String BURST = "burst";
-    public static final String PRIORITY = "priority";
-    public static final String QUEUE_EXTERNAL_ID_KEY = "onos-queue-id";
-
-    /* external id */
-    public static final String EXTERNAL_ID = "external_ids";
-
     /** Ovsdb bridge name. */
     // TODO remove this particular bridge name from OVSDB provider
     public static final String INTEGRATION_BRIDGE = "br-int";
@@ -103,10 +82,4 @@ public final class OvsdbConstant {
 
     /** Ovsdb port. */
     public static final int OVSDBPORT = 6640;
-
-    /** Ovsdb Bridge table, Controller column name. */
-    public static final String BRIDGE_CONTROLLER = "controller";
-
-    /** Openflow port Error. */
-    public static final int OFPORT_ERROR = -1;
 }

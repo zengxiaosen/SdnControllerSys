@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package org.onosproject.net.device;
 
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.PortNumber;
 
 /**
  * Default implementation of immutable port statistics.
@@ -24,7 +23,7 @@ import org.onosproject.net.PortNumber;
 public final class DefaultPortStatistics implements PortStatistics {
 
     private final DeviceId deviceId;
-    private final PortNumber portNumber;
+    private final int  port;
     private final long packetsReceived;
     private final long packetsSent;
     private final long bytesReceived;
@@ -37,7 +36,7 @@ public final class DefaultPortStatistics implements PortStatistics {
     private final long durationNano;
 
     private DefaultPortStatistics(DeviceId deviceId,
-                                  PortNumber portNumber,
+                                  int  port,
                                   long packetsReceived,
                                   long packetsSent,
                                   long bytesReceived,
@@ -49,7 +48,7 @@ public final class DefaultPortStatistics implements PortStatistics {
                                   long durationSec,
                                   long durationNano) {
         this.deviceId = deviceId;
-        this.portNumber = portNumber;
+        this.port = port;
         this.packetsReceived = packetsReceived;
         this.packetsSent = packetsSent;
         this.bytesReceived = bytesReceived;
@@ -65,7 +64,7 @@ public final class DefaultPortStatistics implements PortStatistics {
     // Constructor for serializer
     private DefaultPortStatistics() {
         this.deviceId = null;
-        this.portNumber = null;
+        this.port = 0;
         this.packetsReceived = 0;
         this.packetsSent = 0;
         this.bytesReceived = 0;
@@ -89,12 +88,7 @@ public final class DefaultPortStatistics implements PortStatistics {
 
     @Override
     public int port() {
-        return (int) this.portNumber.toLong();
-    }
-
-    @Override
-    public PortNumber portNumber() {
-        return this.portNumber;
+        return this.port;
     }
 
     @Override
@@ -160,7 +154,7 @@ public final class DefaultPortStatistics implements PortStatistics {
     @Override
     public String toString() {
         return "device: " + deviceId + ", " +
-                "port: " + this.portNumber + ", " +
+                "port: " + this.port + ", " +
                 "pktRx: " + this.packetsReceived + ", " +
                 "pktTx: " + this.packetsSent + ", " +
                 "byteRx: " + this.bytesReceived + ", " +
@@ -174,7 +168,7 @@ public final class DefaultPortStatistics implements PortStatistics {
     public static final class Builder {
 
         DeviceId deviceId;
-        PortNumber portNumber;
+        int port;
         long packetsReceived;
         long packetsSent;
         long bytesReceived;
@@ -195,23 +189,9 @@ public final class DefaultPortStatistics implements PortStatistics {
          *
          * @param port port number
          * @return builder object
-         * @deprecated ONOS 1.12 Magpie
          */
-        @Deprecated
         public Builder setPort(int port) {
-            this.portNumber = PortNumber.portNumber(port);
-
-            return this;
-        }
-
-        /**
-         * Sets port number.
-         *
-         * @param portNumber port number
-         * @return builder object
-         */
-        public Builder setPort(PortNumber portNumber) {
-            this.portNumber = portNumber;
+            this.port = port;
 
             return this;
         }
@@ -356,7 +336,7 @@ public final class DefaultPortStatistics implements PortStatistics {
         public DefaultPortStatistics build() {
             return new DefaultPortStatistics(
                     deviceId,
-                    portNumber,
+                    port,
                     packetsReceived,
                     packetsSent,
                     bytesReceived,

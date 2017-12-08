@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.onosproject.routing.fpm.protocol;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableSet;
 import org.onlab.packet.DeserializationException;
 
 import java.nio.ByteBuffer;
@@ -31,17 +30,7 @@ public final class FpmHeader {
     public static final int FPM_HEADER_LENGTH = 4;
 
     public static final short FPM_VERSION_1 = 1;
-    public static final short FPM_VERSION_ONOS_EXT = 32;
-
-    private static final ImmutableSet<Short> SUPPORTED_VERSIONS =
-            ImmutableSet.<Short>builder()
-            .add(FPM_VERSION_1)
-            .add(FPM_VERSION_ONOS_EXT)
-            .build();
-
     public static final short FPM_TYPE_NETLINK = 1;
-    public static final short FPM_TYPE_PROTOBUF = 2;
-    public static final short FPM_TYPE_KEEPALIVE = 32;
 
     private static final String VERSION_NOT_SUPPORTED = "FPM version not supported: ";
     private static final String TYPE_NOT_SUPPORTED = "FPM type not supported: ";
@@ -130,20 +119,16 @@ public final class FpmHeader {
         ByteBuffer bb = ByteBuffer.wrap(buffer, start, length);
 
         short version = bb.get();
-        if (!SUPPORTED_VERSIONS.contains(version)) {
+        if (version != FPM_VERSION_1) {
             throw new DeserializationException(VERSION_NOT_SUPPORTED + version);
         }
 
         short type = bb.get();
-        int messageLength = bb.getShort();
-
-        if (type == FPM_TYPE_KEEPALIVE) {
-            return new FpmHeader(version, type, messageLength, null);
-        }
-
         if (type != FPM_TYPE_NETLINK) {
             throw new DeserializationException(TYPE_NOT_SUPPORTED + type);
         }
+
+        int messageLength = bb.getShort();
 
         Netlink netlink = Netlink.decode(buffer, bb.position(), bb.limit() - bb.position());
 

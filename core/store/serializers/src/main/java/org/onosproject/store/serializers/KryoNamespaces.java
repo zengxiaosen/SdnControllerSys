@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+
 import org.onlab.packet.ChassisId;
 import org.onlab.packet.EthType;
 import org.onlab.packet.Ip4Address;
@@ -49,7 +49,7 @@ import org.onosproject.cluster.RoleInfo;
 import org.onosproject.core.ApplicationRole;
 import org.onosproject.core.DefaultApplication;
 import org.onosproject.core.DefaultApplicationId;
-import org.onosproject.core.GroupId;
+import org.onosproject.core.DefaultGroupId;
 import org.onosproject.core.Version;
 import org.onosproject.event.Change;
 import org.onosproject.incubator.net.domain.IntentDomainId;
@@ -76,10 +76,14 @@ import org.onosproject.net.HostLocation;
 import org.onosproject.net.Link;
 import org.onosproject.net.LinkKey;
 import org.onosproject.net.MarkerResource;
+import org.onosproject.net.OchPort;
 import org.onosproject.net.OchSignal;
 import org.onosproject.net.OchSignalType;
+import org.onosproject.net.OduCltPort;
 import org.onosproject.net.OduSignalId;
 import org.onosproject.net.OduSignalType;
+import org.onosproject.net.OmsPort;
+import org.onosproject.net.OtuPort;
 import org.onosproject.net.OtuSignalType;
 import org.onosproject.net.Port;
 import org.onosproject.net.PortNumber;
@@ -89,8 +93,11 @@ import org.onosproject.net.behaviour.protection.ProtectedTransportEndpointDescri
 import org.onosproject.net.device.DefaultDeviceDescription;
 import org.onosproject.net.device.DefaultPortDescription;
 import org.onosproject.net.device.DefaultPortStatistics;
+import org.onosproject.net.device.OchPortDescription;
+import org.onosproject.net.device.OduCltPortDescription;
+import org.onosproject.net.device.OmsPortDescription;
+import org.onosproject.net.device.OtuPortDescription;
 import org.onosproject.net.device.PortStatistics;
-import org.onosproject.net.domain.DomainIntent;
 import org.onosproject.net.flow.CompletedBatchOperation;
 import org.onosproject.net.flow.DefaultFlowEntry;
 import org.onosproject.net.flow.DefaultFlowRule;
@@ -100,15 +107,13 @@ import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowId;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchEntry;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchEvent;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchRequest;
+import org.onosproject.net.flow.FlowRuleBatchEntry;
+import org.onosproject.net.flow.FlowRuleBatchEvent;
+import org.onosproject.net.flow.FlowRuleBatchOperation;
+import org.onosproject.net.flow.FlowRuleBatchRequest;
 import org.onosproject.net.flow.FlowRuleEvent;
 import org.onosproject.net.flow.FlowRuleExtPayLoad;
-import org.onosproject.net.flow.IndexTableId;
 import org.onosproject.net.flow.StoredFlowEntry;
-import org.onosproject.net.flow.TableId;
 import org.onosproject.net.flow.TableStatisticsEntry;
 import org.onosproject.net.flow.criteria.ArpHaCriterion;
 import org.onosproject.net.flow.criteria.ArpOpCriterion;
@@ -138,7 +143,6 @@ import org.onosproject.net.flow.criteria.OchSignalCriterion;
 import org.onosproject.net.flow.criteria.OchSignalTypeCriterion;
 import org.onosproject.net.flow.criteria.OduSignalIdCriterion;
 import org.onosproject.net.flow.criteria.OduSignalTypeCriterion;
-import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flow.criteria.PortCriterion;
 import org.onosproject.net.flow.criteria.SctpPortCriterion;
 import org.onosproject.net.flow.criteria.TcpPortCriterion;
@@ -153,7 +157,6 @@ import org.onosproject.net.flow.instructions.L1ModificationInstruction;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction;
 import org.onosproject.net.flow.instructions.L3ModificationInstruction;
 import org.onosproject.net.flow.instructions.L4ModificationInstruction;
-import org.onosproject.net.flow.instructions.PiInstruction;
 import org.onosproject.net.flowobjective.DefaultFilteringObjective;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.DefaultNextObjective;
@@ -173,6 +176,8 @@ import org.onosproject.net.intent.IntentOperation;
 import org.onosproject.net.intent.IntentState;
 import org.onosproject.net.intent.Key;
 import org.onosproject.net.intent.LinkCollectionIntent;
+import org.onosproject.net.intent.MplsIntent;
+import org.onosproject.net.intent.MplsPathIntent;
 import org.onosproject.net.intent.MultiPointToSinglePointIntent;
 import org.onosproject.net.intent.OpticalCircuitIntent;
 import org.onosproject.net.intent.OpticalConnectivityIntent;
@@ -186,7 +191,6 @@ import org.onosproject.net.intent.SinglePointToMultiPointIntent;
 import org.onosproject.net.intent.constraint.AnnotationConstraint;
 import org.onosproject.net.intent.constraint.BandwidthConstraint;
 import org.onosproject.net.intent.constraint.BooleanConstraint;
-import org.onosproject.net.intent.constraint.DomainConstraint;
 import org.onosproject.net.intent.constraint.EncapsulationConstraint;
 import org.onosproject.net.intent.constraint.HashedPathSelectionConstraint;
 import org.onosproject.net.intent.constraint.LatencyConstraint;
@@ -200,33 +204,6 @@ import org.onosproject.net.meter.MeterId;
 import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.DefaultPacketRequest;
 import org.onosproject.net.packet.PacketPriority;
-import org.onosproject.net.pi.model.PiMatchType;
-import org.onosproject.net.pi.model.PiPipeconfId;
-import org.onosproject.net.pi.runtime.PiAction;
-import org.onosproject.net.pi.runtime.PiActionGroup;
-import org.onosproject.net.pi.runtime.PiActionGroupId;
-import org.onosproject.net.pi.runtime.PiActionGroupMember;
-import org.onosproject.net.pi.runtime.PiActionGroupMemberId;
-import org.onosproject.net.pi.runtime.PiActionId;
-import org.onosproject.net.pi.runtime.PiActionParam;
-import org.onosproject.net.pi.runtime.PiActionParamId;
-import org.onosproject.net.pi.runtime.PiExactFieldMatch;
-import org.onosproject.net.pi.runtime.PiFieldMatch;
-import org.onosproject.net.pi.runtime.PiActionProfileId;
-import org.onosproject.net.pi.runtime.PiGroupKey;
-import org.onosproject.net.pi.runtime.PiHeaderFieldId;
-import org.onosproject.net.pi.runtime.PiLpmFieldMatch;
-import org.onosproject.net.pi.runtime.PiMatchKey;
-import org.onosproject.net.pi.runtime.PiPacketMetadata;
-import org.onosproject.net.pi.runtime.PiPacketMetadataId;
-import org.onosproject.net.pi.runtime.PiPacketOperation;
-import org.onosproject.net.pi.runtime.PiPipeconfConfig;
-import org.onosproject.net.pi.runtime.PiRangeFieldMatch;
-import org.onosproject.net.pi.runtime.PiTableAction;
-import org.onosproject.net.pi.runtime.PiTableEntry;
-import org.onosproject.net.pi.runtime.PiTableId;
-import org.onosproject.net.pi.runtime.PiTernaryFieldMatch;
-import org.onosproject.net.pi.runtime.PiValidFieldMatch;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.net.region.DefaultRegion;
 import org.onosproject.net.region.Region;
@@ -243,20 +220,17 @@ import org.onosproject.store.Timestamp;
 import org.onosproject.store.primitives.MapUpdate;
 import org.onosproject.store.primitives.TransactionId;
 import org.onosproject.store.service.MapEvent;
-import org.onosproject.store.service.MultimapEvent;
+import org.onosproject.store.service.TransactionLog;
 import org.onosproject.store.service.SetEvent;
 import org.onosproject.store.service.Task;
-import org.onosproject.store.service.TransactionLog;
 import org.onosproject.store.service.Versioned;
 import org.onosproject.store.service.WorkQueueStats;
 import org.onosproject.ui.model.topo.UiTopoLayoutId;
-import org.onosproject.upgrade.Upgrade;
 
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -281,8 +255,7 @@ public final class KryoNamespaces {
             .register(new ImmutableListSerializer(),
                       ImmutableList.class,
                       ImmutableList.of(1).getClass(),
-                      ImmutableList.of(1, 2).getClass(),
-                      ImmutableList.of(1, 2, 3).subList(1, 3).getClass())
+                      ImmutableList.of(1, 2).getClass())
             .register(new ImmutableSetSerializer(),
                       ImmutableSet.class,
                       ImmutableSet.of().getClass(),
@@ -303,7 +276,6 @@ public final class KryoNamespaces {
                       LinkedHashSet.class
             )
             .register(HashMultiset.class)
-            .register(Sets.class)
             .register(Maps.immutableEntry("a", "b").getClass())
             .register(new ArraysAsListSerializer(), Arrays.asList().getClass())
             .register(Collections.singletonList(1).getClass())
@@ -389,8 +361,6 @@ public final class KryoNamespaces {
                     DefaultFlowEntry.class,
                     StoredFlowEntry.class,
                     DefaultFlowRule.class,
-                    TableId.class,
-                    IndexTableId.class,
                     FlowRule.FlowRemoveReason.class,
                     DefaultPacketRequest.class,
                     PacketPriority.class,
@@ -563,22 +533,30 @@ public final class KryoNamespaces {
             .register(Versioned.class)
             .register(MapEvent.class)
             .register(MapEvent.Type.class)
-            .register(MultimapEvent.class)
-            .register(MultimapEvent.Type.class)
             .register(SetEvent.class)
             .register(SetEvent.Type.class)
-            .register(GroupId.class)
+            .register(DefaultGroupId.class)
             .register(Annotations.class)
+            .register(OmsPort.class)
+            .register(OchPort.class)
             .register(OduSignalType.class)
             .register(OchSignalType.class)
             .register(GridType.class)
             .register(ChannelSpacing.class)
+            .register(OduCltPort.class)
             .register(CltSignalType.class)
             .register(OchSignal.class)
             .register(OduSignalId.class)
+            .register(OduCltPortDescription.class)
+            .register(OchPortDescription.class)
+            .register(OmsPortDescription.class)
             .register(TributarySlot.class)
+            .register(OtuPort.class)
             .register(OtuSignalType.class)
+            .register(OtuPortDescription.class)
             .register(
+                    MplsIntent.class,
+                    MplsPathIntent.class,
                     org.onlab.packet.MplsLabel.class,
                     org.onlab.packet.MPLS.class
             )
@@ -591,45 +569,6 @@ public final class KryoNamespaces {
             .register(ProtectionEndpointIntent.class)
             .register(ProtectedTransportIntent.class)
             .register(MarkerResource.class)
-            .register(new BitSetSerializer(), BitSet.class)
-            .register(DomainIntent.class)
-            .register(DomainConstraint.class)
-            .register(
-                    // PI model
-                    PiMatchType.class,
-                    PiPipeconfId.class,
-                    // PI Runtime
-                    PiAction.class,
-                    PiActionGroup.class,
-                    PiActionGroupId.class,
-                    PiActionGroupMember.class,
-                    PiActionGroupMemberId.class,
-                    PiActionId.class,
-                    PiActionParam.class,
-                    PiActionParamId.class,
-                    PiExactFieldMatch.class,
-                    PiFieldMatch.class,
-                    PiGroupKey.class,
-                    PiHeaderFieldId.class,
-                    PiLpmFieldMatch.class,
-                    PiMatchKey.class,
-                    PiPacketMetadata.class,
-                    PiPacketMetadataId.class,
-                    PiPacketOperation.class,
-                    PiPipeconfConfig.class,
-                    PiRangeFieldMatch.class,
-                    PiTableAction.class,
-                    PiTableEntry.class,
-                    PiTableId.class,
-                    PiTernaryFieldMatch.class,
-                    PiValidFieldMatch.class,
-                    PiActionProfileId.class,
-                    // Other
-                    PiCriterion.class,
-                    PiInstruction.class
-            )
-            .register(Upgrade.class)
-            .register(Upgrade.Status.class)
             .build("API");
 
     /**

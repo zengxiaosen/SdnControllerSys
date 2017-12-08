@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,6 @@
 
 package org.onosproject.store.primitives.impl;
 
-import com.google.common.collect.Maps;
-import org.onlab.util.Tools;
-import org.onosproject.store.primitives.MapUpdate;
-import org.onosproject.store.primitives.TransactionId;
-import org.onosproject.store.service.AsyncConsistentMap;
-import org.onosproject.store.service.MapEvent;
-import org.onosproject.store.service.MapEventListener;
-import org.onosproject.store.service.TransactionLog;
-import org.onosproject.store.service.Version;
-import org.onosproject.store.service.Versioned;
-
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -38,6 +27,18 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import org.onlab.util.Tools;
+import org.onosproject.store.primitives.MapUpdate;
+import org.onosproject.store.primitives.TransactionId;
+import org.onosproject.store.service.AsyncConsistentMap;
+import org.onosproject.store.service.MapEvent;
+import org.onosproject.store.service.MapEventListener;
+import org.onosproject.store.service.TransactionLog;
+import org.onosproject.store.service.Version;
+import org.onosproject.store.service.Versioned;
+
+import com.google.common.collect.Maps;
 
 /**
  * An {@code AsyncConsistentMap} that maps its operations to operations on a
@@ -258,13 +259,11 @@ public class TranscodingAsyncConsistentMap<K1, V1, K2, V2> implements AsyncConsi
 
     @Override
     public CompletableFuture<Void> removeListener(MapEventListener<K1, V1> listener) {
-        synchronized (listeners) {
-            InternalBackingMapEventListener backingMapListener = listeners.remove(listener);
-            if (backingMapListener != null) {
-                return backingMap.removeListener(backingMapListener);
-            } else {
-                return CompletableFuture.completedFuture(null);
-            }
+        InternalBackingMapEventListener backingMapListener = listeners.remove(listener);
+        if (backingMapListener != null) {
+            return backingMap.removeListener(backingMapListener);
+        } else {
+            return CompletableFuture.completedFuture(null);
         }
     }
 
@@ -338,9 +337,7 @@ public class TranscodingAsyncConsistentMap<K1, V1, K2, V2> implements AsyncConsi
 
         @Override
         public void event(MapEvent<K2, V2> event) {
-            listener.event(new MapEvent<K1, V1>(
-                    event.type(),
-                    event.name(),
+            listener.event(new MapEvent<K1, V1>(event.name(),
                     keyDecoder.apply(event.key()),
                     event.newValue() != null ? event.newValue().map(valueDecoder) : null,
                     event.oldValue() != null ? event.oldValue().map(valueDecoder) : null));

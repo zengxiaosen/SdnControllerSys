@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,15 +91,6 @@ public interface MeterStore extends Store<MeterEvent, MeterStoreDelegate> {
     Collection<Meter> getAllMeters();
 
     /**
-     * Returns all meters stored in the store for a
-     * precise device.
-     *
-     * @param deviceId the device to get the meter list from
-     * @return a collection of meters
-     */
-    Collection<Meter> getAllMeters(DeviceId deviceId);
-
-    /**
      * Update the store by deleting the failed meter.
      * Notifies the delegate that the meter failed to allow it
      * to nofity the app.
@@ -122,15 +113,5 @@ public interface MeterStore extends Store<MeterEvent, MeterStoreDelegate> {
      * @return the maximum number of meters supported by the device
      */
     long getMaxMeters(MeterFeaturesKey key);
-
-    /**
-     * Returns the first available MeterId from previously removed meter.
-     * This method allows allocating MeterIds below the actual meterIdCounter
-     * value.
-     *
-     * @param deviceId the device id
-     * @return the meter Id or null if none exist
-     */
-    MeterId firstReusableMeterId(DeviceId deviceId);
 
 }

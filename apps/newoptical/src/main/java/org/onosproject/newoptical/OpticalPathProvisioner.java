@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,63 +17,54 @@ package org.onosproject.newoptical;
 
 import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableList;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
-import org.apache.felix.scr.annotations.Modified;
-import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
-import org.onlab.graph.DefaultEdgeWeigher;
-import org.onlab.graph.ScalarWeight;
-import org.onlab.graph.Weight;
 import org.onlab.util.Bandwidth;
 import org.onlab.util.KryoNamespace;
-import org.onlab.util.Tools;
 import org.onosproject.cluster.ClusterService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.event.AbstractListenerManager;
 import org.onosproject.event.ListenerTracker;
+import org.onosproject.net.optical.OchPort;
+import org.onosproject.net.optical.OduCltPort;
+import org.onosproject.newoptical.api.OpticalConnectivityId;
+import org.onosproject.newoptical.api.OpticalPathEvent;
+import org.onosproject.newoptical.api.OpticalPathListener;
+import org.onosproject.newoptical.api.OpticalPathService;
+import org.onosproject.event.AbstractListenerManager;
 import org.onosproject.mastership.MastershipService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Link;
-import org.onosproject.net.LinkKey;
 import org.onosproject.net.Path;
 import org.onosproject.net.Port;
 import org.onosproject.net.config.NetworkConfigService;
-import org.onosproject.net.config.basics.BandwidthCapacity;
-import org.onosproject.net.config.basics.BasicLinkConfig;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.IntentEvent;
 import org.onosproject.net.intent.IntentListener;
 import org.onosproject.net.intent.IntentService;
-import org.onosproject.net.intent.Key;
 import org.onosproject.net.intent.OpticalCircuitIntent;
 import org.onosproject.net.intent.OpticalConnectivityIntent;
 import org.onosproject.net.link.LinkEvent;
 import org.onosproject.net.link.LinkListener;
 import org.onosproject.net.link.LinkService;
-import org.onosproject.net.optical.OchPort;
-import org.onosproject.net.optical.OduCltPort;
+import org.onosproject.net.config.basics.BandwidthCapacity;
 import org.onosproject.net.resource.ContinuousResource;
 import org.onosproject.net.resource.Resource;
 import org.onosproject.net.resource.ResourceAllocation;
 import org.onosproject.net.resource.ResourceService;
 import org.onosproject.net.resource.Resources;
-import org.onosproject.net.topology.LinkWeigher;
+import org.onosproject.net.topology.LinkWeight;
+import org.onosproject.net.topology.PathService;
 import org.onosproject.net.topology.TopologyEdge;
-import org.onosproject.net.topology.TopologyService;
-import org.onosproject.net.topology.TopologyVertex;
-import org.onosproject.newoptical.api.OpticalConnectivityId;
-import org.onosproject.newoptical.api.OpticalPathEvent;
-import org.onosproject.newoptical.api.OpticalPathListener;
-import org.onosproject.newoptical.api.OpticalPathService;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.AtomicCounter;
 import org.onosproject.store.service.ConsistentMap;
@@ -83,23 +74,18 @@ import org.onosproject.store.service.MapEventListener;
 import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.StorageService;
 import org.onosproject.store.service.Versioned;
-import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -107,7 +93,6 @@ import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.onosproject.net.LinkKey.linkKey;
 import static org.onosproject.net.optical.device.OpticalDeviceServiceView.opticalView;
 
 /**
@@ -119,13 +104,7 @@ import static org.onosproject.net.optical.device.OpticalDeviceServiceView.optica
 public class OpticalPathProvisioner
         extends AbstractListenerManager<OpticalPathEvent, OpticalPathListener>
         implements OpticalPathService {
-
     protected static final Logger log = LoggerFactory.getLogger(OpticalPathProvisioner.class);
-
-    /**
-     * Bandwidth representing no bandwidth requirement specified.
-     */
-    private static final Bandwidth NO_BW_REQUIREMENT = Bandwidth.bps(0);
 
     private static final String OPTICAL_CONNECTIVITY_ID_COUNTER = "optical-connectivity-id";
     private static final String LINKPATH_MAP_NAME = "newoptical-linkpath";
@@ -136,7 +115,7 @@ public class OpticalPathProvisioner
     protected IntentService intentService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected TopologyService topologyService;
+    protected PathService pathService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected CoreService coreService;
@@ -162,11 +141,6 @@ public class OpticalPathProvisioner
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ResourceService resourceService;
 
-    private static final String MAX_PATHS = "maxPaths";
-    private static final int DEFAULT_MAX_PATHS = 10;
-    @Property(name = MAX_PATHS, intValue = DEFAULT_MAX_PATHS,
-            label = "Maximum number of paths to consider for path provisioning")
-    private int maxPaths = DEFAULT_MAX_PATHS;
 
     private ApplicationId appId;
 
@@ -176,18 +150,11 @@ public class OpticalPathProvisioner
 
     private InternalStoreListener storeListener = new InternalStoreListener();
 
-    /**
-     * Map from packet-layer link expected to be realized by some optical Intent to
-     * OpticalConnectivity (~=top level intent over multi-layer topology).
-     */
     private ConsistentMap<PacketLinkRealizedByOptical, OpticalConnectivity> linkPathMap;
 
     private ConsistentMap<OpticalConnectivityId, OpticalConnectivity> connectivityMap;
 
-    // FIXME in the long run. This is effectively app's own resource subsystem
-    /**
-     * Set of cross connect link currently used.
-     */
+    // Map of cross connect link and installed path which uses the link
     private DistributedSet<Link> usedCrossConnectLinkSet;
 
     private static final KryoNamespace.Builder LINKPATH_SERIALIZER = KryoNamespace.newBuilder()
@@ -206,7 +173,7 @@ public class OpticalPathProvisioner
             .register(KryoNamespaces.API);
 
     @Activate
-    protected void activate(ComponentContext context) {
+    protected void activate() {
         deviceService = opticalView(deviceService);
         appId = coreService.registerApplication("org.onosproject.newoptical");
 
@@ -239,8 +206,6 @@ public class OpticalPathProvisioner
 
         linkPathMap.addListener(storeListener);
 
-        readComponentConfiguration(context);
-
         log.info("Started");
     }
 
@@ -253,48 +218,6 @@ public class OpticalPathProvisioner
         log.info("Stopped");
     }
 
-    @Modified
-    public void modified(ComponentContext context) {
-        readComponentConfiguration(context);
-    }
-
-    /**
-     * Extracts properties from the component configuration context.
-     *
-     * @param context the component context
-     */
-    private void readComponentConfiguration(ComponentContext context) {
-        Dictionary<?, ?> properties = context.getProperties();
-        maxPaths = Tools.getIntegerProperty(properties, MAX_PATHS, DEFAULT_MAX_PATHS);
-        log.info("Configured. Maximum paths to consider is configured to {}", maxPaths);
-    }
-
-    @Override
-    public Collection<OpticalConnectivity> listConnectivity() {
-        return connectivityMap.values().stream()
-            .map(Versioned::value)
-            .collect(ImmutableList.toImmutableList());
-    }
-
-    @Override
-    public Set<Key> listIntents(OpticalConnectivityId id) {
-        return linkPathMap.entrySet().stream()
-            .filter(ent -> id.equals(ent.getValue().value().id()))
-            .map(Entry::getKey)
-            .map(PacketLinkRealizedByOptical::realizingIntentKey)
-            .collect(Collectors.toSet());
-    }
-
-    /*
-     * Request packet-layer connectivity between specified ports,
-     * over packet-optical multi-layer infrastructure.
-     *
-     * Functionality-wise this is effectively submitting Packet-Optical
-     * multi-layer P2P Intent.
-     *
-     * It computes multi-layer path meeting specified constraint,
-     * and calls setupPath.
-     */
     @Override
     public OpticalConnectivityId setupConnectivity(ConnectPoint ingress, ConnectPoint egress,
                                                    Bandwidth bandwidth, Duration latency) {
@@ -302,40 +225,33 @@ public class OpticalPathProvisioner
         checkNotNull(egress);
         log.info("setupConnectivity({}, {}, {}, {})", ingress, egress, bandwidth, latency);
 
-        Bandwidth bw = (bandwidth == null) ? NO_BW_REQUIREMENT : bandwidth;
+        bandwidth = (bandwidth == null) ? Bandwidth.bps(0) : bandwidth;
 
-        Stream<Path> paths = topologyService.getKShortestPaths(
-                topologyService.currentTopology(),
-                ingress.deviceId(), egress.deviceId(),
+        Set<Path> paths = pathService.getPaths(ingress.deviceId(), egress.deviceId(),
                 new BandwidthLinkWeight(bandwidth));
-
-        // Path service calculates from node to node, we're only interested in port to port
-        Optional<OpticalConnectivityId> id =
-                paths.filter(p -> p.src().equals(ingress) && p.dst().equals(egress))
-                        .limit(maxPaths)
-                        .map(p -> setupPath(p, bw, latency))
-                        .filter(Objects::nonNull)
-                        .findFirst();
-
-        if (id.isPresent()) {
-            log.info("Assigned OpticalConnectivityId: {}", id);
-        } else {
-            log.error("setupConnectivity({}, {}, {}, {}) failed.", ingress, egress, bandwidth, latency);
+        if (paths.isEmpty()) {
+            log.warn("Unable to find multi-layer path.");
+            return null;
         }
 
-        return id.orElse(null);
+        // Search path with available cross connect points
+        for (Path path : paths) {
+            OpticalConnectivityId id = setupPath(path, bandwidth, latency);
+            if (id != null) {
+                log.info("Assigned OpticalConnectivityId: {}", id);
+                return id;
+            }
+        }
+
+        log.info("setupConnectivity({}, {}, {}, {}) failed.", ingress, egress, bandwidth, latency);
+
+        return null;
     }
 
-    /*
-     * Given a multi-layer path,
-     * compute a set of segments which requires
-     * OpticalConnectivity(~=OpticalConnectivityIntent or OpticalCircuitPath)
-     * to provide packet-layer connectivity.
-     */
     @Override
     public OpticalConnectivityId setupPath(Path path, Bandwidth bandwidth, Duration latency) {
         checkNotNull(path);
-        log.debug("setupPath({}, {}, {})", path, bandwidth, latency);
+        log.info("setupPath({}, {}, {})", path, bandwidth, latency);
 
         // map of cross connect points (optical port -> packet port)
         Map<ConnectPoint, ConnectPoint> crossConnectPointMap = new HashMap<>();
@@ -387,10 +303,6 @@ public class OpticalPathProvisioner
 
         // create intents from cross connect points
         List<Intent> intents = createIntents(crossConnectPoints);
-        if (intents.isEmpty()) {
-            log.error("No intents produced from {}", crossConnectPoints);
-            return null;
-        }
 
         // create set of PacketLinkRealizedByOptical
         Set<PacketLinkRealizedByOptical> packetLinks = createPacketLinkSet(crossConnectPoints,
@@ -489,7 +401,7 @@ public class OpticalPathProvisioner
                         .src(src)
                         .dst(dst)
                         .signalType(srcOCPort.signalType())
-                        .bidirectional(false)
+                        .bidirectional(true)
                         .build();
                 intents.add(circuitIntent);
             } else if (srcPort instanceof OchPort && dstPort instanceof OchPort) {
@@ -505,7 +417,7 @@ public class OpticalPathProvisioner
                         .src(src)
                         .dst(dst)
                         .signalType(srcOchPort.signalType())
-                        .bidirectional(false)
+                        .bidirectional(true)
                         .build();
                 intents.add(opticalIntent);
             } else {
@@ -558,7 +470,7 @@ public class OpticalPathProvisioner
     }
 
     /**
-     * Verifies if given device type is NOT in packet layer, i.e., switch or router device.
+     * Verifies if given device type is in packet layer, i.e., switch or router device.
      *
      * @param type device type
      * @return true if in packet layer, false otherwise
@@ -586,12 +498,12 @@ public class OpticalPathProvisioner
     }
 
     /**
-     * Updates bandwidth resource of given connect point to specified value.
+     * Updates bandwidth resource of given connect point.
      *
      * @param cp Connect point
      * @param bandwidth New bandwidth
      */
-    private void setPortBandwidth(ConnectPoint cp, Bandwidth bandwidth) {
+    private void updatePortBandwidth(ConnectPoint cp, Bandwidth bandwidth) {
         log.debug("update Port {} Bandwidth {}", cp, bandwidth);
         BandwidthCapacity bwCapacity = networkConfigService.addConfig(cp, BandwidthCapacity.class);
         bwCapacity.capacity(bandwidth).apply();
@@ -602,11 +514,6 @@ public class OpticalPathProvisioner
      * @param connectivity Optical connectivity
      */
     private void updateBandwidthUsage(OpticalConnectivity connectivity) {
-        if (NO_BW_REQUIREMENT.equals(connectivity.bandwidth())) {
-            // no bandwidth requirement, nothing to allocate.
-            return;
-        }
-
         OpticalConnectivityId connectivityId = connectivity.id();
 
         List<Link> links = connectivity.links();
@@ -635,11 +542,6 @@ public class OpticalPathProvisioner
         if (connectivity.links().isEmpty()) {
             return;
         }
-        if (NO_BW_REQUIREMENT.equals(connectivity.bandwidth())) {
-            // no bandwidth requirement, nothing to release.
-            return;
-        }
-
 
         // release resource only if this node is the master for link head device
         if (mastershipService.isLocalMaster(connectivity.links().get(0).src().deviceId())) {
@@ -655,26 +557,7 @@ public class OpticalPathProvisioner
         }
     }
 
-    private boolean linkDiscoveryEnabled(ConnectPoint cp) {
-        // FIXME should check Device feature and configuration state.
-
-        // short-term hack for ONS'17 time-frame,
-        // only expect OF device to have link discovery.
-        return "of".equals(cp.deviceId().uri().getScheme());
-    }
-
-    /**
-     * Returns true if both connect point support for link discovery & enabled.
-     *
-     * @param cp1 port 1
-     * @param cp2 port 2
-     * @return true if both connect point support for link discovery & enabled.
-     */
-    private boolean linkDiscoveryEnabled(ConnectPoint cp1, ConnectPoint cp2) {
-        return linkDiscoveryEnabled(cp1) && linkDiscoveryEnabled(cp2);
-    }
-
-    private class BandwidthLinkWeight extends DefaultEdgeWeigher<TopologyVertex, TopologyEdge> implements LinkWeigher {
+    private class BandwidthLinkWeight implements LinkWeight {
         private Bandwidth bandwidth = null;
 
         public BandwidthLinkWeight(Bandwidth bandwidth) {
@@ -682,38 +565,41 @@ public class OpticalPathProvisioner
         }
 
         @Override
-        public Weight weight(TopologyEdge edge) {
+        public double weight(TopologyEdge edge) {
             Link l = edge.link();
 
             // Avoid inactive links
             if (l.state() == Link.State.INACTIVE) {
-                log.trace("{} is not active", l);
-                return ScalarWeight.NON_VIABLE_WEIGHT;
+                return -1.0;
             }
 
             // Avoid cross connect links with used ports
             if (isCrossConnectLink(l) && usedCrossConnectLinkSet.contains(l)) {
-                log.trace("Cross connect {} in use", l);
-                return ScalarWeight.NON_VIABLE_WEIGHT;
+                return -1.0;
             }
 
             // Check availability of bandwidth
-            if (bandwidth != null && !NO_BW_REQUIREMENT.equals(bandwidth)) {
+            if (bandwidth != null) {
                 if (hasEnoughBandwidth(l.src()) && hasEnoughBandwidth(l.dst())) {
-                    return new ScalarWeight(1.0);
+                    return 1.0;
                 } else {
-                    log.trace("Not enough bandwidth on {}", l);
-                    return ScalarWeight.NON_VIABLE_WEIGHT;
+                    return -1.0;
                 }
-            // Allow everything else
             } else {
-                return new ScalarWeight(1.0);
+                // TODO needs to differentiate optical and packet?
+                if (l.type() == Link.Type.OPTICAL) {
+                    // Transport links
+                    return 1.0;
+                } else {
+                    // Packet links
+                    return 1.0;
+                }
             }
         }
 
         private boolean hasEnoughBandwidth(ConnectPoint cp) {
             if (cp.elementId() instanceof DeviceId) {
-                Device device = deviceService.getDevice(cp.deviceId());
+                Device device =  deviceService.getDevice(cp.deviceId());
                 Device.Type type = device.type();
 
                 if (isTransportLayer(type)) {
@@ -730,48 +616,34 @@ public class OpticalPathProvisioner
                     // Check if enough amount of bandwidth resource remains
                     ContinuousResource resource = Resources.continuous(cp.deviceId(), cp.port(), Bandwidth.class)
                             .resource(bandwidth.bps());
-                    try {
-                        return resourceService.isAvailable(resource);
-                    } catch (Exception e) {
-                        log.error("Resource service failed checking availability of {}",
-                                resource, e);
-                        throw e;
-                    }
+                    return resourceService.isAvailable(resource);
                 }
             }
             return false;
         }
     }
 
+
     public class InternalIntentListener implements IntentListener {
         @Override
         public void event(IntentEvent event) {
             switch (event.type()) {
                 case INSTALLED:
-                    log.debug("Intent {} installed.", event.subject());
+                    log.info("Intent {} installed.", event.subject());
                     updateCrossConnectLink(event.subject());
                     break;
                 case WITHDRAWN:
-                    log.debug("Intent {} withdrawn.", event.subject());
+                    log.info("Intent {} withdrawn.", event.subject());
                     removeCrossConnectLinks(event.subject());
                     break;
                 case FAILED:
-                    log.debug("Intent {} failed.", event.subject());
-                    // TODO If it was one of it's own optical Intent,
-                    // update link state
-                    // TODO If it was packet P2P Intent, call setupConnectivity
+                    log.info("Intent {} failed.", event.subject());
                     break;
                 default:
                     break;
             }
         }
 
-        // TODO rename "CrossConnectLink"?
-        /**
-         * Update packet-layer link/port state once Intent is installed.
-         *
-         * @param intent which reached installed state
-         */
         private void updateCrossConnectLink(Intent intent) {
             linkPathMap.entrySet().stream()
                     .filter(e -> e.getKey().realizingIntentKey().equals(intent.key()))
@@ -783,17 +655,12 @@ public class OpticalPathProvisioner
                         // reflect modification only if packetSrc is local_
                         if (mastershipService.isLocalMaster(packetSrc.deviceId())) {
                             // Updates bandwidth of packet ports
-                            setPortBandwidth(packetSrc, bw);
-                            setPortBandwidth(packetDst, bw);
+                            updatePortBandwidth(packetSrc, bw);
+                            updatePortBandwidth(packetDst, bw);
 
                             // Updates link status in distributed map
                             linkPathMap.computeIfPresent(e.getKey(), (link, connectivity) ->
                                     e.getValue().value().setLinkEstablished(packetSrc, packetDst, true));
-
-
-                            if (!linkDiscoveryEnabled(packetSrc, packetDst)) {
-                                injectLink(packetSrc, packetDst);
-                            }
                         }
                     });
         }
@@ -827,17 +694,12 @@ public class OpticalPathProvisioner
                         // reflect modification only if packetSrc is local_
                         if (mastershipService.isLocalMaster(packetSrc.deviceId())) {
                             // Updates bandwidth of packet ports
-                            setPortBandwidth(packetSrc, bw);
-                            setPortBandwidth(packetDst, bw);
+                            updatePortBandwidth(packetSrc, bw);
+                            updatePortBandwidth(packetDst, bw);
 
                             // Updates link status in distributed map
                             linkPathMap.computeIfPresent(e.getKey(), (link, connectivity) ->
                                     e.getValue().value().setLinkEstablished(packetSrc, packetDst, false));
-
-
-                            if (!linkDiscoveryEnabled(packetSrc, packetDst)) {
-                                removeInjectedLink(packetSrc, packetDst);
-                            }
                         }
                     });
         }
@@ -848,74 +710,11 @@ public class OpticalPathProvisioner
                     .findAny();
 
             if (!link.isPresent()) {
-                log.warn("Cross connect point {} has no cross connect link to release.", cp);
+                log.warn("Cross connect point {} has no cross connect link.", cp);
                 return;
             }
 
             usedCrossConnectLinkSet.remove(link.get());
-        }
-
-        /**
-         * Injects link between specified packet port.
-         *
-         * @param packetSrc port 1
-         * @param packetDst port 2
-         */
-        private void injectLink(ConnectPoint packetSrc,
-                                ConnectPoint packetDst) {
-            // inject expected link or durable link
-            // if packet device cannot advertise packet link
-            try {
-                // cannot call addConfig.
-                // it will create default BasicLinkConfig,
-                // which will end up advertising DIRECT links and
-                // DIRECT Link type cannot transition from DIRECT to INDIRECT
-                LinkKey lnkKey = linkKey(packetSrc, packetDst);
-                BasicLinkConfig lnkCfg = networkConfigService
-                        .getConfig(lnkKey, BasicLinkConfig.class);
-                if (lnkCfg == null) {
-                    lnkCfg = new BasicLinkConfig(lnkKey);
-                }
-                lnkCfg.isAllowed(true);
-                lnkCfg.isDurable(true);
-                lnkCfg.type(Link.Type.INDIRECT);
-                lnkCfg.isBidirectional(false);
-                // cannot call apply against manually created instance
-                //lnkCfg.apply();
-                networkConfigService.applyConfig(lnkKey,
-                                                 BasicLinkConfig.class,
-                                                 lnkCfg.node());
-
-            } catch (Exception ex) {
-                log.error("Applying BasicLinkConfig failed", ex);
-            }
-        }
-
-        /**
-         * Removes link injected between specified packet port.
-         *
-         * @param packetSrc port 1
-         * @param packetDst port 2
-         */
-        private void removeInjectedLink(ConnectPoint packetSrc,
-                                        ConnectPoint packetDst) {
-            // remove expected link or durable link
-            // if packet device cannot monitor packet link
-
-            try {
-                // hack to mark link off-line
-                BasicLinkConfig lnkCfg = networkConfigService
-                        .getConfig(linkKey(packetSrc, packetDst),
-                                   BasicLinkConfig.class);
-                lnkCfg.isAllowed(false);
-                lnkCfg.apply();
-            } catch (Exception ex) {
-                log.error("Applying BasicLinkConfig failed", ex);
-            }
-
-            networkConfigService
-                .removeConfig(linkKey(packetSrc, packetDst),
-                              BasicLinkConfig.class);
         }
     }
 

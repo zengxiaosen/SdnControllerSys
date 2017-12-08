@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,6 +63,7 @@ import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.link.LinkAdminService;
 import org.onosproject.net.link.LinkService;
 import org.onosproject.net.packet.PacketService;
+import org.onosproject.net.proxyarp.ProxyArpService;
 import org.onosproject.net.statistic.StatisticService;
 import org.onosproject.net.topology.PathService;
 import org.onosproject.net.topology.TopologyService;
@@ -233,6 +234,7 @@ public final class DefaultPolicyBuilder {
 //        permSet.add(new ServicePermission(MeterService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(ResourceService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(PacketService.class.getName(), ServicePermission.GET));
+        permSet.add(new ServicePermission(ProxyArpService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(RegionService.class.getName(), ServicePermission.GET));
 //      permSet.add(new ServicePermission(LinkResourceService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(FlowStatisticService.class.getName(), ServicePermission.GET));
@@ -326,6 +328,11 @@ public final class DefaultPolicyBuilder {
 //        serviceDirectory.put(LINK_EVENT, ImmutableSet.of(
 //                LinkService.class.getName(), LinkResourceService.class.getName(),
 //                LabelResourceService.class.getName()));
+        serviceDirectory.put(PACKET_READ, ImmutableSet.of(
+                PacketService.class.getName(), ProxyArpService.class.getName()));
+        serviceDirectory.put(PACKET_WRITE, ImmutableSet.of(
+                PacketService.class.getName(), ProxyArpService.class.getName(),
+                EdgePortService.class.getName()));
         serviceDirectory.put(PACKET_EVENT, ImmutableSet.of(
                 PacketService.class.getName()));
         serviceDirectory.put(STATISTIC_READ, ImmutableSet.of(

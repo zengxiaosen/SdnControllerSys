@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,56 @@
  */
 package org.onosproject.cluster;
 
+import java.util.Set;
+
+import org.joda.time.DateTime;
+import org.onosproject.event.ListenerService;
+
 /**
- * Service for obtaining information about the individual nodes within the controller cluster.
- * <p>
- * This service's view of the nodes in the cluster is isolated to a single version of the software. During upgrades,
- * when multiple versions of the software are running in the same cluster, users of this service will only be able
- * to see nodes running the same version as the local node. This is useful for limiting communication to nodes running
- * the same version of the software.
+ * Service for obtaining information about the individual nodes within
+ * the controller cluster.
  */
-public interface ClusterService extends MembershipService {
+public interface ClusterService
+    extends ListenerService<ClusterEvent, ClusterEventListener> {
+
+    /**
+     * Returns the local controller node.
+     *
+     * @return local controller node
+     */
+    ControllerNode getLocalNode();
+
+    /**
+     * Returns the set of current cluster members.
+     *
+     * @return set of cluster members
+     */
+    Set<ControllerNode> getNodes();
+
+    /**
+     * Returns the specified controller node.
+     *
+     * @param nodeId controller node identifier
+     * @return controller node
+     */
+    ControllerNode getNode(NodeId nodeId);
+
+    /**
+     * Returns the availability state of the specified controller node. Note
+     * that this does not imply that all the core and application components
+     * have been fully activated; only that the node has joined the cluster.
+     *
+     * @param nodeId controller node identifier
+     * @return availability state
+     */
+    ControllerNode.State getState(NodeId nodeId);
+
+    /**
+     * Returns the system time when the availability state was last updated.
+     *
+     * @param nodeId controller node identifier
+     * @return system time when the availability state was last updated.
+     */
+    DateTime getLastUpdated(NodeId nodeId);
+
 }

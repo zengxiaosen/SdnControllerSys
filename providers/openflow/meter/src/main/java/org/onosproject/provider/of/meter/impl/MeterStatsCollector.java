@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
 
 package org.onosproject.provider.of.meter.impl;
 
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timeout;
+import org.jboss.netty.util.TimerTask;
 import org.onlab.util.Timer;
 import org.onosproject.openflow.controller.OpenFlowSwitch;
 import org.onosproject.openflow.controller.RoleState;
 import org.projectfloodlight.openflow.protocol.OFMeterStatsRequest;
 import org.slf4j.Logger;
-
-import io.netty.util.Timeout;
-import io.netty.util.TimerTask;
 
 import java.util.concurrent.TimeUnit;
 
@@ -34,6 +34,7 @@ import static org.slf4j.LoggerFactory.getLogger;
  */
 public class MeterStatsCollector implements TimerTask {
 
+    private final HashedWheelTimer timer = Timer.getTimer();
     private final OpenFlowSwitch sw;
     private final Logger log = getLogger(getClass());
     private final int refreshInterval;
@@ -62,17 +63,17 @@ public class MeterStatsCollector implements TimerTask {
 
         log.trace("Collecting stats for {}", sw.getStringId());
 
-        sendMeterStatisticRequest();
+        sendMeterStatistic();
 
         if (!this.stopTimer) {
             log.trace("Scheduling stats collection in {} seconds for {}",
                     this.refreshInterval, this.sw.getStringId());
-            timeout.timer().newTimeout(this, refreshInterval,
+            timeout.getTimer().newTimeout(this, refreshInterval,
                     TimeUnit.SECONDS);
         }
     }
 
-    public void sendMeterStatisticRequest() {
+    private void sendMeterStatistic() {
         if (log.isTraceEnabled()) {
             log.trace("sendMeterStatistics {}:{}", sw.getStringId(), sw.getRole());
         }
@@ -93,7 +94,7 @@ public class MeterStatsCollector implements TimerTask {
      */
     public void start() {
         log.info("Starting Meter Stats collection thread for {}", sw.getStringId());
-        timeout = Timer.newTimeout(this, 1, TimeUnit.SECONDS);
+        timeout = timer.newTimeout(this, 1, TimeUnit.SECONDS);
     }
 
     /**

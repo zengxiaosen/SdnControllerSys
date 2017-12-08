@@ -1,5 +1,5 @@
 /**
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package org.onosproject.tetopology.management;
 
-import static org.onosproject.tetopology.management.api.OptimizationType.NOT_OPTIMIZED;
 import static org.onosproject.tetopology.management.api.TeTopologyEvent.Type.NETWORK_ADDED;
 import static org.onosproject.tetopology.management.api.TeTopologyEvent.Type.NETWORK_REMOVED;
 import static org.onosproject.tetopology.management.api.TeTopologyEvent.Type.TE_TOPOLOGY_ADDED;
@@ -298,7 +297,6 @@ public class SimpleTeTopologyStore
         }
         TeTopologyId topologyId = null;
         DeviceId ownerId = null;
-        OptimizationType opt = NOT_OPTIMIZED;
         if (curNetwork.teTopologyKey() != null
                 && teTopology(curNetwork.teTopologyKey()) != null) {
             topologyId = new TeTopologyId(curNetwork.teTopologyKey()
@@ -306,12 +304,11 @@ public class SimpleTeTopologyStore
                                           teTopology(curNetwork.teTopologyKey())
                                                   .teTopologyIdStringValue());
             ownerId = teTopology(curNetwork.teTopologyKey()).ownerId();
-            opt = teTopologyMap.get(curNetwork.teTopologyKey()).topologyData()
-                    .optimization();
+
         }
         return new DefaultNetwork(networkId, supportingNetworkIds, nodes, links,
                                   topologyId, curNetwork.serverProvided(),
-                                  ownerId, opt);
+                                  ownerId);
     }
 
     @Override
@@ -411,8 +408,9 @@ public class SimpleTeTopologyStore
                 // Hard rule for now
                 flags.set(TeTopology.BIT_CUSTOMIZED);
             }
-            CommonTopologyData common = new CommonTopologyData(network.networkId(), NOT_OPTIMIZED,
-                                                               flags, network.ownerId());
+            CommonTopologyData common = new CommonTopologyData(network
+                    .networkId(), OptimizationType.NOT_OPTIMIZED, flags, network
+                            .ownerId());
             intTopo.setTopologydata(common);
             teTopologyMap.put(topoKey, intTopo);
             // Assume new topology
@@ -426,7 +424,8 @@ public class SimpleTeTopologyStore
         networkMap.put(network.networkId(), newNetwork);
         // Assume new network
         TeTopologyEvent topologyEvent = new TeTopologyEvent(NETWORK_ADDED,
-                                                            network(network.networkId()));
+                                                            network(network
+                                                                    .networkId()));
         notifyDelegate(topologyEvent);
     }
 
@@ -441,8 +440,7 @@ public class SimpleTeTopologyStore
                                                                                null,
                                                                                null,
                                                                                false,
-                                                                               null,
-                                                                               NOT_OPTIMIZED));
+                                                                               null));
         notifyDelegate(topologyEvent);
         if (network != null && network.teTopologyKey() != null) {
             removeNetworkMapEntrys(network, false);

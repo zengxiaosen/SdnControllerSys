@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import org.joda.time.DateTime;
 import org.onlab.packet.IpAddress;
 
 import com.google.common.collect.ImmutableSet;
-import org.onosproject.core.Version;
 
 /**
  * Test adapter for the cluster service.
@@ -47,11 +46,6 @@ public class ClusterServiceAdapter implements ClusterService {
 
     @Override
     public ControllerNode.State getState(NodeId nodeId) {
-        return null;
-    }
-
-    @Override
-    public Version getVersion(NodeId nodeId) {
         return null;
     }
 

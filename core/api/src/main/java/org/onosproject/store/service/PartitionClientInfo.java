@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,11 +30,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class PartitionClientInfo {
     private final PartitionId partitionId;
+    private final Status status;
     private final Collection<NodeId> servers;
+    private final long sessionId;
 
-    public PartitionClientInfo(PartitionId partitionId, Collection<NodeId> servers) {
+    public PartitionClientInfo(PartitionId partitionId, Collection<NodeId> servers, long sessionId, Status status) {
         this.partitionId = checkNotNull(partitionId);
         this.servers = ImmutableList.copyOf(checkNotNull(servers));
+        this.sessionId = sessionId;
+        this.status = checkNotNull(status);
     }
 
     /**
@@ -58,20 +62,16 @@ public class PartitionClientInfo {
     /**
      * Return the sessionId for the partition client.
      * @return session id
-     * @deprecated in Loon release (1.11.0)
      */
-    @Deprecated
     public long sessionId() {
-        return 0;
+        return sessionId;
     }
 
     /**
      * Returns the current status for the client session.
      * @return status
-     * @deprecated in Loon release (1.11.0)
      */
-    @Deprecated
     public Status status() {
-        return null;
+        return status;
     }
 }

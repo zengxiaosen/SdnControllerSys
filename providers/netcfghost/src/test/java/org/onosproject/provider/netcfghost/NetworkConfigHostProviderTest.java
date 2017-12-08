@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.onosproject.provider.netcfghost;
 
-import com.google.common.collect.Sets;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.packet.IpAddress;
@@ -50,7 +49,7 @@ public class NetworkConfigHostProviderTest {
     private VlanId vlan = VlanId.vlanId(VlanId.UNTAGGED);
     private DeviceId deviceId = DeviceId.deviceId("of:0000000000000001");
     private PortNumber port = PortNumber.portNumber(5);
-    private Set<HostLocation> locations = Sets.newHashSet(new HostLocation(deviceId, port, 100));
+    private HostLocation hloc = new HostLocation(deviceId, port, 100);
     private Set<IpAddress> ips = new HashSet<>();
     private HostId hostId = HostId.hostId(mac, vlan);
     private HostDescription hostDescription;
@@ -62,12 +61,12 @@ public class NetworkConfigHostProviderTest {
         // Initialize test variables
         ips.add(IpAddress.valueOf("10.0.0.1"));
         ips.add(IpAddress.valueOf("192.168.0.1"));
-        hostDescription = new DefaultHostDescription(mac, vlan, locations, ips, true);
+        hostDescription = new DefaultHostDescription(mac, vlan, hloc, ips);
     }
 
     @Test
     public void testAddHost() throws Exception {
-        provider.addHost(mac, vlan, locations, ips);
+        provider.addHost(mac, vlan, hloc, ips);
         assertThat(providerService.hostId, is(hostId));
         assertThat(providerService.hostDescription, is(hostDescription));
         assertThat(providerService.event, is("hostDetected"));
@@ -76,7 +75,7 @@ public class NetworkConfigHostProviderTest {
 
     @Test
     public void testUpdateHost() throws Exception {
-        provider.updateHost(mac, vlan, locations, ips);
+        provider.updateHost(mac, vlan, hloc, ips);
         assertThat(providerService.hostId, is(hostId));
         assertThat(providerService.hostDescription, is(hostDescription));
         assertThat(providerService.event, is("hostDetected"));
@@ -121,12 +120,7 @@ public class NetworkConfigHostProviderTest {
 
         @Override
         public void removeIpFromHost(HostId hostId, IpAddress ipAddress) {
-
-        }
-
-        @Override
-        public void removeLocationFromHost(HostId hostId, HostLocation location) {
-
+            // Note: This method is never used.
         }
 
         public void clear() {

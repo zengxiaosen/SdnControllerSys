@@ -1,13 +1,20 @@
-BUNDLES = [
-    '//apps/openstacknode/api:onos-apps-openstacknode-api',
-    '//apps/openstacknode/app:onos-apps-openstacknode-app',
+COMPILE_DEPS = [
+    '//lib:CORE_DEPS',
+    '//lib:org.apache.karaf.shell.console',
+    '//cli:onos-cli',
+    '//protocols/ovsdb/api:onos-protocols-ovsdb-api',
+    '//protocols/ovsdb/rfc:onos-protocols-ovsdb-rfc',
+    '//core/store/serializers:onos-core-serializers',
 ]
 
+osgi_jar_with_tests (
+    deps = COMPILE_DEPS,
+)
+
 onos_app (
-    title = 'OpenStack Node Bootstrap',
+    title = 'OpenStack Node Bootstrap App',
     category = 'Utility',
     url = 'http://onosproject.org',
-    included_bundles = BUNDLES,
     description = 'SONA Openstack Node Bootstrap Application.',
     required_apps = [ 'org.onosproject.ovsdb-base', 'org.onosproject.drivers.ovsdb' ]
 )

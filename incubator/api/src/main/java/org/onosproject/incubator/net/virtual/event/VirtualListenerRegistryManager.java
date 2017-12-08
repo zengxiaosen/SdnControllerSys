@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,10 +72,8 @@ public final class VirtualListenerRegistryManager
 
         ListenerRegistry listenerRegistry =
                 listenerMapByNetwork.get(networkId).get(originalEvent.getClass());
-        if (listenerRegistry != null) {
-            listenerRegistry.process(originalEvent);
-            lastStart = listenerRegistry;
-        }
+        listenerRegistry.process(originalEvent);
+        lastStart = listenerRegistry;
     }
 
     @Override

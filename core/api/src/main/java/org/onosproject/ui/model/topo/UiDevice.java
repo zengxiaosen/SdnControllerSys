@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Foundation
+ *  Copyright 2016-present Open Networking Laboratory
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,17 +21,13 @@ import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.region.RegionId;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 /**
  * Represents a device.
  */
 public class UiDevice extends UiNode {
 
-    private static final String DEVICE_CANNOT_BE_NULL = "Device cannot be null";
-
     private final UiTopology topology;
-    private final DeviceId deviceId;
+    private final Device device;
 
     private RegionId regionId;
 
@@ -42,9 +38,8 @@ public class UiDevice extends UiNode {
      * @param device   backing device
      */
     public UiDevice(UiTopology topology, Device device) {
-        checkNotNull(device, DEVICE_CANNOT_BE_NULL);
         this.topology = topology;
-        this.deviceId = device.id();
+        this.device = device;
     }
 
     /**
@@ -70,7 +65,7 @@ public class UiDevice extends UiNode {
      * @return device ID
      */
     public DeviceId id() {
-        return deviceId;
+        return device.id();
     }
 
     @Override
@@ -84,7 +79,7 @@ public class UiDevice extends UiNode {
      * @return the backing device instance
      */
     public Device backingDevice() {
-        return topology.services.device().getDevice(deviceId);
+        return device;
     }
 
     /**
@@ -112,7 +107,6 @@ public class UiDevice extends UiNode {
      * @return the device type
      */
     public String type() {
-        Device device = backingDevice();
-        return device == null ? null : device.type().toString().toLowerCase();
+        return device.type().toString().toLowerCase();
     }
 }

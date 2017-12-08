@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Modified;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
-import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.ICMP;
 import org.onlab.packet.ICMP6;
@@ -49,6 +49,7 @@ import org.onosproject.net.HostId;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowEntry;
@@ -64,33 +65,32 @@ import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.host.HostService;
+import org.onosproject.net.intent.OpticalPathIntent;
 import org.onosproject.net.link.LinkEvent;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
 import org.onosproject.net.packet.PacketPriority;
 import org.onosproject.net.packet.PacketProcessor;
 import org.onosproject.net.packet.PacketService;
+import org.onosproject.net.statistic.FlowStatisticService;
+import org.onosproject.net.statistic.StatisticService;
+import org.onosproject.net.statistic.SummaryFlowEntryWithLoad;
 import org.onosproject.net.topology.TopologyEvent;
 import org.onosproject.net.topology.TopologyListener;
 import org.onosproject.net.topology.TopologyService;
+import org.onosproject.store.service.StorageService;
+import org.osgi.service.component.ComponentContext;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.EventuallyConsistentMap;
-import org.onosproject.store.service.MultiValuedTimestamp;
-import org.onosproject.store.service.StorageService;
 import org.onosproject.store.service.WallClockTimestamp;
-import org.osgi.service.component.ComponentContext;
+import org.onosproject.store.service.MultiValuedTimestamp;
+import org.osgi.service.jdbc.DataSourceFactory;
 import org.slf4j.Logger;
 
-import java.util.Dictionary;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.util.*;
 
-import static java.util.concurrent.Executors.newSingleThreadExecutor;
-import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
@@ -128,6 +128,16 @@ public class ReactiveForwarding {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected StorageService storageService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected FlowStatisticService flowStatisticService;
+
+//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+//    protected org.onosproject.incubator.net.PortStatisticsService portStatisticsService;
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected StatisticService statisticService;
+
+
 
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
 
@@ -182,6 +192,8 @@ public class ReactiveForwarding {
             label = "Enable matching IPv6 FlowLabel; default is false")
     private boolean matchIpv6FlowLabel = false;
 
+
+
     @Property(name = "matchTcpUdpPorts", boolValue = false,
             label = "Enable matching TCP/UDP ports; default is false")
     private boolean matchTcpUdpPorts = false;
@@ -202,8 +214,6 @@ public class ReactiveForwarding {
 
     private final TopologyListener topologyListener = new InternalTopologyListener();
 
-    private ExecutorService blackHoleExecutor;
-
 
     @Activate
     public void activate(ComponentContext context) {
@@ -218,13 +228,9 @@ public class ReactiveForwarding {
                         MultiValuedTimestamp<>(new WallClockTimestamp(), System.nanoTime()))
                 .build();
 
-        blackHoleExecutor = newSingleThreadExecutor(groupedThreads("onos/app/fwd",
-                                                                   "black-hole-fixer",
-                                                                   log));
-
         cfgService.registerProperties(getClass());
         appId = coreService.registerApplication("org.onosproject.fwd");
-
+        //负责数据包在特定路径上转发的数据包处理器
         packetService.addProcessor(processor, PacketProcessor.director(2));
         topologyService.addListener(topologyListener);
         readComponentConfiguration(context);
@@ -240,8 +246,6 @@ public class ReactiveForwarding {
         flowRuleService.removeFlowRulesById(appId);
         packetService.removeProcessor(processor);
         topologyService.removeListener(topologyListener);
-        blackHoleExecutor.shutdown();
-        blackHoleExecutor = null;
         processor = null;
         log.info("Stopped");
     }
@@ -446,9 +450,10 @@ public class ReactiveForwarding {
     private class ReactivePacketProcessor implements PacketProcessor {
 
         @Override
-        public void process(PacketContext context) {
+        public synchronized void process(PacketContext context) {
             // Stop processing if the packet has been handled, since we
             // can't do any more to it.
+
 
             if (context.isHandled()) {
                 return;
@@ -478,10 +483,12 @@ public class ReactiveForwarding {
                 return;
             }
 
+            HostId id_src = HostId.hostId(macAddress);
+
             HostId id = HostId.hostId(ethPkt.getDestinationMAC());
 
-            // Do not process LLDP MAC address in any way.
-            if (id.mac().isLldp()) {
+            // Do not process link-local addresses in any way.
+            if (id.mac().isLinkLocal()) {
                 droppedPacket(macMetrics);
                 return;
             }
@@ -492,7 +499,7 @@ public class ReactiveForwarding {
                     return;
                 }
             }
-
+            Host src = hostService.getHost(id_src);
             // Do we know who this is for? If not, flood and bail.
             Host dst = hostService.getHost(id);
             if (dst == null) {
@@ -502,19 +509,64 @@ public class ReactiveForwarding {
 
             // Are we on an edge switch that our destination is on? If so,
             // simply forward out to the destination and bail.
+
+            log.info("---------------------------　一次选路信息　------------------------");
+            log.info("源host:"+ id_src.mac().toString());
+            log.info("目的host:"+ id.mac().toString());
+
+
+            // 从同一个交换机进去和出去
             if (pkt.receivedFrom().deviceId().equals(dst.location().deviceId())) {
+
                 if (!context.inPacket().receivedFrom().port().equals(dst.location().port())) {
+
+                    //log.info("case1.............................");
                     installRule(context, dst.location().port(), macMetrics);
                 }
                 return;
             }
 
+
+
+            //log.info("case2.............................");
+//            log.info("源host对应的源switch是："+src.location().deviceId().toString());
+//            log.info("目的host对应的目的switch是："+dst.location().deviceId().toString());
+
+
+            /*
+            注意：这里的src.location().deviceId()是边缘交换机，但是和Dijkstra的getPaths里面的src交换机地址不同
+            因为getPaths的src交换机指的是此时发出packetIn的交换机
+             */
+
             // Otherwise, get a set of paths that lead from here to the
             // destination edge switch.
-            Set<Path> paths =
-                    topologyService.getPaths(topologyService.currentTopology(),
-                                             pkt.receivedFrom().deviceId(),
-                                             dst.location().deviceId());
+            // 保留了dijkstra，要用的话请把一下注释删掉用
+
+
+
+                        Set<Path> paths =
+                                topologyService.getPaths(topologyService.currentTopology(),
+                                                         pkt.receivedFrom().deviceId(),
+                                                         dst.location().deviceId());
+
+
+            // 搭建了胖树拓扑
+//            Set<Path> paths =
+//                    topologyService.getPaths1(topologyService.currentTopology(),
+//                            pkt.receivedFrom().deviceId(),
+//                            dst.location().deviceId(),
+//                            src.location().deviceId());
+
+
+
+            //flowStatisticService.loadSummary(null);
+
+//            Set<Path> ChoicedPaths = myUpdatePaths(paths, pkt.receivedFrom().deviceId(),
+//                    dst.location().deviceId(),
+//                    src.location().deviceId());
+
+            // 在这里看下是否可以加入带宽等信息
+
             if (paths.isEmpty()) {
                 // If there are no paths, flood and bail.
                 flood(context, macMetrics);
@@ -523,6 +575,8 @@ public class ReactiveForwarding {
 
             // Otherwise, pick a path that does not lead back to where we
             // came from; if no such path, flood and bail.
+            // 原本第一个参数是paths
+            //Path path = pickForwardPathIfPossible(ChoicedPaths, pkt.receivedFrom().port());
             Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
             if (path == null) {
                 log.warn("Don't know where to go from here {} for {} -> {}",
@@ -533,6 +587,132 @@ public class ReactiveForwarding {
 
             // Otherwise forward and be done with it.
             installRule(context, path.src().port(), macMetrics);
+        }
+
+        private synchronized Set<Path> myUpdatePaths(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1) {
+            //flowStatisticService.loadSummaryPortInternal()
+            Set<Path> result = new HashSet<>();
+            Map<Integer, Path> indexPath = new LinkedHashMap<>();
+            int i=0;
+            int max_index = 0;
+            long max_rate = 0;
+
+            String sql = null;
+            DBHelper db1 = null;
+            ResultSet ret = null;
+
+
+            sql = "select * from Student";//SQL语句
+            db1 = new DBHelper(sql);//创建DBHelper对象
+            for(int kk=0; kk< 50; kk++){
+                log.info("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+            }
+            try {
+                ret = db1.pst.executeQuery();//执行语句，得到结果集
+                while (ret.next()) {
+                    String uid = ret.getString(1);
+                    String ufname = ret.getString(2);
+                    String no = ret.getString(3);
+
+                    log.info("kk" + uid + "\t" + ufname + "\t" + no + "\t"  );
+                }//显示数据
+                ret.close();
+                db1.close();//关闭连接
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            for(Path path : paths){
+                int j=0;
+                indexPath.put(i, path);
+
+
+
+
+                for(Link link : path.links()){
+
+
+
+
+
+                    log.info("统计信息=====对于path " + i + " 的第 " + j + "条link的源节点： ");
+                    SummaryFlowEntryWithLoad summaryFlowEntryWithLoad = flowStatisticService.loadSummaryPortInternal(link.src());
+                    //long rate = portStatisticsService.load(link.src()).rate();
+                    long rate = statisticService.load(link.src()).rate();
+                    long latest = statisticService.load(link.src()).latest();
+                    long epochtime = statisticService.load(link.src()).time();
+                    long pr = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsReceived();
+                    long ps = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsSent();
+                    long rx_dropped = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
+                    long tx_dropped = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
+                    log.info("packet_received: " + pr);
+                    log.info("packet_sended: " + ps);
+                    log.info("rx_dropped: " + rx_dropped);
+                    log.info("tx_dropped: " + tx_dropped);
+                    log.info("这个端点的流速rate: " + rate);
+                    log.info("这个端点的latest: " + latest);
+                    log.info("这个端点的epochtime: " + epochtime);
+                    double pk_loss = 0;
+                    if((pr+ps) != 0){
+                        pk_loss = (double)(rx_dropped+tx_dropped)/(pr+ps);
+                    }
+                    log.info("源节点丢包率： " + pk_loss);
+                    log.info("TotalLoad: " + summaryFlowEntryWithLoad.totalLoad().rate());
+
+
+
+
+
+
+
+                    log.info("统计信息=====对于path " + i + " 的第 " + j + "条link的目的节点： ");
+                    SummaryFlowEntryWithLoad summaryFlowEntryWithLoad1 = flowStatisticService.loadSummaryPortInternal(link.dst());
+                    //long rate = portStatisticsService.load(link.src()).rate();
+                    long rate1 = statisticService.load(link.dst()).rate();
+                    long latest1 = statisticService.load(link.dst()).latest();
+                    long epochtime1 = statisticService.load(link.dst()).time();
+                    long pr1 = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
+                    long ps1 = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
+                    long rx_dropped1 = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
+                    //Returns the number of packets dropped by TX.
+                    long tx_dropped1 = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
+                    log.info("packet_received: " + pr1);
+                    log.info("packet_sended: " + ps1);
+                    log.info("rx_dropped: " + rx_dropped1);
+                    log.info("tx_dropped: " + tx_dropped1);
+                    log.info("这个端点的流速rate: " + rate1);
+                    log.info("这个端点的latest: " + latest1);
+                    log.info("这个端点的epochtime: " + epochtime1);
+                    double pk_loss1 = 0;
+                    if((pr+ps) != 0){
+                        pk_loss1 = (double)(rx_dropped1+tx_dropped1)/(pr1+ps1);
+                    }
+                    log.info("目的节点节点丢包率： " + pk_loss1);
+
+
+
+                    //这里可以适配不同的策略
+                    //先用path中最大rate那个link代表path的权重吧
+//                    long maxPathRate = statisticService.load(statisticService.max(path)).rate();
+//
+//                    if(maxPathRate >= max_rate){
+//                        max_rate = maxPathRate;
+//                        max_index = i;
+//                    }
+
+
+
+
+
+
+                    j++;
+                }
+                i++;
+            }
+
+            result.add(indexPath.get(0));
+            return result;
+
         }
 
     }
@@ -550,13 +730,16 @@ public class ReactiveForwarding {
 
     // Selects a path from the given set that does not lead back to the
     // specified port if possible.
+    // 这里选很明显用了贪心
     private Path pickForwardPathIfPossible(Set<Path> paths, PortNumber notToPort) {
+        Path lastPath = null;
         for (Path path : paths) {
+            lastPath = path;
             if (!path.src().port().equals(notToPort)) {
                 return path;
             }
         }
-        return null;
+        return lastPath;
     }
 
     // Floods the specified packet if permissible.
@@ -731,8 +914,8 @@ public class ReactiveForwarding {
                 reasons.forEach(re -> {
                     if (re instanceof LinkEvent) {
                         LinkEvent le = (LinkEvent) re;
-                        if (le.type() == LinkEvent.Type.LINK_REMOVED && blackHoleExecutor != null) {
-                            blackHoleExecutor.submit(() -> fixBlackhole(le.subject().src()));
+                        if (le.type() == LinkEvent.Type.LINK_REMOVED) {
+                            fixBlackhole(le.subject().src());
                         }
                     }
                 });
@@ -753,7 +936,7 @@ public class ReactiveForwarding {
             if (srcHost != null && dstHost != null) {
                 DeviceId srcId = srcHost.location().deviceId();
                 DeviceId dstId = dstHost.location().deviceId();
-                log.trace("SRC ID is {}, DST ID is {}", srcId, dstId);
+                log.trace("SRC ID is " + srcId + ", DST ID is " + dstId);
 
                 cleanFlowRules(sd, egress.deviceId());
 
@@ -797,8 +980,8 @@ public class ReactiveForwarding {
 
     // Removes flow rules off specified device with specific SrcDstPair
     private void cleanFlowRules(SrcDstPair pair, DeviceId id) {
-        log.trace("Searching for flow rules to remove from: {}", id);
-        log.trace("Removing flows w/ SRC={}, DST={}", pair.src, pair.dst);
+        log.trace("Searching for flow rules to remove from: " + id);
+        log.trace("Removing flows w/ SRC=" + pair.src + ", DST=" + pair.dst);
         for (FlowEntry r : flowRuleService.getFlowEntries(id)) {
             boolean matchesSrc = false, matchesDst = false;
             for (Instruction i : r.treatment().allInstructions()) {
@@ -818,7 +1001,7 @@ public class ReactiveForwarding {
                 }
             }
             if (matchesDst && matchesSrc) {
-                log.trace("Removed flow rule from device: {}", id);
+                log.trace("Removed flow rule from device: " + id);
                 flowRuleService.removeFlowRules((FlowRule) r);
             }
         }

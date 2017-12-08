@@ -8,7 +8,6 @@ TEST_DEPS = [
     '//lib:TEST_ADAPTERS',
     '//incubator/api:onos-incubator-api-tests',
     '//apps/routing-api:onos-apps-routing-api-tests',
-    '//utils/osgi:onlab-osgi-tests',
 ]
 
 osgi_jar_with_tests (
@@ -24,7 +23,7 @@ BUNDLES = [
 
 onos_app (
     app_name = 'org.onosproject.cpr',
-    title = 'Control Plane Redirect',
+    title = 'Control plane redirect',
     category = 'Traffic Steering',
     url = 'http://onosproject.org',
     description = 'Redirects routing control traffic to a control plane',

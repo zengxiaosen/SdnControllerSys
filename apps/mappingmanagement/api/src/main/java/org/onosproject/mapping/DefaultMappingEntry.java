@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 /**
  * Default implementation of MappingEntry.
  */
-public class DefaultMappingEntry extends DefaultMapping implements StoredMappingEntry {
+public class DefaultMappingEntry extends DefaultMapping implements MappingEntry {
 
     private static final Logger log = getLogger(DefaultMappingEntry.class);
 
@@ -40,15 +40,6 @@ public class DefaultMappingEntry extends DefaultMapping implements StoredMapping
         this.state = state;
     }
 
-    /**
-     * Creates a mapping entry specified with the mapping.
-     *
-     * @param mapping mapping
-     */
-    public DefaultMappingEntry(Mapping mapping) {
-        this(mapping, MappingEntryState.PENDING_ADD);
-    }
-
     @Override
     public MappingEntryState state() {
         return state;
@@ -60,10 +51,5 @@ public class DefaultMappingEntry extends DefaultMapping implements StoredMapping
                 .add("mapping", super.toString())
                 .add("state", state)
                 .toString();
-    }
-
-    @Override
-    public void setState(MappingEntryState newState) {
-        this.state = newState;
     }
 }

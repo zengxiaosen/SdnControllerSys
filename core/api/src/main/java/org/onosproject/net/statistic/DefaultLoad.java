@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,8 @@ public class DefaultLoad implements Load {
 
     /**
      * Indicates the flow statistics poll interval in seconds.
+     流量统计轮询时间间隔，单位为秒。
+
      */
     private static long pollInterval = 10; // same as IMMEDIATE and SHORT flow live type
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,28 +26,26 @@
     var Panel, gs, wss, flash, ls;
 
     // Internal State
-    var summaryPanel, summaryData, detailsPanel;
+    var summaryPanel, summaryData;
 
     // configuration
     var id = 'topo2-p-summary',
-        className = 'topo2-p',
+        className = 'topo-p',
         panelOpts = {
             show: true,
-            width: 260, // summary and detail panel width
+            width: 260 // summary and detail panel width
         },
         handlerMap = {
-            showSummary: handleSummaryData,
+            showSummary: handleSummaryData
         };
 
-    function init(_detailsPanel_) {
-
-        detailsPanel = _detailsPanel_;
+    function init() {
 
         bindHandlers();
         wss.sendEvent('requestSummary');
 
         var options = angular.extend({}, panelOpts, {
-            class: className,
+            class: className
         });
 
         summaryPanel = new Panel(id, options);
@@ -55,8 +53,6 @@
     }
 
     function render() {
-        var endedWithSeparator;
-
         summaryPanel.emptyRegions();
 
         var svg = summaryPanel.appendToHeader('div')
@@ -68,8 +64,7 @@
 
         title.text(summaryData.title);
         gs.addGlyph(svg, 'bird', 24, 0, [1, 1]);
-        endedWithSeparator = ls.listProps(tbody, summaryData);
-        // TODO : review whether we need to use/store end-with-sep state
+        ls.listProps(tbody, summaryData);
     }
 
     function handleSummaryData(data) {
@@ -81,32 +76,12 @@
         wss.bindHandlers(handlerMap);
     }
 
-    function hide() {
-        summaryPanel.el.hide(detailsPanel.getInstance().up);
-    }
-
-    function show() {
-
-        var _show = function () {
-            summaryPanel.el.show();
-        };
-
-        var summaryHeight = summaryPanel.el.bbox().height;
-        if (detailsPanel.isVisible()) {
-            detailsPanel.getInstance().down(summaryHeight, _show);
-        } else {
-            _show();
-        }
-    }
-
-
     function toggle() {
-        var on = summaryPanel.isVisible(),
-            verb = on ? 'Hide' : 'Show';
+        var on = summaryPanel.el.toggle(),
+            verb = on ? 'Show' : 'Hide';
 
         flash.flash(verb + ' Summary Panel');
         wss.sendEvent(on ? 'requestSummary' : 'cancelSummary');
-        on ? hide(): show();
     }
 
     function destroy() {
@@ -130,10 +105,9 @@
                 init: init,
                 toggle: toggle,
                 destroy: destroy,
-                isVisible: function () { return summaryPanel.isVisible(); },
-                getInstance: function () { return summaryPanel; },
+                isVisible: function () { return summaryPanel.isVisible(); }
             };
-        },
+        }
     ]);
 
 })();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package org.onosproject.utils;
 import org.onosproject.cluster.ControllerNode;
 import org.onosproject.core.Application;
 import org.onosproject.core.ApplicationId;
-import org.onosproject.net.intf.Interface;
+import org.onosproject.incubator.net.intf.Interface;
 import org.onosproject.incubator.net.virtual.TenantId;
 import org.onosproject.incubator.net.virtual.VirtualDevice;
 import org.onosproject.incubator.net.virtual.VirtualNetwork;
@@ -118,10 +118,7 @@ public final class Comparators {
             (t1, t2) -> t1.id().compareTo(t2.id());
 
     public static final Comparator<VirtualNetwork> VIRTUAL_NETWORK_COMPARATOR =
-            (v1, v2) -> {
-                int compareId = v1.tenantId().toString().compareTo(v2.tenantId().toString());
-                return (compareId != 0) ? compareId : Long.signum(v1.id().id() - v2.id().id());
-            };
+            (v1, v2) -> v1.tenantId().toString().compareTo(v2.tenantId().toString());
 
     public static final Comparator<VirtualDevice> VIRTUAL_DEVICE_COMPARATOR =
             (v1, v2) -> v1.id().toString().compareTo(v2.id().toString());

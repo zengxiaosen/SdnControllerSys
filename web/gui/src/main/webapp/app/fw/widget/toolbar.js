@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@
             top: 'auto',
             bottom: '10px',
             fade: false,
-            shown: false,
+            shown: false
         };
 
     // internal state
@@ -81,8 +81,8 @@
             panel = ps.createPanel(tbid, settings),
             arrowDiv = createArrow(panel),
             currentRow = panel.append('div').classed('tbar-row', true),
-            rowButtonIds = [], // for removable buttons
-            tbWidth = arrowSize + 2, // empty toolbar width
+            rowButtonIds = [],          // for removable buttons
+            tbWidth = arrowSize + 2,    // empty toolbar width
             maxWidth = panel.width();
 
         arrowDiv.on('click', toggle);
@@ -92,7 +92,7 @@
             settings: settings,
             items: items,
             panel: panel,
-            panelId: tbid,
+            panelId: tbid
         };
 
         panel.classed('toolbar', true)
@@ -171,7 +171,7 @@
                     clear: rowClear,
                     setText: rowSetText,
                     addButton: rowAddButton,
-                    classed: rowClassed,
+                    classed: rowClassed
                 };
             }
         }
@@ -234,7 +234,7 @@
             show: show,
             hide: hide,
             toggle: toggle,
-            isVisible: isVisible,
+            isVisible: isVisible
         };
     }
 
@@ -268,7 +268,7 @@
             return {
                 init: init,
                 createToolbar: createToolbar,
-                destroyToolbar: destroyToolbar,
+                destroyToolbar: destroyToolbar
             };
         }]);
 }());

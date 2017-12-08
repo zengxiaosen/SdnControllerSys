@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,10 +28,9 @@ import org.onlab.packet.TpPort;
 import org.onlab.packet.VlanId;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
-import org.onosproject.net.intf.Interface;
-import org.onosproject.net.intf.InterfaceListener;
-import org.onosproject.net.intf.InterfaceService;
-import org.onosproject.intentsync.IntentSynchronizationService;
+import org.onosproject.incubator.net.intf.Interface;
+import org.onosproject.incubator.net.intf.InterfaceListener;
+import org.onosproject.incubator.net.intf.InterfaceService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.EncapsulationType;
@@ -47,6 +46,7 @@ import org.onosproject.net.intent.AbstractIntentTest;
 import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.Key;
 import org.onosproject.net.intent.PointToPointIntent;
+import org.onosproject.intentsync.IntentSynchronizationService;
 import org.onosproject.routing.config.BgpConfig;
 import org.onosproject.sdnip.config.SdnIpConfig;
 
@@ -58,7 +58,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.easymock.EasyMock.*;
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.reset;
+import static org.easymock.EasyMock.verify;
 import static org.onosproject.routing.TestIntentServiceHelper.eqExceptId;
 
 /**
@@ -113,7 +119,7 @@ public class PeerConnectivityManagerTest extends AbstractIntentTest {
     private static final VlanId VLAN30 = VlanId.vlanId(Short.valueOf("30"));
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         super.setUp();
 
         interfaceService = createMock(InterfaceService.class);

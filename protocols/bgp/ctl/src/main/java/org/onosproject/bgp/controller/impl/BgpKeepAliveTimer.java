@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ public class BgpKeepAliveTimer {
                 handler.sendKeepAliveMessage();
                 handler.getBgpPacketStats().addOutPacket();
             } catch (Exception e) {
-                log.info("Exception occurred while sending keepAlive message" + e.toString());
+                log.info("Exception occured while sending keepAlive message" + e.toString());
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import org.onosproject.bgp.controller.BgpLocalRib;
 import org.onosproject.bgp.controller.BgpNodeListener;
 import org.onosproject.bgp.controller.BgpPeer;
 import org.onosproject.bgp.controller.BgpPeerManager;
-import org.onosproject.bgp.controller.BgpRouteListener;
 import org.onosproject.bgpio.exceptions.BgpParseException;
 import org.onosproject.bgpio.protocol.BgpMessage;
 
@@ -127,21 +126,6 @@ public class BgpControllerAdapter implements BgpController {
 
     @Override
     public Map<String, List<String>> closedSessionMap() {
-        return null;
-    }
-
-    @Override
-    public void addRouteListener(BgpRouteListener listener) {
-
-    }
-
-    @Override
-    public void removeRouteListener(BgpRouteListener listener) {
-
-    }
-
-    @Override
-    public Set<BgpRouteListener> routeListener() {
         return null;
     }
 

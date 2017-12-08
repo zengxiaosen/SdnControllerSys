@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,8 @@ import org.onosproject.net.HostLocation;
 import org.onosproject.net.Link;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.intent.Intent;
+import org.onosproject.net.intent.IntentData;
+import org.onosproject.net.intent.IntentState;
 import org.onosproject.net.intent.Key;
 import org.onosproject.store.AbstractStore;
 import org.onosproject.store.serializers.KryoNamespaces;
@@ -71,8 +73,6 @@ import org.slf4j.Logger;
 
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
@@ -114,27 +114,10 @@ public class DistributedVirtualNetworkStore
     private final MapEventListener<NetworkId, VirtualNetwork> virtualNetworkMapListener =
             new InternalMapListener<>((mapEventType, virtualNetwork) -> {
                 VirtualNetworkEvent.Type eventType =
-                    mapEventType.equals(MapEvent.Type.INSERT)
-                            ? VirtualNetworkEvent.Type.NETWORK_ADDED :
-                    mapEventType.equals(MapEvent.Type.UPDATE)
-                            ? VirtualNetworkEvent.Type.NETWORK_UPDATED :
-                    mapEventType.equals(MapEvent.Type.REMOVE)
-                            ? VirtualNetworkEvent.Type.NETWORK_REMOVED : null;
+                    mapEventType.equals(MapEvent.Type.INSERT) ? VirtualNetworkEvent.Type.NETWORK_ADDED :
+                    mapEventType.equals(MapEvent.Type.UPDATE) ? VirtualNetworkEvent.Type.NETWORK_UPDATED :
+                    mapEventType.equals(MapEvent.Type.REMOVE) ? VirtualNetworkEvent.Type.NETWORK_REMOVED : null;
                 return eventType == null ? null : new VirtualNetworkEvent(eventType, virtualNetwork.id());
-            });
-
-    // Listener for virtual device events
-    private final MapEventListener<VirtualDeviceId, VirtualDevice> virtualDeviceMapListener =
-            new InternalMapListener<>((mapEventType, virtualDevice) -> {
-                VirtualNetworkEvent.Type eventType =
-                        mapEventType.equals(MapEvent.Type.INSERT)
-                                ? VirtualNetworkEvent.Type.VIRTUAL_DEVICE_ADDED :
-                        mapEventType.equals(MapEvent.Type.UPDATE)
-                                ? VirtualNetworkEvent.Type.VIRTUAL_DEVICE_UPDATED :
-                        mapEventType.equals(MapEvent.Type.REMOVE)
-                                ? VirtualNetworkEvent.Type.VIRTUAL_DEVICE_REMOVED : null;
-                return eventType == null ? null :
-                        new VirtualNetworkEvent(eventType, virtualDevice.networkId(), virtualDevice);
             });
 
     // Track virtual network IDs by tenant Id
@@ -142,8 +125,19 @@ public class DistributedVirtualNetworkStore
     private Map<TenantId, Set<NetworkId>> tenantIdNetworkIdSetMap;
 
     // Track virtual devices by device Id
-    private ConsistentMap<VirtualDeviceId, VirtualDevice> deviceIdVirtualDeviceConsistentMap;
-    private Map<VirtualDeviceId, VirtualDevice> deviceIdVirtualDeviceMap;
+    private ConsistentMap<DeviceId, VirtualDevice> deviceIdVirtualDeviceConsistentMap;
+    private Map<DeviceId, VirtualDevice> deviceIdVirtualDeviceMap;
+
+    // Listener for virtual device events
+    private final MapEventListener<DeviceId, VirtualDevice> virtualDeviceMapListener =
+            new InternalMapListener<>((mapEventType, virtualDevice) -> {
+                VirtualNetworkEvent.Type eventType =
+                    mapEventType.equals(MapEvent.Type.INSERT) ? VirtualNetworkEvent.Type.VIRTUAL_DEVICE_ADDED :
+                    mapEventType.equals(MapEvent.Type.UPDATE) ? VirtualNetworkEvent.Type.VIRTUAL_DEVICE_UPDATED :
+                    mapEventType.equals(MapEvent.Type.REMOVE) ? VirtualNetworkEvent.Type.VIRTUAL_DEVICE_REMOVED : null;
+                return eventType == null ? null :
+                        new VirtualNetworkEvent(eventType, virtualDevice.networkId(), virtualDevice);
+            });
 
     // Track device IDs by network Id
     private ConsistentMap<NetworkId, Set<DeviceId>> networkIdDeviceIdSetConsistentMap;
@@ -165,6 +159,10 @@ public class DistributedVirtualNetworkStore
     private ConsistentMap<NetworkId, Set<VirtualPort>> networkIdVirtualPortSetConsistentMap;
     private Map<NetworkId, Set<VirtualPort>> networkIdVirtualPortSetMap;
 
+    // Track intent key to intent data
+    private ConsistentMap<Key, IntentData> intentKeyIntentDataConsistentMap;
+    private Map<Key, IntentData> intentKeyIntentDataMap;
+
     // Track intent ID to TunnelIds
     private ConsistentMap<Key, Set<TunnelId>> intentKeyTunnelIdSetConsistentMap;
     private Map<Key, Set<TunnelId>> intentKeyTunnelIdSetMap;
@@ -176,7 +174,6 @@ public class DistributedVirtualNetworkStore
                            .register(VirtualNetwork.class)
                            .register(DefaultVirtualNetwork.class)
                            .register(VirtualDevice.class)
-                           .register(VirtualDeviceId.class)
                            .register(DefaultVirtualDevice.class)
                            .register(VirtualHost.class)
                            .register(DefaultVirtualHost.class)
@@ -186,6 +183,7 @@ public class DistributedVirtualNetworkStore
                            .register(DefaultVirtualPort.class)
                            .register(Device.class)
                            .register(TunnelId.class)
+                           .register(IntentData.class)
                            .register(VirtualNetworkIntent.class)
                            .register(WallClockTimestamp.class)
                            .nextId(KryoNamespaces.BEGIN_USER_CUSTOM_ID)
@@ -221,7 +219,7 @@ public class DistributedVirtualNetworkStore
                 .build();
         tenantIdNetworkIdSetMap = tenantIdNetworkIdSetConsistentMap.asJavaMap();
 
-        deviceIdVirtualDeviceConsistentMap = storageService.<VirtualDeviceId, VirtualDevice>consistentMapBuilder()
+        deviceIdVirtualDeviceConsistentMap = storageService.<DeviceId, VirtualDevice>consistentMapBuilder()
                 .withSerializer(SERIALIZER)
                 .withName("onos-deviceId-virtualdevice")
                 .withRelaxedReadConsistency()
@@ -271,6 +269,13 @@ public class DistributedVirtualNetworkStore
                 .build();
         intentKeyTunnelIdSetMap = intentKeyTunnelIdSetConsistentMap.asJavaMap();
 
+        intentKeyIntentDataConsistentMap = storageService.<Key, IntentData>consistentMapBuilder()
+                .withSerializer(SERIALIZER)
+                .withName("onos-intentKey-intentData")
+                .withRelaxedReadConsistency()
+                .build();
+        intentKeyIntentDataMap = intentKeyIntentDataConsistentMap.asJavaMap();
+
         log.info("Started");
     }
 
@@ -292,12 +297,6 @@ public class DistributedVirtualNetworkStore
 
     @Override
     public void removeTenantId(TenantId tenantId) {
-        //Remove all the virtual networks of this tenant
-        Set<VirtualNetwork> networkIdSet = getNetworks(tenantId);
-        if (networkIdSet != null) {
-            networkIdSet.forEach(virtualNetwork -> removeNetwork(virtualNetwork.id()));
-        }
-
         tenantIdSet.remove(tenantId);
     }
 
@@ -341,35 +340,30 @@ public class DistributedVirtualNetworkStore
     @Override
     public void removeNetwork(NetworkId networkId) {
         // Make sure that the virtual network exists before attempting to remove it.
-        checkState(networkExists(networkId), "The network does not exist.");
+        if (networkExists(networkId)) {
+            //TODO update both maps in one transaction.
 
-        //Remove all the devices of this network
-        Set<VirtualDevice> deviceSet = getDevices(networkId);
-        if (deviceSet != null) {
-            deviceSet.forEach(virtualDevice -> removeDevice(networkId, virtualDevice.id()));
-        }
-        //TODO update both maps in one transaction.
-
-        VirtualNetwork virtualNetwork = networkIdVirtualNetworkMap.remove(networkId);
-        if (virtualNetwork == null) {
-            return;
-        }
-        TenantId tenantId = virtualNetwork.tenantId();
-
-        Set<NetworkId> networkIdSet = new HashSet<>();
-        tenantIdNetworkIdSetMap.get(tenantId).forEach(networkId1 -> {
-            if (networkId1.id().equals(networkId.id())) {
-                networkIdSet.add(networkId1);
+            VirtualNetwork virtualNetwork = networkIdVirtualNetworkMap.remove(networkId);
+            if (virtualNetwork == null) {
+                return;
             }
-        });
+            TenantId tenantId = virtualNetwork.tenantId();
 
-        tenantIdNetworkIdSetMap.compute(virtualNetwork.tenantId(), (id, existingNetworkIds) -> {
-            if (existingNetworkIds == null || existingNetworkIds.isEmpty()) {
-                return new HashSet<>();
-            } else {
-                return new HashSet<>(Sets.difference(existingNetworkIds, networkIdSet));
-            }
-        });
+            Set<NetworkId> networkIdSet = new HashSet<>();
+            tenantIdNetworkIdSetMap.get(tenantId).forEach(networkId1 -> {
+                if (networkId1.id().equals(networkId.id())) {
+                    networkIdSet.add(networkId1);
+                }
+            });
+
+            tenantIdNetworkIdSetMap.compute(virtualNetwork.tenantId(), (id, existingNetworkIds) -> {
+                if (existingNetworkIds == null || existingNetworkIds.isEmpty()) {
+                    return new HashSet<>();
+                } else {
+                    return new HashSet<>(Sets.difference(existingNetworkIds, networkIdSet));
+                }
+            });
+        }
     }
 
     /**
@@ -386,17 +380,13 @@ public class DistributedVirtualNetworkStore
     @Override
     public VirtualDevice addDevice(NetworkId networkId, DeviceId deviceId) {
         checkState(networkExists(networkId), "The network has not been added.");
-
         Set<DeviceId> deviceIdSet = networkIdDeviceIdSetMap.get(networkId);
         if (deviceIdSet == null) {
             deviceIdSet = new HashSet<>();
         }
-
-        checkState(!deviceIdSet.contains(deviceId), "The device already exists.");
-
         VirtualDevice virtualDevice = new DefaultVirtualDevice(networkId, deviceId);
         //TODO update both maps in one transaction.
-        deviceIdVirtualDeviceMap.put(new VirtualDeviceId(networkId, deviceId), virtualDevice);
+        deviceIdVirtualDeviceMap.put(deviceId, virtualDevice);
         deviceIdSet.add(deviceId);
         networkIdDeviceIdSetMap.put(networkId, deviceIdSet);
         return virtualDevice;
@@ -405,11 +395,6 @@ public class DistributedVirtualNetworkStore
     @Override
     public void removeDevice(NetworkId networkId, DeviceId deviceId) {
         checkState(networkExists(networkId), "The network has not been added.");
-        //Remove all the virtual ports of the this device
-        Set<VirtualPort> virtualPorts = getPorts(networkId, deviceId);
-        if (virtualPorts != null) {
-            virtualPorts.forEach(virtualPort -> removePort(networkId, deviceId, virtualPort.number()));
-        }
         //TODO update both maps in one transaction.
 
         Set<DeviceId> deviceIdSet = new HashSet<>();
@@ -419,7 +404,7 @@ public class DistributedVirtualNetworkStore
             }
         });
 
-        if (!deviceIdSet.isEmpty()) {
+        if (deviceIdSet != null) {
             networkIdDeviceIdSetMap.compute(networkId, (id, existingDeviceIds) -> {
                 if (existingDeviceIds == null || existingDeviceIds.isEmpty()) {
                     return new HashSet<>();
@@ -428,16 +413,15 @@ public class DistributedVirtualNetworkStore
                 }
             });
 
-            deviceIdVirtualDeviceMap.remove(new VirtualDeviceId(networkId, deviceId));
+            deviceIdVirtualDeviceMap.remove(deviceId);
         }
+        //TODO remove virtual links and ports when removing the virtual device
     }
 
     @Override
     public VirtualHost addHost(NetworkId networkId, HostId hostId, MacAddress mac,
                                VlanId vlan, HostLocation location, Set<IpAddress> ips) {
         checkState(networkExists(networkId), "The network has not been added.");
-        checkState(virtualPortExists(networkId, location.deviceId(), location.port()),
-                "The virtual port has not been created.");
         Set<HostId> hostIdSet = networkIdHostIdSetMap.get(networkId);
         if (hostIdSet == null) {
             hostIdSet = new HashSet<>();
@@ -475,45 +459,16 @@ public class DistributedVirtualNetworkStore
         }
     }
 
-    /**
-     * Returns if the given virtual port exists.
-     *
-     * @param networkId network identifier
-     * @param deviceId virtual device Id
-     * @param portNumber virtual port number
-     * @return true if the virtual port exists, false otherwise.
-     */
-    private boolean virtualPortExists(NetworkId networkId, DeviceId deviceId, PortNumber portNumber) {
-        Set<VirtualPort> virtualPortSet = networkIdVirtualPortSetMap.get(networkId);
-        if (virtualPortSet != null) {
-            return virtualPortSet.stream().anyMatch(
-                    p -> p.element().id().equals(deviceId) &&
-                            p.number().equals(portNumber));
-        } else {
-            return false;
-        }
-    }
-
     @Override
     public VirtualLink addLink(NetworkId networkId, ConnectPoint src, ConnectPoint dst,
                                Link.State state, TunnelId realizedBy) {
         checkState(networkExists(networkId), "The network has not been added.");
-        checkState(virtualPortExists(networkId, src.deviceId(), src.port()),
-                "The source virtual port has not been added.");
-        checkState(virtualPortExists(networkId, dst.deviceId(), dst.port()),
-                "The destination virtual port has not been added.");
         Set<VirtualLink> virtualLinkSet = networkIdVirtualLinkSetMap.get(networkId);
         if (virtualLinkSet == null) {
             virtualLinkSet = new HashSet<>();
         }
-
         // validate that the link does not already exist in this network
-        checkState(getLink(networkId, src, dst) == null,
-                "The virtual link already exists");
-        checkState(getLink(networkId, src, null) == null,
-                "The source connection point has been used by another link");
-        checkState(getLink(networkId, null, dst) == null,
-                "The destination connection point has been used by another link");
+        checkState(getLink(networkId, src, dst) == null, "The virtual link already exists");
 
         VirtualLink virtualLink = DefaultVirtualLink.builder()
                 .networkId(networkId)
@@ -534,14 +489,8 @@ public class DistributedVirtualNetworkStore
         Set<VirtualLink> virtualLinkSet = networkIdVirtualLinkSetMap.get(virtualLink.networkId());
         if (virtualLinkSet == null) {
             virtualLinkSet = new HashSet<>();
-            networkIdVirtualLinkSetMap.put(virtualLink.networkId(), virtualLinkSet);
-            log.warn("The updated virtual link {} has not been added", virtualLink);
-            return;
         }
-        if (!virtualLinkSet.remove(virtualLink)) {
-            log.warn("The updated virtual link {} does not exist", virtualLink);
-            return;
-        }
+        virtualLinkSet.remove(virtualLink);
 
         VirtualLink newVirtualLink = DefaultVirtualLink.builder()
                 .networkId(virtualLink.networkId())
@@ -561,7 +510,6 @@ public class DistributedVirtualNetworkStore
 
         final VirtualLink virtualLink = getLink(networkId, src, dst);
         if (virtualLink == null) {
-            log.warn("The removed virtual link between {} and {} does not exist", src, dst);
             return null;
         }
         Set<VirtualLink> virtualLinkSet = new HashSet<>();
@@ -589,18 +537,20 @@ public class DistributedVirtualNetworkStore
             virtualPortSet = new HashSet<>();
         }
 
-        VirtualDevice device = deviceIdVirtualDeviceMap.get(new VirtualDeviceId(networkId, deviceId));
+        Device device = deviceIdVirtualDeviceMap.get(deviceId);
         checkNotNull(device, "The device has not been created for deviceId: " + deviceId);
 
-        checkState(!virtualPortExists(networkId, deviceId, portNumber),
-                "The requested Port Number has been added.");
+        boolean exist = virtualPortSet.stream().anyMatch(
+                p -> p.element().id().equals(deviceId) &&
+                        p.number().equals(portNumber));
+        checkState(!exist, "The requested Port Number is already in use");
 
         VirtualPort virtualPort = new DefaultVirtualPort(networkId, device,
                                                          portNumber, realizedBy);
         virtualPortSet.add(virtualPort);
         networkIdVirtualPortSetMap.put(networkId, virtualPortSet);
         notifyDelegate(new VirtualNetworkEvent(VirtualNetworkEvent.Type.VIRTUAL_PORT_ADDED,
-                                               networkId, device, virtualPort));
+                                               networkId, virtualPort));
         return virtualPort;
     }
 
@@ -611,35 +561,26 @@ public class DistributedVirtualNetworkStore
         Set<VirtualPort> virtualPortSet = networkIdVirtualPortSetMap
                 .get(networkId);
 
-        Optional<VirtualPort> virtualPortOptional = virtualPortSet.stream().filter(
+        VirtualPort vPort = virtualPortSet.stream().filter(
                 p -> p.element().id().equals(deviceId) &&
-                        p.number().equals(portNumber)).findFirst();
-        checkState(virtualPortOptional.isPresent(), "The virtual port has not been added.");
+                        p.number().equals(portNumber)).findFirst().get();
+        checkNotNull(vPort, "The virtual port has not been added.");
 
-        VirtualDevice device = deviceIdVirtualDeviceMap.get(new VirtualDeviceId(networkId, deviceId));
+        Device device = deviceIdVirtualDeviceMap.get(deviceId);
         checkNotNull(device, "The device has not been created for deviceId: "
                 + deviceId);
 
-        VirtualPort vPort = virtualPortOptional.get();
         virtualPortSet.remove(vPort);
         vPort = new DefaultVirtualPort(networkId, device, portNumber, realizedBy);
         virtualPortSet.add(vPort);
         networkIdVirtualPortSetMap.put(networkId, virtualPortSet);
         notifyDelegate(new VirtualNetworkEvent(VirtualNetworkEvent.Type.VIRTUAL_PORT_UPDATED,
-                                               networkId, device, vPort));
+                                               networkId, vPort));
     }
 
     @Override
     public void removePort(NetworkId networkId, DeviceId deviceId, PortNumber portNumber) {
         checkState(networkExists(networkId), "The network has not been added.");
-        VirtualDevice device = deviceIdVirtualDeviceMap.get(new VirtualDeviceId(networkId, deviceId));
-        checkNotNull(device, "The device has not been created for deviceId: "
-                + deviceId);
-
-        if (networkIdVirtualPortSetMap.get(networkId) == null) {
-            log.warn("No port has been created for NetworkId: {}", networkId);
-            return;
-        }
 
         Set<VirtualPort> virtualPortSet = new HashSet<>();
         networkIdVirtualPortSetMap.get(networkId).forEach(port -> {
@@ -661,32 +602,8 @@ public class DistributedVirtualNetworkStore
             if (portRemoved.get()) {
                 virtualPortSet.forEach(virtualPort -> notifyDelegate(
                         new VirtualNetworkEvent(VirtualNetworkEvent.Type.VIRTUAL_PORT_REMOVED,
-                                                networkId, device, virtualPort)
+                                                networkId, virtualPort)
                 ));
-
-                //Remove all the virtual links connected to this virtual port
-                Set<VirtualLink> existingVirtualLinks = networkIdVirtualLinkSetMap.get(networkId);
-                if (existingVirtualLinks != null && !existingVirtualLinks.isEmpty()) {
-                    Set<VirtualLink> virtualLinkSet = new HashSet<>();
-                    ConnectPoint cp = new ConnectPoint(deviceId, portNumber);
-                    existingVirtualLinks.forEach(virtualLink -> {
-                        if (virtualLink.src().equals(cp) || virtualLink.dst().equals(cp)) {
-                            virtualLinkSet.add(virtualLink);
-                        }
-                    });
-                    virtualLinkSet.forEach(virtualLink ->
-                            removeLink(networkId, virtualLink.src(), virtualLink.dst()));
-                }
-
-                //Remove all the hosts connected to this virtual port
-                Set<HostId> hostIdSet = new HashSet<>();
-                hostIdVirtualHostMap.forEach((hostId, virtualHost) -> {
-                    if (virtualHost.location().deviceId().equals(deviceId) &&
-                            virtualHost.location().port().equals(portNumber)) {
-                        hostIdSet.add(hostId);
-                    }
-                });
-                hostIdSet.forEach(hostId -> removeHost(networkId, hostId));
             }
         }
     }
@@ -696,11 +613,7 @@ public class DistributedVirtualNetworkStore
         Set<NetworkId> networkIdSet = tenantIdNetworkIdSetMap.get(tenantId);
         Set<VirtualNetwork> virtualNetworkSet = new HashSet<>();
         if (networkIdSet != null) {
-            networkIdSet.forEach(networkId -> {
-                if (networkIdVirtualNetworkMap.get(networkId) != null) {
-                    virtualNetworkSet.add(networkIdVirtualNetworkMap.get(networkId));
-                }
-            });
+            networkIdSet.forEach(networkId -> virtualNetworkSet.add(networkIdVirtualNetworkMap.get(networkId)));
         }
         return ImmutableSet.copyOf(virtualNetworkSet);
     }
@@ -716,8 +629,7 @@ public class DistributedVirtualNetworkStore
         Set<DeviceId> deviceIdSet = networkIdDeviceIdSetMap.get(networkId);
         Set<VirtualDevice> virtualDeviceSet = new HashSet<>();
         if (deviceIdSet != null) {
-            deviceIdSet.forEach(deviceId -> virtualDeviceSet.add(
-                    deviceIdVirtualDeviceMap.get(new VirtualDeviceId(networkId, deviceId))));
+            deviceIdSet.forEach(deviceId -> virtualDeviceSet.add(deviceIdVirtualDeviceMap.get(deviceId)));
         }
         return ImmutableSet.copyOf(virtualDeviceSet);
     }
@@ -752,13 +664,7 @@ public class DistributedVirtualNetworkStore
 
         VirtualLink virtualLink = null;
         for (VirtualLink link : virtualLinkSet) {
-            if (src == null && link.dst().equals(dst)) {
-                virtualLink = link;
-                break;
-            } else if (dst == null && link.src().equals(src)) {
-                virtualLink = link;
-                break;
-            } else if (link.src().equals(src) && link.dst().equals(dst)) {
+            if (link.src().equals(src) && link.dst().equals(dst)) {
                 virtualLink = link;
                 break;
             }
@@ -785,6 +691,24 @@ public class DistributedVirtualNetworkStore
             }
         });
         return ImmutableSet.copyOf(portSet);
+    }
+
+    @Override
+    public synchronized void addOrUpdateIntent(Intent intent, IntentState state) {
+        checkNotNull(intent, "Intent cannot be null");
+        IntentData intentData = removeIntent(intent.key());
+        if (intentData == null) {
+            intentData = new IntentData(intent, state, new WallClockTimestamp(System.currentTimeMillis()));
+        } else {
+            intentData = new IntentData(intent, state, intentData.version());
+        }
+        intentKeyIntentDataMap.put(intent.key(), intentData);
+    }
+
+    @Override
+    public IntentData removeIntent(Key intentKey) {
+        checkNotNull(intentKey, "Intent key cannot be null");
+        return intentKeyIntentDataMap.remove(intentKey);
     }
 
     @Override
@@ -822,6 +746,30 @@ public class DistributedVirtualNetworkStore
                 }
             });
         }
+    }
+
+    @Override
+    public Set<Intent> getIntents() {
+        Set<Intent> intents = new HashSet<>();
+        intentKeyIntentDataMap.values().forEach(intentData -> intents.add(intentData.intent()));
+        return ImmutableSet.copyOf(intents);
+    }
+
+    @Override
+    public Intent getIntent(Key key) {
+        IntentData intentData = intentKeyIntentDataMap.get(key);
+        return intentData == null ? null : intentData.intent();
+    }
+
+    @Override
+    public Set<IntentData> getIntentData() {
+        return ImmutableSet.copyOf(intentKeyIntentDataMap.values());
+    }
+
+    @Override
+    public IntentData getIntentData(Key key) {
+        IntentData intentData = intentKeyIntentDataMap.get(key);
+        return intentData ==  null ? null : new IntentData(intentData);
     }
 
     /**
@@ -882,48 +830,6 @@ public class DistributedVirtualNetworkStore
             if (vnetEvent != null) {
                 notifyDelegate(vnetEvent);
             }
-        }
-    }
-
-    /**
-     * A wrapper class to isolate device id from other virtual networks.
-     */
-
-    private static class VirtualDeviceId {
-
-        NetworkId networkId;
-        DeviceId deviceId;
-
-        public VirtualDeviceId(NetworkId networkId, DeviceId deviceId) {
-            this.networkId = networkId;
-            this.deviceId = deviceId;
-        }
-
-        public NetworkId getNetworkId() {
-            return networkId;
-        }
-
-        public DeviceId getDeviceId() {
-            return deviceId;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(networkId, deviceId);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-
-            if (obj instanceof VirtualDeviceId) {
-                VirtualDeviceId that = (VirtualDeviceId) obj;
-                return this.deviceId.equals(that.deviceId) &&
-                        this.networkId.equals(that.networkId);
-            }
-            return false;
         }
     }
 }

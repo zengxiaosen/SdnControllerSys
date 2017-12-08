@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package org.onosproject.ui;
 
 import com.google.common.collect.ImmutableList;
-import org.onosproject.ui.lion.LionBundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,28 +45,22 @@ public final class UiExtension {
     private final ClassLoader classLoader;
     private final String resourcePath;
     private final List<UiView> viewList;
-    private final List<LionBundle> lionBundles;
     private final UiMessageHandlerFactory messageHandlerFactory;
     private final UiTopoOverlayFactory topoOverlayFactory;
-    private final UiTopo2OverlayFactory topo2OverlayFactory;
     private final UiTopoMapFactory topoMapFactory;
 
     private boolean isValid = true;
 
     // private constructor - only the builder calls this
     private UiExtension(ClassLoader cl, String path, List<UiView> views,
-                        List<LionBundle> bundles,
                         UiMessageHandlerFactory mhFactory,
                         UiTopoOverlayFactory toFactory,
-                        UiTopo2OverlayFactory to2Factory,
                         UiTopoMapFactory tmFactory) {
         classLoader = cl;
         resourcePath = path;
         viewList = views;
-        lionBundles = bundles;
         messageHandlerFactory = mhFactory;
         topoOverlayFactory = toFactory;
-        topo2OverlayFactory = to2Factory;
         topoMapFactory = tmFactory;
     }
 
@@ -100,16 +93,6 @@ public final class UiExtension {
     }
 
     /**
-     * Returns the list of localization bundles that this extension is
-     * contributing.
-     *
-     * @return contributed localization bundles
-     */
-    public List<LionBundle> lionBundles() {
-        return ImmutableList.copyOf(lionBundles);
-    }
-
-    /**
      * Returns input stream containing specified view-specific resource.
      *
      * @param viewId view identifier
@@ -136,15 +119,6 @@ public final class UiExtension {
      */
     public UiTopoOverlayFactory topoOverlayFactory() {
         return topoOverlayFactory;
-    }
-
-    /**
-     * Returns the topology-2 overlay factory, if one was defined.
-     *
-     * @return topology-2 overlay factory
-     */
-    public UiTopo2OverlayFactory topo2OverlayFactory() {
-        return topo2OverlayFactory;
     }
 
     /**
@@ -176,10 +150,8 @@ public final class UiExtension {
 
         private String resourcePath = EMPTY;
         private List<UiView> viewList = new ArrayList<>();
-        private List<LionBundle> lionBundles = new ArrayList<>();
         private UiMessageHandlerFactory messageHandlerFactory = null;
         private UiTopoOverlayFactory topoOverlayFactory = null;
-        private UiTopo2OverlayFactory topo2OverlayFactory = null;
         private UiTopoMapFactory topoMapFactory = null;
 
         /**
@@ -196,19 +168,6 @@ public final class UiExtension {
             checkArgument(!views.isEmpty(), "Must provide at least one view");
             classLoader = cl;
             viewList = views;
-        }
-
-        /**
-         * Sets the localization bundles (aka {@code LionBundle}s) that this
-         * UI extension is contributing.
-         *
-         * @param bundles the bundles to register
-         * @return self, for chaining
-         */
-        public Builder lionBundles(List<LionBundle> bundles) {
-            checkNotNull(bundles, "Must provide a list");
-            lionBundles = bundles;
-            return this;
         }
 
         /**
@@ -246,17 +205,6 @@ public final class UiExtension {
         }
 
         /**
-         * Sets the topology-2 overlay factory for this extension.
-         *
-         * @param to2Factory topology-2 overlay factory
-         * @return self, for chaining
-         */
-        public Builder topo2OverlayFactory(UiTopo2OverlayFactory to2Factory) {
-            topo2OverlayFactory = to2Factory;
-            return this;
-        }
-
-        /**
          * Sets the topology map factory for this extension.
          *
          * @param tmFactory topology map factory
@@ -274,9 +222,8 @@ public final class UiExtension {
          */
         public UiExtension build() {
             return new UiExtension(classLoader, resourcePath, viewList,
-                                   lionBundles,
-                                   messageHandlerFactory, topoOverlayFactory,
-                                   topo2OverlayFactory, topoMapFactory);
+                                    messageHandlerFactory, topoOverlayFactory,
+                                    topoMapFactory);
         }
     }
 }

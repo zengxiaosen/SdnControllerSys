@@ -5,7 +5,7 @@
 #set( $year = $format.format($date) )
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright ${year} Open Networking Foundation
+  ~ Copyright ${year} Open Networking Laboratory
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <onos.version>1.12.0-SNAPSHOT</onos.version>
+        <onos.version>1.9.3-SNAPSHOT</onos.version>
         <!-- Uncomment to generate ONOS app from this module.
         <onos.app.name>org.foo.app</onos.app.name>
         <onos.app.title>Foo App</onos.app.title>

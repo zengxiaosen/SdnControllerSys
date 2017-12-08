@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package org.onosproject.net.flow;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,7 +34,7 @@ import org.onosproject.net.meter.MeterId;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import org.onosproject.net.pi.runtime.PiTableAction;
+import com.google.common.collect.Lists;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -209,9 +208,9 @@ public final class DefaultTrafficTreatment implements TrafficTreatment {
 
         Instructions.MeterInstruction meter;
 
-        List<Instruction> deferred = new ArrayList<>();
+        List<Instruction> deferred = Lists.newLinkedList();
 
-        List<Instruction> immediate = new ArrayList<>();
+        List<Instruction> immediate = Lists.newLinkedList();
 
         List<Instruction> current = immediate;
 
@@ -246,7 +245,6 @@ public final class DefaultTrafficTreatment implements TrafficTreatment {
                 case L2MODIFICATION:
                 case L3MODIFICATION:
                 case L4MODIFICATION:
-                case PROTOCOL_INDEPENDENT:
                 case EXTENSION:
                     current.add(instruction);
                     break;
@@ -431,12 +429,6 @@ public final class DefaultTrafficTreatment implements TrafficTreatment {
         }
 
         @Override
-        public Builder notWipeDeferred() {
-            clear = false;
-            return this;
-        }
-
-        @Override
         public Builder writeMetadata(long metadata, long metadataMask) {
             return add(Instructions.writeMetadata(metadata, metadataMask));
         }
@@ -479,11 +471,6 @@ public final class DefaultTrafficTreatment implements TrafficTreatment {
         @Override
         public Builder setArpOp(short op) {
             return add(Instructions.modL3ArpOp(op));
-        }
-
-        @Override
-        public Builder piTableAction(PiTableAction piTableAction) {
-            return add(Instructions.piTableAction(piTableAction));
         }
 
         @Override

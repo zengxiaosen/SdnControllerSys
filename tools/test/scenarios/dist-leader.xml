@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright 2016-present Open Networking Foundation
+  ~ Copyright 2016-present Open Networking Laboratory
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
     <group name="Distributed-Primitive-Leader">
 
         <step name="Distributed-Primitive-Leader.Test-Initial-No-Leader"
+              requires="Distributed-Primitives-Setup"
               exec="onos-cluster-execute-expect leader-test test-elector show foo --expect leader=none#candidates=none"/>
 
         <step name="Distributed-Primitive-Leader.Test-Leader-Run"

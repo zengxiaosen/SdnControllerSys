@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
  */
 package org.onosproject.store.primitives.resources.impl;
 
-import io.atomix.protocols.raft.proxy.RaftProxy;
-import io.atomix.protocols.raft.service.RaftService;
+import io.atomix.resource.ResourceType;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.assertFalse;
@@ -25,16 +26,21 @@ import static org.junit.Assert.assertTrue;
 /**
  * Unit test for {@code AtomixCounterMap}.
  */
-public class AtomixAtomicCounterMapTest extends AtomixTestBase<AtomixAtomicCounterMap> {
+public class AtomixAtomicCounterMapTest extends AtomixTestBase {
 
-    @Override
-    protected RaftService createService() {
-        return new AtomixAtomicCounterMapService();
+    @BeforeClass
+    public static void preTestSetup() throws Throwable {
+        createCopycatServers(3);
+    }
+
+    @AfterClass
+    public static void postTestCleanup() throws Exception {
+        clearTests();
     }
 
     @Override
-    protected AtomixAtomicCounterMap createPrimitive(RaftProxy proxy) {
-        return new AtomixAtomicCounterMap(proxy);
+    protected ResourceType resourceType() {
+        return new ResourceType(AtomixAtomicCounterMap.class);
     }
 
     /**
@@ -42,7 +48,8 @@ public class AtomixAtomicCounterMapTest extends AtomixTestBase<AtomixAtomicCount
      */
     @Test
     public void testBasicCounterMapOperations() throws Throwable {
-        AtomixAtomicCounterMap map = newPrimitive("testBasicCounterMapOperationMap");
+        AtomixAtomicCounterMap map = createAtomixClient().getResource("testBasicCounterMapOperationMap",
+                AtomixAtomicCounterMap.class).join();
 
         map.isEmpty().thenAccept(isEmpty -> {
             assertTrue(isEmpty);

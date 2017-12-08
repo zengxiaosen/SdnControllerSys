@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,19 @@
  */
 package org.onosproject.net.optical.intent.impl.compiler;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.packet.ChassisId;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.core.IdGenerator;
 import org.onosproject.net.AbstractProjectableModel;
 import org.onosproject.net.Annotations;
+import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.CltSignalType;
 import org.onosproject.net.ConnectPoint;
-import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.DefaultDevice;
 import org.onosproject.net.DefaultLink;
 import org.onosproject.net.DefaultPath;
@@ -43,9 +43,6 @@ import org.onosproject.net.Path;
 import org.onosproject.net.Port;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.TributarySlot;
-import org.onosproject.net.device.DeviceServiceAdapter;
-import org.onosproject.net.driver.DriverService;
-import org.onosproject.net.driver.DriverServiceAdapter;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
@@ -53,11 +50,11 @@ import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criteria;
 import org.onosproject.net.flow.instructions.Instructions;
-import org.onosproject.net.intent.AbstractIntentTest;
 import org.onosproject.net.intent.FlowRuleIntent;
 import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.IntentExtensionService;
 import org.onosproject.net.intent.Key;
+import org.onosproject.net.intent.MockIdGenerator;
 import org.onosproject.net.intent.OpticalOduIntent;
 import org.onosproject.net.optical.OduCltPort;
 import org.onosproject.net.optical.OtuPort;
@@ -68,6 +65,12 @@ import org.onosproject.net.resource.MockResourceService;
 import org.onosproject.net.topology.LinkWeight;
 import org.onosproject.net.topology.Topology;
 import org.onosproject.net.topology.TopologyServiceAdapter;
+import org.onosproject.net.device.DeviceServiceAdapter;
+import org.onosproject.net.driver.DriverService;
+import org.onosproject.net.driver.DriverServiceAdapter;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -77,19 +80,23 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.easymock.EasyMock.*;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
-import static org.onosproject.net.AnnotationKeys.PORT_NAME;
 import static org.onosproject.net.AnnotationKeys.STATIC_PORT;
+import static org.onosproject.net.AnnotationKeys.PORT_NAME;
 import static org.onosproject.net.Device.Type.OTN;
 import static org.onosproject.net.DeviceId.deviceId;
 import static org.onosproject.net.Link.Type.OPTICAL;
 import static org.onosproject.net.NetTestTools.APP_ID;
 import static org.onosproject.net.NetTestTools.PID;
 
-public class OpticalOduIntentCompilerTest extends AbstractIntentTest {
+public class OpticalOduIntentCompilerTest {
 
     private static final String DEV1 = "of:1";
     private static final String DEV2 = "of:2";
@@ -102,6 +109,7 @@ public class OpticalOduIntentCompilerTest extends AbstractIntentTest {
 
     private CoreService coreService;
     private IntentExtensionService intentExtensionService;
+    private final IdGenerator idGenerator = new MockIdGenerator();
     private OpticalOduIntentCompiler sut;
 
     private final ApplicationId appId = new TestApplicationId("test");
@@ -266,7 +274,8 @@ public class OpticalOduIntentCompilerTest extends AbstractIntentTest {
         sut.resourceService = new MockResourceService();
         sut.topologyService = new MockTopologyService();
 
-        super.setUp();
+        Intent.unbindIdGenerator(idGenerator);
+        Intent.bindIdGenerator(idGenerator);
 
         intentExtensionService = createMock(IntentExtensionService.class);
         intentExtensionService.registerCompiler(OpticalOduIntent.class, sut);
@@ -274,6 +283,11 @@ public class OpticalOduIntentCompilerTest extends AbstractIntentTest {
         sut.intentManager = intentExtensionService;
 
         replay(coreService, intentExtensionService);
+    }
+
+    @After
+    public void tearDown() {
+        Intent.unbindIdGenerator(idGenerator);
     }
 
     /**

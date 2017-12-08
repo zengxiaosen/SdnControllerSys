@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,22 +76,22 @@ public class MetricOfInternalReachabilityTest {
     }
 
     /**
-     * Tests getSubnetAddress() getter method.
+     * Tests getSubnetAddres() getter method.
      */
     @Test
     public void testGetSubnetAddres() throws Exception {
-        reachability.setSubnetAddress(ip4Address);
-        result = reachability.getSubnetAddress();
+        reachability.setSubnetAddres(ip4Address);
+        result = reachability.getSubnetAddres();
         assertThat(result, is(ip4Address));
     }
 
     /**
-     * Tests setSubnetAddress() setter method.
+     * Tests setSubnetAddres() setter method.
      */
     @Test
     public void testSetSubnetAddres() throws Exception {
-        reachability.setSubnetAddress(ip4Address);
-        result = reachability.getSubnetAddress();
+        reachability.setSubnetAddres(ip4Address);
+        result = reachability.getSubnetAddres();
         assertThat(result, is(ip4Address));
     }
 

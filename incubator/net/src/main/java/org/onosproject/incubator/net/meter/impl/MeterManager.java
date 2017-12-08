@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,11 @@
  */
 package org.onosproject.incubator.net.meter.impl;
 
+import org.apache.commons.lang3.tuple.Pair;
 import com.google.common.collect.Maps;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
-import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
@@ -55,34 +55,21 @@ import org.slf4j.Logger;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.concurrent.Executors.newFixedThreadPool;
-import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Provides implementation of the meter service APIs.
  */
-@Component(immediate = true)
+@Component(immediate = true, enabled = true)
 @Service
-public class MeterManager
-        extends AbstractListenerProviderRegistry<MeterEvent, MeterListener, MeterProvider, MeterProviderService>
+public class MeterManager extends AbstractListenerProviderRegistry<MeterEvent, MeterListener,
+        MeterProvider, MeterProviderService>
         implements MeterService, MeterProviderRegistry {
 
     private static final String METERCOUNTERIDENTIFIER = "meter-id-counter-%s";
-    private static final String NUM_THREAD = "numThreads";
-    private static final String WORKER_PATTERN = "installer-%d";
-    private static final String GROUP_THREAD_NAME = "onos/meter";
-
-    private static final int DEFAULT_NUM_THREADS = 4;
-    @Property(name = NUM_THREAD,
-            intValue = DEFAULT_NUM_THREADS,
-            label = "Number of worker threads")
-    private int numThreads = DEFAULT_NUM_THREADS;
-
     private final Logger log = getLogger(getClass());
     private final MeterStoreDelegate delegate = new InternalMeterStoreDelegate();
 
@@ -100,10 +87,9 @@ public class MeterManager
 
     private TriConsumer<MeterRequest, MeterStoreResult, Throwable> onComplete;
 
-    private ExecutorService executorService;
-
     @Activate
     public void activate() {
+
         store.setDelegate(delegate);
         eventDispatcher.addSink(MeterEvent.class, listenerRegistry);
 
@@ -121,17 +107,12 @@ public class MeterManager
                 });
 
             };
-
-        executorService = newFixedThreadPool(numThreads,
-                groupedThreads(GROUP_THREAD_NAME, WORKER_PATTERN, log));
         log.info("Started");
     }
 
     @Deactivate
     public void deactivate() {
         store.unsetDelegate(delegate);
-        eventDispatcher.removeSink(MeterEvent.class);
-        executorService.shutdown();
         log.info("Stopped");
     }
 
@@ -208,19 +189,9 @@ public class MeterManager
     }
 
     private MeterId allocateMeterId(DeviceId deviceId) {
-        // We first query the store for any previously removed meterId that could
-        // be reused. Receiving a value (not null) already means that meters
-        // are available for the device.
-        MeterId meterid = store.firstReusableMeterId(deviceId);
-        if (meterid != null) {
-            return meterid;
-        }
-        // If there was no reusable MeterId we have to generate a new value
-        // with an upper limit in maxMeters.
         long maxMeters = store.getMaxMeters(MeterFeaturesKey.key(deviceId));
         if (maxMeters == 0L) {
-            // MeterFeatures couldn't be retrieved, trying with queryMeters.
-            // queryMeters is implemented in FullMetersAvailable behaviour.
+            // MeterFeatures couldn't be retrieved, trying with queryMeters
             maxMeters = queryMeters(deviceId);
         }
 
@@ -269,40 +240,16 @@ public class MeterManager
 
         @Override
         public void pushMeterMetrics(DeviceId deviceId, Collection<Meter> meterEntries) {
-            Collection<Meter> allMeters = store.getAllMeters(deviceId);
-
-            Map<MeterId, Meter> meterEntriesMap = meterEntries.stream()
-                    .collect(Collectors.toMap(Meter::id, Meter -> Meter));
-
-            // Look for meters defined in onos and missing in the device (restore)
-            allMeters.stream().forEach(m -> {
-                if ((m.state().equals(MeterState.PENDING_ADD) ||
-                        m.state().equals(MeterState.ADDED)) &&
-                        !meterEntriesMap.containsKey(m.id())) {
-                    // The meter is missing in the device. Reinstall!
-                    log.debug("Adding meter missing in device {} {}", deviceId, m);
-                    provider().performMeterOperation(deviceId,
-                            new MeterOperation(m, MeterOperation.Type.ADD));
-                }
-            });
-
-            // Look for meters defined in the device and not in onos (remove)
-            meterEntriesMap.entrySet().stream()
-                    .filter(md -> !allMeters.stream().anyMatch(m -> m.id().equals(md.getKey())))
-                    .forEach(mio -> {
-                        // The meter is missin in onos. Uninstall!
-                        log.debug("Remove meter in device not in onos {} {}", deviceId, mio.getKey());
-                        Meter meter = mio.getValue();
-                        provider().performMeterOperation(deviceId,
-                                new MeterOperation(meter, MeterOperation.Type.REMOVE));
-            });
+            //FIXME: FOLLOWING CODE CANNOT BE TESTED UNTIL SOMETHING THAT
+            //FIXME: IMPLEMENTS METERS EXISTS
+            Map<Pair<DeviceId, MeterId>, Meter> storedMeterMap = store.getAllMeters().stream()
+                    .collect(Collectors.toMap(m -> Pair.of(m.deviceId(), m.id()), Function.identity()));
 
             meterEntries.stream()
-                    .filter(m -> allMeters.stream()
-                            .anyMatch(sm -> sm.deviceId().equals(deviceId) && sm.id().equals(m.id())))
+                    .filter(m -> storedMeterMap.remove(Pair.of(m.deviceId(), m.id())) != null)
                     .forEach(m -> store.updateMeterState(m));
 
-            allMeters.forEach(m -> {
+            storedMeterMap.values().forEach(m -> {
                 if (m.state() == MeterState.PENDING_ADD) {
                     provider().performMeterOperation(m.deviceId(),
                                                      new MeterOperation(m,
@@ -329,51 +276,20 @@ public class MeterManager
         @Override
         public void notify(MeterEvent event) {
             DeviceId deviceId = event.subject().deviceId();
+            MeterProvider p = getProvider(event.subject().deviceId());
             switch (event.type()) {
                 case METER_ADD_REQ:
-                    executorService.execute(new MeterInstaller(deviceId, event.subject(),
-                            MeterOperation.Type.ADD));
+                    p.performMeterOperation(deviceId, new MeterOperation(event.subject(),
+                                                                         MeterOperation.Type.ADD));
                     break;
                 case METER_REM_REQ:
-                    executorService.execute(new MeterInstaller(deviceId, event.subject(),
-                            MeterOperation.Type.REMOVE));
-                    break;
-                case METER_ADDED:
-                    log.info("Meter added {}", event.subject());
-                    post(new MeterEvent(MeterEvent.Type.METER_ADDED, event.subject()));
-                    break;
-                case METER_REMOVED:
-                    log.info("Meter removed {}", event.subject());
-                    post(new MeterEvent(MeterEvent.Type.METER_REMOVED, event.subject()));
+                    p.performMeterOperation(deviceId, new MeterOperation(event.subject(),
+                                                                         MeterOperation.Type.REMOVE));
                     break;
                 default:
                     log.warn("Unknown meter event {}", event.type());
             }
 
-        }
-    }
-    /**
-     * Task that passes the meter down to the provider.
-     */
-    private class MeterInstaller implements Runnable {
-        private final DeviceId deviceId;
-        private final Meter meter;
-        private final MeterOperation.Type op;
-
-        public MeterInstaller(DeviceId deviceId, Meter meter, MeterOperation.Type op) {
-            this.deviceId = checkNotNull(deviceId);
-            this.meter = checkNotNull(meter);
-            this.op = checkNotNull(op);
-        }
-
-        @Override
-        public void run() {
-            MeterProvider p = getProvider(this.deviceId);
-            if (p == null) {
-                log.error("Unable to recover {}'s provider", deviceId);
-                return;
-            }
-            p.performMeterOperation(deviceId, new MeterOperation(meter, op));
         }
     }
 

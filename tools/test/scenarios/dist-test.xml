@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright 2015-present Open Networking Foundation
+  ~ Copyright 2015-present Open Networking Laboratory
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -19,15 +19,12 @@
     <group name="Distributed-Primitives">
 
         <import file="${ONOS_SCENARIOS}/dist-setup.xml"/>
-        <dependency name="Distributed-Primitives-Setup"/>
+        <dependency name="Distributed-Primitives-Setup" requires="Setup"/>
 
         <group name="Distributed-Primitives-Internal" requires="Distributed-Primitives-Setup">
 
             <import file="${ONOS_SCENARIOS}/dist-map.xml"/>
             <dependency name="Distributed-Primitive-Map"/>
-
-            <import file="${ONOS_SCENARIOS}/dist-ec-map.xml"/>
-            <dependency name="Distributed-Primitive-Ec-Map"/>
 
             <import file="${ONOS_SCENARIOS}/dist-value.xml"/>
             <dependency name="Distributed-Primitive-Value"/>

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,14 +37,10 @@ import org.onosproject.net.intent.Constraint;
 import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.Key;
 import org.onosproject.net.intent.constraint.BandwidthConstraint;
-import org.onosproject.net.intent.constraint.DomainConstraint;
 import org.onosproject.net.intent.constraint.EncapsulationConstraint;
 import org.onosproject.net.intent.constraint.HashedPathSelectionConstraint;
-import org.onosproject.net.intent.constraint.LatencyConstraint;
 import org.onosproject.net.intent.constraint.PartialFailureConstraint;
 
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -185,15 +181,6 @@ public abstract class ConnectivityIntentCommand extends AbstractShellCommand {
     @Option(name = "--hashed", description = "Hashed path selection",
             required = false, multiValued = false)
     private boolean hashedPathSelection = false;
-
-    @Option(name = "--domains", description = "Allow domain delegation",
-            required = false, multiValued = false)
-    private boolean domains = false;
-
-    @Option(name = "-l", aliases = "--latency",
-            description = "Max latency in nanoseconds tolerated by the intent", required = false,
-            multiValued = false)
-    String latConstraint = null;
 
     // Resource Group
     @Option(name = "-r", aliases = "--resourceGroup", description = "Resource Group Id",
@@ -413,21 +400,6 @@ public abstract class ConnectivityIntentCommand extends AbstractShellCommand {
         if (hashedPathSelection) {
             constraints.add(new HashedPathSelectionConstraint());
         }
-
-        // Check for domain processing
-        if (domains) {
-            constraints.add(DomainConstraint.domain());
-        }
-        // Check for a latency specification
-        if (!isNullOrEmpty(latConstraint)) {
-            try {
-                long lat = Long.parseLong(latConstraint);
-                constraints.add(new LatencyConstraint(Duration.of(lat, ChronoUnit.NANOS)));
-            } catch (NumberFormatException e) {
-                double lat = Double.parseDouble(latConstraint);
-                constraints.add(new LatencyConstraint(Duration.of((long) lat, ChronoUnit.NANOS)));
-            }
-        }
         return constraints;
     }
 
@@ -447,12 +419,10 @@ public abstract class ConnectivityIntentCommand extends AbstractShellCommand {
         if (resourceGroupId != null) {
             if (resourceGroupId.toLowerCase().startsWith("0x")) {
                 return ResourceGroup.of(Long.parseUnsignedLong(resourceGroupId.substring(2), 16));
-            } else {
-                return ResourceGroup.of(Long.parseUnsignedLong(resourceGroupId));
             }
-        } else {
-            return null;
+            return ResourceGroup.of(resourceGroupId);
         }
+        return null;
     }
 
     /**
@@ -464,6 +434,7 @@ public abstract class ConnectivityIntentCommand extends AbstractShellCommand {
      */
     protected Key key() {
         Key key = null;
+        ApplicationId appIdForIntent;
 
         if (intentKey != null) {
             key = Key.of(intentKey, appId());

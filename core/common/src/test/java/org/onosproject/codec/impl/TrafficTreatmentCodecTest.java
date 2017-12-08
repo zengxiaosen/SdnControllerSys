@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,7 +114,7 @@ public class TrafficTreatmentCodecTest {
             int counter = 0;
             for (int idx = 0; idx < node.size(); idx++) {
                 String type = node.get(idx).get("type").asText();
-                if (!"METER".equals(type) && !"TABLE".equals(type)) {
+                if (!type.equals("METER") && !type.equals("TABLE")) {
                     counter++;
                 }
             }

@@ -1,5 +1,5 @@
 /*
-* Copyright 2016-present Open Networking Foundation
+* Copyright 2016-present Open Networking Laboratory
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -1051,7 +1051,7 @@ public class OspfNbrImpl implements OspfNbr {
     public boolean processReceivedLsa(LsaHeader recLsa,
                                       boolean receivedViaFlooding, Channel ch, Ip4Address sourceIp)
             throws Exception {
-        log.debug("OSPFNbr::processReceivedLsa(recLsa, receivedViaFlooding, ch)...!!!");
+        log.debug("OSPFNbr::processReceivedLsa(recLsa, recievedViaFlooding, ch)...!!!");
 
         //Validate the lsa checksum RFC 2328 13 (1)
         ChecksumCalculator checkSum = new ChecksumCalculator();
@@ -1902,19 +1902,20 @@ public class OspfNbrImpl implements OspfNbr {
 
                     String key = (String) itr.next();
                     OspfLsa lsa = txList.get(key);
-                    if (lsa != null) {
-                        if ((lsa.age() + OspfParameters.INFTRA_NS_DELAY) >= OspfParameters.MAXAGE) {
-                            ((LsaHeader) lsa.lsaHeader()).setAge(OspfParameters.MAXAGE);
-                        } else {
-                            ((LsaHeader) lsa.lsaHeader()).setAge(lsa.age() + OspfParameters.INFTRA_NS_DELAY);
-                        }
+                    if ((lsa.age() + OspfParameters.INFTRA_NS_DELAY) >= OspfParameters.MAXAGE) {
+                        ((LsaHeader) lsa.lsaHeader()).setAge(OspfParameters.MAXAGE);
+                    } else {
+                        ((LsaHeader) lsa.lsaHeader()).setAge(lsa.age() + OspfParameters.INFTRA_NS_DELAY);
+                    }
 
-                        if ((currentLength + ((LsaHeader) lsa.lsaHeader()).lsPacketLen()) >= maxSize) {
-                            itr.previous();
-                            break;
-                        }
-                        log.debug("FloodingTimer::LSA Type::{}, Header: {}, LSA: {}", lsa.getOspfLsaType(),
-                                  lsa.lsaHeader(), lsa);
+                    if ((currentLength + ((LsaHeader) lsa.lsaHeader()).lsPacketLen()) >= maxSize) {
+                        itr.previous();
+                        break;
+                    }
+                    log.debug("FloodingTimer::LSA Type::{}, Header: {}, LSA: {}", lsa.getOspfLsaType(),
+                              lsa.lsaHeader(), lsa);
+
+                    if (lsa != null) {
                         lsupdate.addLsa(lsa);
                         noLsa++;
                         currentLength = currentLength + ((LsaHeader) lsa.lsaHeader()).lsPacketLen();

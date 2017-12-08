@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.onosproject.pcep.tools.PcepTools;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The class representing a network switch PCEPDid. This class is immutable.
  */
 public final class PcepDpid {
-    private static final Logger log = LoggerFactory.getLogger(PcepDpid.class);
+
     private static final String SCHEME = "l3";
     private static final long UNKNOWN = 0;
     private long nodeId;
@@ -64,21 +62,6 @@ public final class PcepDpid {
      */
     public static URI uri(PcepDpid dpid) {
         return uri(dpid.nodeId);
-    }
-
-    /**
-     * Produces pcep URI.
-     *
-     * @param value string to get URI
-     * @return pcep URI, otherwise null
-     */
-    public static URI uri(String value) {
-        try {
-            return new URI(SCHEME, value, null);
-        } catch (URISyntaxException e) {
-            log.debug("Exception PcepId URI: " + e.toString());
-        }
-        return null;
     }
 
     /**

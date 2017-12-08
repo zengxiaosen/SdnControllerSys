@@ -36,8 +36,6 @@ osgi_feature (
     '//lib:commons-io',
     '//lib:jersey-client',
     '//lib:mapdb',
-    '//lib:bcpkix-jdk15on',
-    '//lib:bcprov-jdk15on',
   ]
 )
 
@@ -98,6 +96,7 @@ osgi_feature (
   required_features = ['onos-core'],
   included_bundles = [
     '//incubator/net:onos-incubator-net',
+    '//incubator/core:onos-incubator-core',
     '//incubator/store:onos-incubator-store',
     '//incubator/rpc:onos-incubator-rpc',
   ]

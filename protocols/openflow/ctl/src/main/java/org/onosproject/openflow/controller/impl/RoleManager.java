@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,7 +123,7 @@ class RoleManager implements RoleHandler {
         }
 
         int xid = sw.getNextTransactionId();
-        OFRoleRequest rrm = sw.factory()
+        OFRoleRequest rrm = OFFactories.getFactory(OFVersion.OF_13)
                 .buildRoleRequest()
                 .setRole(roleToSend)
                 .setXid(xid)

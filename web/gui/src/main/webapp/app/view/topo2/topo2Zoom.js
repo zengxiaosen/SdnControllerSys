@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,44 +15,48 @@
  */
 
 /*
- ONOS GUI -- Topology Zoom Module.
- Module that handles Zoom events.
+ ONOS GUI -- Topology Breadcrumb Module.
+ Module that renders the breadcrumbs for regions
  */
 
 (function () {
+
     'use strict';
 
-    // injected references
-    var fs, zs;
+    var zs, ps;
 
-    // internal state
     var zoomer,
         zoomEventListeners = [];
-
-    function createZoomer(options) {
-        // need to wrap the original zoom callback to extend its behavior
-        var origCallback = fs.isF(options.zoomCallback) || function () {};
-
-        options.zoomCallback = function () {
-            origCallback();
-
-            angular.forEach(zoomEventListeners, function (ev) {
-                ev(zoomer);
-            });
-        };
-
-        zoomer = zs.createZoomer(options);
-        return zoomer;
-    }
 
     function getZoomer() {
         return zoomer;
     }
 
+    function createZoomer(options) {
+        var settings = angular.extend({}, options, {
+            zoomCallback: zoomCallback
+        });
+
+        zoomer = zs.createZoomer(settings);
+        return zoomer;
+    }
+
+    function zoomCallback() {
+        var sc = zoomer.scale(),
+            tr = zoomer.translate();
+
+        ps.setPrefs('topo_zoom', { tx: tr[0], ty: tr[1], sc: sc });
+
+        angular.forEach(zoomEventListeners, function (ev) {
+            ev(zoomer);
+        });
+    }
+
     function findZoomEventListener(ev) {
-        for (var i = 0, len = zoomEventListeners.length; i < len; i++) {
+        for (var i = 0, l = zoomEventListeners.length; i < l; i++) {
             if (zoomEventListeners[i] === ev) return i;
         }
+
         return -1;
     }
 
@@ -61,6 +65,7 @@
     }
 
     function removeZoomEventListener(callback) {
+
         var evIndex = findZoomEventListener(callback);
 
         if (evIndex !== -1) {
@@ -68,34 +73,21 @@
         }
     }
 
-    function adjustmentScale(min, max) {
-        var _scale = 1,
-            size = (min + max) / 2;
-
-        if (size * scale() < max) {
-            _scale = min / (size * scale());
-        } else if (size * scale() > max) {
-            _scale = min / (size * scale());
-        }
-
-        return _scale;
-    }
-
     function scale() {
         return zoomer.scale();
     }
 
-    function panAndZoom(translate, scale, transition) {
-        zoomer.panZoom(translate, scale, transition);
+    function panAndZoom(translate, scale) {
+        zoomer.panZoom(translate, scale, 1000);
     }
 
     angular.module('ovTopo2')
     .factory('Topo2ZoomService', [
-        'FnService', 'ZoomService',
-        function (_fs_, _zs_) {
+        'ZoomService', 'PrefsService',
+        function (_zs_, _ps_) {
 
-            fs = _fs_;
             zs = _zs_;
+            ps = _ps_;
 
             return {
                 getZoomer: getZoomer,
@@ -104,8 +96,7 @@
                 removeZoomEventListener: removeZoomEventListener,
 
                 scale: scale,
-                adjustmentScale: adjustmentScale,
-                panAndZoom: panAndZoom,
+                panAndZoom: panAndZoom
             };
         }]);
 })();

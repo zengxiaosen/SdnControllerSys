@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ public class NetconfAlarmTranslator implements AlarmTranslator {
         } catch (SAXException | IOException | ParserConfigurationException |
                 UnsupportedOperationException | IllegalArgumentException |
                 TransformerException e) {
-            log.error("Exception thrown translating message from {}.", deviceId, e);
+            log.error("Exception thrown translating {} from {}.", message, deviceId);
             return ImmutableSet.of();
         }
     }
@@ -96,7 +96,7 @@ public class NetconfAlarmTranslator implements AlarmTranslator {
 
     private long parseDate(String timeStr)
             throws UnsupportedOperationException, IllegalArgumentException {
-        return ISODateTimeFormat.dateTime().parseMillis(timeStr);
+        return ISODateTimeFormat.dateTimeNoMillis().parseMillis(timeStr);
     }
 
     private static String nodeToString(Node rootNode) throws TransformerException {

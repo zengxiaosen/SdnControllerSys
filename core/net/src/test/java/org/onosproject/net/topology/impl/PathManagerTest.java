@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.junit.TestUtils;
-import org.onosproject.net.DeviceId;
-import org.onosproject.net.ElementId;
-import org.onosproject.net.Host;
-import org.onosproject.net.HostId;
-import org.onosproject.net.Path;
+import org.onosproject.net.*;
 import org.onosproject.net.host.HostServiceAdapter;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.net.topology.LinkWeigher;
@@ -35,7 +31,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -75,10 +70,6 @@ public class PathManagerTest {
         fakeTopoMgr.paths.add(createPath("src", "middle", "dst"));
         Set<Path> paths = service.getPaths(src, dst);
         validatePaths(paths, 1, 2, src, dst);
-
-        validatePaths(service.getKShortestPaths(src, dst)
-                          .collect(Collectors.toSet()),
-                      1, 2, src, dst);
     }
 
     @Test
@@ -88,6 +79,12 @@ public class PathManagerTest {
         fakeTopoMgr.paths.add(createPath("src", "middle", "edge"));
         fakeHostMgr.hosts.put(dst, host("12:34:56:78:90:ab/1", "edge"));
         Set<Path> paths = service.getPaths(src, dst);
+        for(Path p : paths){
+            System.out.println("path");
+            for(Link l : p.links()){
+                System.out.println(l.src().elementId().toString()+","+l.dst().elementId().toString());
+            }
+        }
         validatePaths(paths, 1, 3, src, dst);
     }
 
@@ -110,10 +107,6 @@ public class PathManagerTest {
         fakeHostMgr.hosts.put(dst, host("12:34:56:78:90:ef/1", "dstEdge"));
         Set<Path> paths = service.getPaths(src, dst);
         validatePaths(paths, 1, 4, src, dst);
-
-        validatePaths(service.getKShortestPaths(src, dst)
-                      .collect(Collectors.toSet()),
-                  1, 4, src, dst);
     }
 
     @Test
@@ -123,11 +116,8 @@ public class PathManagerTest {
         fakeHostMgr.hosts.put(src, host("12:34:56:78:90:ab/1", "edge"));
         fakeHostMgr.hosts.put(dst, host("12:34:56:78:90:ef/1", "edge"));
         Set<Path> paths = service.getPaths(src, dst);
-        validatePaths(paths, 1, 2, src, dst);
 
-        validatePaths(service.getKShortestPaths(src, dst)
-                      .collect(Collectors.toSet()),
-                  1, 2, src, dst);
+        validatePaths(paths, 1, 2, src, dst);
     }
 
     @Test

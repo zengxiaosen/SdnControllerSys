@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,10 @@
 package org.onosproject.ovsdb.controller;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onosproject.ovsdb.controller.OvsdbConstant.*;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import com.google.common.collect.Maps;
 import org.onosproject.net.DefaultAnnotations;
@@ -58,26 +56,20 @@ public final class OvsdbInterface {
         /**
          * A pair of virtual devices that act as a patch cable.
          */
-        PATCH,
-        /**
-         * A DPDK net device.
-         */
-        DPDK
+        PATCH
     }
 
     private final String name;
     private final Type type;
-    private final Optional<Long> mtu;
 
     /* Adds more configs */
 
     /* Fields start with "options:" prefix defined in the OVSDB */
     private final Map<String, String> options;
 
-    private OvsdbInterface(String name, Type type, Optional<Long> mtu, Map<String, String> options) {
+    private OvsdbInterface(String name, Type type, Map<String, String> options) {
         this.name = name;
-        this.type = checkNotNull(type, "the type of interface can not be null");
-        this.mtu = mtu;
+        this.type = type;
         this.options = Maps.newHashMap(options);
     }
 
@@ -106,15 +98,6 @@ public final class OvsdbInterface {
      */
     public String typeToString() {
         return type.name().toLowerCase();
-    }
-
-    /**
-     * Returns mtu of the interface.
-     *
-     * @return interface mtu
-     */
-    public Optional<Long> mtu() {
-        return mtu;
     }
 
     /**
@@ -148,7 +131,6 @@ public final class OvsdbInterface {
         return toStringHelper(this)
                 .add("name", name)
                 .add("type", type)
-                .add("mtu", mtu)
                 .add("options", options)
                 .toString();
     }
@@ -188,7 +170,6 @@ public final class OvsdbInterface {
     public static final class Builder {
         private String name;
         private Type type;
-        private Optional<Long> mtu = Optional.empty();
         private Map<String, String> options = Maps.newHashMap();
 
         private Builder() {
@@ -239,7 +220,7 @@ public final class OvsdbInterface {
          * @return ovsdb interface
          */
         public OvsdbInterface build() {
-            return new OvsdbInterface(name, type, mtu, options);
+            return new OvsdbInterface(name, type, options);
         }
 
         /**
@@ -261,17 +242,6 @@ public final class OvsdbInterface {
          */
         public Builder type(Type type) {
             this.type = type;
-            return this;
-        }
-
-        /**
-         * Returns OVSDB interface builder with a given interface mtu.
-         *
-         * @param mtu mtu of the interface
-         * @return ovsdb interface builder
-         */
-        public Builder mtu(Long mtu) {
-            this.mtu = Optional.ofNullable(mtu);
             return this;
         }
 

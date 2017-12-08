@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,65 +15,73 @@
  */
 package org.onosproject.store.primitives.resources.impl;
 
+import io.atomix.copycat.client.CopycatClient;
+import io.atomix.resource.AbstractResource;
+import io.atomix.resource.ResourceTypeInfo;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
+import org.onosproject.cluster.Leadership;
+import org.onosproject.cluster.NodeId;
+import org.onosproject.event.Change;
+import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorCommands.Anoint;
+import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorCommands.GetAllLeaderships;
+import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorCommands.GetElectedTopics;
+import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorCommands.GetLeadership;
+import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorCommands.Listen;
+import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorCommands.Promote;
+import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorCommands.Run;
+import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorCommands.Unlisten;
+import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorCommands.Withdraw;
+import org.onosproject.store.service.AsyncLeaderElector;
+
+import com.google.common.collect.ImmutableSet;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Sets;
-import io.atomix.protocols.raft.proxy.RaftProxy;
-import org.onlab.util.KryoNamespace;
-import org.onosproject.cluster.Leadership;
-import org.onosproject.cluster.NodeId;
-import org.onosproject.event.Change;
-import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.Anoint;
-import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.GetElectedTopics;
-import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.GetLeadership;
-import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.Promote;
-import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.Run;
-import org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.Withdraw;
-import org.onosproject.store.serializers.KryoNamespaces;
-import org.onosproject.store.service.AsyncLeaderElector;
-import org.onosproject.store.service.Serializer;
-
-import static org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorEvents.CHANGE;
-import static org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.ADD_LISTENER;
-import static org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.ANOINT;
-import static org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.EVICT;
-import static org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.GET_ALL_LEADERSHIPS;
-import static org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.GET_ELECTED_TOPICS;
-import static org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.GET_LEADERSHIP;
-import static org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.PROMOTE;
-import static org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.REMOVE_LISTENER;
-import static org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.RUN;
-import static org.onosproject.store.primitives.resources.impl.AtomixLeaderElectorOperations.WITHDRAW;
 
 /**
  * Distributed resource providing the {@link AsyncLeaderElector} primitive.
  */
-public class AtomixLeaderElector extends AbstractRaftPrimitive implements AsyncLeaderElector {
-    private static final Serializer SERIALIZER = Serializer.using(KryoNamespace.newBuilder()
-            .register(KryoNamespaces.API)
-            .register(AtomixLeaderElectorOperations.NAMESPACE)
-            .register(AtomixLeaderElectorEvents.NAMESPACE)
-            .build());
-
-    private final Set<Consumer<Change<Leadership>>> leadershipChangeListeners = Sets.newCopyOnWriteArraySet();
+@ResourceTypeInfo(id = -152, factory = AtomixLeaderElectorFactory.class)
+public class AtomixLeaderElector extends AbstractResource<AtomixLeaderElector>
+    implements AsyncLeaderElector {
+    private final Set<Consumer<Status>> statusChangeListeners =
+            Sets.newCopyOnWriteArraySet();
+    private final Set<Consumer<Change<Leadership>>> leadershipChangeListeners =
+            Sets.newCopyOnWriteArraySet();
     private final Consumer<Change<Leadership>> cacheUpdater;
     private final Consumer<Status> statusListener;
 
+    public static final String CHANGE_SUBJECT = "leadershipChangeEvents";
     private final LoadingCache<String, CompletableFuture<Leadership>> cache;
 
-    public AtomixLeaderElector(RaftProxy proxy) {
-        super(proxy);
+    Function<CopycatClient.State, Status> mapper = state -> {
+        switch (state) {
+            case CONNECTED:
+                return Status.ACTIVE;
+            case SUSPENDED:
+                return Status.SUSPENDED;
+            case CLOSED:
+                return Status.INACTIVE;
+            default:
+                throw new IllegalStateException("Unknown state " + state);
+        }
+    };
+
+    public AtomixLeaderElector(CopycatClient client, Properties properties) {
+        super(client, properties);
         cache = CacheBuilder.newBuilder()
                 .maximumSize(1000)
-                .build(CacheLoader.from(topic -> proxy.invoke(
-                        GET_LEADERSHIP, SERIALIZER::encode, new GetLeadership(topic), SERIALIZER::decode)));
+                .build(CacheLoader.from(topic -> this.client.submit(new GetLeadership(topic))));
 
         cacheUpdater = change -> {
             Leadership leadership = change.newValue();
@@ -85,19 +93,31 @@ public class AtomixLeaderElector extends AbstractRaftPrimitive implements AsyncL
             }
         };
         addStatusChangeListener(statusListener);
-
-        proxy.addStateChangeListener(state -> {
-            if (state == RaftProxy.State.CONNECTED && isListening()) {
-                proxy.invoke(ADD_LISTENER);
-            }
-        });
-        proxy.addEventListener(CHANGE, SERIALIZER::decode, this::handleEvent);
+        client.onStateChange(this::handleStateChange);
     }
 
     @Override
     public CompletableFuture<Void> destroy() {
         removeStatusChangeListener(statusListener);
         return removeChangeListener(cacheUpdater);
+    }
+
+    @Override
+    public String name() {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<AtomixLeaderElector> open() {
+        return super.open().thenApply(result -> {
+            client.onStateChange(state -> {
+                if (state == CopycatClient.State.CONNECTED && isListening()) {
+                    client.submit(new Listen());
+                }
+            });
+            client.onEvent(CHANGE_SUBJECT, this::handleEvent);
+            return result;
+        });
     }
 
     public CompletableFuture<AtomixLeaderElector> setupCache() {
@@ -110,32 +130,27 @@ public class AtomixLeaderElector extends AbstractRaftPrimitive implements AsyncL
 
     @Override
     public CompletableFuture<Leadership> run(String topic, NodeId nodeId) {
-        return proxy.<Run, Leadership>invoke(RUN, SERIALIZER::encode, new Run(topic, nodeId), SERIALIZER::decode)
-                .whenComplete((r, e) -> cache.invalidate(topic));
+        return client.submit(new Run(topic, nodeId)).whenComplete((r, e) -> cache.invalidate(topic));
     }
 
     @Override
     public CompletableFuture<Void> withdraw(String topic) {
-        return proxy.invoke(WITHDRAW, SERIALIZER::encode, new Withdraw(topic))
-                .whenComplete((r, e) -> cache.invalidate(topic));
+        return client.submit(new Withdraw(topic)).whenComplete((r, e) -> cache.invalidate(topic));
     }
 
     @Override
     public CompletableFuture<Boolean> anoint(String topic, NodeId nodeId) {
-        return proxy.<Anoint, Boolean>invoke(ANOINT, SERIALIZER::encode, new Anoint(topic, nodeId), SERIALIZER::decode)
-                .whenComplete((r, e) -> cache.invalidate(topic));
+        return client.submit(new Anoint(topic, nodeId)).whenComplete((r, e) -> cache.invalidate(topic));
     }
 
     @Override
     public CompletableFuture<Boolean> promote(String topic, NodeId nodeId) {
-        return proxy.<Promote, Boolean>invoke(
-                PROMOTE, SERIALIZER::encode, new Promote(topic, nodeId), SERIALIZER::decode)
-                .whenComplete((r, e) -> cache.invalidate(topic));
+        return client.submit(new Promote(topic, nodeId)).whenComplete((r, e) -> cache.invalidate(topic));
     }
 
     @Override
     public CompletableFuture<Void> evict(NodeId nodeId) {
-        return proxy.invoke(EVICT, SERIALIZER::encode, new AtomixLeaderElectorOperations.Evict(nodeId));
+        return client.submit(new AtomixLeaderElectorCommands.Evict(nodeId));
     }
 
     @Override
@@ -150,17 +165,17 @@ public class AtomixLeaderElector extends AbstractRaftPrimitive implements AsyncL
 
     @Override
     public CompletableFuture<Map<String, Leadership>> getLeaderships() {
-        return proxy.invoke(GET_ALL_LEADERSHIPS, SERIALIZER::decode);
+        return client.submit(new GetAllLeaderships());
     }
 
     public CompletableFuture<Set<String>> getElectedTopics(NodeId nodeId) {
-        return proxy.invoke(GET_ELECTED_TOPICS, SERIALIZER::encode, new GetElectedTopics(nodeId), SERIALIZER::decode);
+        return client.submit(new GetElectedTopics(nodeId));
     }
 
     @Override
     public synchronized CompletableFuture<Void> addChangeListener(Consumer<Change<Leadership>> consumer) {
         if (leadershipChangeListeners.isEmpty()) {
-            return proxy.invoke(ADD_LISTENER).thenRun(() -> leadershipChangeListeners.add(consumer));
+            return client.submit(new Listen()).thenRun(() -> leadershipChangeListeners.add(consumer));
         } else {
             leadershipChangeListeners.add(consumer);
             return CompletableFuture.completedFuture(null);
@@ -170,12 +185,31 @@ public class AtomixLeaderElector extends AbstractRaftPrimitive implements AsyncL
     @Override
     public synchronized CompletableFuture<Void> removeChangeListener(Consumer<Change<Leadership>> consumer) {
         if (leadershipChangeListeners.remove(consumer) && leadershipChangeListeners.isEmpty()) {
-            return proxy.invoke(REMOVE_LISTENER).thenApply(v -> null);
+            return client.submit(new Unlisten()).thenApply(v -> null);
         }
         return CompletableFuture.completedFuture(null);
     }
 
+    @Override
+    public void addStatusChangeListener(Consumer<Status> listener) {
+        statusChangeListeners.add(listener);
+    }
+
+    @Override
+    public void removeStatusChangeListener(Consumer<Status> listener) {
+        statusChangeListeners.remove(listener);
+    }
+
+    @Override
+    public Collection<Consumer<Status>> statusChangeListeners() {
+        return ImmutableSet.copyOf(statusChangeListeners);
+    }
+
     private boolean isListening() {
         return !leadershipChangeListeners.isEmpty();
+    }
+
+    private void handleStateChange(CopycatClient.State state) {
+        statusChangeListeners().forEach(listener -> listener.accept(mapper.apply(state)));
     }
 }

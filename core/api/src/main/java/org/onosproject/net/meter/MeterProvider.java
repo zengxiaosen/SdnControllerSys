@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,6 @@ import org.onosproject.net.provider.Provider;
  * Abstraction of a Meter provider.
  */
 public interface MeterProvider extends Provider {
-    /**
-     * Meter capable property name.
-     * A driver is assumed to be meter capable if this property is undefined.
-     */
-    String METER_CAPABLE = "meterCapable";
 
     /**
      * Performs a batch of meter operation on the specified device with the

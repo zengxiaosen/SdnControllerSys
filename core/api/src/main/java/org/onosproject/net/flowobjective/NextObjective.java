@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -218,22 +218,6 @@ public interface NextObjective extends Objective {
          * @return a next objective
          */
         NextObjective removeFromExisting(ObjectiveContext context);
-
-        /**
-         * Builds the next objective that needs to be verified.
-         *
-         * @return a next objective with {@link Operation} VERIFY
-         */
-        NextObjective verify();
-
-        /**
-         * Builds the next objective that needs to be verified. The context will
-         * be used to notify the calling application.
-         *
-         * @param context an objective context
-         * @return a next objective with {@link Operation} VERIFY
-         */
-        NextObjective verify(ObjectiveContext context);
 
     }
 

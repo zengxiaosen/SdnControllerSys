@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package org.onosproject.cli.app;
 
 import java.net.URI;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 import org.apache.karaf.shell.commands.Command;
@@ -56,19 +55,12 @@ public class ApplicationsListCommand extends AbstractShellCommand {
             required = false, multiValued = false)
     private boolean activeOnly = false;
 
-    @Option(name = "-n", aliases = "--name", description = "Sort by application ID name")
-    private boolean sortByName = false;
-
 
     @Override
     protected void execute() {
         ApplicationService service = get(ApplicationService.class);
         List<Application> apps = newArrayList(service.getApplications());
-        if (sortByName) {
-            apps.sort(Comparator.comparing(app -> app.id().name()));
-        } else {
-            Collections.sort(apps, Comparators.APP_COMPARATOR);
-        }
+        Collections.sort(apps, Comparators.APP_COMPARATOR);
 
         if (outputJson()) {
             print("%s", json(service, apps));

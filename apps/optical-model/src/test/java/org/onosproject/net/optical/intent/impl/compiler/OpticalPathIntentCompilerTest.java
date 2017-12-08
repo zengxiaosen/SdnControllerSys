@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,23 @@
  */
 package org.onosproject.net.optical.intent.impl.compiler;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.core.IdGenerator;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DefaultLink;
 import org.onosproject.net.DefaultPath;
 import org.onosproject.net.Link;
 import org.onosproject.net.OchSignalType;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.intent.AbstractIntentTest;
 import org.onosproject.net.intent.FlowRuleIntent;
 import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.IntentExtensionService;
+import org.onosproject.net.intent.MockIdGenerator;
 import org.onosproject.net.intent.OpticalPathIntent;
 
 import java.util.Arrays;
@@ -38,17 +40,24 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.easymock.EasyMock.*;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.onosproject.net.Link.Type.DIRECT;
-import static org.onosproject.net.NetTestTools.*;
+import static org.onosproject.net.NetTestTools.PID;
+import static org.onosproject.net.NetTestTools.connectPoint;
+import static org.onosproject.net.NetTestTools.createLambda;
 
-public class OpticalPathIntentCompilerTest extends AbstractIntentTest {
+public class OpticalPathIntentCompilerTest {
 
     private CoreService coreService;
     private IntentExtensionService intentExtensionService;
+    private final IdGenerator idGenerator = new MockIdGenerator();
     private OpticalPathIntentCompiler sut;
 
     private final ApplicationId appId = new TestApplicationId("test");
@@ -72,7 +81,8 @@ public class OpticalPathIntentCompilerTest extends AbstractIntentTest {
                 .andReturn(appId);
         sut.coreService = coreService;
 
-        super.setUp();
+        Intent.unbindIdGenerator(idGenerator);
+        Intent.bindIdGenerator(idGenerator);
 
         intent = OpticalPathIntent.builder()
                 .appId(appId)
@@ -88,6 +98,11 @@ public class OpticalPathIntentCompilerTest extends AbstractIntentTest {
         sut.intentManager = intentExtensionService;
 
         replay(coreService, intentExtensionService);
+    }
+
+    @After
+    public void tearDown() {
+        Intent.unbindIdGenerator(idGenerator);
     }
 
     @Test

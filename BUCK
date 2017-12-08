@@ -32,6 +32,7 @@ INSTALL = [
     '//core/store/serializers:onos-core-serializers-install',
 
     '//incubator/net:onos-incubator-net-install',
+    '//incubator/core:onos-incubator-core-install',
     '//incubator/store:onos-incubator-store-install',
     '//incubator/rpc:onos-incubator-rpc-install',
 
@@ -52,10 +53,10 @@ tar_file(
     root = 'onos-test-%s' % ONOS_VERSION,
     srcs = glob(['tools/test/**/*']) + [
                'tools/dev/bash_profile',
+               'tools/dev/bin/onos-app',
                'tools/dev/bin/onos-create-app',
                'tools/build/envDefaults'
            ],
-    other_tars = [ '//tools/package:onos-package-runtime' ],
 )
 
 only_lib_dep_pom(

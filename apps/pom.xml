@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2014-present Open Networking Foundation
+  ~ Copyright 2014-present Open Networking Laboratory
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.onosproject</groupId>
         <artifactId>onos</artifactId>
-        <version>1.12.0-SNAPSHOT</version>
+        <version>1.9.3-SNAPSHOT</version>
     </parent>
 
     <artifactId>onos-apps</artifactId>
@@ -34,11 +34,11 @@
         <module>roadm</module>
         <module>faultmanagement</module>
         <module>fwd</module>
-        <module>packet-stats</module>
         <module>mobility</module>
         <module>proxyarp</module>
         <module>sdnip</module>
         <module>optical-model</module>
+        <module>optical</module>
         <module>newoptical</module>
         <module>metrics</module>
         <module>routing</module>
@@ -46,7 +46,6 @@
         <module>reactive-routing</module>
         <module>virtualbng</module>
         <module>bgprouter</module>
-        <module>flowspec-api</module>
         <module>test</module>
         <module>segmentrouting</module>
         <module>kafka-integration</module>
@@ -69,10 +68,13 @@
         <module>vpls</module>
         <module>openstacknode</module>
         <module>openstacknetworking</module>
+        <module>openstackinterface</module>
         <module>influxdbmetrics</module>
         <module>gangliametrics</module>
         <module>graphitemetrics</module>
+        <module>xosclient</module>
         <module>scalablegateway</module>
+        <module>bmv2-demo</module>
         <module>yms</module>
         <module>tetopology</module>
         <module>rabbitmq</module>
@@ -81,23 +83,10 @@
         <module>tetunnel</module>
         <module>actn-mdsc</module>
         <module>config</module>
-        <module>configsync</module>
-        <module>configsync-netconf</module>
+        <module>restconf</module>
         <module>ofagent</module>
         <module>intentsync</module>
         <module>mappingmanagement</module>
-        <module>network-troubleshoot</module>
-        <module>restconf</module>
-        <module>yang</module>
-        <module>openroadm</module>
-        <module>netconf/client</module>
-	    <module>gluon</module>
-        <module>evpnopenflow</module>
-        <module>route-service</module>
-        <module>evpn-route-service</module>
-        <module>l3vpn</module>
-        <module>openstacknetworkingui</module>
-        <module>cfm</module>
     </modules>
 
     <properties>
@@ -119,6 +108,8 @@
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.scr.annotations</artifactId>
         </dependency>
+
+
     </dependencies>
 
     <build>

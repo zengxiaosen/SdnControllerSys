@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,12 @@ import org.onosproject.net.behaviour.ControllerConfig;
 import org.onosproject.net.behaviour.ControllerInfo;
 import org.onosproject.net.driver.AbstractHandlerBehaviour;
 import org.onosproject.net.driver.DriverHandler;
-import org.onosproject.netconf.DatastoreId;
 import org.onosproject.netconf.NetconfController;
 import org.onosproject.netconf.NetconfDevice;
-import org.onosproject.netconf.NetconfException;
 import org.slf4j.Logger;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,11 +57,11 @@ public class NetconfControllerConfig extends AbstractHandlerBehaviour
         if (mastershipService.isLocalMaster(deviceId)) {
             try {
                 String reply = controller.getNetconfDevice(deviceId).getSession().
-                        getConfig(DatastoreId.RUNNING);
+                        getConfig("running");
                 log.debug("Reply XML {}", reply);
                 controllers.addAll(XmlConfigParser.parseStreamControllers(XmlConfigParser.
                         loadXml(new ByteArrayInputStream(reply.getBytes(StandardCharsets.UTF_8)))));
-            } catch (NetconfException e) {
+            } catch (IOException e) {
                 log.error("Cannot communicate with device {} ", deviceId, e);
             }
         } else {
@@ -86,7 +85,7 @@ public class NetconfControllerConfig extends AbstractHandlerBehaviour
                 String config = null;
 
                 try {
-                    String reply = device.getSession().getConfig(DatastoreId.RUNNING);
+                    String reply = device.getSession().getConfig("running");
                     log.info("reply XML {}", reply);
                     config = XmlConfigParser.createControllersConfig(
                             XmlConfigParser.loadXml(getClass().getResourceAsStream("controllers.xml")),
@@ -94,14 +93,14 @@ public class NetconfControllerConfig extends AbstractHandlerBehaviour
                                     new ByteArrayInputStream(reply.getBytes(StandardCharsets.UTF_8))),
                             "running", "merge", "create", controllers
                     );
-                } catch (NetconfException e) {
+                } catch (IOException e) {
                     log.error("Cannot comunicate to device {} , exception {}", deviceId, e.getMessage());
                 }
                 device.getSession().editConfig(config.substring(config.indexOf("-->") + 3));
             } catch (NullPointerException e) {
                 log.warn("No NETCONF device with requested parameters " + e);
                 throw new NullPointerException("No NETCONF device with requested parameters " + e);
-            } catch (NetconfException e) {
+            } catch (IOException e) {
                 log.error("Cannot comunicate to device {} , exception {}", deviceId, e.getMessage());
             }
         } else {

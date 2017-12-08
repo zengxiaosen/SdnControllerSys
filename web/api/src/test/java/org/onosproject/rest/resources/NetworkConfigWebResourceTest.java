@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,12 @@
  */
 package org.onosproject.rest.resources;
 
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.util.HashSet;
-import java.util.Set;
-
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-
-import org.eclipse.jetty.http.HttpStatus;
+import com.eclipsesource.json.Json;
+import com.eclipsesource.json.JsonObject;
+import com.eclipsesource.json.JsonValue;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,12 +35,11 @@ import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.config.NetworkConfigServiceAdapter;
 import org.onosproject.net.config.SubjectFactory;
 
-import com.eclipsesource.json.Json;
-import com.eclipsesource.json.JsonObject;
-import com.eclipsesource.json.JsonValue;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableSet;
+import javax.ws.rs.NotFoundException;
+import javax.ws.rs.client.WebTarget;
+import java.net.HttpURLConnection;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.replay;
@@ -62,7 +55,7 @@ import static org.junit.Assert.fail;
  */
 public class NetworkConfigWebResourceTest extends ResourceTest {
 
-    private MockNetworkConfigService mockNetworkConfigService;
+    MockNetworkConfigService mockNetworkConfigService;
 
     public class MockDeviceConfig extends Config<Device> {
 
@@ -149,9 +142,9 @@ public class NetworkConfigWebResourceTest extends ResourceTest {
 
         @Override
         public SubjectFactory getSubjectFactory(String subjectClassKey) {
-            if ("devices".equals(subjectClassKey)) {
+            if (subjectClassKey.equals("devices")) {
                 return mockDevicesSubjectFactory;
-            } else if ("links".equals(subjectClassKey)) {
+            } else if (subjectClassKey.equals("links")) {
                 return mockLinksSubjectFactory;
             }
             return null;
@@ -211,7 +204,7 @@ public class NetworkConfigWebResourceTest extends ResourceTest {
      * Sets up test config data.
      */
     @SuppressWarnings("unchecked")
-    private void setUpConfigData() {
+    public void setUpConfigData() {
         mockNetworkConfigService.devicesSubjects.add("device1");
         mockNetworkConfigService.devicesConfigs.add(new MockDeviceConfig("v1", "v2"));
     }
@@ -355,49 +348,5 @@ public class NetworkConfigWebResourceTest extends ResourceTest {
         checkBasicAttributes(result);
     }
 
-    /**
-     * Tests network configuration with POST and illegal JSON.
-     */
-    @Test
-    public void testBadPost() {
-        String json = "this is invalid!";
-        WebTarget wt = target();
-
-        Response response = wt.path("network/configuration")
-                .request(MediaType.APPLICATION_JSON_TYPE)
-                .post(Entity.json(json));
-        Assert.assertThat(response.getStatus(), is(HttpURLConnection.HTTP_BAD_REQUEST));
-    }
-
-    /**
-     * Tests creating a network config with POST.
-     */
-    @Test
-    public void testPost() {
-        InputStream jsonStream = IntentsResourceTest.class
-                .getResourceAsStream("post-config.json");
-        WebTarget wt = target();
-
-        Response response = wt.path("network/configuration")
-                .request(MediaType.APPLICATION_JSON_TYPE)
-                .post(Entity.json(jsonStream));
-        Assert.assertThat(response.getStatus(), is(HttpURLConnection.HTTP_OK));
-    }
-
-    /**
-     * Tests creating a network config with POST of valid but incorrect JSON.
-     */
-    @Test
-    public void testBadSyntaxPost() {
-        InputStream jsonStream = IntentsResourceTest.class
-                .getResourceAsStream("post-config-bad-syntax.json");
-        WebTarget wt = target();
-
-        Response response = wt.path("network/configuration")
-                .request(MediaType.APPLICATION_JSON_TYPE)
-                .post(Entity.json(jsonStream));
-        Assert.assertThat(response.getStatus(), is(HttpStatus.MULTI_STATUS_207));
-    }
-
-    // TODO: Add test for DELETE
+    // TODO: Add test for DELETE and POST
 }

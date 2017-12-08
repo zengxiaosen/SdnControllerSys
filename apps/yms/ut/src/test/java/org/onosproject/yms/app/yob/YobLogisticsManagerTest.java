@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ public class YobLogisticsManagerTest {
                     (YdtExtendedContext) childCtx, YdtTestUtils
                             .getSchemaRegistry());
             Class<?> aClass = yangObject.getClass();
-            if ("CustomssupervisorOpParam".equals(aClass.getSimpleName())) {
+            if (aClass.getSimpleName().equals("CustomssupervisorOpParam")) {
                 try {
                     Field field = aClass.getDeclaredField("supervisor");
                     Field onosYangNodeOperationType = aClass
@@ -67,7 +67,8 @@ public class YobLogisticsManagerTest {
                 }
             }
 
-            if ("MerchandisersupervisorOpParam".equals(aClass.getSimpleName())) {
+            if (aClass.getSimpleName().equals(
+                    "MerchandisersupervisorOpParam")) {
                 try {
                     Field field = aClass.getDeclaredField("supervisor");
                     field.setAccessible(true);
@@ -81,7 +82,7 @@ public class YobLogisticsManagerTest {
                 }
             }
 
-            if ("WarehousesupervisorOpParam".equals(aClass.getSimpleName())) {
+            if (aClass.getSimpleName().equals("WarehousesupervisorOpParam")) {
                 try {
                     Field field = aClass.getDeclaredField("supervisor");
                     field.setAccessible(true);

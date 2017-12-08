@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,7 +69,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.onlab.util.Tools.get;
@@ -159,6 +158,9 @@ public class DistributedTopologyStore
 
     @Modified
     protected void modified(ComponentContext context) {
+        for(int i=0; i<500; i++){
+            log.info("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
+        }
         Dictionary<?, ?> properties = context.getProperties();
 
         String newLinkWeightFunction = get(properties, "linkWeightFunction");
@@ -169,6 +171,8 @@ public class DistributedTopologyStore
                     new MetricLinkWeight() :
                     linkWeightFunction.equals(GEO_DISTANCE) ?
                             new GeoDistanceLinkWeight(deviceService) : null;
+
+
             setDefaultLinkWeight(weight);
         }
         log.info(FORMAT, linkWeightFunction);
@@ -212,35 +216,39 @@ public class DistributedTopologyStore
 
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst) {
+
+        for(int i=0; i<30; i++){
+            log.info("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh");
+        }
+
+        log.info("store端调用的是DistributedTopologyStore。。。getPaths。。。。。。。。。。。。。。。。。。。。。。。。。。");
+        //return defaultTopology(topology).getPaths(src, dst);
         return defaultTopology(topology).getPaths(src, dst);
+    }
+    @Override
+    public Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs){
+        log.info("store端调用的是DistributedTopologyStore。。。getPaths1。。。。。。。。。。。。。。。。。。。。。。。。。。");
+        //return defaultTopology(topology).getPaths(src, dst);
+        return defaultTopology(topology).getPaths1(src, dst, hs);
     }
 
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst,
                               LinkWeight weight) {
+        for(int i=0; i<2; i++){
+            log.info("2是不是被调用了DistributedTopologyStore。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
+        }
         return getPaths(topology, src, dst, adapt(weight));
     }
 
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src,
                               DeviceId dst, LinkWeigher weigher) {
+        for(int i=0; i<10; i++){
+            log.info("3是不是被调用了DistributedTopologyStore。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
+        }
         return defaultTopology(topology).getPaths(src, dst, weigher);
-    }
 
-    @Override
-    public Set<Path> getKShortestPaths(Topology topology,
-                                       DeviceId src, DeviceId dst,
-                                       LinkWeigher weigher,
-                                       int maxPaths) {
-        return defaultTopology(topology).getKShortestPaths(src, dst, weigher, maxPaths);
-    }
-
-    @Override
-    public Stream<Path> getKShortestPaths(Topology topology,
-                                          DeviceId src,
-                                          DeviceId dst,
-                                          LinkWeigher weigher) {
-        return defaultTopology(topology).getKShortestPaths(src, dst, weigher);
     }
 
     @Override

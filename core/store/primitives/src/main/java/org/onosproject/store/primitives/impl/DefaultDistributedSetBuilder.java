@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package org.onosproject.store.primitives.impl;
 
+import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
 import org.onosproject.core.ApplicationId;
@@ -49,6 +50,12 @@ public class DefaultDistributedSetBuilder<E> extends DistributedSetBuilder<E> {
     @Override
     public DistributedSetBuilder<E> withApplicationId(ApplicationId id) {
         mapBuilder.withApplicationId(id);
+        return this;
+    }
+
+    @Override
+    public DistributedSetBuilder<E> withExecutorSupplier(Supplier<Executor> executorSupplier) {
+        mapBuilder.withExecutorSupplier(executorSupplier);
         return this;
     }
 

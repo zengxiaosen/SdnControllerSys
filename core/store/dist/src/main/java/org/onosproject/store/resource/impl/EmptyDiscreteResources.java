@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import com.google.common.collect.ImmutableSet;
 import org.onosproject.net.resource.DiscreteResource;
 import org.onosproject.net.resource.DiscreteResourceId;
 
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -61,16 +60,6 @@ final class EmptyDiscreteResources implements DiscreteResources {
     @Override
     public Set<DiscreteResource> values() {
         return ImmutableSet.of();
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(values());
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        return object instanceof DiscreteResources && ((DiscreteResources) object).isEmpty();
     }
 
     @Override

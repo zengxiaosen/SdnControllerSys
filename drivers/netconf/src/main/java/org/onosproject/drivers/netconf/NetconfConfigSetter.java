@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import com.google.common.base.Preconditions;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.driver.DriverHandler;
 import org.onosproject.netconf.NetconfController;
-import org.onosproject.netconf.NetconfException;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -69,7 +68,7 @@ public class NetconfConfigSetter extends AbstractHandlerBehaviour
                     .get(deviceId)
                     .getSession()
                     .requestSync(request);
-        } catch (NetconfException e) {
+        } catch (IOException e) {
             log.error("Configuration could not be set", e);
         }
         return UNABLE_TO_SET_CONFIG;

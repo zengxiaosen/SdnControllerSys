@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-  ~ Copyright 2015-present Open Networking Foundation
+  ~ Copyright 2015-present Open Networking Laboratory
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.onosproject</groupId>
         <artifactId>onos-incubator</artifactId>
-        <version>1.12.0-SNAPSHOT</version>
+        <version>1.9.3-SNAPSHOT</version>
     </parent>
 
     <artifactId>onos-incubator-net</artifactId>
@@ -99,18 +99,6 @@
             <artifactId>onlab-osgi</artifactId>
             <classifier>tests</classifier>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.googlecode.concurrent-trees</groupId>
-            <artifactId>concurrent-trees</artifactId>
-            <version>2.6.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.onosproject</groupId>
-            <artifactId>onos-core-serializers</artifactId>
-            <version>${project.version}</version>
         </dependency>
     </dependencies>
 

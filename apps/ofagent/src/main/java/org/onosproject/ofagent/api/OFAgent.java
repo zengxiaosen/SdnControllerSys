@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,28 +15,18 @@
  */
 package org.onosproject.ofagent.api;
 
+import io.netty.channel.nio.NioEventLoopGroup;
 import org.onosproject.incubator.net.virtual.NetworkId;
 
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 /**
- * Representation of an OpenFlow agent, which holds the mapping between the virtual
- * network and the external OpenFlow controllers.
+ * Representation of an OF agent, which brokers virtual devices and external
+ * controllers by handling OpenFlow connections and messages between them.
  */
 public interface OFAgent {
-
-    enum State {
-
-        /**
-         * Specifies that the ofagent state is started.
-         */
-        STARTED,
-
-        /**
-         * Specifies that the ofagent state is stopped.
-         */
-        STOPPED
-    }
 
     /**
      * Returns the identifier of the virtual network that this agent cares for.
@@ -53,11 +43,14 @@ public interface OFAgent {
     Set<OFController> controllers();
 
     /**
-     * Returns the admin state of the agent.
-     *
-     * @return state
+     * Starts the OpenFlow agent.
      */
-    State state();
+    void start();
+
+    /**
+     * Stops the OpenFlow agent.
+     */
+    void stop();
 
     /**
      * Builder of OF agent entities.
@@ -71,15 +64,6 @@ public interface OFAgent {
          */
         OFAgent build();
 
-
-        /**
-         * Returns OF agent builder with the supplied OF agent.
-         *
-         * @param ofAgent ofagent
-         * @return of agent builder
-         */
-        Builder from(OFAgent ofAgent);
-
         /**
          * Returns OF agent builder with the supplied network ID.
          *
@@ -87,6 +71,15 @@ public interface OFAgent {
          * @return of agent builder
          */
         Builder networkId(NetworkId networkId);
+
+        /**
+         * Returns OF agent builder with the supplied network services for the
+         * virtual network.
+         *
+         * @param services network services for the virtual network
+         * @return of agent builder
+         */
+        Builder services(Map<Class<?>, Object> services);
 
         /**
          * Returns OF agent builder with the supplied controllers.
@@ -97,27 +90,19 @@ public interface OFAgent {
         Builder controllers(Set<OFController> controllers);
 
         /**
-         * Returns OF agent builder with the supplied additional controller.
+         * Returns OF agent builder with the supplied event executor.
          *
-         * @param controller additional controller
+         * @param eventExecutor event executor
          * @return of agent builder
          */
-        Builder addController(OFController controller);
+        Builder eventExecutor(ExecutorService eventExecutor);
 
         /**
-         * Returns OF agent builder with the supplied controller removed.
+         * Returns OF agent builder with the supplied IO work group.
          *
-         * @param controller controller to delete
+         * @param ioWorker io worker group
          * @return of agent builder
          */
-        Builder deleteController(OFController controller);
-
-        /**
-         * Returns OF agent builder with the supplied state.
-         *
-         * @param state state of the agent
-         * @return of agent builder
-         */
-        Builder state(State state);
+        Builder ioWorker(NioEventLoopGroup ioWorker);
     }
 }

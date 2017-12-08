@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import org.onosproject.net.driver.DefaultDriverData;
 import org.onosproject.netconf.NetconfDevice;
 import org.onosproject.netconf.NetconfDeviceInfo;
 import org.onosproject.netconf.NetconfException;
-import org.onosproject.netconf.ctl.impl.NetconfControllerImpl;
+import org.onosproject.netconf.ctl.NetconfControllerImpl;
 
 import java.util.ArrayList;
 import java.util.Arrays;

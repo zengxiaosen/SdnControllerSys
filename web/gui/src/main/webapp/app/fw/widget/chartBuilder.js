@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
     // fs -> FnService
     // wss -> WebSocketService
     // ls -> LoadingService
-    var $log, $interval, fs, wss, ls;
+    var $log, $interval, $timeout, fs, wss, ls;
 
     // constants
     var refreshInterval = 2000;
@@ -51,7 +51,7 @@
         o.scope.changedData = [];
         o.scope.reqParams = o.reqParams || {};
         o.scope.autoRefresh = true;
-        o.scope.autoRefreshTip = o.lion_toggle_auto_refresh || 'Toggle auto refresh';
+        o.scope.autoRefreshTip = 'Toggle auto refresh';
 
         // === websocket functions ===
         // response
@@ -129,18 +129,19 @@
 
     angular.module('onosWidget')
         .factory('ChartBuilderService',
-        ['$log', '$interval', 'FnService', 'WebSocketService',
+        ['$log', '$interval', '$timeout', 'FnService', 'WebSocketService',
             'LoadingService',
 
-            function (_$log_, _$interval_, _fs_, _wss_, _ls_) {
+            function (_$log_, _$interval_, _$timeout_, _fs_, _wss_, _ls_) {
                 $log = _$log_;
                 $interval = _$interval_;
+                $timeout = _$timeout_;
                 fs = _fs_;
                 wss = _wss_;
                 ls = _ls_;
 
                 return {
-                    buildChart: buildChart,
+                    buildChart: buildChart
                 };
             }]);
 }());

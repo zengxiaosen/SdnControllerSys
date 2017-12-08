@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -117,7 +117,7 @@ public class SimpleIntentStore
                     if (pendingData.state() == PURGE_REQ) {
                         current.remove(newData.key(), newData);
                     } else {
-                        current.put(newData.key(), IntentData.copy(newData));
+                        current.put(newData.key(), new IntentData(newData));
                     }
 
                     if (pendingData.version().compareTo(newData.version()) <= 0) {
@@ -150,7 +150,7 @@ public class SimpleIntentStore
         if (currentData == null) {
             return null;
         }
-        return IntentData.copy(currentData);
+        return new IntentData(currentData);
     }
 
     @Override
@@ -167,7 +167,7 @@ public class SimpleIntentStore
                     existingData.version().compareTo(data.version()) < 0) {
                 pending.put(data.key(), data);
                 checkNotNull(delegate, "Store delegate is not set")
-                        .process(IntentData.copy(data));
+                        .process(new IntentData(data));
                 IntentEvent.getEvent(data).ifPresent(this::notifyDelegate);
             } else {
                 log.debug("IntentData {} is older than existing: {}",

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,27 +23,30 @@ import org.onlab.packet.IPv6;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip6Address;
 import org.onlab.packet.IpAddress;
+import org.onlab.packet.IpPrefix;
 import org.onlab.packet.MPLS;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.VlanId;
 import org.onlab.packet.ndp.NeighborSolicitation;
-import org.onosproject.net.neighbour.NeighbourMessageContext;
-import org.onosproject.net.neighbour.NeighbourMessageType;
+import org.onosproject.incubator.net.neighbour.NeighbourMessageContext;
+import org.onosproject.incubator.net.neighbour.NeighbourMessageType;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.Host;
+import org.onosproject.net.HostId;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.packet.DefaultOutboundPacket;
+import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.OutboundPacket;
+import org.onosproject.net.packet.PacketContext;
 import org.onosproject.segmentrouting.config.DeviceConfigNotFoundException;
 import org.onosproject.segmentrouting.config.SegmentRoutingAppConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -92,7 +95,7 @@ public class IcmpHandler extends SegmentRoutingNeighbourHandler {
                                                               treatment, ByteBuffer.wrap(payload.serialize()));
             srManager.packetService.emit(packet);
         } else {
-            log.trace("Send a MPLS packet as a ICMP response");
+            log.debug("Send a MPLS packet as a ICMP response");
             TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                     .setOutput(outport.port())
                     .build();
@@ -117,8 +120,10 @@ public class IcmpHandler extends SegmentRoutingNeighbourHandler {
 
     /**
      * Process incoming ICMP packet.
-     * If it is an ICMP request to router, then sends an ICMP response.
-     * Otherwise ignore the packet.
+     * If it is an ICMP request to router or known host, then sends an ICMP response.
+     * If it is an ICMP packet to known host and forward the packet to the host.
+     * If it is an ICMP packet to unknown host in a subnet, then sends an ARP request
+     * to the subnet.
      *
      * @param eth inbound ICMP packet
      * @param inPort the input port
@@ -140,48 +145,45 @@ public class IcmpHandler extends SegmentRoutingNeighbourHandler {
                 (destinationAddress.equals(routerIp.getIp4Address()) ||
                         gatewayIpAddresses.contains(destinationAddress))) {
             sendIcmpResponse(eth, inPort);
+            // We remove the packet from the queue
+            srManager.ipHandler.dequeuePacket(ipv4Packet, destinationAddress);
+
+        // ICMP for any known host
+        } else if (!srManager.hostService.getHostsByIp(destinationAddress).isEmpty()) {
+            // TODO: known host packet should not be coming to controller - resend flows?
+            srManager.ipHandler.forwardPackets(deviceId, destinationAddress);
+
+        // ICMP for an unknown host in the subnet of the router
+        } else if (config.inSameSubnet(deviceId, destinationAddress)) {
+            srManager.arpHandler.sendArpRequest(deviceId, destinationAddress, inPort);
+
+        // ICMP for an unknown host
         } else {
-            log.trace("Ignore ICMP that targets for {}", destinationAddress);
+            log.debug("ICMP request for unknown host {} ", destinationAddress);
+            // We remove the packet from the queue
+            srManager.ipHandler.dequeuePacket(ipv4Packet, destinationAddress);
         }
-        // We remove the packet from the queue
-        srManager.ipHandler.dequeuePacket(ipv4Packet, destinationAddress);
     }
 
     /**
      * Sends an ICMP reply message.
      *
+     * Note: we assume that packets sending from the edge switches to the hosts
+     * have untagged VLAN.
      * @param icmpRequest the original ICMP request
      * @param outport the output port where the ICMP reply should be sent to
      */
     private void sendIcmpResponse(Ethernet icmpRequest, ConnectPoint outport) {
+        // Note: We assume that packets arrive at the edge switches have
+        // untagged VLAN.
         Ethernet icmpReplyEth = ICMP.buildIcmpReply(icmpRequest);
         IPv4 icmpRequestIpv4 = (IPv4) icmpRequest.getPayload();
         IPv4 icmpReplyIpv4 = (IPv4) icmpReplyEth.getPayload();
         Ip4Address destIpAddress = Ip4Address.valueOf(icmpRequestIpv4.getSourceAddress());
         Ip4Address destRouterAddress = config.getRouterIpAddressForASubnetHost(destIpAddress);
-
-        // Note: Source IP of the ICMP request doesn't belong to any configured subnet.
-        //       The source might be an indirectly attached host (e.g. behind a router)
-        //       Lookup the route store for the nexthop instead.
-        if (destRouterAddress == null) {
-            Optional<DeviceId> deviceId = srManager.routeService
-                    .longestPrefixLookup(destIpAddress).map(srManager::nextHopLocations)
-                    .flatMap(locations -> locations.stream().findFirst())
-                    .map(ConnectPoint::deviceId);
-            if (deviceId.isPresent()) {
-                try {
-                    destRouterAddress = config.getRouterIpv4(deviceId.get());
-                } catch (DeviceConfigNotFoundException e) {
-                    log.warn("Device config for {} not found. Abort ICMP processing", deviceId);
-                    return;
-                }
-            }
-        }
-
         int destSid = config.getIPv4SegmentId(destRouterAddress);
         if (destSid < 0) {
-            log.warn("Failed to lookup SID of the switch that {} attaches to. " +
-                    "Unable to process ICMP request.", destIpAddress);
+            log.warn("Cannot find the Segment ID for {}", destIpAddress);
             return;
         }
         sendPacketOut(outport, icmpReplyEth, destSid, destIpAddress, icmpReplyIpv4.getTtl());
@@ -193,8 +195,10 @@ public class IcmpHandler extends SegmentRoutingNeighbourHandler {
 
     /**
      * Process incoming ICMPv6 packet.
-     * If it is an ICMPv6 request to router, then sends an ICMPv6 response.
-     * Otherwise ignore the packet.
+     * If it is an ICMP request to router or known host, then sends an ICMP response.
+     * If it is an ICMP packet to known host and forward the packet to the host.
+     * If it is an ICMP packet to unknown host in a subnet, then sends an ARP request
+     * to the subnet.
      *
      * @param eth the incoming ICMPv6 packet
      * @param inPort the input port
@@ -217,8 +221,20 @@ public class IcmpHandler extends SegmentRoutingNeighbourHandler {
                 (destinationAddress.equals(routerIp.getIp6Address()) ||
                         gatewayIpAddresses.contains(destinationAddress))) {
             sendIcmpv6Response(eth, inPort);
+            // We remove the packet from the queue
+            srManager.ipHandler.dequeuePacket(ipv6Packet, destinationAddress);
+            // ICMP for any known host
+        } else if (!srManager.hostService.getHostsByIp(destinationAddress).isEmpty()) {
+            // TODO: known host packet should not be coming to controller - resend flows?
+            srManager.ipHandler.forwardPackets(deviceId, destinationAddress);
+            // ICMP for an unknown host in the subnet of the router
+        } else if (config.inSameSubnet(deviceId, destinationAddress)) {
+            sendNdpRequest(deviceId, destinationAddress, inPort);
+            // ICMP for an unknown host or not configured host
         } else {
-            log.trace("Ignore ICMPv6 that targets for {}", destinationAddress);
+            log.debug("ICMPv6 request for unknown host or not configured host {} ", destinationAddress);
+            // We remove the packet from the queue
+            srManager.ipHandler.dequeuePacket(ipv6Packet, destinationAddress);
         }
     }
 
@@ -231,35 +247,16 @@ public class IcmpHandler extends SegmentRoutingNeighbourHandler {
      * @param outport the output port where the ICMP reply should be sent to
      */
     private void sendIcmpv6Response(Ethernet ethRequest, ConnectPoint outport) {
-        // Note: We assume that packets arrive at the edge switches have untagged VLAN.
+        // Note: We assume that packets arrive at the edge switches have
+        // untagged VLAN.
         Ethernet ethReply = ICMP6.buildIcmp6Reply(ethRequest);
         IPv6 icmpRequestIpv6 = (IPv6) ethRequest.getPayload();
         IPv6 icmpReplyIpv6 = (IPv6) ethRequest.getPayload();
         Ip6Address destIpAddress = Ip6Address.valueOf(icmpRequestIpv6.getSourceAddress());
         Ip6Address destRouterAddress = config.getRouterIpAddressForASubnetHost(destIpAddress);
-
-        // Note: Source IP of the ICMP request doesn't belong to any configured subnet.
-        //       The source might be an indirect host behind a router.
-        //       Lookup the route store for the nexthop instead.
-        if (destRouterAddress == null) {
-            Optional<DeviceId> deviceId = srManager.routeService
-                    .longestPrefixLookup(destIpAddress).map(srManager::nextHopLocations)
-                    .flatMap(locations -> locations.stream().findFirst())
-                    .map(ConnectPoint::deviceId);
-            if (deviceId.isPresent()) {
-                try {
-                    destRouterAddress = config.getRouterIpv6(deviceId.get());
-                } catch (DeviceConfigNotFoundException e) {
-                    log.warn("Device config for {} not found. Abort ICMPv6 processing", deviceId);
-                    return;
-                }
-            }
-        }
-
         int sid = config.getIPv6SegmentId(destRouterAddress);
         if (sid < 0) {
-            log.warn("Failed to lookup SID of the switch that {} attaches to. " +
-                    "Unable to process ICMPv6 request.", destIpAddress);
+            log.warn("Cannot find the Segment ID for {}", destIpAddress);
             return;
         }
         sendPacketOut(outport, ethReply, sid, destIpAddress, icmpReplyIpv6.getHopLimit());
@@ -282,11 +279,19 @@ public class IcmpHandler extends SegmentRoutingNeighbourHandler {
      * @param hostService the host service
      */
     public void processPacketIn(NeighbourMessageContext pkt, HostService hostService) {
-        // First we validate the ndp packet
+        /*
+         * First we validate the ndp packet
+         */
         SegmentRoutingAppConfig appConfig = srManager.cfgService
                 .getConfig(srManager.appId, SegmentRoutingAppConfig.class);
         if (appConfig != null && appConfig.suppressSubnet().contains(pkt.inPort())) {
             // Ignore NDP packets come from suppressed ports
+            pkt.drop();
+            return;
+        }
+        if (!validateSrcIp(pkt)) {
+            log.debug("Ignore NDP packet discovered on {} with unexpected src ip address {}.",
+                      pkt.inPort(), pkt.sender());
             pkt.drop();
             return;
         }
@@ -300,38 +305,64 @@ public class IcmpHandler extends SegmentRoutingNeighbourHandler {
     }
 
     /**
+     * Utility function to verify if the src ip belongs to the same
+     * subnet configured on the port it is seen.
+     *
+     * @param pkt the ndp packet and context information
+     * @return true if the src ip is a valid address for the subnet configured
+     * for the connect point
+     */
+    private boolean validateSrcIp(NeighbourMessageContext pkt) {
+        ConnectPoint connectPoint = pkt.inPort();
+        IpPrefix subnet = config.getPortIPv6Subnet(
+                connectPoint.deviceId(),
+                connectPoint.port()
+        );
+        return subnet != null && subnet.contains(pkt.sender());
+    }
+
+    /**
      * Helper method to handle the ndp requests.
      *
      * @param pkt the ndp packet request and context information
      * @param hostService the host service
      */
     private void handleNdpRequest(NeighbourMessageContext pkt, HostService hostService) {
-        // ND request for the gateway. We have to reply on behalf of the gateway.
+        /*
+         * ND request for the gateway. We have to reply on behalf
+         * of the gateway.
+         */
         if (isNdpForGateway(pkt)) {
-            log.trace("Sending NDP reply on behalf of gateway IP for pkt: {}", pkt);
+            log.debug("Sending NDP reply on behalf of the router");
             sendResponse(pkt, config.getRouterMacForAGatewayIp(pkt.target()), hostService);
         } else {
-            // NOTE: Ignore NDP packets except those target for the router
-            //       We will reconsider enabling this when we have host learning support
             /*
-            // ND request for an host. We do a search by Ip.
+             * ND request for an host. We do a search by Ip.
+             */
             Set<Host> hosts = hostService.getHostsByIp(pkt.target());
-            // Possible misconfiguration ? In future this case
-            // should be handled we can have same hosts in different VLANs.
+            /*
+             * Possible misconfiguration ? In future this case
+             * should be handled we can have same hosts in different
+             * vlans.
+             */
             if (hosts.size() > 1) {
                 log.warn("More than one host with IP {}", pkt.target());
             }
             Host targetHost = hosts.stream().findFirst().orElse(null);
-            // If we know the host forward to its attachment point.
+            /*
+             * If we know the host forward to its attachment
+             * point.
+             */
             if (targetHost != null) {
                 log.debug("Forward NDP request to the target host");
                 pkt.forward(targetHost.location());
             } else {
-                // Flood otherwise.
+                /*
+                 * Flood otherwise.
+                 */
                 log.debug("Flood NDP request to the target subnet");
                 flood(pkt);
             }
-            */
         }
     }
 
@@ -347,23 +378,21 @@ public class IcmpHandler extends SegmentRoutingNeighbourHandler {
             Ip6Address hostIpAddress = pkt.sender().getIp6Address();
             srManager.ipHandler.forwardPackets(pkt.inPort().deviceId(), hostIpAddress);
         } else {
-            // NOTE: Ignore NDP packets except those target for the router
-            //       We will reconsider enabling this when we have host learning support
-            /*
             HostId hostId = HostId.hostId(pkt.dstMac(), pkt.vlan());
             Host targetHost = hostService.getHost(hostId);
             if (targetHost != null) {
                 log.debug("Forwarding the reply to the host");
                 pkt.forward(targetHost.location());
             } else {
-                // We don't have to flood towards spine facing ports.
-                if (pkt.vlan().equals(SegmentRoutingManager.INTERNAL_VLAN)) {
+                /*
+                 * We don't have to flood towards spine facing ports.
+                 */
+                if (pkt.vlan().equals(VlanId.vlanId(SegmentRoutingManager.ASSIGNED_VLAN_NO_SUBNET))) {
                     return;
                 }
                 log.debug("Flooding the reply to the subnet");
                 flood(pkt);
             }
-            */
         }
     }
 
@@ -384,13 +413,11 @@ public class IcmpHandler extends SegmentRoutingNeighbourHandler {
         } catch (DeviceConfigNotFoundException e) {
             log.warn(e.getMessage() + " Aborting check for router IP in processing ndp");
         }
-
-        return gatewayIpAddresses != null && gatewayIpAddresses.stream()
-                .filter(IpAddress::isIp6)
-                .anyMatch(gatewayIp -> gatewayIp.equals(pkt.target()) ||
-                        Arrays.equals(IPv6.getSolicitNodeAddress(gatewayIp.toOctets()),
-                                pkt.target().toOctets())
-        );
+        if (gatewayIpAddresses != null &&
+                gatewayIpAddresses.contains(pkt.target())) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -403,15 +430,22 @@ public class IcmpHandler extends SegmentRoutingNeighbourHandler {
     public void sendNdpRequest(DeviceId deviceId, IpAddress targetAddress, ConnectPoint inPort) {
         byte[] senderMacAddress = new byte[MacAddress.MAC_ADDRESS_LENGTH];
         byte[] senderIpAddress = new byte[Ip6Address.BYTE_LENGTH];
-        // Retrieves device info.
+        /*
+         * Retrieves device info.
+         */
         if (!getSenderInfo(senderMacAddress, senderIpAddress, deviceId, targetAddress)) {
             log.warn("Aborting sendNdpRequest, we cannot get all the information needed");
             return;
         }
-        // We have to compute the dst mac address and dst ip address.
+        /*
+         * We have to compute the dst mac address and dst
+         * ip address.
+         */
         byte[] dstIp = IPv6.getSolicitNodeAddress(targetAddress.toOctets());
         byte[] dstMac = IPv6.getMCastMacAddress(dstIp);
-        // Creates the request.
+        /*
+         * Creates the request.
+         */
         Ethernet ndpRequest = NeighborSolicitation.buildNdpSolicit(
                 targetAddress.toOctets(),
                 senderIpAddress,
@@ -422,4 +456,34 @@ public class IcmpHandler extends SegmentRoutingNeighbourHandler {
         );
         flood(ndpRequest, inPort, targetAddress);
     }
+
+    /////////////////////////////////////////////////////////////////
+    //    XXX Neighbour hacking, temporary workaround will be      //
+    //    removed as soon as possible, when the bridging will      //
+    //    be implemented. For now, it's fine to leave this         //
+    /////////////////////////////////////////////////////////////////
+
+    // XXX Neighbour hacking, this method is used to handle
+    // the ICMPv6 protocols for the upstream port
+    public boolean handleUPstreamPackets(PacketContext packetContext) {
+        InboundPacket pkt = packetContext.inPacket();
+        Ethernet ethernet = pkt.parsed();
+        if (srManager.vRouterCP == null || srManager.upstreamCP == null) {
+            return false;
+        }
+        if (pkt.receivedFrom().equals(srManager.upstreamCP)) {
+            sendTo(ByteBuffer.wrap(ethernet.serialize()), srManager.vRouterCP);
+            return true;
+        }
+        return false;
+    }
+
+    // XXX Neigbour hack. To send out a packet
+    private void sendTo(ByteBuffer packet, ConnectPoint outPort) {
+        TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder();
+        builder.setOutput(outPort.port());
+        srManager.packetService.emit(new DefaultOutboundPacket(outPort.deviceId(),
+                                                     builder.build(), packet));
+    }
+
 }

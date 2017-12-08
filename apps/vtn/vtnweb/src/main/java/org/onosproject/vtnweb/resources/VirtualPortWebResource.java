@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -387,7 +387,7 @@ public class VirtualPortWebResource extends AbstractWebResource {
      * @return the virtualPort state
      */
     private State isState(String state) {
-        if ("ACTIVE".equals(state)) {
+        if (state.equals("ACTIVE")) {
             return VirtualPort.State.ACTIVE;
         } else {
             return VirtualPort.State.DOWN;

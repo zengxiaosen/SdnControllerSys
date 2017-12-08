@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,30 +18,27 @@ package org.onosproject.drivers.ciena;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.commons.configuration.HierarchicalConfiguration;
-import org.onlab.packet.ChassisId;
 import org.onosproject.drivers.utilities.XmlConfigParser;
 import org.onosproject.net.AnnotationKeys;
 import org.onosproject.net.ChannelSpacing;
 import org.onosproject.net.CltSignalType;
 import org.onosproject.net.DefaultAnnotations;
-import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.GridType;
 import org.onosproject.net.OchSignal;
 import org.onosproject.net.OduSignalType;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.SparseAnnotations;
-import org.onosproject.net.device.DefaultDeviceDescription;
 import org.onosproject.net.device.DeviceDescription;
 import org.onosproject.net.device.DeviceDescriptionDiscovery;
-import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.device.PortDescription;
 import org.onosproject.net.driver.AbstractHandlerBehaviour;
+import org.onosproject.net.driver.DriverHandler;
 import org.onosproject.protocol.rest.RestSBController;
 import org.slf4j.Logger;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onosproject.net.optical.device.OchPortHelper.ochPortDescription;
@@ -51,52 +48,40 @@ import static org.slf4j.LoggerFactory.getLogger;
 /**
  * Discovers the ports from a Ciena WaveServer Rest device.
  */
-//TODO: Use CienaRestDevice
 public class CienaWaveserverDeviceDescription extends AbstractHandlerBehaviour
         implements DeviceDescriptionDiscovery {
 
     private final Logger log = getLogger(getClass());
 
-    private static final String PORT_ID = "ptp-index";
+    private static final String SPEED = "speed";
+    private static final String GBPS = "Gbps";
+    private static final String PORT_ID = "port-id";
     private static final String XML = "xml";
     private static final String ENABLED = "enabled";
-    private static final String ADMIN_STATE = "state.admin-state";
-    private static final String PORTS = "ws-ptps.ptps";
-    private static final String PORT_IN = "properties.line-system.cmd.port-in";
-    private static final String PORT_OUT = "properties.line-system.cmd.port-out";
+    private static final String EMPTY_STRING = "";
+    private static final String NAME = "name";
+    private static final String ADMIN_STATE = "admin-state";
 
-    private static final String CHANNEL_ID =
-            "properties.transmitter.line-system-channel-number";
-
-    private static final String PORT_REQUEST =
-            "ciena-ws-ptp:ws-ptps?config=true&format=xml&depth=unbounded";
     private static final ArrayList<String> LINESIDE_PORT_ID = Lists.newArrayList(
             "4", "48");
 
+    private static final String GENERAL_PORT_REQUEST =
+            "ws-ports?config=true&format=xml&depth=unbounded";
+    private static final String SPECIFIC_PORT_PATH = "ws-ptps/ptp/";
+    private static final String SPECIFIC_PORT_CONFIG =
+            "/ptp-config?config=true&format=xml&depth=unbounded";
+    //HTTP strings
+//    private static final String GENERAL_PORT_REQUEST =
+//            "/yang-api/datastore/ws-ports?config=true&format=xml&depth=unbounded";
+//    private static final String SPECIFIC_PORT_PATH = "/yang-api/datastore/ws-ptps/ptp/";
+//    private static final String SPECIFIC_PORT_CONFIG =
+//            "/ptp-config?config=true&format=xml&depth=unbounded";
+
     @Override
     public DeviceDescription discoverDeviceDetails() {
-        log.debug("getting device description");
-        DeviceService deviceService = checkNotNull(handler().get(DeviceService.class));
-        DeviceId deviceId = handler().data().deviceId();
-        Device device = deviceService.getDevice(deviceId);
-
-        if (device == null) {
-            return new DefaultDeviceDescription(deviceId.uri(),
-                                                Device.Type.OTN,
-                                                "Ciena",
-                                                "WaveServer",
-                                                "Unknown",
-                                                "Unknown",
-                                                new ChassisId());
-        } else {
-            return new DefaultDeviceDescription(device.id().uri(),
-                                                Device.Type.OTN,
-                                                device.manufacturer(),
-                                                device.hwVersion(),
-                                                device.swVersion(),
-                                                device.serialNumber(),
-                                                device.chassisId());
-        }
+        log.info("No description to be added for device");
+        //TODO to be implemented if needed.
+        return null;
     }
 
     @Override
@@ -105,82 +90,86 @@ public class CienaWaveserverDeviceDescription extends AbstractHandlerBehaviour
     }
 
     private List<PortDescription> getPorts() {
-        /*
-         * Relationship between ptp-index and port number shown in Ciena Wave Server
-         * CLI:
-         *      ptp-index = 4 * port_number (without decimal) + decimal
-         *      e.g
-         *          if port_number is 5 then ptp-index = 5 * 4 + 0 = 20
-         *          if port_number is 5.1 then ptp-index = 5 * 4 + 1 = 21
-         *
-         * Relationship between channelId and in/out port:
-         *      in_port = channelId * 2
-         *      out_port = channelId * 2 -1
-         */
         List<PortDescription> ports = Lists.newArrayList();
-        RestSBController controller = checkNotNull(handler().get(RestSBController.class));
-        DeviceId deviceId = handler().data().deviceId();
+        DriverHandler handler = handler();
+        RestSBController controller = checkNotNull(handler.get(RestSBController.class));
+        DeviceId deviceId = handler.data().deviceId();
+
 
         HierarchicalConfiguration config = XmlConfigParser.
-                loadXml(controller.get(deviceId, PORT_REQUEST, XML));
+                loadXml(controller.get(deviceId, GENERAL_PORT_REQUEST, XML));
         List<HierarchicalConfiguration> portsConfig =
                 parseWaveServerCienaPorts(config);
         portsConfig.forEach(sub -> {
             String portId = sub.getString(PORT_ID);
-            DefaultAnnotations.Builder annotations = DefaultAnnotations.builder();
+            String name = sub.getString(NAME);
             if (LINESIDE_PORT_ID.contains(portId)) {
-                annotations.set(AnnotationKeys.CHANNEL_ID, sub.getString(CHANNEL_ID));
-                // TX/OUT and RX/IN ports
-                annotations.set(AnnotationKeys.PORT_OUT, sub.getString(PORT_OUT));
-                annotations.set(AnnotationKeys.PORT_IN, sub.getString(PORT_IN));
+                String txName = name + " Tx";
+                DefaultAnnotations.Builder annotations = DefaultAnnotations.builder()
+                        .set(AnnotationKeys.PORT_NAME, txName);
+                String wsportInfoRequest = SPECIFIC_PORT_PATH + portId +
+                        SPECIFIC_PORT_CONFIG;
                 ports.add(parseWaveServerCienaOchPorts(
-                        Long.valueOf(portId),
-                        sub,
+                        sub.getLong(PORT_ID),
+                        toGbps(Long.parseLong(sub.getString(SPEED).replace(GBPS, EMPTY_STRING)
+                                                      .replace(" ", EMPTY_STRING))),
+                        XmlConfigParser.loadXml(controller.get(deviceId, wsportInfoRequest, XML)),
                         annotations.build()));
-
+                //adding corresponding opposite side port
+                String rxName = name.replace(".1", ".2") + " Rx";
+                ports.add(parseWaveServerCienaOchPorts(
+                        sub.getLong(PORT_ID) + 1,
+                        toGbps(Long.parseLong(sub.getString(SPEED).replace(GBPS, EMPTY_STRING)
+                                                      .replace(" ", EMPTY_STRING))),
+                        XmlConfigParser.loadXml(controller.get(deviceId, wsportInfoRequest, XML)),
+                        annotations.set(AnnotationKeys.PORT_NAME, rxName)
+                                .build()));
             } else if (!portId.equals("5") && !portId.equals("49")) {
-                DefaultAnnotations.builder()
-                        .set(AnnotationKeys.PORT_NAME, portId);
+                DefaultAnnotations.Builder annotations = DefaultAnnotations.builder()
+                        .set(AnnotationKeys.PORT_NAME, name);
                 //FIXME change when all optical types have two way information methods, see jira tickets
+                final int speed100GbpsinMbps = 100000;
+                CltSignalType cltType = toGbps(Long.parseLong(
+                        sub.getString(SPEED).replace(GBPS, EMPTY_STRING)
+                                .replace(" ", EMPTY_STRING))) == speed100GbpsinMbps ?
+                        CltSignalType.CLT_100GBE : null;
                 ports.add(oduCltPortDescription(PortNumber.portNumber(sub.getLong(PORT_ID)),
                                                 sub.getString(ADMIN_STATE).equals(ENABLED),
-                                                CltSignalType.CLT_100GBE, annotations.build()));
+                                                cltType, annotations.build()));
             }
         });
         return ImmutableList.copyOf(ports);
     }
 
     public static List<HierarchicalConfiguration> parseWaveServerCienaPorts(HierarchicalConfiguration cfg) {
-        return cfg.configurationsAt(PORTS);
+        return cfg.configurationsAt("ws-ports.port-interface");
     }
 
-    public static PortDescription parseWaveServerCienaOchPorts(long portNumber,
+    public static PortDescription parseWaveServerCienaOchPorts(long portNumber, long oduPortSpeed,
                                                                HierarchicalConfiguration config,
                                                                SparseAnnotations annotations) {
-        final List<String> tunableType = Lists.newArrayList("performance-optimized", "accelerated");
-        final String flexGrid = "flex-grid";
-        final String state = "properties.transmitter.state";
-        final String tunable = "properties.modem.tx-tuning-mode";
-        final String spacing = "properties.line-system.wavelength-spacing";
-        final String frequency = "properties.transmitter.frequency.value";
+        final List<String> tunableType = Lists.newArrayList("Performance-Optimized", "Accelerated");
+        final String transmitterPath = "ptp-config.transmitter-state";
+        final String tunablePath = "ptp-config.adv-config.tx-tuning-mode";
+        final String gridTypePath = "ptp-config.adv-config.wl-spacing";
+        final String frequencyPath = "ptp-config.adv-config.frequency";
 
-        boolean isEnabled = config.getString(state).equals(ENABLED);
-        boolean isTunable = tunableType.contains(config.getString(tunable));
+        boolean isEnabled = config.getString(transmitterPath).equals("enabled");
+        boolean isTunable = tunableType.contains(config.getString(tunablePath));
 
-        GridType gridType = config.getString(spacing).equals(flexGrid) ? GridType.FLEX : null;
+        //FIXME change when all optical types have two way information methods, see jira tickets
+        final int speed100GbpsinMbps = 100000;
+        OduSignalType oduSignalType = oduPortSpeed == speed100GbpsinMbps ? OduSignalType.ODU4 : null;
+        GridType gridType = config.getString(gridTypePath).equals("FlexGrid") ? GridType.FLEX : null;
         ChannelSpacing chSpacing = gridType == GridType.FLEX ? ChannelSpacing.CHL_6P25GHZ : null;
 
         //Working in Ghz //(Nominal central frequency - 193.1)/channelSpacing = spacingMultiplier
         final int baseFrequency = 193100;
-        int spacingMult = (int) (toGbps(((int) config.getDouble(frequency) -
+        int spacingMult = (int) (toGbps((Integer.parseInt(config.getString(frequencyPath)) -
                 baseFrequency)) / toGbpsFromHz(chSpacing.frequency().asHz())); //FIXME is there a better way ?
 
-        return ochPortDescription(PortNumber.portNumber(portNumber), isEnabled, OduSignalType.ODU4, isTunable,
+        return ochPortDescription(PortNumber.portNumber(portNumber), isEnabled, oduSignalType, isTunable,
                                   new OchSignal(gridType, chSpacing, spacingMult, 1), annotations);
-    }
-
-    public static ArrayList<String> getLinesidePortId() {
-        return LINESIDE_PORT_ID;
     }
 
     //FIXME remove when all optical types have two way information methods, see jira tickets

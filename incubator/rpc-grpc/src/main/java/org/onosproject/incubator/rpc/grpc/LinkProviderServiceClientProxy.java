@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,18 @@
  */
 package org.onosproject.incubator.rpc.grpc;
 
-import com.google.common.annotations.Beta;
-import com.google.common.util.concurrent.ListenableFuture;
-import io.grpc.Channel;
+import static org.onosproject.incubator.protobuf.net.ProtobufUtils.asMap;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import org.onosproject.grpc.net.Link.LinkType;
 import org.onosproject.grpc.net.link.LinkProviderServiceRpcGrpc;
 import org.onosproject.grpc.net.link.LinkProviderServiceRpcGrpc.LinkProviderServiceRpcFutureStub;
 import org.onosproject.grpc.net.link.LinkService.LinkDetectedMsg;
 import org.onosproject.grpc.net.link.LinkService.LinkVanishedMsg;
 import org.onosproject.grpc.net.link.LinkService.Void;
-import org.onosproject.grpc.net.link.models.LinkEnumsProto.LinkTypeProto;
-import org.onosproject.grpc.net.models.ConnectPointProtoOuterClass.ConnectPointProto;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Link.Type;
@@ -36,11 +38,10 @@ import org.onosproject.net.provider.ProviderId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import com.google.common.annotations.Beta;
+import com.google.common.util.concurrent.ListenableFuture;
 
-import static org.onosproject.incubator.protobuf.models.ProtobufUtils.asMap;
+import io.grpc.Channel;
 
 /**
  * Proxy object to handle LinkProviderService calls.
@@ -225,25 +226,25 @@ class LinkProviderServiceClientProxy
      * Translates ONOS object to gRPC message.
      *
      * @param type {@link org.onosproject.net.Link.Type Link.Type}
-     * @return gRPC LinkTypeProto
+     * @return gRPC LinkType
      */
-    private LinkTypeProto translate(Type type) {
+    private LinkType translate(Type type) {
         switch (type) {
         case DIRECT:
-            return LinkTypeProto.DIRECT;
+            return LinkType.DIRECT;
         case EDGE:
-            return LinkTypeProto.EDGE;
+            return LinkType.EDGE;
         case INDIRECT:
-            return LinkTypeProto.INDIRECT;
+            return LinkType.INDIRECT;
         case OPTICAL:
-            return LinkTypeProto.OPTICAL;
+            return LinkType.OPTICAL;
         case TUNNEL:
-            return LinkTypeProto.TUNNEL;
+            return LinkType.TUNNEL;
         case VIRTUAL:
-            return LinkTypeProto.VIRTUAL;
+            return LinkType.VIRTUAL;
 
         default:
-            return LinkTypeProto.DIRECT;
+            return LinkType.DIRECT;
 
         }
     }
@@ -252,10 +253,10 @@ class LinkProviderServiceClientProxy
      * Translates ONOS object to gRPC message.
      *
      * @param cp {@link ConnectPoint}
-     * @return gRPC ConnectPointProto
+     * @return gRPC ConnectPoint
      */
-    private ConnectPointProto translate(ConnectPoint cp) {
-        return ConnectPointProto.newBuilder()
+    private org.onosproject.grpc.net.Link.ConnectPoint translate(ConnectPoint cp) {
+        return org.onosproject.grpc.net.Link.ConnectPoint.newBuilder()
                 .setDeviceId(cp.deviceId().toString())
                 .setPortNumber(cp.port().toString())
                 .build();

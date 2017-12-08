@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,10 +25,8 @@ import org.onosproject.net.behaviour.ControllerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,10 +51,6 @@ public final class XmlConfigParser {
         } catch (ConfigurationException e) {
             throw new IllegalArgumentException("Cannot load xml from Stream", e);
         }
-    }
-
-    public static HierarchicalConfiguration loadXmlString(String xmlStr) {
-        return loadXml(new ByteArrayInputStream(xmlStr.getBytes(StandardCharsets.UTF_8)));
     }
 
     public static List<ControllerInfo> parseStreamControllers(HierarchicalConfiguration cfg) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@ public class VirtualProviderManager
     public synchronized void unregisterProvider(VirtualProvider virtualProvider) {
         checkNotNull(virtualProvider, "Provider cannot be null");
 
-        //TODO: invalidate provider services which subscribe the provider
+        //TODO: invalidate provider services witch subscribe the provider
         providers.remove(virtualProvider.id());
 
         if (!virtualProvider.id().isAncillary()) {
@@ -84,9 +84,12 @@ public class VirtualProviderManager
     public synchronized void
     registerProviderService(NetworkId networkId,
                             VirtualProviderService virtualProviderService) {
-        Set<VirtualProviderService> services =
-                servicesByNetwork.computeIfAbsent(networkId, k -> new HashSet<>());
+        Set<VirtualProviderService> services = servicesByNetwork.get(networkId);
 
+        if (services == null) {
+            services = new HashSet<>();
+            servicesByNetwork.put(networkId, services);
+        }
         services.add(virtualProviderService);
     }
 
@@ -143,7 +146,7 @@ public class VirtualProviderManager
 
         return services.stream()
                 .filter(s -> getProviderClass(s).equals(providerClass))
-                .findFirst().orElse(null);
+                .findFirst().get();
     }
 
     /**

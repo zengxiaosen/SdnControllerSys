@@ -1,8 +1,7 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
-    '//lib:JACKSON',
-    '//lib:KRYO',
     '//lib:openflowj',
+    '//drivers/utilities:onos-drivers-utilities',
     '//protocols/openflow/api:onos-protocols-openflow-api',
     '//core/store/serializers:onos-core-serializers',
 ]
@@ -21,10 +20,10 @@ osgi_jar_with_tests (
 
 onos_app (
     app_name = 'org.onosproject.drivers',
-    title = 'Default Drivers',
+    title = 'Default device drivers',
     category = 'Drivers',
     url = 'http://onosproject.org',
-    description = 'Suite of default drivers.',
+    description = 'ONOS Default device drivers application.',
     included_bundles = [
         ':onos-drivers-default',
         '//lib:openflowj',

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,17 +24,14 @@ import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.TransactionContext;
 import org.onosproject.store.service.TransactionalMap;
 import org.onosproject.utils.MeteringAgent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Default implementation of transaction context.
  */
 public class DefaultTransactionContext implements TransactionContext {
-    private final Logger log = LoggerFactory.getLogger(getClass());
+
     private final AtomicBoolean isOpen = new AtomicBoolean(false);
     private final TransactionId transactionId;
     private final TransactionCoordinator transactionCoordinator;
@@ -63,26 +60,20 @@ public class DefaultTransactionContext implements TransactionContext {
 
     @Override
     public void begin() {
-        if (isOpen.compareAndSet(false, true)) {
-            log.trace("Opened transaction {}", transactionId);
-        } else {
+        if (!isOpen.compareAndSet(false, true)) {
             throw new IllegalStateException("TransactionContext is already open");
         }
     }
 
     @Override
     public CompletableFuture<CommitStatus> commit() {
-        checkState(isOpen.get(), "Transaction not open");
         final MeteringAgent.Context timer = monitor.startTimer("commit");
-        log.debug("Committing transaction {}", transactionId);
         return transactionCoordinator.commit().whenComplete((r, e) -> timer.stop(e));
     }
 
     @Override
     public void abort() {
-        if (isOpen.compareAndSet(true, false)) {
-            log.debug("Aborted transaction {}", transactionId);
-        }
+        isOpen.set(false);
     }
 
     @Override

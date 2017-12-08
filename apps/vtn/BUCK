@@ -6,7 +6,7 @@ BUNDLES = [
 ]
 
 onos_app (
-  title = 'OPNFV',
+  title = 'OPNFV App',
   url = 'http://onosproject.org',
   included_bundles = BUNDLES,
   description = 'ONOS framework applications',

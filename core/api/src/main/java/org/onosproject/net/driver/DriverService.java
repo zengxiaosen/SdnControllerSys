@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import java.util.Set;
 /**
  * Service for obtaining drivers and driver behaviour implementations.
  */
-public interface DriverService extends DriverRegistry {
+public interface DriverService extends DriverResolver {
 
     /**
      * Returns the overall set of drivers being provided.
@@ -38,6 +38,17 @@ public interface DriverService extends DriverRegistry {
      * @return provided drivers
      */
     Set<Driver> getDrivers(Class<? extends Behaviour> withBehaviour);
+
+    /**
+     * Returns the driver that matches the specified primordial device
+     * discovery information.
+     *
+     * @param mfr device manufacturer
+     * @param hw  device hardware name/version
+     * @param sw  device software version
+     * @return driver or null of no matching one is found
+     */
+    Driver getDriver(String mfr, String hw, String sw);
 
     /**
      * Returns the driver for the specified device. If the device carries

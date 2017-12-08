@@ -1,7 +1,5 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
-    '//lib:NETTY',
-    '//lib:JACKSON',
     '//lib:openflowj',
     '//protocols/openflow/api:onos-protocols-openflow-api',
     '//drivers/default:onos-drivers-default',
@@ -11,7 +9,6 @@ COMPILE_DEPS = [
 TEST_DEPS = [
     '//lib:TEST_ADAPTERS',
     '//core/api:onos-api-tests',
-    '//utils/osgi:onlab-osgi-tests',
 ]
 
 osgi_jar_with_tests (
@@ -23,9 +20,9 @@ osgi_jar_with_tests (
 
 onos_app (
     app_name = 'org.onosproject.drivers.optical',
-    title = 'Basic Optical Drivers',
+    title = 'Other optical Device Drivers',
     category = 'Drivers',
     url = 'http://onosproject.org',
-    description = 'Suite of basic optical device drivers.',
+    description = 'ONOS other optical Device Drivers application.',
     required_apps = [ 'org.onosproject.drivers', 'org.onosproject.optical-model' ],
 )

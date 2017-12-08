@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,10 @@ import org.onosproject.net.packet.OutboundPacket;
 /**
  * Abstraction of a virtual packet provider capable of emitting packets
  * from virtual network core services to the underlay network.
- * This provider de-virtualizes and virtualize PacketContext.
+ * This provider de-virtualzes OutboundPacket, and virtualizes PacketContext.
  */
 public interface VirtualPacketProvider extends VirtualProvider {
+
     /**
      * Emits the specified outbound packet onto the underlay physical network.
      * This provider maps the requested packets for physical network.
@@ -32,4 +33,10 @@ public interface VirtualPacketProvider extends VirtualProvider {
      * @param packet outbound packet in the context of virtual network
      */
     void emit(NetworkId networkId, OutboundPacket packet);
+
+    /**
+     * Starts to deliver packets to virtual packet managers.
+     */
+    void startPacketHandling();
+
 }

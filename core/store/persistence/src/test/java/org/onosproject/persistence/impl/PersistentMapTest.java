@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,11 +73,6 @@ public class PersistentMapTest extends MapDBTest {
                 num = num | bytes[3];
 
                 return (T) Integer.valueOf(num);
-            }
-
-            @Override
-            public <T> T copy(T object) {
-                return decode(encode(object));
             }
         }, fakeDB, "map");
     }

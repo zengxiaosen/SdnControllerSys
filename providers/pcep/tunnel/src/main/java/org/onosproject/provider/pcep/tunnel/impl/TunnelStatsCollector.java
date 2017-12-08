@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@ package org.onosproject.provider.pcep.tunnel.impl;
 
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timeout;
+import org.jboss.netty.util.TimerTask;
 import org.onlab.util.Timer;
 import org.onosproject.pcep.api.PcepController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.netty.util.Timeout;
-import io.netty.util.TimerTask;
 
 import java.util.concurrent.TimeUnit;
 
@@ -39,6 +39,7 @@ public class TunnelStatsCollector implements TimerTask {
     protected PcepController controller;
 
     private int refreshInterval;
+    private final HashedWheelTimer timer = Timer.getTimer();
 
     private String pcepTunnelId;
     private Timeout timeout;
@@ -46,7 +47,7 @@ public class TunnelStatsCollector implements TimerTask {
 
 
     /**
-     * Create a tunnel status collector object.
+     * Greate a tunnel status collector object.
      *
      * @param id              tunnel whose status data will be collected
      * @param refreshInterval time interval for collecting statistic
@@ -67,7 +68,7 @@ public class TunnelStatsCollector implements TimerTask {
         if (!stopped && !timeout.isCancelled()) {
             log.trace("Scheduling stats collection in {} seconds for {}",
                       this.refreshInterval, pcepTunnelId);
-            timeout.timer().newTimeout(this, refreshInterval, TimeUnit.SECONDS);
+            timeout.getTimer().newTimeout(this, refreshInterval, TimeUnit.SECONDS);
         }
 
     }
@@ -87,7 +88,7 @@ public class TunnelStatsCollector implements TimerTask {
     public synchronized void start() {
         log.info("Starting Tunnel Stats collection thread for {}", pcepTunnelId);
         stopped = false;
-        timeout = Timer.newTimeout(this, 1, TimeUnit.SECONDS);
+        timeout = timer.newTimeout(this, 1, TimeUnit.SECONDS);
     }
 
     /**

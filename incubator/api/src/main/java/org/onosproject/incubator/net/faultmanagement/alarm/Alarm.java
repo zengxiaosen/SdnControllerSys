@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,17 +121,6 @@ public interface Alarm {
     boolean acknowledged();
 
     /**
-     * Returns a flag to indicate if this alarm has been cleared. All
-     * alarms are not cleared until and unless an ONOS user or app takes action to
-     * indicate so.
-     *
-     * @return whether alarm is currently cleared (true indicates it is)
-     */
-    default boolean cleared() {
-        return false;
-    }
-
-    /**
      * Returns a flag to indicate if this alarm is manually-cleared by a user action within ONOS. Some stateless events
      * e.g. backup-failure or upgrade-failure, may be mapped by ONOS to alarms, and these may be deemed manually-
      * clearable. The more typical case is that an alarm represents a persistent fault on or related to a device and
@@ -215,7 +204,7 @@ public interface Alarm {
          * correct the problem in order to prevent it from becoming a more
          * serious service affecting fault.
          */
-        WARNING
+        WARNING;
 
     }
 

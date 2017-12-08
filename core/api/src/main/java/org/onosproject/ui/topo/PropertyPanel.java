@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,22 +31,21 @@ public class PropertyPanel {
     private static final NumberFormat NF = NumberFormat.getInstance();
 
     private String title;
-    private String glyphId;
+    private String typeId;
     private String id;
-    private String navPath;
     private List<Prop> properties = new ArrayList<>();
     private List<ButtonId> buttons = new ArrayList<>();
 
     /**
      * Constructs a property panel model with the given title and
-     * glyph identifier (icon to display).
+     * type identifier (icon to display).
      *
-     * @param title   title text
-     * @param glyphId glyph ID
+     * @param title title text
+     * @param typeId type (icon) ID
      */
-    public PropertyPanel(String title, String glyphId) {
+    public PropertyPanel(String title, String typeId) {
         this.title = title;
-        this.glyphId = glyphId;
+        this.typeId = typeId;
     }
 
     /**
@@ -68,20 +67,6 @@ public class PropertyPanel {
     }
 
     /**
-     * Adds a navigation path field to the panel data, to be included in
-     * the returned JSON data to the client. This is typically used to
-     * configure the topology view with the appropriate navigation path for
-     * a hot-link to some other view.
-     *
-     * @param navPath the navigation path
-     * @return self for chaining
-     */
-    public PropertyPanel navPath(String navPath) {
-        this.navPath = navPath;
-        return this;
-    }
-
-    /**
      * Adds an ID field to the panel data, to be included in
      * the returned JSON data to the client.
      *
@@ -96,136 +81,51 @@ public class PropertyPanel {
     /**
      * Adds a property to the panel data.
      *
-     * @param key   property key
-     * @param label property label (localized)
+     * @param key property key
      * @param value property value
      * @return self, for chaining
      */
-    public PropertyPanel addProp(String key, String label, String value) {
-        properties.add(new Prop(key, label, value));
-        return this;
-    }
-
-    /**
-     * Adds a property to the panel data, using a decimal formatter.
-     *
-     * @param key   property key
-     * @param label property label (localized)
-     * @param value property value
-     * @return self, for chaining
-     */
-    public PropertyPanel addProp(String key, String label, int value) {
-        properties.add(new Prop(key, label, formatter().format(value)));
-        return this;
-    }
-
-    /**
-     * Adds a property to the panel data, using a decimal formatter.
-     *
-     * @param key   property key
-     * @param label property label (localized)
-     * @param value property value
-     * @return self, for chaining
-     */
-    public PropertyPanel addProp(String key, String label, long value) {
-        properties.add(new Prop(key, label, formatter().format(value)));
-        return this;
-    }
-
-    /**
-     * Adds a property to the panel data. Note that the value's
-     * {@link Object#toString toString()} method is used to convert the
-     * value to a string.
-     *
-     * @param key   property key
-     * @param label property label (localized)
-     * @param value property value
-     * @return self, for chaining
-     */
-    public PropertyPanel addProp(String key, String label, Object value) {
-        properties.add(new Prop(key, label, value.toString()));
-        return this;
-    }
-
-    /**
-     * Adds a property to the panel data. Note that the value's
-     * {@link Object#toString toString()} method is used to convert the
-     * value to a string, from which the characters defined in the given
-     * regular expression string are stripped.
-     *
-     * @param key     property key
-     * @param label   property label (localized)
-     * @param value   property value
-     * @param reStrip regexp characters to strip from value string
-     * @return self, for chaining
-     */
-    public PropertyPanel addProp(String key, String label,
-                                 Object value, String reStrip) {
-        String val = value.toString().replaceAll(reStrip, "");
-        properties.add(new Prop(key, label, val));
-        return this;
-    }
-
-    /*
-     * The following degenerate forms of addProp(...) for backward compatibility.
-     */
-
-    /**
-     * Adds a property to the panel data.
-     * Note that the key is used as the label.
-     *
-     * @param key   property key (also used as display label)
-     * @param value property value
-     * @return self, for chaining
-     * @deprecated as of Loon (1.11) in deference to the localized version
-     */
-    @Deprecated
     public PropertyPanel addProp(String key, String value) {
-        return addProp(key, key, value);
+        properties.add(new Prop(key, value));
+        return this;
     }
 
     /**
      * Adds a property to the panel data, using a decimal formatter.
-     * Note that the key is used as the label.
      *
-     * @param key   property key (also used as display label)
+     * @param key property key
      * @param value property value
      * @return self, for chaining
-     * @deprecated as of Loon (1.11) in deference to the localized version
      */
-    @Deprecated
     public PropertyPanel addProp(String key, int value) {
-        return addProp(key, key, value);
+        properties.add(new Prop(key, formatter().format(value)));
+        return this;
     }
 
     /**
      * Adds a property to the panel data, using a decimal formatter.
-     * Note that the key is used as the label.
      *
-     * @param key   property key (also used as display label)
+     * @param key property key
      * @param value property value
      * @return self, for chaining
-     * @deprecated as of Loon (1.11) in deference to the localized version
      */
-    @Deprecated
     public PropertyPanel addProp(String key, long value) {
-        return addProp(key, key, value);
+        properties.add(new Prop(key, formatter().format(value)));
+        return this;
     }
 
     /**
      * Adds a property to the panel data. Note that the value's
      * {@link Object#toString toString()} method is used to convert the
      * value to a string.
-     * Note also that the key is used as the label.
      *
-     * @param key   property key (also used as display label)
+     * @param key property key
      * @param value property value
      * @return self, for chaining
-     * @deprecated as of Loon (1.11) in deference to the localized version
      */
-    @Deprecated
     public PropertyPanel addProp(String key, Object value) {
-        return addProp(key, key, value);
+        properties.add(new Prop(key, value.toString()));
+        return this;
     }
 
     /**
@@ -233,17 +133,16 @@ public class PropertyPanel {
      * {@link Object#toString toString()} method is used to convert the
      * value to a string, from which the characters defined in the given
      * regular expression string are stripped.
-     * Note also that the key is used as the label.
      *
-     * @param key     property key (also used as display label)
-     * @param value   property value
+     * @param key property key
+     * @param value property value
      * @param reStrip regexp characters to strip from value string
      * @return self, for chaining
-     * @deprecated as of Loon (1.11) in deference to the localized version
      */
-    @Deprecated
     public PropertyPanel addProp(String key, Object value, String reStrip) {
-        return addProp(key, key, value, reStrip);
+        String val = value.toString().replaceAll(reStrip, "");
+        properties.add(new Prop(key, val));
+        return this;
     }
 
     /**
@@ -266,21 +165,12 @@ public class PropertyPanel {
     }
 
     /**
-     * Returns the glyph identifier.
+     * Returns the type identifier.
      *
-     * @return glyph identifier
+     * @return type identifier
      */
-    public String glyphId() {
-        return glyphId;
-    }
-
-    /**
-     * Returns the navigation path.
-     *
-     * @return the navigation path
-     */
-    public String navPath() {
-        return navPath;
+    public String typeId() {
+        return typeId;
     }
 
     /**
@@ -297,6 +187,7 @@ public class PropertyPanel {
      *
      * @return the property list
      */
+    // TODO: consider protecting this?
     public List<Prop> properties() {
         return properties;
     }
@@ -306,6 +197,7 @@ public class PropertyPanel {
      *
      * @return the button list
      */
+    // TODO: consider protecting this?
     public List<ButtonId> buttons() {
         return buttons;
     }
@@ -324,13 +216,13 @@ public class PropertyPanel {
     }
 
     /**
-     * Sets the glyph identifier.
+     * Sets the type identifier (icon ID).
      *
-     * @param glyphId glyph identifier
+     * @param typeId type identifier
      * @return self, for chaining
      */
-    public PropertyPanel glyphId(String glyphId) {
-        this.glyphId = glyphId;
+    public PropertyPanel typeId(String typeId) {
+        this.typeId = typeId;
         return this;
     }
 
@@ -343,7 +235,7 @@ public class PropertyPanel {
     public PropertyPanel removeProps(String... keys) {
         Set<String> forRemoval = Sets.newHashSet(keys);
         List<Prop> toKeep = new ArrayList<>();
-        for (Prop p : properties) {
+        for (Prop p: properties) {
             if (!forRemoval.contains(p.key())) {
                 toKeep.add(p);
             }
@@ -382,7 +274,7 @@ public class PropertyPanel {
     public PropertyPanel removeButtons(ButtonId... descriptors) {
         Set<ButtonId> forRemoval = Sets.newHashSet(descriptors);
         List<ButtonId> toKeep = new ArrayList<>();
-        for (ButtonId bd : buttons) {
+        for (ButtonId bd: buttons) {
             if (!forRemoval.contains(bd)) {
                 toKeep.add(bd);
             }
@@ -405,23 +297,20 @@ public class PropertyPanel {
 
 
     /**
-     * Simple data carrier for a property, composed of a key/label/value trio.
+     * Simple data carrier for a property, composed of a key/value pair.
      */
     public static class Prop {
         private final String key;
-        private final String label;
         private final String value;
 
         /**
          * Constructs a property data value.
          *
-         * @param key   property key (localization key)
-         * @param label property label (localization value)
+         * @param key property key
          * @param value property value
          */
-        public Prop(String key, String label, String value) {
+        public Prop(String key, String value) {
             this.key = key;
-            this.label = label;
             this.value = value;
         }
 
@@ -435,15 +324,6 @@ public class PropertyPanel {
         }
 
         /**
-         * Returns the property's (localized) label.
-         *
-         * @return the label
-         */
-        public String label() {
-            return label;
-        }
-
-        /**
          * Returns the property's value.
          *
          * @return the value
@@ -451,10 +331,6 @@ public class PropertyPanel {
         public String value() {
             return value;
         }
-
-        /*
-         * NOTE: equals/hashCode are only expressed in terms of key and value.
-         */
 
         @Override
         public boolean equals(Object o) {
@@ -478,16 +354,16 @@ public class PropertyPanel {
 
         @Override
         public String toString() {
-            return "{" + key + "(" + label + ") -> " + value + "}";
+            return "{" + key + " -> " + value + "}";
         }
     }
 
     /**
      * Auxiliary class representing a separator property.
      */
-    static class Separator extends Prop {
-        Separator() {
-            super("-", "-", "");
+    public static class Separator extends Prop {
+        public Separator() {
+            super("-", "");
         }
     }
 

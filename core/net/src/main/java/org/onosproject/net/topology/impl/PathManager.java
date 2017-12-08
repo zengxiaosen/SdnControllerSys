@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,8 @@ import org.onosproject.net.topology.TopologyService;
 import org.onosproject.net.topology.AbstractPathService;
 import org.slf4j.Logger;
 
+import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Stream;
 import java.util.Map;
 
 
@@ -59,6 +59,8 @@ public class PathManager extends AbstractPathService implements PathService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected HostService hostService;
 
+    private static HashSet<String> hashSet = new HashSet<>();
+
     @Activate
     public void activate() {
         // initialize AbstractPathService
@@ -82,25 +84,22 @@ public class PathManager extends AbstractPathService implements PathService {
     @Override
     public Set<Path> getPaths(ElementId src, ElementId dst, LinkWeight weight) {
         checkPermission(TOPOLOGY_READ);
+
         return super.getPaths(src, dst, weight);
     }
 
     @Override
     public Set<Path> getPaths(ElementId src, ElementId dst, LinkWeigher weigher) {
         checkPermission(TOPOLOGY_READ);
+
         return super.getPaths(src, dst, weigher);
     }
 
-    @Override
-    public Stream<Path> getKShortestPaths(ElementId src, ElementId dst,
-                                          LinkWeigher weigher) {
-        checkPermission(TOPOLOGY_READ);
-        return super.getKShortestPaths(src, dst, weigher);
-    }
 
     @Override
     public Set<DisjointPath> getDisjointPaths(ElementId src, ElementId dst) {
         checkPermission(TOPOLOGY_READ);
+
         return getDisjointPaths(src, dst, (LinkWeigher) null);
     }
 

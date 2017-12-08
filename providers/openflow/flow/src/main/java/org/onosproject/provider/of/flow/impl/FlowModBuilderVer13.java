@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -338,6 +338,17 @@ public class FlowModBuilderVer13 extends FlowModBuilder {
             return factory().actions().buildSetField().setField(oxm).build();
         }
         return null;
+    }
+
+    private OFAction buildModOchSignalInstruction(ModOchSignalInstruction instruction) {
+        OchSignal signal = instruction.lambda();
+        byte gridType = OpenFlowValueMapper.lookupGridType(signal.gridType());
+        byte channelSpacing = OpenFlowValueMapper.lookupChannelSpacing(signal.channelSpacing());
+
+        return factory().actions().circuit(factory().oxms().expOchSigId(
+                new CircuitSignalID(gridType, channelSpacing,
+                        (short) signal.spacingMultiplier(), (short) signal.slotGranularity())
+        ));
     }
 
     private OFAction buildL1Modification(Instruction i) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,46 +16,37 @@
 package org.onosproject.openflow.controller.impl;
 
 
-import org.junit.After;
-import org.junit.Before;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.junit.Test;
-import org.onosproject.openflow.ChannelAdapter;
+import org.onosproject.core.netty.ChannelAdapter;
 import org.onosproject.openflow.ChannelHandlerContextAdapter;
 import org.projectfloodlight.openflow.protocol.OFHello;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.Channel;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import java.util.ArrayList;
-import java.util.List;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 /**
  * Tests for the OpenFlow message decoder.
  */
 public class OFMessageDecoderTest {
 
-    private ByteBuf buf;
+    static class ConnectedChannel extends ChannelAdapter {
+        @Override
+        public boolean isConnected() {
+            return true;
+        }
+    }
 
-    private ByteBuf getHelloMessageBuffer() {
+    private ChannelBuffer getHelloMessageBuffer() {
         // OFHello, OF version 1, xid of 0, total of 8 bytes
         byte[] messageData = {0x1, 0x0, 0x0, 0x8, 0x0, 0x0, 0x0, 0x0};
-        buf.writeBytes(messageData);
-        return buf;
+        ChannelBuffer channelBuffer = ChannelBuffers.dynamicBuffer();
+        channelBuffer.writeBytes(messageData);
+        return channelBuffer;
     }
-
-    @Before
-    public void setUp() {
-        buf = ByteBufAllocator.DEFAULT.buffer();
-    }
-
-    @After
-    public void tearDown() {
-        buf.release();
-    }
-
 
     /**
      * Tests decoding a message on a closed channel.
@@ -64,13 +55,13 @@ public class OFMessageDecoderTest {
      */
     @Test
     public void testDecodeNoChannel() throws Exception {
-        OFMessageDecoder decoder = OFMessageDecoder.getInstance();
-        ByteBuf channelBuffer = getHelloMessageBuffer();
-        List<Object> out = new ArrayList<>();
-        decoder.decode(new ChannelHandlerContextAdapter(),
-                       channelBuffer,
-                       out);
-        assertThat(out.size(), is(0));
+        OFMessageDecoder decoder = new OFMessageDecoder();
+        ChannelBuffer channelBuffer = getHelloMessageBuffer();
+        Object message =
+                decoder.decode(new ChannelHandlerContextAdapter(),
+                               new ChannelAdapter(),
+                               channelBuffer);
+        assertThat(message, nullValue());
     }
 
     /**
@@ -80,29 +71,14 @@ public class OFMessageDecoderTest {
      */
     @Test
     public void testDecode() throws Exception {
-        OFMessageDecoder decoder = OFMessageDecoder.getInstance();
-        ByteBuf channelBuffer = getHelloMessageBuffer();
-        List<Object> out = new ArrayList<>();
-        decoder.decode(new ActiveChannelHandlerContextAdapter(),
-                       channelBuffer,
-                       out);
-        assertThat(out.size(), is(1));
-        assertThat(out.get(0), instanceOf(OFHello.class));
-    }
-
-    public class ActiveChannelHandlerContextAdapter
-            extends ChannelHandlerContextAdapter {
-
-        @Override
-        public Channel channel() {
-            return new ChannelAdapter() {
-                @Override
-                public boolean isActive() {
-                    return true;
-                }
-            };
-        }
-
+        OFMessageDecoder decoder = new OFMessageDecoder();
+        ChannelBuffer channelBuffer = getHelloMessageBuffer();
+        Object message =
+                decoder.decode(new ChannelHandlerContextAdapter(),
+                               new ConnectedChannel(),
+                               channelBuffer);
+        assertThat(message, notNullValue());
+        assertThat(message, instanceOf(OFHello.class));
     }
 
 }

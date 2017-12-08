@@ -1,6 +1,5 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
-    '//lib:JACKSON',
     '//lib:javax.ws.rs-api',
     '//utils/rest:onlab-rest',
     '//apps/pce/app:onos-apps-pce-app',
@@ -11,7 +10,6 @@ COMPILE_DEPS = [
 
 TEST_DEPS = [
     '//lib:TEST_REST',
-    '//lib:minimal-json',
 ]
 
 osgi_jar_with_tests (
@@ -20,7 +18,7 @@ osgi_jar_with_tests (
 )
 
 onos_app (
-    title = 'PCE REST API',
+    title = 'PCE Rest application',
     category = 'Utility',
     url = 'http://onosproject.org',
     description = 'Tunnel Service between network devices via REST interface',

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package org.onlab.graph;
 
 import com.google.common.collect.ImmutableList;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -29,10 +30,33 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class DefaultPath<V extends Vertex, E extends Edge<V>> implements Path<V, E> {
 
-    private final V src;
-    private final V dst;
-    private final List<E> edges;
+    private  V src;
+    private  V dst;
+    //private final List<E> edges;
+    private List<E> edges;
+
+    public List<E> getEdges() {
+        return edges;
+    }
+
+    public void setEdges(List<E> edges) {
+        this.edges = edges;
+    }
+
+    public Weight getCost() {
+        return cost;
+    }
+
+    public void setCost(Weight cost) {
+        this.cost = cost;
+    }
+
     private Weight cost;
+
+    public DefaultPath(V src, V dst) {
+        this.src = src;
+        this.dst = dst;
+    }
 
     /**
      * Creates a new path from the specified list of edges and cost.
@@ -66,7 +90,7 @@ public class DefaultPath<V extends Vertex, E extends Edge<V>> implements Path<V,
 
     @Override
     public List<E> edges() {
-        return edges;
+        return Collections.unmodifiableList(edges);
     }
 
     @Override

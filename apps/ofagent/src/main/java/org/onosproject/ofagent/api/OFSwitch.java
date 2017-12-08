@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,19 @@
  */
 package org.onosproject.ofagent.api;
 
-import org.projectfloodlight.openflow.types.DatapathId;
+import org.onosproject.net.Device;
 
 /**
  * Representation of virtual OpenFlow switch.
  */
-public interface OFSwitch extends OFSwitchOperationService, OFControllerRoleService {
+public interface OFSwitch extends OFSwitchService, OFControllerRoleService {
 
     /**
      * Returns the device information.
      *
      * @return virtual device
      */
-    DatapathId dpid();
+    Device device();
 
     /**
      * Returns the capabilities of the switch.
@@ -35,4 +35,13 @@ public interface OFSwitch extends OFSwitchOperationService, OFControllerRoleServ
      * @return capabilities
      */
     OFSwitchCapabilities capabilities();
+
+    /**
+     * Returns if the switch is connected to controllers or not.
+     *
+     * @return true if the switch is connected, false otherwise
+     */
+    boolean isConnected();
+
+    // TODO add builder interface
 }

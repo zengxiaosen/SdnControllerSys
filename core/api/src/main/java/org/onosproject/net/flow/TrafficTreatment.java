@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package org.onosproject.net.flow;
 
 import java.util.List;
 
-import com.google.common.annotations.Beta;
 import org.onlab.packet.EthType;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
@@ -31,7 +30,6 @@ import org.onosproject.net.flow.instructions.ExtensionTreatment;
 import org.onosproject.net.flow.instructions.Instruction;
 import org.onosproject.net.flow.instructions.Instructions;
 import org.onosproject.net.meter.MeterId;
-import org.onosproject.net.pi.runtime.PiTableAction;
 
 /**
  * Abstraction of network traffic treatment.
@@ -320,12 +318,6 @@ public interface TrafficTreatment {
         Builder wipeDeferred();
 
         /**
-         * the instruction to clear not wipe the deferred instructions set.
-         * @return a treatment builder
-         */
-        Builder notWipeDeferred();
-
-        /**
          * Writes metadata to associate with a packet.
          * <pre>
          * {@code
@@ -402,15 +394,6 @@ public interface TrafficTreatment {
          * @return a treatment builder.
          */
         Builder setArpOp(short op);
-
-        /**
-         * Sets the protocol independent table action.
-         *
-         * @param piTableAction protocol-independent table action
-         * @return a treatment builder.
-         */
-        @Beta
-        Builder piTableAction(PiTableAction piTableAction);
 
         /**
          * Uses an extension treatment.

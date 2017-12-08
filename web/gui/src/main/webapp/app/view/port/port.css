@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,47 +28,10 @@
 #ov-port td {
     text-align: center;
 }
-
 #ov-port td.right {
     text-align: right;
 }
 
-#ov-port td.delta {
-    text-align: right;
-    font-weight: bold;
-}
-
-#ov-port td.delta:before {
-    content: "+";
-}
-
 #ov-port tr.no-data td {
     text-align: center;
-}
-
-#port-details-panel.floatpanel {
-    z-index: 0;
-}
-
-
-#port-details-panel .container {
-    padding: 8px 12px;
-}
-
-#port-details-panel .close-btn {
-    position: absolute;
-    right: 12px;
-    top: 12px;
-    cursor: pointer;
-}
-
-#port-details-panel .port-icon {
-    display: inline-block;
-    padding: 0 6px 0 0;
-    vertical-align: middle;
-}
-
-#port-details-panel h2 {
-    display: inline-block;
-    margin: 8px 0;
 }

@@ -6,7 +6,7 @@ BUNDLES = [
 ]
 
 onos_app (
-  title = 'Mapping Management',
+  title = 'Mapping Management App',
   description = 'ONOS mapping management application',
   category = 'Monitoring',
   url = 'https://onosproject.org/',

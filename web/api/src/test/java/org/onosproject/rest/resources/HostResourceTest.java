@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.onosproject.rest.resources;
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonArray;
 import com.eclipsesource.json.JsonObject;
-import com.eclipsesource.json.JsonValue;
 import com.google.common.collect.ImmutableSet;
 import org.hamcrest.Description;
 import org.hamcrest.Matchers;
@@ -53,7 +52,6 @@ import javax.ws.rs.core.Response;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 import static org.easymock.EasyMock.anyBoolean;
@@ -145,21 +143,19 @@ public class HostResourceTest extends ResourceTest {
                 return false;
             }
 
-            //  Check host locations
-            final JsonArray jsonLocations = jsonHost.get("locations").asArray();
-            final Set<HostLocation> expectedLocations = host.locations();
-            if (jsonLocations.size() != expectedLocations.size()) {
-                reason = "locations arrays differ in size";
+            // Check location element id
+            final JsonObject jsonLocation = jsonHost.get("location").asObject();
+            final String jsonLocationElementId = jsonLocation.get("elementId").asString();
+            if (!jsonLocationElementId.equals(host.location().elementId().toString())) {
+                reason = "location element id " + host.location().elementId().toString();
                 return false;
             }
 
-            Iterator<JsonValue> jsonIterator = jsonLocations.iterator();
-            Iterator<HostLocation> locIterator = expectedLocations.iterator();
-            while (jsonIterator.hasNext()) {
-                boolean result = verifyLocation(jsonIterator.next().asObject(), locIterator.next());
-                if (!result) {
-                    return false;
-                }
+            // Check location port number
+            final String jsonLocationPortNumber = jsonLocation.get("port").asString();
+            if (!jsonLocationPortNumber.equals(host.location().port().toString())) {
+                reason = "location portNumber " + host.location().port().toString();
+                return false;
             }
 
             //  Check Ip Addresses
@@ -176,20 +172,6 @@ public class HostResourceTest extends ResourceTest {
         @Override
         public void describeTo(Description description) {
             description.appendText(reason);
-        }
-
-        private boolean verifyLocation(JsonObject jsonLocation, HostLocation expectedLocation) {
-            final String jsonLocationElementId = jsonLocation.get("elementId").asString();
-            if (!jsonLocationElementId.equals(expectedLocation.elementId().toString())) {
-                reason = "location element id " + host.location().elementId().toString();
-                return false;
-            }
-            final String jsonLocationPortNumber = jsonLocation.get("port").asString();
-            if (!jsonLocationPortNumber.equals(expectedLocation.port().toString())) {
-                reason = "location portNumber " + expectedLocation.port().toString();
-                return false;
-            }
-            return true;
         }
     }
 

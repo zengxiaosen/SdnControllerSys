@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,6 @@ import org.onosproject.store.primitives.TransactionId;
 import org.onosproject.store.service.CommitStatus;
 import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.TransactionalMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 
@@ -34,7 +32,6 @@ import static com.google.common.base.MoreObjects.toStringHelper;
  * Transaction coordinator.
  */
 public class TransactionCoordinator {
-    private final Logger log = LoggerFactory.getLogger(getClass());
     protected final TransactionId transactionId;
     protected final TransactionManager transactionManager;
     protected final Set<TransactionParticipant> transactionParticipants = Sets.newConcurrentHashSet();
@@ -70,10 +67,8 @@ public class TransactionCoordinator {
                 .count();
 
         if (totalParticipants == 0) {
-            log.debug("No transaction participants, skipping commit", totalParticipants);
             return CompletableFuture.completedFuture(CommitStatus.SUCCESS);
         } else if (totalParticipants == 1) {
-            log.debug("Committing transaction {} via 1 participant", transactionId);
             return transactionParticipants.stream()
                     .filter(TransactionParticipant::hasPendingUpdates)
                     .findFirst()
@@ -81,7 +76,6 @@ public class TransactionCoordinator {
                     .prepareAndCommit()
                     .thenApply(v -> v ? CommitStatus.SUCCESS : CommitStatus.FAILURE);
         } else {
-            log.debug("Committing transaction {} via {} participants", transactionId, totalParticipants);
             Set<TransactionParticipant> transactionParticipants = this.transactionParticipants.stream()
                     .filter(TransactionParticipant::hasPendingUpdates)
                     .collect(Collectors.toSet());
@@ -107,7 +101,6 @@ public class TransactionCoordinator {
      * @return a completable future indicating whether <em>all</em> prepares succeeded
      */
     protected CompletableFuture<Boolean> prepare(Set<TransactionParticipant> transactionParticipants) {
-        log.trace("Preparing transaction {} via {}", transactionId, transactionParticipants);
         return Tools.allOf(transactionParticipants.stream()
                 .map(TransactionParticipant::prepare)
                 .collect(Collectors.toList()))
@@ -121,7 +114,6 @@ public class TransactionCoordinator {
      * @return a completable future to be completed once the commits are complete
      */
     protected CompletableFuture<Void> commit(Set<TransactionParticipant> transactionParticipants) {
-        log.trace("Committing transaction {} via {}", transactionId, transactionParticipants);
         return CompletableFuture.allOf(transactionParticipants.stream()
                 .map(TransactionParticipant::commit)
                 .toArray(CompletableFuture[]::new));
@@ -134,7 +126,6 @@ public class TransactionCoordinator {
      * @return a completable future to be completed once the rollbacks are complete
      */
     protected CompletableFuture<Void> rollback(Set<TransactionParticipant> transactionParticipants) {
-        log.trace("Rolling back transaction {} via {}", transactionId, transactionParticipants);
         return CompletableFuture.allOf(transactionParticipants.stream()
                 .map(TransactionParticipant::rollback)
                 .toArray(CompletableFuture[]::new));

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import org.onlab.packet.MacAddress;
 import org.onlab.packet.VlanId;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -35,7 +34,7 @@ public class DefaultHost extends AbstractElement implements Host {
 
     private final MacAddress mac;
     private final VlanId vlan;
-    private final Set<HostLocation> locations;
+    private final HostLocation location;
     private final Set<IpAddress> ips;
     private final boolean configured;
 
@@ -71,29 +70,10 @@ public class DefaultHost extends AbstractElement implements Host {
     public DefaultHost(ProviderId providerId, HostId id, MacAddress mac,
                        VlanId vlan, HostLocation location, Set<IpAddress> ips,
                        boolean configured, Annotations... annotations) {
-        this(providerId, id, mac, vlan, Collections.singleton(location), ips,
-                configured, annotations);
-    }
-
-    /**
-     * Creates an end-station host using the supplied information.
-     *
-     * @param providerId  provider identity
-     * @param id          host identifier
-     * @param mac         host MAC address
-     * @param vlan        host VLAN identifier
-     * @param locations   set of host locations
-     * @param ips         host IP addresses
-     * @param configured  true if configured via NetworkConfiguration
-     * @param annotations optional key/value annotations
-     */
-    public DefaultHost(ProviderId providerId, HostId id, MacAddress mac,
-                       VlanId vlan, Set<HostLocation> locations, Set<IpAddress> ips,
-                       boolean configured, Annotations... annotations) {
         super(providerId, id, annotations);
         this.mac = mac;
         this.vlan = vlan;
-        this.locations = new HashSet<>(locations);
+        this.location = location;
         this.ips = new HashSet<>(ips);
         this.configured = configured;
     }
@@ -108,10 +88,6 @@ public class DefaultHost extends AbstractElement implements Host {
         return mac;
     }
 
-    /**
-     * Returns an unmodifiable set of IP addresses currently bound to the
-     * host MAC address.
-     */
     @Override
     public Set<IpAddress> ipAddresses() {
         return Collections.unmodifiableSet(ips);
@@ -119,14 +95,7 @@ public class DefaultHost extends AbstractElement implements Host {
 
     @Override
     public HostLocation location() {
-        return locations.stream()
-                .sorted(Comparator.comparingLong(HostLocation::time).reversed())
-                .findFirst().orElse(null);
-    }
-
-    @Override
-    public Set<HostLocation> locations() {
-        return locations;
+        return location;
     }
 
     @Override
@@ -141,7 +110,7 @@ public class DefaultHost extends AbstractElement implements Host {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, mac, vlan, locations);
+        return Objects.hash(id, mac, vlan, location);
     }
 
     @Override
@@ -154,7 +123,7 @@ public class DefaultHost extends AbstractElement implements Host {
             return Objects.equals(this.id, other.id) &&
                     Objects.equals(this.mac, other.mac) &&
                     Objects.equals(this.vlan, other.vlan) &&
-                    Objects.equals(this.locations, other.locations) &&
+                    Objects.equals(this.location, other.location) &&
                     Objects.equals(this.ipAddresses(), other.ipAddresses()) &&
                     Objects.equals(this.annotations(), other.annotations());
         }
@@ -167,7 +136,7 @@ public class DefaultHost extends AbstractElement implements Host {
                 .add("id", id())
                 .add("mac", mac())
                 .add("vlan", vlan())
-                .add("locations", locations())
+                .add("location", location())
                 .add("ipAddresses", ipAddresses())
                 .add("annotations", annotations())
                 .add("configured", configured())

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ public class GatewayNodeConfig extends Config<ApplicationId> {
     /**
      * Returns the set of nodes read from network config.
      *
-     * @return set of OpenstackNodeConfig or null
+     * @return set of OpensatckNodeConfig or null
      */
     public Set<GatewayNode> gatewayNodes() {
 

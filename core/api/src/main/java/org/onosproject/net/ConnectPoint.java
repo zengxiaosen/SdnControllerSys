@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Abstraction of a network connection point expressed as a pair of the
  * network element identifier and port number.
  */
-public class ConnectPoint implements Comparable<ConnectPoint> {
+public class ConnectPoint {
 
     private final ElementId elementId;
     private final PortNumber portNumber;
@@ -167,13 +167,4 @@ public class ConnectPoint implements Comparable<ConnectPoint> {
         return elementId + "/" + portNumber;
     }
 
-    @Override
-    public int compareTo(ConnectPoint o) {
-        int result = deviceId().toString().compareTo(o.deviceId().toString());
-        if (result == 0) {
-            long delta = port().toLong() - o.port().toLong();
-            result = delta == 0 ? 0 : (delta < 0 ? -1 : +1);
-        }
-        return result;
-    }
 }

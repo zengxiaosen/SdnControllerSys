@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,12 @@
  */
 package org.onosproject.store.device.impl;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.Futures;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Reference;
@@ -35,6 +28,7 @@ import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
 import org.onlab.packet.ChassisId;
 import org.onlab.util.KryoNamespace;
+import org.onlab.util.SharedExecutors;
 import org.onosproject.cluster.ClusterService;
 import org.onosproject.cluster.NodeId;
 import org.onosproject.mastership.MastershipService;
@@ -48,6 +42,9 @@ import org.onosproject.net.Device;
 import org.onosproject.net.Device.Type;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.MastershipRole;
+import org.onosproject.net.OchPort;
+import org.onosproject.net.OduCltPort;
+import org.onosproject.net.OmsPort;
 import org.onosproject.net.Port;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DefaultPortStatistics;
@@ -56,6 +53,9 @@ import org.onosproject.net.device.DeviceDescription;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceStore;
 import org.onosproject.net.device.DeviceStoreDelegate;
+import org.onosproject.net.device.OchPortDescription;
+import org.onosproject.net.device.OduCltPortDescription;
+import org.onosproject.net.device.OmsPortDescription;
 import org.onosproject.net.device.PortDescription;
 import org.onosproject.net.device.PortStatistics;
 import org.onosproject.net.provider.ProviderId;
@@ -63,6 +63,7 @@ import org.onosproject.store.AbstractStore;
 import org.onosproject.store.cluster.messaging.ClusterCommunicationService;
 import org.onosproject.store.impl.MastershipBasedTimestamp;
 import org.onosproject.store.serializers.KryoNamespaces;
+import org.onosproject.store.serializers.StoreSerializer;
 import org.onosproject.store.serializers.custom.DistributedStoreSerializers;
 import org.onosproject.store.service.DistributedSet;
 import org.onosproject.store.service.EventuallyConsistentMap;
@@ -75,12 +76,18 @@ import org.onosproject.store.service.StorageService;
 import org.onosproject.store.service.WallClockTimestamp;
 import org.slf4j.Logger;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.Futures;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
@@ -92,7 +99,9 @@ import static org.onosproject.net.device.DeviceEvent.Type.DEVICE_UPDATED;
 import static org.onosproject.net.device.DeviceEvent.Type.PORT_ADDED;
 import static org.onosproject.net.device.DeviceEvent.Type.PORT_STATS_UPDATED;
 import static org.onosproject.net.device.DeviceEvent.Type.PORT_UPDATED;
+import static org.onosproject.store.device.impl.GossipDeviceStoreMessageSubjects.DEVICE_INJECTED;
 import static org.onosproject.store.device.impl.GossipDeviceStoreMessageSubjects.DEVICE_REMOVE_REQ;
+import static org.onosproject.store.device.impl.GossipDeviceStoreMessageSubjects.PORT_INJECTED;
 import static org.onosproject.store.service.EventuallyConsistentMapEvent.Type.PUT;
 import static org.onosproject.store.service.EventuallyConsistentMapEvent.Type.REMOVE;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -149,10 +158,12 @@ public class ECDeviceStore
     private final SetEventListener<DeviceId> deviceStatusTracker =
             new InternalDeviceStatusTracker();
 
-    protected static final Serializer SERIALIZER = Serializer.using(
+    protected static final StoreSerializer SERIALIZER = StoreSerializer.using(
                   KryoNamespace.newBuilder()
                     .register(DistributedStoreSerializers.STORE_COMMON)
                     .nextId(DistributedStoreSerializers.STORE_CUSTOM_BEGIN)
+                    .register(DeviceInjectedEvent.class)
+                    .register(PortInjectedEvent.class)
                     .build("ECDevice"));
 
     protected static final KryoNamespace.Builder SERIALIZER_BUILDER = KryoNamespace.newBuilder()
@@ -206,6 +217,18 @@ public class ECDeviceStore
                 .withTombstonesDisabled()
                 .build();
 
+        clusterCommunicator.addSubscriber(DEVICE_INJECTED,
+                SERIALIZER::decode,
+                this::injectDevice,
+                SERIALIZER::encode,
+                SharedExecutors.getPoolThreadExecutor());
+
+        clusterCommunicator.addSubscriber(PORT_INJECTED,
+                SERIALIZER::decode,
+                this::injectPort,
+                SERIALIZER::encode,
+                SharedExecutors.getPoolThreadExecutor());
+
         availableDevices = storageService.<DeviceId>setBuilder()
                 .withName("onos-online-devices")
                 .withSerializer(Serializer.using(KryoNamespaces.API))
@@ -232,6 +255,8 @@ public class ECDeviceStore
         portDescriptions.destroy();
         devices.clear();
         devicePorts.clear();
+        clusterCommunicator.removeSubscriber(DEVICE_INJECTED);
+        clusterCommunicator.removeSubscriber(PORT_INJECTED);
         log.info("Stopped");
     }
 
@@ -243,11 +268,6 @@ public class ECDeviceStore
     @Override
     public int getDeviceCount() {
         return devices.size();
-    }
-
-    @Override
-    public int getAvailableDeviceCount() {
-        return availableDevices.size();
     }
 
     @Override
@@ -265,7 +285,18 @@ public class ECDeviceStore
             deviceDescriptions.put(new DeviceKey(providerId, deviceId), deviceDescription);
             return refreshDeviceCache(providerId, deviceId);
         } else {
+            // Only forward for ConfigProvider
+            // Forwarding was added as a workaround for ONOS-490
+            if (!providerId.scheme().equals("cfg")) {
                 return null;
+            }
+            DeviceInjectedEvent deviceInjectedEvent = new DeviceInjectedEvent(providerId, deviceId, deviceDescription);
+            return Futures.getUnchecked(
+                    clusterCommunicator.sendAndReceive(deviceInjectedEvent,
+                            DEVICE_INJECTED,
+                            SERIALIZER::encode,
+                            SERIALIZER::decode,
+                            master));
         }
     }
 
@@ -391,7 +422,21 @@ public class ECDeviceStore
             });
             deviceEvents = refreshDevicePortCache(providerId, deviceId, Optional.empty());
         } else {
-            return Collections.emptyList();
+            // Only forward for ConfigProvider
+            // Forwarding was added as a workaround for ONOS-490
+            if (!providerId.scheme().equals("cfg")) {
+                return Collections.emptyList();
+            }
+            if (master == null) {
+                return Collections.emptyList();
+            }
+            PortInjectedEvent portInjectedEvent = new PortInjectedEvent(providerId, deviceId, descriptions);
+            deviceEvents = Futures.getUnchecked(
+                    clusterCommunicator.sendAndReceive(portInjectedEvent,
+                                    PORT_INJECTED,
+                                    SERIALIZER::encode,
+                                    SERIALIZER::decode,
+                                    master));
         }
         return deviceEvents == null ? Collections.emptyList() : deviceEvents;
     }
@@ -484,8 +529,40 @@ public class ECDeviceStore
 
     private Port buildTypedPort(Device device, PortNumber number, boolean isEnabled,
             PortDescription description, Annotations annotations) {
+        // FIXME this switch need to go away once all ports are done.
+        switch (description.type()) {
+        case OMS:
+            if (description instanceof OmsPortDescription) {
+                // remove if-block once deprecation is complete
+                OmsPortDescription omsDesc = (OmsPortDescription) description;
+                return new OmsPort(device, number, isEnabled, omsDesc.minFrequency(),
+                        omsDesc.maxFrequency(), omsDesc.grid(), annotations);
+            }
+            // same as default
+            return new DefaultPort(device, number, isEnabled, description.type(),
+                                   description.portSpeed(), annotations);
+        case OCH:
+            if (description instanceof OchPortDescription) {
+                // remove if-block once Och deprecation is complete
+                OchPortDescription ochDesc = (OchPortDescription) description;
+                return new OchPort(device, number, isEnabled, ochDesc.signalType(),
+                                   ochDesc.isTunable(), ochDesc.lambda(), annotations);
+            }
+            return new DefaultPort(device, number, isEnabled, description.type(),
+                                   description.portSpeed(), annotations);
+        case ODUCLT:
+            if (description instanceof OduCltPortDescription) {
+                // remove if-block once deprecation is complete
+                OduCltPortDescription oduDesc = (OduCltPortDescription) description;
+                return new OduCltPort(device, number, isEnabled, oduDesc.signalType(), annotations);
+            }
+            // same as default
+            return new DefaultPort(device, number, isEnabled, description.type(),
+                                   description.portSpeed(), annotations);
+        default:
             return new DefaultPort(device, number, isEnabled, description.type(),
                     description.portSpeed(), annotations);
+        }
     }
 
     @Override
@@ -685,6 +762,14 @@ public class ECDeviceStore
             mastershipService.relinquishMastership(deviceId);
         }
         return event;
+    }
+
+    private DeviceEvent injectDevice(DeviceInjectedEvent event) {
+        return createOrUpdateDevice(event.providerId(), event.deviceId(), event.deviceDescription());
+    }
+
+    private List<DeviceEvent> injectPort(PortInjectedEvent event) {
+        return updatePorts(event.providerId(), event.deviceId(), event.portDescriptions());
     }
 
     private DefaultAnnotations mergeAnnotations(DeviceId deviceId) {

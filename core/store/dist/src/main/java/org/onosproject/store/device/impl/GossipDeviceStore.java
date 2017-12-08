@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,27 +15,10 @@
  */
 package org.onosproject.store.device.impl;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
-
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
@@ -60,6 +43,10 @@ import org.onosproject.net.Device;
 import org.onosproject.net.Device.Type;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.MastershipRole;
+import org.onosproject.net.OchPort;
+import org.onosproject.net.OduCltPort;
+import org.onosproject.net.OmsPort;
+import org.onosproject.net.OtuPort;
 import org.onosproject.net.Port;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DefaultPortStatistics;
@@ -68,6 +55,10 @@ import org.onosproject.net.device.DeviceDescription;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceStore;
 import org.onosproject.net.device.DeviceStoreDelegate;
+import org.onosproject.net.device.OchPortDescription;
+import org.onosproject.net.device.OduCltPortDescription;
+import org.onosproject.net.device.OmsPortDescription;
+import org.onosproject.net.device.OtuPortDescription;
 import org.onosproject.net.device.PortDescription;
 import org.onosproject.net.device.PortStatistics;
 import org.onosproject.net.provider.ProviderId;
@@ -75,23 +66,38 @@ import org.onosproject.store.AbstractStore;
 import org.onosproject.store.Timestamp;
 import org.onosproject.store.cluster.messaging.ClusterCommunicationService;
 import org.onosproject.store.cluster.messaging.MessageSubject;
-import org.onosproject.store.impl.MastershipBasedTimestamp;
 import org.onosproject.store.impl.Timestamped;
 import org.onosproject.store.serializers.KryoNamespaces;
+import org.onosproject.store.serializers.StoreSerializer;
 import org.onosproject.store.serializers.custom.DistributedStoreSerializers;
 import org.onosproject.store.service.EventuallyConsistentMap;
 import org.onosproject.store.service.EventuallyConsistentMapEvent;
 import org.onosproject.store.service.EventuallyConsistentMapListener;
 import org.onosproject.store.service.MultiValuedTimestamp;
-import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.StorageService;
 import org.onosproject.store.service.WallClockTimestamp;
 import org.slf4j.Logger;
 
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Predicates.notNull;
@@ -101,16 +107,19 @@ import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.onlab.util.Tools.minPriority;
 import static org.onosproject.cluster.ControllerNodeToNodeId.toNodeId;
+import static org.onosproject.net.DefaultAnnotations.merge;
 import static org.onosproject.net.device.DeviceEvent.Type.DEVICE_AVAILABILITY_CHANGED;
 import static org.onosproject.net.device.DeviceEvent.Type.PORT_ADDED;
 import static org.onosproject.net.device.DeviceEvent.Type.PORT_REMOVED;
 import static org.onosproject.net.device.DeviceEvent.Type.PORT_STATS_UPDATED;
 import static org.onosproject.net.device.DeviceEvent.Type.PORT_UPDATED;
 import static org.onosproject.store.device.impl.GossipDeviceStoreMessageSubjects.DEVICE_ADVERTISE;
+import static org.onosproject.store.device.impl.GossipDeviceStoreMessageSubjects.DEVICE_INJECTED;
 import static org.onosproject.store.device.impl.GossipDeviceStoreMessageSubjects.DEVICE_OFFLINE;
 import static org.onosproject.store.device.impl.GossipDeviceStoreMessageSubjects.DEVICE_REMOVED;
 import static org.onosproject.store.device.impl.GossipDeviceStoreMessageSubjects.DEVICE_REMOVE_REQ;
 import static org.onosproject.store.device.impl.GossipDeviceStoreMessageSubjects.DEVICE_UPDATE;
+import static org.onosproject.store.device.impl.GossipDeviceStoreMessageSubjects.PORT_INJECTED;
 import static org.onosproject.store.device.impl.GossipDeviceStoreMessageSubjects.PORT_STATUS_UPDATE;
 import static org.onosproject.store.device.impl.GossipDeviceStoreMessageSubjects.PORT_UPDATE;
 import static org.onosproject.store.service.EventuallyConsistentMapEvent.Type.PUT;
@@ -171,9 +180,8 @@ public class GossipDeviceStore
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected MastershipTermService termService;
 
-    private static final Timestamp DEFAULT_TIMESTAMP = new MastershipBasedTimestamp(0, 0);
 
-    protected static final Serializer SERIALIZER = Serializer.using(KryoNamespace.newBuilder()
+    protected static final StoreSerializer SERIALIZER = StoreSerializer.using(KryoNamespace.newBuilder()
                     .register(DistributedStoreSerializers.STORE_COMMON)
                     .nextId(DistributedStoreSerializers.STORE_CUSTOM_BEGIN)
                     .register(new InternalDeviceEventSerializer(), InternalDeviceEvent.class)
@@ -184,6 +192,8 @@ public class GossipDeviceStore
                     .register(DeviceAntiEntropyAdvertisement.class)
                     .register(DeviceFragmentId.class)
                     .register(PortFragmentId.class)
+                    .register(DeviceInjectedEvent.class)
+                    .register(PortInjectedEvent.class)
                     .build("GossipDevice"));
 
     private ExecutorService executor;
@@ -208,6 +218,8 @@ public class GossipDeviceStore
         addSubscriber(PORT_UPDATE, this::handlePortEvent);
         addSubscriber(PORT_STATUS_UPDATE, this::handlePortStatusEvent);
         addSubscriber(DEVICE_ADVERTISE, this::handleDeviceAdvertisement);
+        addSubscriber(DEVICE_INJECTED, this::handleDeviceInjectedEvent);
+        addSubscriber(PORT_INJECTED, this::handlePortInjectedEvent);
 
         // start anti-entropy thread
         backgroundExecutor.scheduleAtFixedRate(new SendAdvertisementTask(),
@@ -269,17 +281,14 @@ public class GossipDeviceStore
         clusterCommunicator.removeSubscriber(PORT_UPDATE);
         clusterCommunicator.removeSubscriber(PORT_STATUS_UPDATE);
         clusterCommunicator.removeSubscriber(DEVICE_ADVERTISE);
+        clusterCommunicator.removeSubscriber(DEVICE_INJECTED);
+        clusterCommunicator.removeSubscriber(PORT_INJECTED);
         log.info("Stopped");
     }
 
     @Override
     public int getDeviceCount() {
         return devices.size();
-    }
-
-    @Override
-    public int getAvailableDeviceCount() {
-        return availableDevices.size();
     }
 
     @Override
@@ -304,36 +313,53 @@ public class GossipDeviceStore
                                                          DeviceDescription deviceDescription) {
         NodeId localNode = clusterService.getLocalNode().id();
         NodeId deviceNode = mastershipService.getMasterFor(deviceId);
-        final boolean isMaster = localNode.equals(deviceNode);
 
         // Process device update only if we're the master,
         // otherwise signal the actual master.
         DeviceEvent deviceEvent = null;
+        if (localNode.equals(deviceNode)) {
 
-        // If this node is the master for the device, acquire a new timestamp. Otherwise,
-        // use a 0,0 or tombstone timestamp to create the device if it doesn't already exist.
-        final Timestamp newTimestamp = isMaster
-                ? deviceClockService.getTimestamp(deviceId)
-                : removalRequest.getOrDefault(deviceId, DEFAULT_TIMESTAMP);
-        final Timestamped<DeviceDescription> deltaDesc = new Timestamped<>(deviceDescription, newTimestamp);
-        final Timestamped<DeviceDescription> mergedDesc;
-        final Map<ProviderId, DeviceDescriptions> device = getOrCreateDeviceDescriptionsMap(deviceId);
+            final Timestamp newTimestamp = deviceClockService.getTimestamp(deviceId);
+            final Timestamped<DeviceDescription> deltaDesc = new Timestamped<>(deviceDescription, newTimestamp);
+            final Timestamped<DeviceDescription> mergedDesc;
+            final Map<ProviderId, DeviceDescriptions> device = getOrCreateDeviceDescriptionsMap(deviceId);
 
-        synchronized (device) {
-            deviceEvent = createOrUpdateDeviceInternal(providerId, deviceId, deltaDesc);
-            if (deviceEvent == null) {
+            synchronized (device) {
+                deviceEvent = createOrUpdateDeviceInternal(providerId, deviceId, deltaDesc);
+                mergedDesc = device.get(providerId).getDeviceDesc();
+            }
+
+            if (deviceEvent != null) {
+                log.debug("Notifying peers of a device update topology event for providerId: {} and deviceId: {}",
+                          providerId, deviceId);
+                notifyPeers(new InternalDeviceEvent(providerId, deviceId, mergedDesc));
+            }
+
+        } else {
+            // Only forward for ConfigProvider
+            // Forwarding was added as a workaround for ONOS-490
+            if (!providerId.scheme().equals("cfg")) {
                 return null;
             }
-            mergedDesc = device.get(providerId).getDeviceDesc();
-        }
+            // FIXME Temporary hack for NPE (ONOS-1171).
+            // Proper fix is to implement forwarding to master on ConfigProvider
+            // redo ONOS-490
+            if (deviceNode == null) {
+                // silently ignore
+                return null;
+            }
 
-        // If this node is the master for the device, update peers.
-        if (isMaster) {
-            log.debug("Notifying peers of a device update topology event for providerId: {} and deviceId: {}",
-                    providerId, deviceId);
-            notifyPeers(new InternalDeviceEvent(providerId, deviceId, mergedDesc));
-        } else {
-            return null;
+
+            DeviceInjectedEvent deviceInjectedEvent = new DeviceInjectedEvent(
+                    providerId, deviceId, deviceDescription);
+
+            // TODO check unicast return value
+            clusterCommunicator.unicast(deviceInjectedEvent, DEVICE_INJECTED, SERIALIZER::encode, deviceNode);
+            /* error log:
+            log.warn("Failed to process injected device id: {} desc: {} " +
+                            "(cluster messaging failed: {})",
+                    deviceId, deviceDescription, e);
+            */
         }
 
         return deviceEvent;
@@ -399,7 +425,6 @@ public class GossipDeviceStore
             markOnline(newDevice.id(), timestamp);
         }
 
-        log.debug("Device {} added", newDevice.id());
         return new DeviceEvent(DeviceEvent.Type.DEVICE_ADDED, newDevice, null);
     }
 
@@ -413,8 +438,7 @@ public class GossipDeviceStore
         boolean propertiesChanged =
                 !Objects.equals(oldDevice.hwVersion(), newDevice.hwVersion()) ||
                         !Objects.equals(oldDevice.swVersion(), newDevice.swVersion()) ||
-                        !Objects.equals(oldDevice.providerId(), newDevice.providerId()) ||
-                        !Objects.equals(oldDevice.chassisId(), newDevice.chassisId());
+                        !Objects.equals(oldDevice.providerId(), newDevice.providerId());
         boolean annotationsChanged =
                 !AnnotationsUtil.isEqual(oldDevice.annotations(), newDevice.annotations());
 
@@ -430,7 +454,6 @@ public class GossipDeviceStore
                        providerId, oldDevice, devices.get(newDevice.id()), newDevice);
             }
 
-            log.debug("Device {} updated", newDevice.id());
             event = new DeviceEvent(DeviceEvent.Type.DEVICE_UPDATED, newDevice, null);
         }
 
@@ -487,9 +510,6 @@ public class GossipDeviceStore
             }
 
             Timestamp lastTimestamp = primDescs.getLatestTimestamp();
-            if (lastTimestamp == null) {
-                lastTimestamp = deviceClockService.getTimestamp(deviceId);
-            }
             if (timestamp.compareTo(lastTimestamp) <= 0) {
                 // outdated event ignore
                 return null;
@@ -599,6 +619,7 @@ public class GossipDeviceStore
                 final DeviceDescriptions descs = device.get(providerId);
                 List<PortDescription> mergedList =
                         FluentIterable.from(portDescriptions)
+                                .filter(input -> input.portNumber() != null)
                                 .transform(input ->
                                     // lookup merged port description
                                     descs.getPortDesc(input.portNumber()).value()
@@ -613,7 +634,28 @@ public class GossipDeviceStore
             }
 
         } else {
-            return Collections.emptyList();
+            // Only forward for ConfigProvider
+            // Forwarding was added as a workaround for ONOS-490
+            if (!providerId.scheme().equals("cfg")) {
+                return Collections.emptyList();
+            }
+            // FIXME Temporary hack for NPE (ONOS-1171).
+            // Proper fix is to implement forwarding to master on ConfigProvider
+            // redo ONOS-490
+            if (deviceNode == null) {
+                // silently ignore
+                return Collections.emptyList();
+            }
+
+            PortInjectedEvent portInjectedEvent = new PortInjectedEvent(providerId, deviceId, portDescriptions);
+
+            //TODO check unicast return value
+            clusterCommunicator.unicast(portInjectedEvent, PORT_INJECTED, SERIALIZER::encode, deviceNode);
+            /* error log:
+            log.warn("Failed to process injected ports of device id: {} " +
+                            "(cluster messaging failed: {})",
+                    deviceId, e);
+            */
         }
 
         return deviceEvents == null ? Collections.emptyList() : deviceEvents;
@@ -1038,10 +1080,7 @@ public class GossipDeviceStore
             }
         }
 
-        boolean isMaster = myId.equals(master);
-
-        // If this node is not the master, forward the request.
-        if (!isMaster) {
+        if (!myId.equals(master)) {
             log.debug("{} has control of {}, forwarding remove request",
                       master, deviceId);
 
@@ -1050,21 +1089,20 @@ public class GossipDeviceStore
              /* error log:
              log.error("Failed to forward {} remove request to {}", deviceId, master, e);
              */
+
+            // event will be triggered after master processes it.
+            return null;
         }
 
-        // If this node is the master, get a timestamp. Otherwise, default to the current device timestamp.
-        Timestamp timestamp = isMaster ? deviceClockService.getTimestamp(deviceId) : null;
+        // I have control..
 
+        Timestamp timestamp = deviceClockService.getTimestamp(deviceId);
         DeviceEvent event = removeDeviceInternal(deviceId, timestamp);
-
-        // If this node is the master, update peers.
-        if (isMaster && event != null) {
+        if (event != null) {
             log.debug("Notifying peers of a device removed topology event for deviceId: {}",
                       deviceId);
             notifyPeers(new InternalDeviceRemovedEvent(deviceId, timestamp));
         }
-
-        // Relinquish mastership if acquired to remove the device.
         if (relinquishAtEnd) {
             log.debug("Relinquishing temporary role acquired for {}", deviceId);
             mastershipService.relinquishMastership(deviceId);
@@ -1072,7 +1110,8 @@ public class GossipDeviceStore
         return event;
     }
 
-    private DeviceEvent removeDeviceInternal(DeviceId deviceId, Timestamp timestamp) {
+    private DeviceEvent removeDeviceInternal(DeviceId deviceId,
+                                             Timestamp timestamp) {
 
         Map<ProviderId, DeviceDescriptions> descs = getOrCreateDeviceDescriptionsMap(deviceId);
         synchronized (descs) {
@@ -1084,12 +1123,6 @@ public class GossipDeviceStore
             }
 
             Timestamp lastTimestamp = primDescs.getLatestTimestamp();
-
-            // If no timestamp is set, default the timestamp to the last timestamp for the device.
-            if (timestamp == null) {
-                timestamp = lastTimestamp;
-            }
-
             if (timestamp.compareTo(lastTimestamp) <= 0) {
                 // outdated event ignore
                 return null;
@@ -1120,7 +1153,7 @@ public class GossipDeviceStore
     private boolean isDeviceRemoved(DeviceId deviceId, Timestamp timestampToCheck) {
         Timestamp removalTimestamp = removalRequest.get(deviceId);
         if (removalTimestamp != null &&
-                removalTimestamp.compareTo(timestampToCheck) > 0) {
+                removalTimestamp.compareTo(timestampToCheck) >= 0) {
             // removalRequest is more recent
             return true;
         }
@@ -1150,8 +1183,8 @@ public class GossipDeviceStore
         String swVersion = base.swVersion();
         String serialNumber = base.serialNumber();
         ChassisId chassisId = base.chassisId();
-        DefaultAnnotations.Builder annotations = DefaultAnnotations.builder();
-        annotations.putAll(base.annotations());
+        DefaultAnnotations annotations = DefaultAnnotations.builder().build();
+        annotations = merge(annotations, base.annotations());
 
         for (Entry<ProviderId, DeviceDescriptions> e : providerDescs.entrySet()) {
             if (e.getKey().equals(primary)) {
@@ -1163,18 +1196,59 @@ public class GossipDeviceStore
             // providers
 
             // annotation merging. not so efficient, should revisit later
-            annotations.putAll(e.getValue().getDeviceDesc().value().annotations());
+            annotations = merge(annotations, e.getValue().getDeviceDesc().value().annotations());
         }
 
         return new DefaultDevice(primary, deviceId, type, manufacturer,
                                  hwVersion, swVersion, serialNumber,
-                                 chassisId, annotations.build());
+                                 chassisId, annotations);
     }
 
     private Port buildTypedPort(Device device, PortNumber number, boolean isEnabled,
                                  PortDescription description, Annotations annotations) {
+        // FIXME this switch need to go away once all ports are done.
+        switch (description.type()) {
+            case OMS:
+                if (description instanceof OmsPortDescription) {
+                    // remove if-block once deprecation is complete
+                    OmsPortDescription omsDesc = (OmsPortDescription) description;
+                    return new OmsPort(device, number, isEnabled, omsDesc.minFrequency(),
+                            omsDesc.maxFrequency(), omsDesc.grid(), annotations);
+                }
+                // same as default
+                return new DefaultPort(device, number, isEnabled, description.type(),
+                                       description.portSpeed(), annotations);
+            case OCH:
+                if (description instanceof OchPortDescription) {
+                    // remove if-block once Och deprecation is complete
+                    OchPortDescription ochDesc = (OchPortDescription) description;
+                    return new OchPort(device, number, isEnabled, ochDesc.signalType(),
+                                       ochDesc.isTunable(), ochDesc.lambda(), annotations);
+                }
+                return new DefaultPort(device, number, isEnabled, description.type(),
+                                       description.portSpeed(), annotations);
+            case ODUCLT:
+                if (description instanceof OduCltPortDescription) {
+                    // remove if-block once deprecation is complete
+                    OduCltPortDescription oduDesc = (OduCltPortDescription) description;
+                    return new OduCltPort(device, number, isEnabled, oduDesc.signalType(), annotations);
+                }
+                // same as default
+                return new DefaultPort(device, number, isEnabled, description.type(),
+                                       description.portSpeed(), annotations);
+            case OTU:
+                if (description instanceof OtuPortDescription) {
+                    // remove if-block once deprecation is complete
+                    OtuPortDescription otuDesc = (OtuPortDescription) description;
+                    return new OtuPort(device, number, isEnabled, otuDesc.signalType(), annotations);
+                }
+                // same as default
+                return new DefaultPort(device, number, isEnabled, description.type(),
+                                       description.portSpeed(), annotations);
+            default:
                 return new DefaultPort(device, number, isEnabled, description.type(),
                         description.portSpeed(), annotations);
+        }
     }
 
     /**
@@ -1192,12 +1266,12 @@ public class GossipDeviceStore
         DeviceDescriptions primDescs = descsMap.get(primary);
         // if no primary, assume not enabled
         boolean isEnabled = false;
-        DefaultAnnotations.Builder annotations = DefaultAnnotations.builder();
+        DefaultAnnotations annotations = DefaultAnnotations.builder().build();
         Timestamp newest = null;
         final Timestamped<PortDescription> portDesc = primDescs.getPortDesc(number);
         if (portDesc != null) {
             isEnabled = portDesc.value().isEnabled();
-            annotations.putAll(portDesc.value().annotations());
+            annotations = merge(annotations, portDesc.value().annotations());
             newest = portDesc.timestamp();
         }
         Port updated = null;
@@ -1216,18 +1290,18 @@ public class GossipDeviceStore
                 if (newest != null && newest.isNewerThan(otherPortDesc.timestamp())) {
                     continue;
                 }
-                annotations.putAll(otherPortDesc.value().annotations());
+                annotations = merge(annotations, otherPortDesc.value().annotations());
                 PortDescription other = otherPortDesc.value();
-                updated = buildTypedPort(device, number, isEnabled, other, annotations.build());
+                updated = buildTypedPort(device, number, isEnabled, other, annotations);
                 newest = otherPortDesc.timestamp();
             }
         }
         if (portDesc == null) {
-            return updated == null ? new DefaultPort(device, number, false, annotations.build()) : updated;
+            return updated == null ? new DefaultPort(device, number, false, annotations) : updated;
         }
         PortDescription current = portDesc.value();
         return updated == null
-                ? buildTypedPort(device, number, isEnabled, current, annotations.build())
+                ? buildTypedPort(device, number, isEnabled, current, annotations)
                 : updated;
     }
 
@@ -1643,6 +1717,40 @@ public class GossipDeviceStore
             handleAdvertisement(advertisement);
         } catch (Exception e) {
             log.warn("Exception thrown handling Device advertisements.", e);
+        }
+    }
+
+    private void handleDeviceInjectedEvent(DeviceInjectedEvent event) {
+        ProviderId providerId = event.providerId();
+        DeviceId deviceId = event.deviceId();
+        DeviceDescription deviceDescription = event.deviceDescription();
+        if (!deviceClockService.isTimestampAvailable(deviceId)) {
+            // workaround for ONOS-1208
+            log.warn("Not ready to accept update. Dropping {}", deviceDescription);
+            return;
+        }
+
+        try {
+            createOrUpdateDevice(providerId, deviceId, deviceDescription);
+        } catch (Exception e) {
+            log.warn("Exception thrown handling device injected event.", e);
+        }
+    }
+
+    private void handlePortInjectedEvent(PortInjectedEvent event) {
+        ProviderId providerId = event.providerId();
+        DeviceId deviceId = event.deviceId();
+        List<PortDescription> portDescriptions = event.portDescriptions();
+        if (!deviceClockService.isTimestampAvailable(deviceId)) {
+            // workaround for ONOS-1208
+            log.warn("Not ready to accept update. Dropping {}", portDescriptions);
+            return;
+        }
+
+        try {
+            updatePorts(providerId, deviceId, portDescriptions);
+        } catch (Exception e) {
+            log.warn("Exception thrown handling port injected event.", e);
         }
     }
 

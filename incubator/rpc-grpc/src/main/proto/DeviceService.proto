@@ -1,17 +1,15 @@
 syntax = "proto3";
 option java_package = "org.onosproject.grpc.net.device";
 
-import "net/device/DeviceDescriptionProto.proto";
-import "net/device/PortDescriptionProto.proto";
-import "net/device/PortStatisticsProto.proto";
-import "net/device/DeviceEnumsProto.proto";
+import "Device.proto";
+import "Port.proto";
 
 package Device;
 
 message DeviceConnected {
   // DeviceID as String DeviceId#toString
   string device_id = 1;
-  net.device.DeviceDescriptionProto device_description = 2;
+  DeviceDescription device_description = 2;
 }
 
 message DeviceDisconnected {
@@ -22,26 +20,26 @@ message DeviceDisconnected {
 message UpdatePorts {
   // DeviceID as String DeviceId#toString
   string device_id = 1;
-  repeated net.device.PortDescriptionProto port_descriptions= 2;
+  repeated Port.PortDescription port_descriptions= 2;
 }
 
 message PortStatusChanged {
   // DeviceID as String DeviceId#toString
   string device_id = 1;
-  net.device.PortDescriptionProto port_description= 2;
+  Port.PortDescription port_description= 2;
 }
 
 message ReceivedRoleReply {
   // DeviceID as String DeviceId#toString
   string device_id = 1;
-  net.device.MastershipRoleProto requested = 2;
-  net.device.MastershipRoleProto response = 3;
+  MastershipRole requested = 2;
+  MastershipRole response = 3;
 }
 
 message UpdatePortStatistics {
   // DeviceID as String DeviceId#toString
   string device_id = 1;
-  repeated net.device.PortStatisticsProto port_statistics = 2;
+  repeated Port.PortStatistics port_statistics = 2;
 }
 
 message RegisterProvider {
@@ -74,7 +72,7 @@ message TriggerProbe {
 message RoleChanged {
   // DeviceID as String DeviceId#toString
   string device_id = 1;
-  net.device.MastershipRoleProto new_role = 2;
+  MastershipRole new_role = 2;
 }
 
 message IsReachableRequest {

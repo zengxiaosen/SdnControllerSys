@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright 2015-present Open Networking Foundation
+  ~ Copyright 2015-present Open Networking Laboratory
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>20.0</version>
+            <version>19.0</version>
         </dependency>
 
         <dependency>

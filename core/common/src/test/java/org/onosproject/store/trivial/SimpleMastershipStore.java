@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,8 +45,6 @@ import org.onosproject.cluster.ControllerNode.State;
 import org.onosproject.cluster.DefaultControllerNode;
 import org.onosproject.cluster.NodeId;
 import org.onosproject.cluster.RoleInfo;
-import org.onosproject.core.Version;
-import org.onosproject.core.VersionService;
 import org.onosproject.mastership.MastershipEvent;
 import org.onosproject.mastership.MastershipStore;
 import org.onosproject.mastership.MastershipStoreDelegate;
@@ -76,9 +74,6 @@ public class SimpleMastershipStore
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ClusterService clusterService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected VersionService versionService;
 
     //devices mapped to their masters, to emulate multiple nodes
     protected final Map<DeviceId, NodeId> masterMap = new HashMap<>();
@@ -124,14 +119,6 @@ public class SimpleMastershipStore
                     } else {
                         return State.INACTIVE;
                     }
-                }
-
-                @Override
-                public Version getVersion(NodeId nodeId) {
-                    if (instance.id().equals(nodeId)) {
-                        return versionService.version();
-                    }
-                    return null;
                 }
 
                 @Override

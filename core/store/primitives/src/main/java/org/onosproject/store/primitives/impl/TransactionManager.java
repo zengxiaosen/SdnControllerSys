@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Foundation
+ * Copyright 2017-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,21 +49,15 @@ public class TransactionManager {
     private final List<PartitionId> sortedPartitions;
     private final AsyncConsistentMap<TransactionId, Transaction.State> transactions;
     private final int cacheSize;
-    private final int buckets;
-    private final Map<PartitionId, Cache<String, CachedMap>> partitionCache = Maps.newConcurrentMap();
+    private final Map<PartitionId, Cache<String, AsyncConsistentMap>> partitionCache = Maps.newConcurrentMap();
 
-    public TransactionManager(StorageService storageService, PartitionService partitionService, int buckets) {
-        this(storageService, partitionService, DEFAULT_CACHE_SIZE, buckets);
+    public TransactionManager(StorageService storageService, PartitionService partitionService) {
+        this(storageService, partitionService, DEFAULT_CACHE_SIZE);
     }
 
-    public TransactionManager(
-            StorageService storageService,
-            PartitionService partitionService,
-            int cacheSize,
-            int buckets) {
+    public TransactionManager(StorageService storageService, PartitionService partitionService, int cacheSize) {
         this.partitionService = partitionService;
         this.cacheSize = cacheSize;
-        this.buckets = buckets;
         this.transactions = storageService.<TransactionId, Transaction.State>consistentMapBuilder()
                 .withName("onos-transactions")
                 .withSerializer(Serializer.using(KryoNamespaces.API,
@@ -107,9 +101,8 @@ public class TransactionManager {
         }
 
         Hasher<K> hasher = key -> {
-            int bucket = Math.abs(Hashing.murmur3_32().hashBytes(serializer.encode(key)).asInt()) % buckets;
-            int partition = Hashing.consistentHash(bucket, sortedPartitions.size());
-            return sortedPartitions.get(partition);
+            int hashCode = Hashing.sha256().hashBytes(serializer.encode(key)).asInt();
+            return sortedPartitions.get(Math.abs(hashCode) % sortedPartitions.size());
         };
         return new PartitionedTransactionalMap<>(partitions, hasher);
     }
@@ -120,17 +113,18 @@ public class TransactionManager {
             PartitionId partitionId,
             Serializer serializer,
             TransactionCoordinator transactionCoordinator) {
-        Cache<String, CachedMap> mapCache = partitionCache.computeIfAbsent(partitionId, p ->
+        Cache<String, AsyncConsistentMap> mapCache = partitionCache.computeIfAbsent(partitionId, p ->
                 CacheBuilder.newBuilder().maximumSize(cacheSize / partitionService.getNumberOfPartitions()).build());
         try {
-            CachedMap<K, V> cachedMap = mapCache.get(mapName,
-                    () -> new CachedMap<>(partitionService.getDistributedPrimitiveCreator(partitionId)
-                            .newAsyncConsistentMap(mapName, serializer)));
+            AsyncConsistentMap<K, V> baseMap = partitionService.getDistributedPrimitiveCreator(partitionId)
+                            .newAsyncConsistentMap(mapName, serializer);
+            AsyncConsistentMap<K, V> asyncMap = mapCache.get(mapName, () ->
+                    DistributedPrimitives.newCachingMap(baseMap));
 
             Transaction<MapUpdate<K, V>> transaction = new Transaction<>(
                     transactionCoordinator.transactionId,
-                    cachedMap.baseMap);
-            return new DefaultTransactionalMapParticipant<>(cachedMap.cachedMap.asConsistentMap(), transaction);
+                    baseMap);
+            return new DefaultTransactionalMapParticipant<>(asyncMap.asConsistentMap(), transaction);
         } catch (ExecutionException e) {
             throw new TransactionException(e);
         }
@@ -155,15 +149,5 @@ public class TransactionManager {
      */
     CompletableFuture<Void> remove(TransactionId transactionId) {
         return transactions.remove(transactionId).thenApply(v -> null);
-    }
-
-    private static class CachedMap<K, V> {
-        private final AsyncConsistentMap<K, V> baseMap;
-        private final AsyncConsistentMap<K, V> cachedMap;
-
-        public CachedMap(AsyncConsistentMap<K, V> baseMap) {
-            this.baseMap = baseMap;
-            this.cachedMap = DistributedPrimitives.newCachingMap(baseMap);
-        }
     }
 }

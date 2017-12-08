@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,13 +123,13 @@ public class TenantNetworkWebResource extends AbstractWebResource {
     }
 
     private State isState(String state) {
-        if ("ACTIVE".equals(state)) {
+        if (state.equals("ACTIVE")) {
             return TenantNetwork.State.ACTIVE;
-        } else if ("BUILD".equals(state)) {
+        } else if (state.equals("BUILD")) {
             return TenantNetwork.State.BUILD;
-        } else if ("DOWN".equals(state)) {
+        } else if (state.equals("DOWN")) {
             return TenantNetwork.State.DOWN;
-        } else if ("ERROR".equals(state)) {
+        } else if (state.equals("ERROR")) {
             return TenantNetwork.State.ERROR;
         } else {
             return null;
@@ -137,7 +137,7 @@ public class TenantNetworkWebResource extends AbstractWebResource {
     }
 
     private Type isType(String type) {
-        if ("LOCAL".equals(type)) {
+        if (type.equals("LOCAL")) {
             return TenantNetwork.Type.LOCAL;
         } else {
             return null;
@@ -286,7 +286,7 @@ public class TenantNetworkWebResource extends AbstractWebResource {
         String segmentationIdStr = node.get("provider:segmentation_id").asText();
         SegmentationId segmentationId = SegmentationId.segmentationId(segmentationIdStr);
         TenantId tenantId = TenantId.tenantId(tenantIdStr);
-        if (segmentationIdStr == null || "null".equals(segmentationIdStr)) {
+        if (segmentationIdStr == null || segmentationIdStr.equals("null")) {
             segmentationId = get(VtnRscService.class).getL3vni(tenantId);
         }
         TenantNetworkId id = null;
@@ -337,7 +337,7 @@ public class TenantNetworkWebResource extends AbstractWebResource {
             String segmentationIdStr = node.get("provider:segmentation_id").asText();
             SegmentationId segmentationId = SegmentationId.segmentationId(segmentationIdStr);
             TenantId tenantId = TenantId.tenantId(tenantIdStr);
-            if (segmentationIdStr == null || "null".equals(segmentationIdStr)) {
+            if (segmentationIdStr == null || segmentationIdStr.equals("null")) {
                 segmentationId = get(VtnRscService.class).getL3vni(tenantId);
             }
             network = new DefaultTenantNetwork(

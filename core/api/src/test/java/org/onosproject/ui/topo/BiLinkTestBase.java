@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,11 @@ import org.onosproject.net.LinkKey;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.driver.Behaviour;
 import org.onosproject.net.provider.ProviderId;
-import org.onosproject.ui.AbstractUiTest;
-import org.onosproject.ui.model.topo.UiLinkId;
 
 /**
  * Base class for unit tests of {@link BiLink} and {@link BiLinkMap}.
  */
-public abstract class BiLinkTestBase extends AbstractUiTest {
+public abstract class BiLinkTestBase {
 
     protected static class FakeLink implements Link {
         private final ConnectPoint src;
@@ -41,38 +39,29 @@ public abstract class BiLinkTestBase extends AbstractUiTest {
             this.dst = dst;
         }
 
-        @Override
-        public ConnectPoint src() {
+        @Override public ConnectPoint src() {
             return src;
         }
-
-        @Override
-        public ConnectPoint dst() {
+        @Override public ConnectPoint dst() {
             return dst;
         }
 
-        @Override
-        public Type type() {
+        @Override public Type type() {
             return null;
         }
-
-        @Override
-        public State state() {
+        @Override public State state() {
             return null;
         }
-
-        @Override
-        public boolean isExpected() {
+        @Override public boolean isDurable() {
             return false;
         }
-
-        @Override
-        public Annotations annotations() {
+        @Override public boolean isExpected() {
+            return false;
+        }
+        @Override public Annotations annotations() {
             return null;
         }
-
-        @Override
-        public ProviderId providerId() {
+        @Override public ProviderId providerId() {
             return null;
         }
 
@@ -105,11 +94,6 @@ public abstract class BiLinkTestBase extends AbstractUiTest {
         public ConcreteLink(LinkKey key, Link link) {
             super(key, link);
         }
-
-        public ConcreteLink(UiLinkId uiLinkId) {
-            super(uiLinkId);
-        }
-
         @Override
         public LinkHighlight highlight(Enum<?> type) {
             return null;
@@ -122,5 +106,6 @@ public abstract class BiLinkTestBase extends AbstractUiTest {
             return new ConcreteLink(key, link);
         }
     }
+
 
 }

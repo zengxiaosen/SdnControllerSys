@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,11 +105,11 @@ public class PceWebTopovOverlay extends UiTopoOverlay {
                 pp.addProp("LSR ID", lsrId);
             }
 
-            if (Boolean.valueOf(abrStatus).equals(true) && Boolean.valueOf(asbrStatus).equals(true)) {
+            if (abrStatus.equals(true) && asbrStatus.equals(true)) {
                 pp.addProp("Position", ABR_ASBR);
-            } else if (Boolean.valueOf(abrStatus).equals(true)) {
+            } else if (abrStatus.equals(true)) {
                 pp.addProp("Position", ABR);
-            } else if (Boolean.valueOf(asbrStatus).equals(true)) {
+            } else if (asbrStatus.equals(true)) {
                 pp.addProp("Position", ASBR);
             } else {
                 pp.addProp("Position", INNER);
@@ -164,7 +164,7 @@ public class PceWebTopovOverlay extends UiTopoOverlay {
         try {
             Thread.sleep(100);
         } catch (InterruptedException e) {
-            log.error("Exception occurred while getting the bandwidth.");
+            log.error("Exception occured while getting the bandwidth.");
         }
         Set<Resource> resources = resService.getRegisteredResources(devResource.id());
         for (Resource res : resources) {

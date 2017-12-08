@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import org.onosproject.net.DeviceId;
  */
 public interface FlowRule {
 
-    IndexTableId DEFAULT_TABLE = IndexTableId.of(0);
     int MAX_TIMEOUT = 60;
     int MIN_PRIORITY = 0;
     int MAX_PRIORITY = 65535;
@@ -35,19 +34,9 @@ public interface FlowRule {
      * Used to check reason parameter in flows.
      */
     enum FlowRemoveReason {
+        NO_REASON,
         IDLE_TIMEOUT,
-        HARD_TIMEOUT,
-        DELETE,
-        GROUP_DELETE,
-        METER_DELETE,
-        EVICTION,
-        NO_REASON;
-
-        /**
-         * Covert short to enum.
-         * @return reason in enum
-         * @param reason remove reason in integer
-         */
+        HARD_TIMEOUT;
         public static FlowRemoveReason parseShort(short reason) {
             switch (reason) {
                 case -1 :
@@ -56,14 +45,6 @@ public interface FlowRule {
                     return IDLE_TIMEOUT;
                 case 1:
                     return HARD_TIMEOUT;
-                case 2 :
-                    return DELETE;
-                case 3:
-                    return GROUP_DELETE;
-                case 4:
-                    return METER_DELETE;
-                case 5:
-                    return EVICTION;
                 default :
                     return NO_REASON;
             }
@@ -154,17 +135,8 @@ public interface FlowRule {
      * Returns the table id for this rule.
      *
      * @return an integer.
-     * @deprecated in Loon release (version 1.11.0). Use {@link #table()} instead.
      */
-    @Deprecated
     int tableId();
-
-    /**
-     * Returns the table identifier for this rule.
-     *
-     * @return a table identifier.
-     */
-    TableId table();
 
     /**
      * {@inheritDoc}
@@ -237,26 +209,12 @@ public interface FlowRule {
         Builder forDevice(DeviceId deviceId);
 
         /**
-         * Sets the table id for this flow rule, when the identifier is of type {@link TableId.Type#INDEX}. Default
-         * value is 0.
-         * <p>
-         * <em>Important:</em> This method is left here for backward compatibility with applications that specifies
-         * table identifiers using integers, e.g. as in OpenFlow. Currently there is no plan to deprecate this method,
-         * however, new applications should favor using {@link #forTable(TableId)}.
+         * Sets the table id for this flow rule. Default value is 0.
          *
          * @param tableId an integer
          * @return this
          */
         Builder forTable(int tableId);
-
-        /**
-         * Sets the table identifier for this flow rule.
-         * Default identifier is of type {@link TableId.Type#INDEX} and value 0.
-         *
-         * @param tableId table identifier
-         * @return this
-         */
-        Builder forTable(TableId tableId);
 
         /**
          * Sets the selector (or match field) for this flow rule.

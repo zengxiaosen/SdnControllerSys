@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,19 +22,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSetMultimap.Builder;
-import org.onlab.graph.DefaultEdgeWeigher;
-import org.onlab.graph.DijkstraGraphSearch;
-import org.onlab.graph.DisjointPathPair;
-import org.onlab.graph.GraphPathSearch;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.onlab.graph.*;
 import org.onlab.graph.GraphPathSearch.Result;
-import org.onlab.graph.KShortestPathsSearch;
-import org.onlab.graph.LazyKShortestPathsSearch;
-import org.onlab.graph.ScalarWeight;
-import org.onlab.graph.SrlgGraphSearch;
-import org.onlab.graph.SuurballeGraphSearch;
-import org.onlab.graph.TarjanGraphSearch;
 import org.onlab.graph.TarjanGraphSearch.SccResult;
-import org.onlab.graph.Weight;
 import org.onosproject.net.AbstractModel;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DefaultDisjointPath;
@@ -44,7 +36,9 @@ import org.onosproject.net.DisjointPath;
 import org.onosproject.net.Link;
 import org.onosproject.net.Link.Type;
 import org.onosproject.net.Path;
+import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.provider.ProviderId;
+import org.onosproject.net.statistic.FlowStatisticService;
 import org.onosproject.net.topology.ClusterId;
 import org.onosproject.net.topology.DefaultTopologyCluster;
 import org.onosproject.net.topology.DefaultTopologyVertex;
@@ -59,12 +53,8 @@ import org.onosproject.net.topology.TopologyVertex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -89,11 +79,6 @@ public class DefaultTopology extends AbstractModel implements Topology {
             new TarjanGraphSearch<>();
     private static final SuurballeGraphSearch<TopologyVertex, TopologyEdge> SUURBALLE =
             new SuurballeGraphSearch<>();
-    private static final KShortestPathsSearch<TopologyVertex, TopologyEdge> KSHORTEST =
-            new KShortestPathsSearch<>();
-    private static final LazyKShortestPathsSearch<TopologyVertex, TopologyEdge> LAZY_KSHORTEST =
-            new LazyKShortestPathsSearch<>();
-
 
     private static LinkWeigher defaultLinkWeigher = null;
     private static GraphPathSearch<TopologyVertex, TopologyEdge> defaultGraphPathSearch = null;
@@ -103,7 +88,14 @@ public class DefaultTopology extends AbstractModel implements Topology {
     private final long computeCost;
     private final TopologyGraph graph;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DeviceService deviceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected FlowStatisticService flowStatisticService;
+
     private final LinkWeigher hopCountWeigher;
+    //private final LinkWeigher bdCountWeigher;
 
     private final Supplier<SccResult<TopologyVertex, TopologyEdge>> clusterResults;
     private final Supplier<ImmutableMap<ClusterId, TopologyCluster>> clusters;
@@ -120,6 +112,9 @@ public class DefaultTopology extends AbstractModel implements Topology {
      * @param linkWeigher new default link-weight
      */
     public static void setDefaultLinkWeigher(LinkWeigher linkWeigher) {
+        for(int i=0; i<500; i++){
+            log.info("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
+        }
         log.info("Setting new default link-weight function to {}", linkWeigher);
         defaultLinkWeigher = linkWeigher;
     }
@@ -161,6 +156,7 @@ public class DefaultTopology extends AbstractModel implements Topology {
         this.clusterIndexes = Suppliers.memoize(this::buildIndexes);
 
         this.hopCountWeigher = adapt(new HopCountLinkWeight(graph.getVertexes().size()));
+
         this.broadcastSets = Suppliers.memoize(this::buildBroadcastSets);
         this.infrastructurePoints = Suppliers.memoize(this::findInfrastructurePoints);
         this.computeCost = Math.max(0, System.nanoTime() - time);
@@ -342,7 +338,13 @@ public class DefaultTopology extends AbstractModel implements Topology {
      * @return set of shortest paths
      */
     public Set<Path> getPaths(DeviceId src, DeviceId dst) {
+        log.info("Topology端调用处1。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
         return getPaths(src, dst, linkWeight(), ALL_PATHS);
+    }
+
+    public Set<Path> getPaths1(DeviceId src, DeviceId dst, DeviceId hs){
+        //log.info("Topology端调用处1。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
+        return getPaths1(src, dst, linkWeight(), ALL_PATHS, hs);
     }
 
     /**
@@ -377,6 +379,12 @@ public class DefaultTopology extends AbstractModel implements Topology {
      */
     public Set<Path> getPaths(DeviceId src, DeviceId dst, LinkWeigher weigher,
                               int maxPaths) {
+        log.info("Topology端调用处2。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
+        for(int i=0; i< 5; i++){
+            log.info(".........................");
+        }
+        log.info("验证上报packetIn的交换机："+src.toString()+" , 目的交换机："+dst.toString()+")");
+
         DefaultTopologyVertex srcV = new DefaultTopologyVertex(src);
         DefaultTopologyVertex dstV = new DefaultTopologyVertex(dst);
         Set<TopologyVertex> vertices = graph.getVertexes();
@@ -388,95 +396,551 @@ public class DefaultTopology extends AbstractModel implements Topology {
         GraphPathSearch.Result<TopologyVertex, TopologyEdge> result =
                 graphPathSearch().search(graph, srcV, dstV, weigher, maxPaths);
         ImmutableSet.Builder<Path> builder = ImmutableSet.builder();
+        int j=0;
+        for (org.onlab.graph.Path<TopologyVertex, TopologyEdge> path : result.paths()) {
+            log.info("根据源目取出的path的数量：" + result.paths().size());
+            log.info("path "+j+"................");
+            for (TopologyEdge e : path.edges()) {
+                log.info("edge src,dst:" + e.link().src().deviceId().toString() + "," + e.link().dst().deviceId().toString());
+            }
+            //return new DefaultPath(CORE_PROVIDER_ID, links, path.cost());
+            builder.add(networkPath(path));
+            j++;
+        }
+        // Set<Path<V, E>> paths();
         for (org.onlab.graph.Path<TopologyVertex, TopologyEdge> path : result.paths()) {
             builder.add(networkPath(path));
+        }
+        for(int i=0; i< 5; i++){
+            log.info(".........................");
         }
         return builder.build();
     }
 
-    /**
-     * Computes on-demand the k-shortest paths between source and
-     * destination devices.
-     *
-     * @param src    source device
-     * @param dst    destination device
-     * @param maxPaths maximum number of paths (k)
-     * @return set of k-shortest paths
-     */
-    public Set<Path> getKShortestPaths(DeviceId src, DeviceId dst,
-                                       int maxPaths) {
-
-        return getKShortestPaths(src, dst, linkWeight(), maxPaths);
-    }
-
-    /**
-     * Computes on-demand the k-shortest paths between source and
-     * destination devices.
-     *
-     * The first {@code maxPaths} paths will be returned
-     * in ascending order according to the provided {@code weigher}
-     *
-     * @param src    source device
-     * @param dst    destination device
-     * @param weigher link weight function
-     * @param maxPaths maximum number of paths (k)
-     * @return set of k-shortest paths
-     */
-    public Set<Path> getKShortestPaths(DeviceId src, DeviceId dst,
-                                       LinkWeigher weigher,
-                                       int maxPaths) {
+    public synchronized Set<Path> getPaths1(DeviceId src, DeviceId dst, LinkWeigher weigher,
+                              int maxPaths, DeviceId hs) {
+        //log.info("Topology端调用处2。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
+        for(int i=0; i< 5; i++){
+            log.info(".........................");
+        }
         DefaultTopologyVertex srcV = new DefaultTopologyVertex(src);
         DefaultTopologyVertex dstV = new DefaultTopologyVertex(dst);
         Set<TopologyVertex> vertices = graph.getVertexes();
+        // src or dst not part of the current graph
         if (!vertices.contains(srcV) || !vertices.contains(dstV)) {
-            // src or dst not part of the current graph
             return ImmutableSet.of();
         }
+        log.info("验证上报packetIn的交换机："+src.toString()+ " , 源交换机： " + hs.toString()  + " , 目的交换机："+dst.toString()+")");
+        //        GraphPathSearch.Result<TopologyVertex, TopologyEdge> result =
+        //                graphPathSearch().search(graph, srcV, dstV, weigher, maxPaths);
+        Set<org.onlab.graph.Path<TopologyVertex, TopologyEdge>> myresult = mysearchPaths(graph, srcV, dstV, weigher, maxPaths, hs);
 
-        return KSHORTEST.search(graph, srcV, dstV, weigher, maxPaths)
-                .paths().stream()
-                    .map(this::networkPath)
-                    .collect(ImmutableSet.toImmutableSet());
-    }
+        ImmutableSet.Builder<Path> builder = ImmutableSet.builder();
+        // Set<Path<V, E>> paths();
 
-    /**
-     * Lazily computes on-demand the k-shortest paths between source and
-     * destination devices.
-     *
-     *
-     * @param src    source device
-     * @param dst    destination device
-     * @return stream of k-shortest paths
-     */
-    public Stream<Path> getKShortestPaths(DeviceId src, DeviceId dst) {
-        return getKShortestPaths(src, dst, linkWeight());
-    }
 
-    /**
-     * Lazily computes on-demand the k-shortest paths between source and
-     * destination devices.
-     *
-     *
-     * @param src    source device
-     * @param dst    destination device
-     * @param weigher link weight function
-     * @return stream of k-shortest paths
-     */
-    public Stream<Path> getKShortestPaths(DeviceId src, DeviceId dst,
-                                          LinkWeigher weigher) {
-        DefaultTopologyVertex srcV = new DefaultTopologyVertex(src);
-        DefaultTopologyVertex dstV = new DefaultTopologyVertex(dst);
-        Set<TopologyVertex> vertices = graph.getVertexes();
-        if (!vertices.contains(srcV) || !vertices.contains(dstV)) {
-            // src or dst not part of the current graph
-            return Stream.empty();
+        //展示
+        int j=1;
+        log.info("遍历取出的所有path, " + "path的数量是：" + myresult.size());
+        for (org.onlab.graph.Path<TopologyVertex, TopologyEdge> path : myresult) {
+            log.info("第 " + j + "条path "+"..........."+path.toString());
+
+            for (TopologyEdge e : path.edges()) {
+                log.info("edge src,dst:" + e.link().src().deviceId().toString() + "," + e.link().dst().deviceId().toString());
+            }
+            //builder.add(networkPath(path));
+            j++;
         }
 
-        return LAZY_KSHORTEST.lazyPathSearch(graph, srcV, dstV, weigher)
-                    .map(this::networkPath);
+
+
+        //Set<org.onlab.graph.Path<TopologyVertex, TopologyEdge>> myChoicedResult = myChoicedPaths(graph, srcV, dstV, hs, myresult);
+
+
+        //在这里需要有选择的选路！，目前是遍历 v1
+        for (org.onlab.graph.Path<TopologyVertex, TopologyEdge> path : myresult) {
+
+            builder.add(networkPath(path));
+        }
+
+
+        for(int i=0; i< 5; i++){
+            log.info(".........................");
+        }
+        return builder.build();
     }
 
+
+
+    private Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> myChoicedPaths(TopologyGraph graph, DefaultTopologyVertex srcV, DefaultTopologyVertex dstV, DeviceId hs, Set<org.onlab.graph.Path<TopologyVertex, TopologyEdge>> myresult1) {
+
+        //flowStatisticService = new FlowStatisticManager();
+        int i=0;
+        for(org.onlab.graph.Path<TopologyVertex, TopologyEdge> path : myresult1){
+            for(int j=0; j< 10; j++){
+                log.info("统计网络基本信息！！！！！");
+            }
+            log.info("path " + i + " : ");
+
+            int k=0;
+            for(TopologyEdge edge : path.edges()){
+                log.info("edge " + k + " : ");
+                ConnectPoint connectPoint_linksrc = edge.link().src();
+                ConnectPoint connectPoint_linkdst = edge.link().dst();
+
+                //List<org.onosproject.net.Port> ports = new ArrayList<>(deviceService.getPorts(connectPoint_linksrc.deviceId()));
+
+
+
+//                for(org.onosproject.net.Port port : ports){
+//                    log.info("port number: " + port.number());
+//                    ConnectPoint cp = new ConnectPoint(connectPoint_linksrc.deviceId(), port.number());
+//                }
+                k++;
+            }
+
+            i++;
+        }
+
+        return null;
+    }
+
+    private  synchronized  Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> mysearchPaths(TopologyGraph graph, DefaultTopologyVertex srcV, DefaultTopologyVertex dstV, LinkWeigher weigher,
+                                                                                 int maxPaths, DeviceId hs) {
+        gouzaoFatreeLayer(graph);
+        showFattreeLayer(graph);
+        AddLayerDataToV(graph, srcV, dstV, hs);
+        Set<TopologyEdge> e1 = graph.getEdgesFrom(srcV);
+
+
+
+        // 粘型11
+        // 如果上报packetin的交换机在第一层，和目的交换机连着同一个边缘交换机
+        Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> result_j0 = new LinkedHashSet<>();
+        log.info("上报交换机的层数：" + srcV.deviceId().getLayer());
+        log.info("源交换机的层数：" + hs.getLayer());
+        log.info("目的交换机的层数："+ dstV.deviceId().getLayer());
+        log.info("源头交换机："+hs.toString().trim());
+        log.info("上报交换机："+srcV.deviceId().toString());
+        int biaoji = 0;
+        if(srcV.deviceId().getLayer().equals("1") && srcV.deviceId().toString().trim().equals(hs.toString().trim()) && dstV.deviceId().getLayer().equals("1")){
+
+            for(TopologyEdge edge : e1){
+                if(edge.dst().deviceId().getLayer().equals("2")){
+                    Set<TopologyEdge> xiaxing = graph.getEdgesFrom(edge.dst());
+                        for(TopologyEdge edge1 : xiaxing){
+                            if(edge1.dst().deviceId().getLayer().equals("1") && edge1.dst().deviceId().toString().trim().equals(dstV.deviceId().toString().trim())){
+                                log.info("找到了！");
+                                biaoji ++;
+                                List<TopologyEdge> edge_merge = new ArrayList<>();
+                                edge_merge.add(edge);
+                                edge_merge.add(edge1);
+                                org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge> thePath = new org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge>(srcV, dstV);
+                                thePath.setEdges(edge_merge);
+                                result_j0.add(thePath);
+                            }
+                        }
+                    }
+                }
+
+            if(biaoji != 0){
+                return result_j0;
+            }
+        }
+
+
+
+
+        // 分离型11
+        // 如果上报packetin的交换机在第一层，和目的交换机没有连在同一交换机，必须经过第三层交换机通信
+        Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> result_11 = new LinkedHashSet<>();
+        if(srcV.deviceId().getLayer().equals("1") && srcV.deviceId().toString().trim().equals(hs.toString().trim()) && dstV.deviceId().getLayer().equals("1") && biaoji == 0){
+            for(TopologyEdge edge : e1){
+                if(edge.dst().deviceId().getLayer().equals("2")){
+                    log.info("源目都是一层，跑到上行第二层了");
+                    Set<TopologyEdge> shangxing = graph.getEdgesFrom(edge.dst());
+                    for(TopologyEdge edge1 : shangxing){
+                        if(edge1.dst().deviceId().getLayer().equals("3")){
+                            log.info("源目都是一层，跑到第三层了");
+                            Set<TopologyEdge> xiaxing = graph.getEdgesFrom(edge1.dst());
+                            for(TopologyEdge edge2 : xiaxing){
+                                if(edge2.dst().deviceId().getLayer().equals("2")){
+                                    log.info("源目都是一层，跑到下行第二层了");
+                                    Set<TopologyEdge> xiaxing1 = graph.getEdgesFrom(edge2.dst());
+                                    for(TopologyEdge edge3 : xiaxing1){
+                                        if(edge3.dst().deviceId().getLayer().equals("1")){
+                                            log.info("源目都是一层，跑到下行第一层了");
+                                            if(edge3.dst().deviceId().toString().trim().equals(dstV.deviceId().toString().trim())){
+                                                log.info("找到了！");
+                                                List<TopologyEdge> edge_merge = new ArrayList<>();
+                                                edge_merge.add(edge);
+                                                edge_merge.add(edge1);
+                                                edge_merge.add(edge2);
+                                                edge_merge.add(edge3);
+                                                org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge> thePath = new org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge>(srcV, dstV);
+                                                thePath.setEdges(edge_merge);
+                                                log.info(thePath.toString());
+                                                result_11.add(thePath);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return result_11;
+        }
+
+
+
+        // 粘型21
+        // 如果上报packetin的交换机底下就有目的交换机
+        // 上报交换机在第二层
+        // myedge_j1严格来说应该属于result21，但是不想沾，属于分离型21（2代表srcV在第二层，1代表dstV在第一层）
+        List<TopologyEdge> myedge_j1 = new ArrayList<TopologyEdge>();
+        log.info("上报packetin的交换机："+srcV.deviceId().toString() + ",源交换机:" + hs.toString() + "目的交换机：" + dstV.deviceId().toString());
+        for(TopologyEdge e : e1){
+            log.info("从上报交换机出发，通往的交换机节点有："+e.dst().deviceId().toString());
+            //通过打印得知，e1涵盖了所有与此交换机相连的边
+            if(dstV.deviceId().toString().trim().equals(e.dst().deviceId().toString().trim())){
+                myedge_j1.add(e);
+            }
+        }
+        if(!myedge_j1.isEmpty() && myedge_j1.size() == 1){
+            //属于上述情况
+            org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge> myPathObject = new org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge>(srcV, dstV);
+            myPathObject.setEdges(myedge_j1);
+            //myPathObject.setEdges(mylist);
+            Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> myresult_j = new LinkedHashSet<>();
+            myresult_j.add(myPathObject);
+            return myresult_j;
+        }
+        // 以上已debug验证通过
+
+
+
+
+
+        // 分离型21
+        //如果说上报packetin在上行第二层，且下面没有目的交换机，沿着第三层遍历肯定ok（上行第二层，通过fattree结果做算法实验
+        // h001 ping h005
+        Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> result_21 = new LinkedHashSet<>();
+        if(srcV.deviceId().getLayer().equals("2")){
+            for(TopologyEdge edge : e1){
+                if(edge.dst().deviceId().getLayer().equals("3")){
+                    Set<TopologyEdge> xiaxing = graph.getEdgesFrom(edge.dst());
+                    for(TopologyEdge edge1 : xiaxing){
+                        if(edge1.dst().deviceId().getLayer().equals("2")){
+                            Set<TopologyEdge> xiaxing1 = graph.getEdgesFrom(edge1.dst());
+                            for(TopologyEdge edge2 : xiaxing1){
+                                if(edge2.dst().deviceId().getLayer().equals("1")){
+                                    if(edge2.dst().deviceId().toString().trim().equals(dstV.deviceId().toString().trim())){
+                                        log.info("找到了！");
+                                        List<TopologyEdge> edge_merge = new ArrayList<>();
+                                        edge_merge.add(edge);
+                                        edge_merge.add(edge1);
+                                        edge_merge.add(edge2);
+                                        org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge> thePath = new org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge>(srcV, dstV);
+                                        thePath.setEdges(edge_merge);
+                                        result_21.add(thePath);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return result_21;
+        }
+
+
+
+
+
+
+        //如果上报了packetin在第三层，那么到目的交换机就只有唯一一条路径了，就顺着走就行了
+        Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> result_31 = new LinkedHashSet<>();
+        if(srcV.deviceId().getLayer().equals("3")){
+            for(TopologyEdge edge : e1){
+                if(edge.dst().deviceId().getLayer().equals("2")){
+                    Set<TopologyEdge> xiaxing = graph.getEdgesFrom(edge.dst());
+                    for(TopologyEdge edge1 : xiaxing){
+                        if(edge1.dst().deviceId().getLayer().equals("1")){
+                            if(edge1.dst().deviceId().toString().trim().equals(dstV.deviceId().toString().trim())){
+                                log.info("找到了！");
+                                List<TopologyEdge> edge_merge = new ArrayList<>();
+                                edge_merge.add(edge);
+                                edge_merge.add(edge1);
+                                org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge> thePath = new org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge>(srcV, dstV);
+                                thePath.setEdges(edge_merge);
+                                result_31.add(thePath);
+                            }
+                        }
+                    }
+                }
+            }
+            return result_31;
+        }
+
+
+
+
+
+
+//        TopologyVertex yuanshiNode = null;
+//        for(TopologyEdge e : e1){
+//            //前面已经判断了，上报交换机下面没有目的交换机，所以只能去胖树策略找
+//            if(e.dst().deviceId().toString().trim().equals(hs.toString().trim())){
+//                zV = 1;
+//                yuanshiNode = e.dst();
+//
+//            }
+//        }
+//        if(zV == 1){
+//            Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> myresult_j1 = new LinkedHashSet<>();
+//            myresult_j1 = getFattreePathOrigin1(graph, srcV, dstV, yuanshiNode);
+//            return myresult_j1;
+//        }
+//
+//
+        //temp  没用的，做测试
+        Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> myresult_ssss = new LinkedHashSet<>();
+        return myresult_ssss;
+
+
+
+
+
+
+
+
+
+
+    }
+
+    private void AddLayerDataToV(TopologyGraph graph, DefaultTopologyVertex srcV, DefaultTopologyVertex dstV, DeviceId hs) {
+        for(TopologyVertex vertex : graph.getVertexes()) {
+            if(vertex.deviceId().toString().trim().equals(srcV.deviceId().toString().trim())){
+                srcV.deviceId().setLayer(vertex.deviceId().getLayer());
+            }
+            if(vertex.deviceId().toString().trim().equals(dstV.deviceId().toString().trim())){
+                dstV.deviceId().setLayer(vertex.deviceId().getLayer());
+            }
+            if(vertex.deviceId().toString().trim().equals(hs.toString().trim())){
+                hs.setLayer(vertex.deviceId().getLayer());
+            }
+        }
+    }
+
+    private void showFattreeLayer(TopologyGraph graph) {
+        Set<TopologyVertex> temp = graph.getVertexes();
+        for (TopologyVertex tv : temp){
+            log.info("deviceId " + tv.deviceId().toString().trim() + " : layer " + tv.deviceId().getLayer() );
+        }
+    }
+
+    private void gouzaoFatreeLayer(TopologyGraph graph) {
+        Set<TopologyVertex> temp = graph.getVertexes();
+        List<String> bianyuanceng = new ArrayList<>();
+        List<String> huijuceng = new ArrayList<>();
+        List<String> hexinceng = new ArrayList<>();
+
+        bianyuanceng.add("of:0000000000000bbd");
+        bianyuanceng.add("of:0000000000000bbe");
+        bianyuanceng.add("of:0000000000000bbf");
+        bianyuanceng.add("of:0000000000000bc0");
+        bianyuanceng.add("of:0000000000000bbb");
+        bianyuanceng.add("of:0000000000000bbc");
+        bianyuanceng.add("of:0000000000000bba");
+        bianyuanceng.add("of:0000000000000bb9");
+
+        huijuceng.add("of:00000000000007d6");
+        huijuceng.add("of:00000000000007d5");
+        huijuceng.add("of:00000000000007d8");
+        huijuceng.add("of:00000000000007d7");
+        huijuceng.add("of:00000000000007d4");
+        huijuceng.add("of:00000000000007d3");
+        huijuceng.add("of:00000000000007d2");
+        huijuceng.add("of:00000000000007d1");
+
+        hexinceng.add("of:00000000000003eb");
+        hexinceng.add("of:00000000000003ec");
+        hexinceng.add("of:00000000000003ea");
+        hexinceng.add("of:00000000000003e9");
+        for(TopologyVertex tv : temp){
+            if(bianyuanceng.contains(tv.deviceId().toString().trim())){
+                tv.deviceId().setLayer("1");
+            }else if(huijuceng.contains(tv.deviceId().toString().trim())){
+                tv.deviceId().setLayer("2");
+            }else if(hexinceng.contains(tv.deviceId().toString().trim())){
+                tv.deviceId().setLayer("3");
+            }
+        }
+
+    }
+
+    private synchronized Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> getFattreePathOrigin1(TopologyGraph graph, DefaultTopologyVertex srcV, DefaultTopologyVertex dstV, TopologyVertex hs)
+    {
+
+        //此时的srcV在二层
+        Set<TopologyEdge> e2 = graph.getEdgesFrom(srcV);
+        List<TopologyVertex> result3Layer = new ArrayList<>();
+        for(TopologyEdge e : e2){
+
+            if (e.dst().deviceId().getLayer().equals("3")){
+                result3Layer.add(e.dst());
+                log.info("第三层的deviceId是:"+e.dst().deviceId().toString());
+            }
+        }
+
+
+        Set<TopologyEdge> topologyEdgeSet = graph.getEdgesFrom(hs);
+
+        Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> myresult = new LinkedHashSet<>();
+        for(int i=0; i< result3Layer.size(); i++){
+            LinkedHashMap<TopologyVertex, TopologyEdge> linkedHashMap = new LinkedHashMap<>();
+            Set<TopologyEdge> e2_1 = graph.getEdgesTo(srcV);
+            for(TopologyEdge eTemp : e2_1){
+                if (eTemp.dst().deviceId().getLayer().equals("1") && eTemp.src().deviceId().toString().trim().equals(hs.deviceId().toString().trim())) {
+                    linkedHashMap.put(srcV, eTemp);
+                }
+            }
+
+            TopologyVertex tempLayer3 = result3Layer.get(i);
+
+            Set<TopologyEdge> tempLayer3Edge = graph.getEdgesTo(tempLayer3);
+            for(TopologyEdge edge : tempLayer3Edge){
+                TopologyVertex ee = edge.src();
+                if(ee.deviceId().toString().trim().equals(srcV.deviceId().toString().trim())){
+                    linkedHashMap.put(tempLayer3, edge);
+                }
+            }
+
+
+
+            //result3Layer.get(i);
+            DefaultTopologyVertex mys = new DefaultTopologyVertex(hs.deviceId());
+            org.onlab.graph.Path<TopologyVertex, TopologyEdge> tempPath = gouzaoPath(graph, result3Layer.get(i), srcV, mys, dstV, linkedHashMap);
+            // 这条path是从源开始的，所有我们要从发出packetin的交换机开始。
+            org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge> mytempPath = new org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge>(srcV, dstV);
+            List<TopologyEdge> myedgeSegments = new ArrayList<>();
+            int k=0;
+            for(TopologyEdge edge_z : tempPath.edges()){
+                if (edge_z.src().deviceId().toString().trim().equals(srcV.deviceId().toString().trim())){
+                    k++;
+                }
+                if(k != 0){
+                    myedgeSegments.add(edge_z);
+                }
+            }
+            mytempPath.setEdges(myedgeSegments);
+            myresult.add(mytempPath);
+        }
+        return myresult;
+
+    }
+
+
+
+    private Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> getFattreePathOrigin(TopologyGraph graph, DefaultTopologyVertex srcV, DefaultTopologyVertex dstV, DeviceId hs)
+    {
+        // 汇聚层
+        // dst节点和以该节点为尾巴的边(上行)
+        LinkedHashMap<TopologyVertex, TopologyEdge> linkedHashMap = new LinkedHashMap<>();
+        Set<TopologyVertex> huijuceng = new LinkedHashSet<>();
+        Set<TopologyEdge> topologyEdgeSet = graph.getEdgesFrom(srcV);
+        //log.info("对应的汇聚层的个数："+topologyEdgeSet.size());
+
+
+        Set<org.onlab.graph.Path<TopologyVertex,TopologyEdge>> myresult = new LinkedHashSet<>();
+        log.info("遍历对应的汇聚层交换机edge");
+        for (TopologyEdge topologyEdge : topologyEdgeSet) {
+            TopologyVertex tempV = topologyEdge.dst();
+            log.info("edge 源目:(" + topologyEdge.src().deviceId().toString() + ", "+ topologyEdge.dst().deviceId().toString()+")");
+            log.info("link 源目:(" + topologyEdge.link().src().deviceId().toString() + ", "+topologyEdge.link().dst().deviceId().toString()+ ")");
+            huijuceng.add(tempV);
+            linkedHashMap.put(tempV, topologyEdge);
+        }
+        for (TopologyVertex topologyVertex : huijuceng) {
+            // 对每个汇聚层交换机找出它的核心层交换机set
+            //Set<TopologyVertex> hxc = findHxc(topologyVertex, graph);
+            Set<TopologyEdge> temp1 = graph.getEdgesFrom(topologyVertex);
+            for (TopologyEdge edge : temp1) {
+                TopologyVertex hxcdst = edge.dst();
+                linkedHashMap.put(hxcdst, edge);
+            }
+        }
+        // 汇聚层下面没有dst目的交换机
+        for (TopologyVertex topologyVertex : huijuceng) {
+            // 对每个汇聚层交换机找出它的核心层交换机set
+            Set<TopologyVertex> hxc = findHxc(topologyVertex, graph);
+            // 找到了最高层，其实下行路径中的路已经确定了
+            for (TopologyVertex topologyVertex1 : hxc) {
+                // 参数：核心层，汇聚层，边缘层的交换机
+                org.onlab.graph.Path<TopologyVertex, TopologyEdge> tempPath = gouzaoPath(graph, topologyVertex1, topologyVertex, srcV, dstV, linkedHashMap);
+                myresult.add(tempPath);
+            }
+        }
+        return myresult;
+
+    }
+
+
+
+    private Set<TopologyVertex> findHxc(TopologyVertex topologyVertex, TopologyGraph graph) {
+        Set<TopologyEdge> topologyEdgeSet = graph.getEdgesFrom(topologyVertex);
+        Set<TopologyVertex> result = new LinkedHashSet<>();
+        for (TopologyEdge topologyEdge : topologyEdgeSet) {
+            TopologyVertex temp = topologyEdge.dst();
+            result.add(temp);
+        }
+        return result;
+    }
+
+    //org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge> myPathObject = new org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge>(srcV, dstV);
+
+    private org.onlab.graph.Path<TopologyVertex,TopologyEdge> gouzaoPath(TopologyGraph graph, TopologyVertex topologyVertex1, TopologyVertex topologyVertex,
+                                                                         DefaultTopologyVertex srcV, DefaultTopologyVertex dstV, LinkedHashMap<TopologyVertex, TopologyEdge> linkedHashMap) {
+        org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge> myPathObject = new org.onlab.graph.DefaultPath<TopologyVertex,TopologyEdge>(srcV, dstV);
+        List<TopologyEdge> myedge1 = new ArrayList<>();
+        TopologyEdge e1 = linkedHashMap.get(topologyVertex);
+        TopologyEdge e2 = linkedHashMap.get(topologyVertex1);
+        myedge1.add(e1);
+        myedge1.add(e2);
+        // 最高层节点是topologyVertex1
+        // 下行第一层
+        Set<TopologyEdge> edges_1 = graph.getEdgesFrom(topologyVertex1);
+        for (TopologyEdge edge_1 : edges_1) {
+            TopologyVertex vertex_huiju = edge_1.dst();
+            if (vertex_huiju.deviceId().getLayer().equals("2") && !vertex_huiju.deviceId().toString().trim().equals(topologyVertex.deviceId().toString().trim())){
+
+                Set<TopologyEdge> edges_2 = graph.getEdgesFrom(vertex_huiju);
+                for (TopologyEdge edge_2 : edges_2) {
+                    TopologyVertex vertex_bianyuan = edge_2.dst();
+                    if (vertex_bianyuan.deviceId().getLayer().equals("1") && vertex_bianyuan.deviceId().toString().trim().equals(dstV.deviceId().toString().trim())) {
+//                        linkedHashMap.put(vertex_huiju, edge_1);
+//                        linkedHashMap.put(vertex_bianyuan, edge_2);
+                        myedge1.add(edge_1);
+                        myedge1.add(edge_2);
+                    }
+                }
+            }
+        }
+        myPathObject.setEdges(myedge1);
+        myPathObject.setCost(null);
+        return myPathObject;
+    }
+
+
+
+
+
+
+
     /**
+     * /**
      * Returns the set of pre-computed shortest disjoint path pairs between
      * source and destination devices.
      *
@@ -766,6 +1230,17 @@ public class DefaultTopology extends AbstractModel implements Topology {
     }
 
     private LinkWeigher linkWeight() {
+
+        for(int i=0; i<3; i++){
+            log.info("=====defaultLinkWeigher信息=====hopCountWeigher=====");
+        }
+        log.info("defaultLinkWeigher 是不是空： " + (defaultLinkWeigher == null));
+        //defaultLinkWeigher基本上都是空的
+        //log.info("defaultLinkWeigher: " + defaultLinkWeigher.toString());
+        //足以证明dijkstra走的是hopweight,是基于条数走的
+        log.info("hopCountWeigher: " + hopCountWeigher.toString());
+        //log.info(hopCountWeigher);
+        //会经过这里去取哪种linkWeigher
         return defaultLinkWeigher != null ? defaultLinkWeigher : hopCountWeigher;
     }
 

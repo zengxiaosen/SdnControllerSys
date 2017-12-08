@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
@@ -152,7 +151,6 @@ public class IsisTopologyProvider extends AbstractProvider implements DeviceProv
      * @return link description
      */
     private LinkDescription buildLinkDes(IsisLink isisLink) {
-        checkNotNull(isisLink);
         long srcAddress = 0;
         long dstAddress = 0;
         boolean localPseduo = false;
@@ -187,8 +185,9 @@ public class IsisTopologyProvider extends AbstractProvider implements DeviceProv
         ConnectPoint src = new ConnectPoint(srcId, PortNumber.portNumber(srcAddress));
         ConnectPoint dst = new ConnectPoint(dstId, PortNumber.portNumber(dstAddress));
         DefaultAnnotations.Builder annotationBuilder = DefaultAnnotations.builder();
-
-        annotationBuilder = buildAnnotations(annotationBuilder, isisLink);
+        if (isisLink != null) {
+            annotationBuilder = buildAnnotations(annotationBuilder, isisLink);
+        }
 
         return new DefaultLinkDescription(src, dst, Link.Type.DIRECT, false, annotationBuilder.build());
     }

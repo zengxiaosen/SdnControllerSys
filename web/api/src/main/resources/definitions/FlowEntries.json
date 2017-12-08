@@ -27,7 +27,6 @@
           "life",
           "packets",
           "bytes",
-          "liveType",
           "lastSeen"
         ],
         "properties": {
@@ -85,10 +84,6 @@
             "type": "integer",
             "format": "int64",
             "example": 1826226
-          },
-          "liveType": {
-            "type": "string",
-            "example": "UNKNOWN"
           },
           "lastSeen": {
             "type": "integer",

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
+import org.onlab.util.GuavaCollectors;
 import org.onlab.util.Tools;
 import org.onosproject.event.AbstractListenerManager;
 import org.onosproject.net.resource.DiscreteResourceId;
@@ -132,7 +133,7 @@ public final class ResourceManager extends AbstractListenerManager<ResourceEvent
         Collection<Resource> resources = store.getAllocatedResources(parent, cls);
         return resources.stream()
                 .flatMap(resource -> store.getResourceAllocations(resource.id()).stream())
-                .collect(ImmutableList.toImmutableList());
+                .collect(GuavaCollectors.toImmutableList());
     }
 
     @Override

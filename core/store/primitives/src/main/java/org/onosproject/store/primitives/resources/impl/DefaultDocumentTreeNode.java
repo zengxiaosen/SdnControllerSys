@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,11 @@ package org.onosproject.store.primitives.resources.impl;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 
 import org.onosproject.store.service.DocumentPath;
 import org.onosproject.store.service.DocumentTreeNode;
-import org.onosproject.store.service.Ordering;
 import org.onosproject.store.service.Versioned;
 
 import com.google.common.base.MoreObjects;
@@ -38,29 +37,16 @@ import com.google.common.collect.Sets;
 public class DefaultDocumentTreeNode<V> implements DocumentTreeNode<V> {
     private final DocumentPath key;
     private Versioned<V> value;
-    private final Map<String, DocumentTreeNode<V>> children;
-    private final Ordering ordering;
+    private final TreeMap<String, DocumentTreeNode<V>> children = Maps.newTreeMap();
     private final DocumentTreeNode<V> parent;
 
     public DefaultDocumentTreeNode(DocumentPath key,
-            V value,
-            long version,
-            Ordering ordering,
-            DocumentTreeNode<V> parent) {
+                            V value,
+                            long version,
+                            DocumentTreeNode<V> parent) {
         this.key = checkNotNull(key);
         this.value = new Versioned<>(value, version);
-        this.ordering = ordering;
         this.parent = parent;
-
-        switch (ordering) {
-            case INSERTION:
-                children = Maps.newLinkedHashMap();
-                break;
-            case NATURAL:
-            default:
-                children = Maps.newTreeMap();
-                break;
-        }
     }
 
     @Override
@@ -94,15 +80,14 @@ public class DefaultDocumentTreeNode<V> implements DocumentTreeNode<V> {
      * @param newValue new value to set
      * @param newVersion new version to set
      * @return previous value; can be {@code null} if no child currently exists with that relative path name.
-     * a non null return value indicates child already exists and no modification occurred.
+     * a non null return value indicates child already exists and no modification occured.
      */
     public Versioned<V> addChild(String name, V newValue, long newVersion) {
         DefaultDocumentTreeNode<V> child = (DefaultDocumentTreeNode<V>) children.get(name);
         if (child != null) {
             return child.value();
         }
-        children.put(name, new DefaultDocumentTreeNode<>(
-                new DocumentPath(name, path()), newValue, newVersion, ordering, this));
+        children.put(name, new DefaultDocumentTreeNode<>(new DocumentPath(name, path()), newValue, newVersion, this));
         return null;
     }
 
@@ -152,9 +137,9 @@ public class DefaultDocumentTreeNode<V> implements DocumentTreeNode<V> {
     public String toString() {
         MoreObjects.ToStringHelper helper =
                 MoreObjects.toStringHelper(getClass())
-                        .add("parent", this.parent)
-                        .add("key", this.key)
-                        .add("value", this.value);
+                .add("parent", this.parent)
+                .add("key", this.key)
+                .add("value", this.value);
         for (DocumentTreeNode<V> child : children.values()) {
             helper = helper.add("child", "\n" + child.path().pathElements()
                     .get(child.path().pathElements().size() - 1) +

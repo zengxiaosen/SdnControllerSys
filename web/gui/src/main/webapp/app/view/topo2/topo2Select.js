@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,33 +21,47 @@
 (function () {
     'use strict';
 
-    var t2zs, t2ddp;
+    var t2rs;
 
     // internal state
-    var instance,
-        consumeClick,
+    var consumeClick,
         zoomer,
-        previousNearestLink; // previous link to mouse position
+        previousNearestLink;    // previous link to mouse position
+
+    function init(svg, _zoomer_) {
+        zoomer = _zoomer_;
+        svg.on('mousemove', mouseMoveHandler);
+        svg.on('click', mouseClickHandler);
+    }
+
+    function selectObject(obj) {}
+
+    function clickConsumed(x) {
+        var cc = consumeClick;
+        consumeClick = Boolean(x);
+        return cc;
+    }
 
     function mouseClickHandler() {
-        if (d3.event.defaultPrevented) return;
 
         if (!d3.event.shiftKey) {
-            this.clearSelection();
+            t2rs.deselectLink();
         }
 
-        if (!this.clickConsumed()) {
+        if (!clickConsumed()) {
             if (previousNearestLink) {
-                this.selectObject(previousNearestLink, true);
+                previousNearestLink.select();
             }
         }
+
     }
 
     // Select Links
-    function mouseMoveHandler(ev) {
+    function mouseMoveHandler() {
         var mp = getLogicalMousePosition(this),
             link = computeNearestLink(mp);
 
+        // link.enhance();
         if (link) {
             if (previousNearestLink && previousNearestLink !== link) {
                 previousNearestLink.unenhance();
@@ -109,11 +123,7 @@
             return mdist(p, m) <= proximity;
         }
 
-        var links = [];
-
-        if (instance.region.model.get('links')) {
-            links = instance.region.regionLinks();
-        }
+        var links = t2rs.regionLinks();
 
         if (links.length) {
             minDist = proximity * 2;
@@ -146,82 +156,19 @@
         return nearest;
     }
 
-    var SelectionService = function () {
-        instance = this;
-        this.selectedNodes = [];
-        this.selectionOrder = [];
-    };
-
-    SelectionService.prototype = {
-        init: function () {
-            zoomer = t2zs.getZoomer();
-
-            var svg = d3.select('#topo2');
-            svg.on('mousemove', mouseMoveHandler);
-            svg.on('click', mouseClickHandler.bind(this));
-        },
-        updateDetails: function () {
-
-            var nodeCount = this.selectedNodes.length;
-
-            if (nodeCount === 1) {
-                this.selectedNodes[0].showDetails();
-            } else if (nodeCount > 1) {
-                t2ddp.showMulti(this.selectedNodes);
-            } else {
-                t2ddp.hide();
-            }
-        },
-        selectObject: function (node, multiSelectEnabled) {
-
-            var event = d3.event,
-                nodeIndex = _.indexOf(this.selectionOrder, node.get('id'));
-
-            if (nodeIndex < 0) {
-
-                if (multiSelectEnabled && !event.shiftKey || !multiSelectEnabled) {
-                    this.clearSelection();
-                }
-
-                this.selectedNodes.push(node);
-                this.selectionOrder.push(node.get('id'));
-
-                node.select();
-            } else {
-                this.removeNode(node, nodeIndex);
-            }
-
-            this.updateDetails();
-        },
-        removeNode: function (node, index) {
-            this.selectedNodes.splice(index, 1);
-            this.selectionOrder.splice(index, 1);
-            node.deselect();
-        },
-        clearSelection: function () {
-            _.each(this.selectedNodes, function (node) {
-                node.deselect();
-            });
-
-            this.selectedNodes = [];
-            this.selectionOrder = [];
-            this.updateDetails();
-        },
-        clickConsumed: function (x) {
-            var cc = consumeClick;
-            consumeClick = Boolean(x);
-            return cc;
-        },
-    };
-
     angular.module('ovTopo2')
     .factory('Topo2SelectService', [
-        'Topo2ZoomService', 'Topo2DeviceDetailsPanel',
-        function (_t2zs_, _t2ddp_) {
-            t2zs = _t2zs_;
-            t2ddp = _t2ddp_;
-            return instance || new SelectionService();
-        },
+        'Topo2RegionService',
+        function (_t2rs_) {
+
+            t2rs = _t2rs_;
+
+            return {
+                init: init,
+                selectObject: selectObject,
+                clickConsumed: clickConsumed
+            };
+        }
     ]);
 
 })();

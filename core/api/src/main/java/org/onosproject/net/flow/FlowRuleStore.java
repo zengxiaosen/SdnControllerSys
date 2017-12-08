@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ package org.onosproject.net.flow;
 import java.util.List;
 
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchEvent;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
 import org.onosproject.store.Store;
 
 /**
@@ -138,12 +136,4 @@ public interface FlowRuleStore extends Store<FlowRuleBatchEvent, FlowRuleStoreDe
      * @return the flow table statistics
      */
     Iterable<TableStatisticsEntry> getTableStatistics(DeviceId deviceId);
-
-    /**
-     * Returns number of flow rules in ADDED state for specified device.
-     *
-     * @param deviceId the device ID
-     * @return number of flow rules in ADDED state
-     */
-    long getActiveFlowRuleCount(DeviceId deviceId);
 }

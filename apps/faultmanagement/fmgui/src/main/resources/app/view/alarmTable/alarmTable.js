@@ -9,15 +9,8 @@
     var detailsReq = 'alarmTableDetailsRequest',
             detailsResp = 'alarmTableDetailsResponse',
             pName = 'ov-alarm-table-item-details-panel',
-            propOrder = [
-                'id', 'alarmDeviceId', 'alarmDesc', 'alarmSource',
-                'alarmTimeRaised', 'alarmTimeUpdated', 'alarmTimeCleared',
-                'alarmSeverity'
-            ],
-            friendlyProps = [
-                'Alarm Id', 'Device Id', 'Description', 'Source',
-                'Time Raised', 'Time Updated', 'Time Cleared', 'Severity'
-            ];
+            propOrder = ['id', 'alarmDeviceId', 'alarmDesc', 'alarmSource', 'alarmTimeRaised', 'alarmTimeUpdated', 'alarmTimeCleared', 'alarmSeverity'],
+            friendlyProps = ['Alarm Id', 'Device Id', 'Description', 'Source', 'Time Raised', 'Time Updated', 'Time Cleared', 'Severity'];
 
 
     function addProp(tbody, index, value) {

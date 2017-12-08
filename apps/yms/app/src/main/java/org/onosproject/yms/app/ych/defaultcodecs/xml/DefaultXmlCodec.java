@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ public class DefaultXmlCodec implements YangDataTreeCodec {
             rootElement.add(Namespace.get(rootNode.getNamespace()));
         }
 
-        if ("config".equals(rootElement.getName())) {
+        if (rootElement.getName().equals("config")) {
             rootElement.add(new Namespace("nc", "urn:ietf:params:xml:ns:netconf:base:1.0"));
         }
 

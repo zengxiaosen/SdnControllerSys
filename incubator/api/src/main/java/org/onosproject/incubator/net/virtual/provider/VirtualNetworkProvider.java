@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,9 +46,7 @@ public interface VirtualNetworkProvider extends Provider {
      * @param src       source connection point
      * @param dst       destination connection point
      * @return new tunnel's id
-     * @deprecated in Loon Release (1.11)
      */
-    @Deprecated
     TunnelId createTunnel(NetworkId networkId, ConnectPoint src, ConnectPoint dst);
 
     /**
@@ -56,9 +54,7 @@ public interface VirtualNetworkProvider extends Provider {
      *
      * @param networkId virtual network identifier
      * @param tunnelId  tunnel identifier
-     * @deprecated in Loon Release (1.11)
      */
-    @Deprecated
     void destroyTunnel(NetworkId networkId, TunnelId tunnelId);
 
 }

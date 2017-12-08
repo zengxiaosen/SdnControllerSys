@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@
     // shorthand
     var lu, rlk, nodes, links, linksByDevice;
 
-    var dim; // dimensions of layout [w,h]
+    var dim;    // dimensions of layout [w,h]
 
     // configuration 'constants'
     var defaultLinkType = 'direct',
@@ -47,7 +47,8 @@
 
     function coordFromLngLat(loc) {
         var p = api.projection();
-        return p ? p([loc.longOrX, loc.latOrY]) : [0, 0];
+        // suspected cause of ONOS-2109
+        return p ? p([loc.lng, loc.lat]) : [0, 0];
     }
 
     function lngLatFromCoord(coord) {
@@ -90,14 +91,14 @@
         function rand() {
             return {
                 x: rnd.randDim(dim[0]),
-                y: rnd.randDim(dim[1]),
+                y: rnd.randDim(dim[1])
             };
         }
 
         function near(node) {
             return {
                 x: node.x + nearDist + rnd.spread(nearDist),
-                y: node.y + nearDist + rnd.spread(nearDist),
+                y: node.y + nearDist + rnd.spread(nearDist)
             };
         }
 
@@ -114,7 +115,7 @@
         var loc = node.location,
             coord;
 
-        if (loc && loc.locType === 'geo') {
+        if (loc && loc.type === 'lnglat') {
             coord = coordFromLngLat(loc);
             node.fixed = true;
             node.px = node.x = coord[0];
@@ -158,9 +159,11 @@
         return node;
     }
 
-    function createHostLink(hostId, devId, devPort) {
-        var linkKey = hostId + '/0-' + devId + '/' + devPort,
-            lnk = linkEndPoints(hostId, devId);
+    function createHostLink(host) {
+        var src = host.id,
+            dst = host.cp.device,
+            id = host.ingress,
+            lnk = linkEndPoints(src, dst);
 
         if (!lnk) {
             return null;
@@ -168,10 +171,10 @@
 
         // Synthesize link ...
         angular.extend(lnk, {
-            key: linkKey,
+            key: id,
             class: 'link',
             // NOTE: srcPort left undefined (host end of the link)
-            tgtPort: devPort,
+            tgtPort: host.cp.port,
 
             type: function () { return 'hostLink'; },
             expected: function () { return true; },
@@ -179,7 +182,7 @@
                 // hostlink target is edge switch
                 return lnk.target.online;
             },
-            linkWidth: function () { return 1; },
+            linkWidth: function () { return 1; }
         });
         return lnk;
     }
@@ -201,7 +204,7 @@
                 x1: 0,
                 y1: 0,
                 x2: 0,
-                y2: 0,
+                y2: 0
             },
 
             // functions to aggregate dual link state
@@ -228,7 +231,7 @@
                     wt = (t && t.linkWidth) || 0;
                 return lnk.position.multiLink ? 5 : Math.max(ws, wt);
             },
-            extra: link.extra,
+            extra: link.extra
         });
         return lnk;
     }
@@ -242,13 +245,13 @@
 
         if (sMiss || dMiss) {
             $log.error('Node(s) not on map for link:' + sMiss + dMiss);
-            // logicError('Node(s) not on map for link:\n' + sMiss + dMiss);
+            //logicError('Node(s) not on map for link:\n' + sMiss + dMiss);
             return null;
         }
 
         return {
             source: srcNode,
-            target: dstNode,
+            target: dstNode
         };
     }
 
@@ -304,7 +307,7 @@
                 result.updateWith = function (data) {
                     angular.extend(rawLink, data);
                     api.restyleLinkElement(ldata);
-                };
+                }
             }
         } else if (op === 'remove') {
             if (!ldata) {
@@ -347,7 +350,7 @@
                         } else {
                             api.removeLinkElement(ldata);
                         }
-                    };
+                    }
                 }
             }
         }
@@ -362,16 +365,6 @@
             }
         });
         return a;
-    }
-
-    function findHosts() {
-        var hosts = [];
-        nodes.forEach(function (d) {
-            if (d.class === 'host') {
-                hosts.push(d);
-            }
-        });
-        return hosts;
     }
 
     function findAttachedHosts(devId) {
@@ -461,10 +454,9 @@
                 findLink: findLink,
                 findLinkById: findLinkById,
                 findDevices: findDevices,
-                findHosts: findHosts,
                 findAttachedHosts: findAttachedHosts,
                 findAttachedLinks: findAttachedLinks,
-                findBadLinks: findBadLinks,
-            };
+                findBadLinks: findBadLinks
+            }
         }]);
 }());

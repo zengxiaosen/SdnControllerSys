@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,6 +68,7 @@ public class VirtualNetworkIntentCompilerTest extends TestDeviceParams {
     private CoreService coreService;
     private TestableIntentService intentService = new FakeIntentManager();
     private IntentExtensionService intentExtensionService;
+    private final IdGenerator idGenerator = new MockIdGenerator();
     private VirtualNetworkIntentCompiler compiler;
     private VirtualNetworkManager manager;
     private DistributedVirtualNetworkStore virtualNetworkManagerStore;
@@ -96,7 +97,8 @@ public class VirtualNetworkIntentCompilerTest extends TestDeviceParams {
 
         coreService = new TestCoreService();
 
-        MockIdGenerator.cleanBind();
+        Intent.unbindIdGenerator(idGenerator);
+        Intent.bindIdGenerator(idGenerator);
 
         setField(virtualNetworkManagerStore, "coreService", coreService);
         setField(virtualNetworkManagerStore, "storageService", new TestStorageService());
@@ -104,6 +106,7 @@ public class VirtualNetworkIntentCompilerTest extends TestDeviceParams {
 
         manager = new VirtualNetworkManager();
         manager.setStore(virtualNetworkManagerStore);
+        manager.setIntentService(intentService);
         setField(manager, "coreService", coreService);
         NetTestTools.injectEventDispatcher(manager, new TestEventDispatcher());
         manager.activate();
@@ -127,8 +130,8 @@ public class VirtualNetworkIntentCompilerTest extends TestDeviceParams {
 
     @After
     public void tearDown() {
+        Intent.unbindIdGenerator(idGenerator);
         manager.deactivate();
-        MockIdGenerator.unbind();
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -147,16 +147,6 @@ public interface BgpOpenMsg extends BgpMessage {
          * @return builder by setting capabilities
          */
         Builder setFlowSpecRpdCapabilityTlv(boolean isFlowSpecRpdCapabilitySet);
-
-        /**
-         * Sets Evpn capability and return its builder.
-         *
-         * @param isEvpnCapabilitySet boolean value to know whether evpn
-         *            capability is set or not
-         *
-         * @return builder by setting capabilities
-         */
-        Builder setEvpnCapabilityTlv(boolean isEvpnCapabilitySet);
 
         @Override
         Builder setHeader(BgpHeader bgpMsgHeader);

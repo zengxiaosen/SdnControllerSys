@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,19 +17,15 @@
 package org.onosproject.incubator.net.virtual.impl;
 
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.onlab.junit.TestTools;
 import org.onlab.junit.TestUtils;
 import org.onlab.osgi.TestServiceDirectory;
 import org.onosproject.common.event.impl.TestEventDispatcher;
 import org.onosproject.core.CoreService;
 import org.onosproject.core.CoreServiceAdapter;
 import org.onosproject.core.IdGenerator;
-import org.onosproject.event.Event;
-import org.onosproject.event.EventDeliveryService;
 import org.onosproject.incubator.net.virtual.TenantId;
 import org.onosproject.incubator.net.virtual.VirtualDevice;
 import org.onosproject.incubator.net.virtual.VirtualNetwork;
@@ -37,19 +33,16 @@ import org.onosproject.incubator.net.virtual.VirtualPort;
 import org.onosproject.incubator.store.virtual.impl.DistributedVirtualNetworkStore;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Device;
-import org.onosproject.net.DeviceId;
 import org.onosproject.net.MastershipRole;
 import org.onosproject.net.NetTestTools;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.device.DeviceEvent;
-import org.onosproject.net.device.DeviceListener;
+import org.onosproject.net.TestDeviceParams;
 import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.intent.FakeIntentManager;
+import org.onosproject.net.intent.TestableIntentService;
 import org.onosproject.store.service.TestStorageService;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
@@ -57,15 +50,14 @@ import static org.junit.Assert.*;
 /**
  * Junit tests for VirtualNetworkDeviceService.
  */
-public class VirtualNetworkDeviceManagerTest extends VirtualNetworkTestUtil {
+public class VirtualNetworkDeviceManagerTest extends TestDeviceParams {
     private final String tenantIdValue1 = "TENANT_ID1";
 
     private VirtualNetworkManager manager;
     private DistributedVirtualNetworkStore virtualNetworkManagerStore;
     private CoreService coreService;
+    private TestableIntentService intentService = new FakeIntentManager();
     private TestServiceDirectory testDirectory;
-    private TestListener testListener = new TestListener();
-    private TestEventDispatcher dispatcher = new TestEventDispatcher();
 
     @Before
     public void setUp() throws Exception {
@@ -78,8 +70,9 @@ public class VirtualNetworkDeviceManagerTest extends VirtualNetworkTestUtil {
 
         manager = new VirtualNetworkManager();
         manager.store = virtualNetworkManagerStore;
+        manager.intentService = intentService;
         manager.coreService = coreService;
-        NetTestTools.injectEventDispatcher(manager, dispatcher);
+        NetTestTools.injectEventDispatcher(manager, new TestEventDispatcher());
 
         testDirectory = new TestServiceDirectory();
         TestUtils.setField(manager, "serviceDirectory", testDirectory);
@@ -342,91 +335,6 @@ public class VirtualNetworkDeviceManagerTest extends VirtualNetworkTestUtil {
     }
 
     /**
-     * Tests DeviceEvents received during virtual device/port addition and removal.
-     */
-    @Test
-    public void testDeviceEventsForAddRemovalDeviceAndPorts() throws TestUtils.TestUtilsException {
-        manager.registerTenantId(TenantId.tenantId(tenantIdValue1));
-        VirtualNetwork virtualNetwork = manager.createVirtualNetwork(TenantId.tenantId(tenantIdValue1));
-
-        // add virtual device before virtual device manager is created
-        VirtualDevice device1 = manager.createVirtualDevice(virtualNetwork.id(), VDID1);
-        validateEvents(); // no DeviceEvent expected
-
-        testDirectory.add(EventDeliveryService.class, dispatcher);
-        DeviceService deviceService = manager.get(virtualNetwork.id(), DeviceService.class);
-
-        // virtual device manager is created; register DeviceEvent listener
-        deviceService.addListener(testListener);
-
-        // list to keep track of expected event types
-        List<DeviceEvent.Type> expectedEventTypes = new ArrayList<>();
-
-        // add virtual device
-        VirtualDevice device2 = manager.createVirtualDevice(virtualNetwork.id(), VDID2);
-        expectedEventTypes.add(DeviceEvent.Type.DEVICE_ADDED);
-
-        ConnectPoint cp = new ConnectPoint(PHYDID1, PortNumber.portNumber(1));
-
-        // add 2 virtual ports
-        manager.createVirtualPort(virtualNetwork.id(),
-                                  device2.id(), PortNumber.portNumber(1), cp);
-        expectedEventTypes.add(DeviceEvent.Type.PORT_ADDED);
-        manager.createVirtualPort(virtualNetwork.id(),
-                                  device2.id(), PortNumber.portNumber(2), cp);
-        expectedEventTypes.add(DeviceEvent.Type.PORT_ADDED);
-
-        // verify virtual ports were added
-        Set<VirtualPort> virtualPorts = manager.getVirtualPorts(virtualNetwork.id(), device2.id());
-        assertNotNull("The virtual port set should not be null", virtualPorts);
-        assertEquals("The virtual port set size did not match.", 2, virtualPorts.size());
-
-        // remove 2 virtual ports
-        for (VirtualPort virtualPort : virtualPorts) {
-            manager.removeVirtualPort(virtualNetwork.id(),
-                                      (DeviceId) virtualPort.element().id(), virtualPort.number());
-            expectedEventTypes.add(DeviceEvent.Type.PORT_REMOVED);
-            // attempt to remove the same virtual port again - no DeviceEvent.Type.PORT_REMOVED expected.
-            manager.removeVirtualPort(virtualNetwork.id(),
-                                      (DeviceId) virtualPort.element().id(), virtualPort.number());
-        }
-
-        // verify virtual ports were removed
-        virtualPorts = manager.getVirtualPorts(virtualNetwork.id(), device2.id());
-        assertTrue("The virtual port set should be empty.", virtualPorts.isEmpty());
-
-        // Add/remove one virtual port again.
-        VirtualPort virtualPort =
-                manager.createVirtualPort(virtualNetwork.id(), device2.id(),
-                                                            PortNumber.portNumber(1), cp);
-        expectedEventTypes.add(DeviceEvent.Type.PORT_ADDED);
-
-        ConnectPoint newCp = new ConnectPoint(PHYDID3, PortNumber.portNumber(2));
-        manager.bindVirtualPort(virtualNetwork.id(), device2.id(),
-                                PortNumber.portNumber(1), newCp);
-        expectedEventTypes.add(DeviceEvent.Type.PORT_UPDATED);
-
-        manager.removeVirtualPort(virtualNetwork.id(),
-                                  (DeviceId) virtualPort.element().id(), virtualPort.number());
-        expectedEventTypes.add(DeviceEvent.Type.PORT_REMOVED);
-
-        // verify no virtual ports remain
-        virtualPorts = manager.getVirtualPorts(virtualNetwork.id(), device2.id());
-        assertTrue("The virtual port set should be empty.", virtualPorts.isEmpty());
-
-        // remove virtual device
-        manager.removeVirtualDevice(virtualNetwork.id(), device2.id());
-        expectedEventTypes.add(DeviceEvent.Type.DEVICE_REMOVED);
-
-        // Validate that the events were all received in the correct order.
-        validateEvents((Enum[]) expectedEventTypes.toArray(
-                new DeviceEvent.Type[expectedEventTypes.size()]));
-
-        // cleanup
-        deviceService.removeListener(testListener);
-    }
-
-    /**
      * Core service test class.
      */
     private class TestCoreService extends CoreServiceAdapter {
@@ -441,37 +349,6 @@ public class VirtualNetworkDeviceManagerTest extends VirtualNetworkTestUtil {
                     return counter.getAndIncrement();
                 }
             };
-        }
-    }
-
-    /**
-     * Method to validate that the actual versus expected virtual network events were
-     * received correctly.
-     *
-     * @param types expected virtual network events.
-     */
-    private void validateEvents(Enum... types) {
-        TestTools.assertAfter(100, () -> {
-            int i = 0;
-            assertEquals("wrong events received", types.length, testListener.events.size());
-            for (Event event : testListener.events) {
-                assertEquals("incorrect event type", types[i], event.type());
-                i++;
-            }
-            testListener.events.clear();
-        });
-    }
-
-    /**
-     * Test listener class to receive device events.
-     */
-    private static class TestListener implements DeviceListener {
-
-        private List<DeviceEvent> events = Lists.newArrayList();
-
-        @Override
-        public void event(DeviceEvent event) {
-            events.add(event);
         }
     }
 }

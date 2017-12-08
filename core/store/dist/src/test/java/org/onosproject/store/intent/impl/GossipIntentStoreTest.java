@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,26 +15,26 @@
  */
 package org.onosproject.store.intent.impl;
 
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.IntStream;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.cfg.ConfigProperty;
 import org.onosproject.cluster.ClusterServiceAdapter;
-import org.onosproject.cluster.NodeId;
-import org.onosproject.net.intent.AbstractIntentTest;
+import org.onosproject.core.IdGenerator;
 import org.onosproject.net.intent.HostToHostIntent;
 import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.IntentData;
 import org.onosproject.net.intent.IntentState;
 import org.onosproject.net.intent.IntentTestsMocks;
+import org.onosproject.net.intent.MockIdGenerator;
 import org.onosproject.net.intent.WorkPartitionServiceAdapter;
 import org.onosproject.store.service.TestStorageService;
-
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.IntStream;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -45,19 +45,21 @@ import static org.onosproject.net.NetTestTools.hid;
 /**
  * Gossip Intent Store test using database adapter.
  */
-public class GossipIntentStoreTest extends AbstractIntentTest {
+public class GossipIntentStoreTest {
 
     private GossipIntentStore intentStore;
+    private IdGenerator idGenerator;
     private HostToHostIntent.Builder builder1;
 
-    @Override
     @Before
     public void setUp() {
         intentStore = new GossipIntentStore();
         intentStore.storageService = new TestStorageService();
         intentStore.partitionService = new WorkPartitionServiceAdapter();
         intentStore.clusterService = new ClusterServiceAdapter();
-        super.setUp();
+        idGenerator = new MockIdGenerator();
+        Intent.unbindIdGenerator(idGenerator);
+        Intent.bindIdGenerator(idGenerator);
         builder1 = HostToHostIntent
                         .builder()
                         .one(hid("12:34:56:78:91:ab/1"))
@@ -67,11 +69,10 @@ public class GossipIntentStoreTest extends AbstractIntentTest {
         intentStore.activate(null);
     }
 
-    @Override
     @After
-    public void tearDown() {
+    public void cleanUp() {
         intentStore.deactivate();
-        super.tearDown();
+        Intent.unbindIdGenerator(idGenerator);
     }
 
     /**
@@ -174,11 +175,11 @@ public class GossipIntentStoreTest extends AbstractIntentTest {
         );
 
         // now purge the intent that was created
-        IntentData purgeAssigned =
-                IntentData.assign(IntentData.purge(intent),
-                                  new IntentTestsMocks.MockTimestamp(12),
-                                  new NodeId("node-id"));
-        intentStore.write(purgeAssigned);
+        IntentData purge = new IntentData(
+                intent,
+                IntentState.PURGE_REQ,
+                new IntentTestsMocks.MockTimestamp(12));
+        intentStore.write(purge);
 
         // check that no intents are left
         assertThat(intentStore.getIntentCount(), is(0L));

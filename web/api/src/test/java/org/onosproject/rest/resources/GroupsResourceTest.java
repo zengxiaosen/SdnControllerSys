@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import org.onosproject.codec.impl.GroupCodec;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.core.DefaultApplicationId;
+import org.onosproject.core.DefaultGroupId;
 import org.onosproject.core.GroupId;
 import org.onosproject.net.DefaultDevice;
 import org.onosproject.net.Device;
@@ -119,14 +120,14 @@ public class GroupsResourceTest extends ResourceTest {
             this.deviceId = deviceId;
             this.appId = new DefaultApplicationId(appId, String.valueOf(appId));
             this.appCookie = new DefaultGroupKey(appCookie.getBytes());
-            this.baseValue = id * 100L;
+            this.baseValue = id * 100;
             this.bucketList = new ArrayList<>();
             this.buckets = new GroupBuckets(bucketList);
         }
 
         @Override
         public GroupId id() {
-            return new GroupId((int) baseValue + 55);
+            return new DefaultGroupId((int) baseValue + 55);
         }
 
         @Override

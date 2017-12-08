@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
-import org.onosproject.net.flow.FlowEntry.FlowEntryState;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleOperations;
 import org.onosproject.net.flow.FlowRuleOperationsContext;
@@ -44,9 +43,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Streams;
 
 /**
  * Installs bulk flows.
@@ -55,7 +52,7 @@ import com.google.common.collect.Streams;
          description = "Installs a number of test flow rules - for testing only")
 public class AddTestFlowsCommand extends AbstractShellCommand {
 
-    private static final int MAX_OUT_PORT = 254;
+    private static final int MAX_OUT_PORT = 65279;
 
     private CountDownLatch latch;
 
@@ -68,6 +65,7 @@ public class AddTestFlowsCommand extends AbstractShellCommand {
     String numOfRuns = null;
 
     @Override
+    @java.lang.SuppressWarnings("squid:S1148")
     protected void execute() {
         FlowRuleService flowService = get(FlowRuleService.class);
         DeviceService deviceService = get(DeviceService.class);
@@ -119,17 +117,9 @@ public class AddTestFlowsCommand extends AbstractShellCommand {
 
             }
         }
-        // close stages
-        rules.newStage();
-        remove.newStage();
 
         for (int i = 0; i < num; i++) {
-            printProgress("Run %d:", i);
             latch = new CountDownLatch(2);
-            final CountDownLatch addSuccess = new CountDownLatch(1);
-            printProgress("..batch add request");
-            Stopwatch add = Stopwatch.createStarted();
-
             flowService.apply(rules.build(new FlowRuleOperationsContext() {
 
                 private final Stopwatch timer = Stopwatch.createStarted();
@@ -138,7 +128,6 @@ public class AddTestFlowsCommand extends AbstractShellCommand {
                 public void onSuccess(FlowRuleOperations ops) {
 
                     timer.stop();
-                    printProgress("..add success");
                     results.add(timer.elapsed(TimeUnit.MILLISECONDS));
                     if (results.size() == num) {
                         if (outputJson()) {
@@ -148,46 +137,21 @@ public class AddTestFlowsCommand extends AbstractShellCommand {
                         }
                     }
                     latch.countDown();
-                    addSuccess.countDown();
                 }
             }));
 
-            try {
-                addSuccess.await();
-                // wait until all flows reaches ADDED state
-                while (!Streams.stream(flowService.getFlowEntriesById(appId))
-                        .allMatch(fr -> fr.state() == FlowEntryState.ADDED)) {
-                    Thread.sleep(100);
-                }
-                add.stop();
-                printProgress("..completed %d ± 100 ms", add.elapsed(TimeUnit.MILLISECONDS));
-            } catch (InterruptedException e1) {
-                printProgress("Interrupted");
-                Thread.currentThread().interrupt();
-            }
-
-            printProgress("..cleaning up");
             flowService.apply(remove.build(new FlowRuleOperationsContext() {
                 @Override
                 public void onSuccess(FlowRuleOperations ops) {
                     latch.countDown();
                 }
             }));
-
             try {
                 latch.await();
-                while (!Iterables.isEmpty(flowService.getFlowEntriesById(appId))) {
-                    Thread.sleep(500);
-                }
             } catch (InterruptedException e) {
-                printProgress("Interrupted.");
-                Thread.currentThread().interrupt();
+                e.printStackTrace();
             }
-        }
-        if (outputJson()) {
-            print("%s", json(new ObjectMapper(), true, results));
-        } else {
-            printTime(true, results);
+
         }
     }
 
@@ -201,17 +165,10 @@ public class AddTestFlowsCommand extends AbstractShellCommand {
         return result;
     }
 
-    private void printProgress(String format, Object... args) {
-        if (!outputJson()) {
-            print(format, args);
-        }
-    }
-
-
     private void printTime(boolean isSuccess, ArrayList<Long> elapsed) {
         print("Run is %s.", isSuccess ? "success" : "failure");
         for (int i = 0; i < elapsed.size(); i++) {
-            print("  Run %s : %s ms", i, elapsed.get(i));
+            print("  Run %s : %s", i, elapsed.get(i));
         }
     }
 }

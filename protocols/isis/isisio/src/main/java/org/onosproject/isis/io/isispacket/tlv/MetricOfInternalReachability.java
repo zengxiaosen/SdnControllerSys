@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import java.util.List;
  */
 public class MetricOfInternalReachability {
     private Ip4Address ipAddress;
-    private Ip4Address subnetAddress;
+    private Ip4Address subnetAddres;
     private byte defaultMetric;
     private byte delayMetric;
     private byte expenseMetric;
@@ -64,19 +64,19 @@ public class MetricOfInternalReachability {
     /**
      * Returns the subnet address of metric of internal reachability.
      *
-     * @return subnetAddress subnet address of metric of internal reachability
+     * @return subnetAddres subnet address of metric of internal reachability
      */
-    public Ip4Address getSubnetAddress() {
-        return subnetAddress;
+    public Ip4Address getSubnetAddres() {
+        return subnetAddres;
     }
 
     /**
      * Sets the subnet address for metric of internal reachability.
      *
-     * @param subnetAddress subnet address
+     * @param subnetAddres subnet address
      */
-    public void setSubnetAddress(Ip4Address subnetAddress) {
-        this.subnetAddress = subnetAddress;
+    public void setSubnetAddres(Ip4Address subnetAddres) {
+        this.subnetAddres = subnetAddres;
     }
 
     /**
@@ -365,7 +365,7 @@ public class MetricOfInternalReachability {
 
         tempByteArray = new byte[IsisUtil.FOUR_BYTES];
         channelBuffer.readBytes(tempByteArray, 0, IsisUtil.FOUR_BYTES);
-        this.setSubnetAddress(Ip4Address.valueOf(tempByteArray));
+        this.setSubnetAddres(Ip4Address.valueOf(tempByteArray));
     }
 
     /**
@@ -425,7 +425,7 @@ public class MetricOfInternalReachability {
         bytes.add((byte) Integer.parseInt(binary, 2));
 
         bytes.addAll(Bytes.asList(this.getIpAddress().toOctets()));
-        bytes.addAll(Bytes.asList(this.getSubnetAddress().toOctets()));
+        bytes.addAll(Bytes.asList(this.getSubnetAddres().toOctets()));
         return Bytes.toArray(bytes);
     }
 
@@ -434,7 +434,7 @@ public class MetricOfInternalReachability {
         return MoreObjects.toStringHelper(getClass())
                 .omitNullValues()
                 .add("ipAddress", ipAddress)
-                .add("subnetAddress", subnetAddress)
+                .add("subnetAddres", subnetAddres)
                 .add("defaultMetric", defaultMetric)
                 .add("delayMetric", delayMetric)
                 .add("expenseMetric", expenseMetric)

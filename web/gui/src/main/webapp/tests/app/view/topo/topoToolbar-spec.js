@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ describe('factory: view/topo/topoToolbar.js', function() {
         expect(fs.areFunctions(ttbs, [
             'init', 'createToolbar', 'destroyToolbar',
             'keyListener', 'toggleToolbar', 'setDefaultOverlay',
-            'fnkey', 'setLionBundle',
+            'fnkey'
         ])).toBeTruthy();
     });
 

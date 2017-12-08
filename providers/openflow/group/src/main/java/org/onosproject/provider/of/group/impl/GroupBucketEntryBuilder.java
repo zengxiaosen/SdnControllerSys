@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package org.onosproject.provider.of.group.impl;
 
 import com.google.common.collect.Lists;
+import org.onosproject.core.DefaultGroupId;
 import org.onosproject.core.GroupId;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
@@ -94,7 +95,7 @@ public class GroupBucketEntryBuilder {
                     PortNumber port =
                             PortNumber.portNumber(bucket.getWatchPort().getPortNumber());
                     GroupId groupId =
-                            new GroupId(bucket.getWatchGroup().getGroupNumber());
+                            new DefaultGroupId(bucket.getWatchGroup().getGroupNumber());
                     groupBucket =
                             DefaultGroupBucket.createFailoverGroupBucket(treatment,
                                     port, groupId);

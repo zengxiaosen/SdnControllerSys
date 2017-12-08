@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,12 +26,10 @@
 
     function Collection(models, options) {
 
-        var opts = options || {};
+        var opts = options || (options = {});
 
         this.models = [];
         this._reset();
-
-        this.initialize.apply(this, arguments);
 
         if (opts.comparator) {
             this.comparator = opts.comparator;
@@ -44,21 +42,9 @@
 
     Collection.prototype = {
         model: Model,
-        initialize: function () {},
         addModel: function (data) {
-            if (Object.getPrototypeOf(data) !== Object.prototype) {
-                this.models.push(data);
-                data.collection = this;
-                this._byId[data.get('id')] = data;
-                return data;
-            }
-
-            if (this._byId[data.id]) {
-                return this._byId[data.id];
-            }
-
             var CollectionModel = this.model;
-            var model = new CollectionModel(data, this);
+            var model = new CollectionModel(data);
             model.collection = this;
 
             this.models.push(model);
@@ -102,12 +88,6 @@
         filter: function (comparator) {
             return _.filter(this.models, comparator);
         },
-        empty: function () {
-            _.map(this.models, function (m) {
-                m.remove();
-            });
-            this._reset();
-        },
         _reset: function () {
             this._byId = [];
             this.models = [];
@@ -116,17 +96,18 @@
             return this.models.map(function (model) {
                 return model.toJSON(options);
             });
-        },
+        }
     };
 
     angular.module('ovTopo2')
         .factory('Topo2Collection',
         ['Topo2Model', 'FnService',
             function (_Model_, fn) {
+
                 Collection.extend = fn.extend;
                 Model = _Model_;
                 return Collection;
-            },
+            }
         ]);
 
 })();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import org.onosproject.net.driver.HandlerBehaviour;
 import java.util.List;
 
 /**
- * Device behaviour to obtain, set and remove controllers at the device.
+ * Device behaviour to obtain and set controllers at the device.
  */
 public interface ControllerConfig extends HandlerBehaviour {
 
@@ -39,16 +39,5 @@ public interface ControllerConfig extends HandlerBehaviour {
      * @param controllers a list of controller descriptions
      */
     void setControllers(List<ControllerInfo> controllers);
-
-    /**
-     * Remove a list of controllers on a device.
-     *
-     * @param controllers a list of controller descriptions
-     */
-    default void removeControllers(List<ControllerInfo> controllers) {
-        List<ControllerInfo> controllersList = this.getControllers();
-        controllersList.removeAll(controllers);
-        this.setControllers(controllersList);
-    }
 
 }

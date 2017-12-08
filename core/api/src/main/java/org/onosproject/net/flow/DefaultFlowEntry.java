@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,17 +116,6 @@ public class DefaultFlowEntry extends DefaultFlowRule
     public DefaultFlowEntry(FlowRule rule) {
         this(rule, FlowEntryState.PENDING_ADD, 0, 0, 0);
     }
-
-    /**
-     * Creates a flow entry based on specified flow rule and state.
-     *
-     * @param rule to use as base
-     * @param state of the flow entry
-     */
-    public DefaultFlowEntry(FlowRule rule, FlowEntryState state) {
-        this(rule, state, 0, 0, 0);
-    }
-
 
     /**
      * Creates a flow entry of flow table specified with the flow rule, state,

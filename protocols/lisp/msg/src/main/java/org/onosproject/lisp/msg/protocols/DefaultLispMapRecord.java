@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -250,8 +250,8 @@ public final class DefaultLispMapRecord extends AbstractLispRecord
             // serialize locator
             LocatorWriter recordWriter = new LocatorWriter();
             List<LispLocator> locators = message.getLocators();
-            for (LispLocator locator : locators) {
-                recordWriter.writeTo(byteBuf, locator);
+            for (int i = 0; i < locators.size(); i++) {
+                recordWriter.writeTo(byteBuf, locators.get(i));
             }
         }
     }

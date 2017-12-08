@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,8 @@ import org.onlab.packet.TpPort;
 import org.onlab.packet.VlanId;
 import org.onlab.util.HexString;
 import org.onosproject.codec.CodecContext;
-import org.onosproject.net.flow.ExtensionTreatmentCodec;
+import org.onosproject.codec.ExtensionTreatmentCodec;
+import org.onosproject.core.DefaultGroupId;
 import org.onosproject.core.GroupId;
 import org.onosproject.net.ChannelSpacing;
 import org.onosproject.net.Device;
@@ -107,9 +108,6 @@ public final class DecodeInstructionCodecHelper {
         } else if (subType.equals(L2ModificationInstruction.L2SubType.MPLS_PUSH.name())) {
             return Instructions.pushMpls();
         } else if (subType.equals(L2ModificationInstruction.L2SubType.MPLS_POP.name())) {
-            if (json.has(InstructionCodec.ETHERNET_TYPE)) {
-                return Instructions.popMpls(getEthType());
-            }
             return Instructions.popMpls();
         } else if (subType.equals(L2ModificationInstruction.L2SubType.DEC_MPLS_TTL.name())) {
             return Instructions.decMplsTtl();
@@ -159,12 +157,6 @@ public final class DecodeInstructionCodecHelper {
             int flowLabel = nullIsIllegal(json.get(InstructionCodec.FLOW_LABEL),
                     InstructionCodec.FLOW_LABEL + InstructionCodec.MISSING_MEMBER_MESSAGE).asInt();
             return Instructions.modL3IPv6FlowLabel(flowLabel);
-        } else  if (subType.equals(L3ModificationInstruction.L3SubType.TTL_IN.name())) {
-            return Instructions.copyTtlIn();
-        } else  if (subType.equals(L3ModificationInstruction.L3SubType.TTL_OUT.name())) {
-            return Instructions.copyTtlOut();
-        } else  if (subType.equals(L3ModificationInstruction.L3SubType.DEC_TTL.name())) {
-            return Instructions.decNwTtl();
         }
         throw new IllegalArgumentException("L3 Instruction subtype "
                 + subType + " is not supported");
@@ -363,7 +355,7 @@ public final class DecodeInstructionCodecHelper {
             return Instructions.transition(nullIsIllegal(json.get(InstructionCodec.TABLE_ID),
                     InstructionCodec.TABLE_ID + InstructionCodec.MISSING_MEMBER_MESSAGE).asInt());
         } else if (type.equals(Instruction.Type.GROUP.name())) {
-            GroupId groupId = new GroupId(nullIsIllegal(json.get(InstructionCodec.GROUP_ID),
+            GroupId groupId = new DefaultGroupId(nullIsIllegal(json.get(InstructionCodec.GROUP_ID),
                     InstructionCodec.GROUP_ID + InstructionCodec.MISSING_MEMBER_MESSAGE).asInt());
             return Instructions.createGroup(groupId);
         } else if (type.equals(Instruction.Type.METER.name())) {

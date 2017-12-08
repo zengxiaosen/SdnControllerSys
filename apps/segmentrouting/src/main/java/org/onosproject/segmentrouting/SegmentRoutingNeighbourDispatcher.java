@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package org.onosproject.segmentrouting;
 
-import org.onosproject.net.neighbour.NeighbourMessageContext;
-import org.onosproject.net.neighbour.NeighbourMessageHandler;
+import org.onosproject.incubator.net.neighbour.NeighbourMessageContext;
+import org.onosproject.incubator.net.neighbour.NeighbourMessageHandler;
 import org.onosproject.net.host.HostService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +42,7 @@ public class SegmentRoutingNeighbourDispatcher implements NeighbourMessageHandle
 
     @Override
     public void handleMessage(NeighbourMessageContext context, HostService hostService) {
-        log.trace("Received a {} packet {}", context.protocol(), context.packet());
+        log.debug("Received a {} packet {}", context.protocol(), context.packet());
         switch (context.protocol()) {
             case ARP:
                 if (this.manager.arpHandler != null) {

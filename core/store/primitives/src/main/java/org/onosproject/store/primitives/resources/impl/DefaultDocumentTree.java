@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import org.onosproject.store.service.DocumentTreeListener;
 import org.onosproject.store.service.DocumentTreeNode;
 import org.onosproject.store.service.IllegalDocumentModificationException;
 import org.onosproject.store.service.NoSuchDocumentPathException;
-import org.onosproject.store.service.Ordering;
 import org.onosproject.store.service.Versioned;
 
 import com.google.common.base.Preconditions;
@@ -42,28 +41,18 @@ import com.google.common.collect.Maps;
 public class DefaultDocumentTree<V> implements DocumentTree<V> {
 
     private static final DocumentPath ROOT_PATH = DocumentPath.from("root");
-    final DefaultDocumentTreeNode<V> root;
+    private final DefaultDocumentTreeNode<V> root;
     private final Supplier<Long> versionSupplier;
 
     public DefaultDocumentTree() {
         AtomicLong versionCounter = new AtomicLong(0);
         versionSupplier = versionCounter::incrementAndGet;
-        root = new DefaultDocumentTreeNode<V>(ROOT_PATH, null, versionSupplier.get(), Ordering.NATURAL, null);
+        root = new DefaultDocumentTreeNode<V>(ROOT_PATH, null, versionSupplier.get(), null);
     }
 
-    public DefaultDocumentTree(Supplier<Long> versionSupplier, Ordering ordering) {
-        root = new DefaultDocumentTreeNode<V>(ROOT_PATH, null, versionSupplier.get(), ordering, null);
+    public DefaultDocumentTree(Supplier<Long> versionSupplier) {
+        root = new DefaultDocumentTreeNode<V>(ROOT_PATH, null, versionSupplier.get(), null);
         this.versionSupplier = versionSupplier;
-    }
-
-    DefaultDocumentTree(Supplier<Long> versionSupplier, DefaultDocumentTreeNode<V> root) {
-        this.root = root;
-        this.versionSupplier = versionSupplier;
-    }
-
-    @Override
-    public String name() {
-        return null;
     }
 
     @Override
@@ -75,7 +64,7 @@ public class DefaultDocumentTree<V> implements DocumentTree<V> {
     public Map<String, Versioned<V>> getChildren(DocumentPath path) {
         DocumentTreeNode<V> node = getNode(path);
         if (node != null) {
-            Map<String, Versioned<V>> childrenValues = Maps.newLinkedHashMap();
+            Map<String, Versioned<V>> childrenValues = Maps.newHashMap();
             node.children().forEachRemaining(n -> childrenValues.put(simpleName(n.path()), n.value()));
             return childrenValues;
         }
@@ -140,8 +129,10 @@ public class DefaultDocumentTree<V> implements DocumentTree<V> {
         checkRootModification(path);
         DocumentTreeNode<V> node = getNode(path);
         if (node != null && node.value() != null && node.value().version() == version) {
-            set(path, newValue);
-            return true;
+            if (!Objects.equals(newValue, node.value().value())) {
+                set(path, newValue);
+                return true;
+            }
         }
         return false;
     }

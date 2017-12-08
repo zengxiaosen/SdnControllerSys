@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,12 +62,7 @@ public class LatencyConstraint implements Constraint {
     }
 
     private double cost(Link link) {
-        //Check only links, not EdgeLinks
-        if (link.type() != Link.Type.EDGE) {
-            return link.annotations().value(LATENCY) != null ? getAnnotatedValue(link, LATENCY) : 0;
-        } else {
-            return 0;
-        }
+        return getAnnotatedValue(link, LATENCY);
     }
 
     // doesn't use LinkResourceService
@@ -78,9 +73,8 @@ public class LatencyConstraint implements Constraint {
     }
 
     private boolean validate(Path path) {
-        //Guarantee all the latency units in ONOS is nanoseconds.
         double pathLatency = path.links().stream().mapToDouble(this::cost).sum();
-        return Duration.of((long) pathLatency, ChronoUnit.NANOS).compareTo(latency) <= 0;
+        return Duration.of((long) pathLatency, ChronoUnit.MICROS).compareTo(latency) <= 0;
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,6 @@
  * limitations under the License.
  */
 package org.onosproject.store.resource.impl;
-
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableSet;
@@ -54,12 +40,22 @@ import org.onosproject.net.resource.Resources;
 import org.onosproject.store.AbstractStore;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.CommitStatus;
-import org.onosproject.store.service.DistributedPrimitive;
 import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.StorageService;
 import org.onosproject.store.service.TransactionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -124,104 +120,94 @@ public class ConsistentResourceStore extends AbstractStore<ResourceEvent, Resour
             resources.forEach(r -> log.trace("registering {}", r));
         }
 
-        // Retry the transaction until successful.
-        while (true) {
-            TransactionContext tx = service.transactionContextBuilder().build();
-            tx.begin();
+        TransactionContext tx = service.transactionContextBuilder().build();
+        tx.begin();
 
-            // the order is preserved by LinkedHashMap
-            Map<DiscreteResource, List<Resource>> resourceMap = resources.stream()
-                    .filter(x -> x.parent().isPresent())
-                    .collect(Collectors.groupingBy(x -> x.parent().get(), LinkedHashMap::new, Collectors.toList()));
+        // the order is preserved by LinkedHashMap
+        Map<DiscreteResource, List<Resource>> resourceMap = resources.stream()
+                .filter(x -> x.parent().isPresent())
+                .collect(Collectors.groupingBy(x -> x.parent().get(), LinkedHashMap::new, Collectors.toList()));
 
-            TransactionalDiscreteResourceSubStore discreteTxStore = discreteStore.transactional(tx);
-            TransactionalContinuousResourceSubStore continuousTxStore = continuousStore.transactional(tx);
-            for (Map.Entry<DiscreteResource, List<Resource>> entry : resourceMap.entrySet()) {
-                DiscreteResourceId parentId = entry.getKey().id();
-                if (!discreteTxStore.lookup(parentId).isPresent()) {
-                    return abortTransaction(tx);
-                }
-
-                if (!register(discreteTxStore, continuousTxStore, parentId, entry.getValue())) {
-                    return abortTransaction(tx);
-                }
+        TransactionalDiscreteResourceSubStore discreteTxStore = discreteStore.transactional(tx);
+        TransactionalContinuousResourceSubStore continuousTxStore = continuousStore.transactional(tx);
+        for (Map.Entry<DiscreteResource, List<Resource>> entry : resourceMap.entrySet()) {
+            DiscreteResourceId parentId = entry.getKey().id();
+            if (!discreteTxStore.lookup(parentId).isPresent()) {
+                return abortTransaction(tx);
             }
 
-            try {
-                CommitStatus status = commitTransaction(tx);
-                if (status == CommitStatus.SUCCESS) {
-                    log.trace("Transaction commit succeeded on registration: resources={}", resources);
-                    List<ResourceEvent> events = resources.stream()
-                            .filter(x -> x.parent().isPresent())
-                            .map(x -> new ResourceEvent(RESOURCE_ADDED, x))
-                            .collect(Collectors.toList());
-                    notifyDelegate(events);
-                    return true;
-                }
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                log.warn("Transaction commit failed on registration", e);
-                return false;
+            if (!register(discreteTxStore, continuousTxStore, parentId, entry.getValue())) {
+                return abortTransaction(tx);
             }
         }
+
+        return tx.commit().whenComplete((status, error) -> {
+            if (status == CommitStatus.SUCCESS) {
+                log.trace("Transaction commit succeeded on registration: resources={}", resources);
+                List<ResourceEvent> events = resources.stream()
+                        .filter(x -> x.parent().isPresent())
+                        .map(x -> new ResourceEvent(RESOURCE_ADDED, x))
+                        .collect(Collectors.toList());
+                notifyDelegate(events);
+            } else {
+                log.warn("Transaction commit failed on registration", error);
+            }
+        }).join() == CommitStatus.SUCCESS;
     }
 
     @Override
     public boolean unregister(List<? extends ResourceId> ids) {
         checkNotNull(ids);
 
-        // Retry the transaction until successful.
-        while (true) {
-            TransactionContext tx = service.transactionContextBuilder().build();
-            tx.begin();
+        TransactionContext tx = service.transactionContextBuilder().build();
+        tx.begin();
 
-            TransactionalDiscreteResourceSubStore discreteTxStore = discreteStore.transactional(tx);
-            TransactionalContinuousResourceSubStore continuousTxStore = continuousStore.transactional(tx);
-            // Look up resources by resource IDs
-            List<Resource> resources = ids.stream()
-                    .filter(x -> x.parent().isPresent())
-                    .map(x -> {
-                        // avoid access to consistent map in the case of discrete resource
-                        if (x instanceof DiscreteResourceId) {
-                            return Optional.of(Resources.discrete((DiscreteResourceId) x).resource());
-                        } else {
-                            return continuousTxStore.lookup((ContinuousResourceId) x);
-                        }
-                    })
-                    .flatMap(Tools::stream)
-                    .collect(Collectors.toList());
-            // the order is preserved by LinkedHashMap
-            Map<DiscreteResourceId, List<Resource>> resourceMap = resources.stream().collect(
-                    Collectors.groupingBy(x -> x.parent().get().id(), LinkedHashMap::new, Collectors.toList()));
+        TransactionalDiscreteResourceSubStore discreteTxStore = discreteStore.transactional(tx);
+        TransactionalContinuousResourceSubStore continuousTxStore = continuousStore.transactional(tx);
+        // Look up resources by resource IDs
+        List<Resource> resources = ids.stream()
+                .filter(x -> x.parent().isPresent())
+                .map(x -> {
+                    // avoid access to consistent map in the case of discrete resource
+                    if (x instanceof DiscreteResourceId) {
+                        return Optional.of(Resources.discrete((DiscreteResourceId) x).resource());
+                    } else {
+                        return continuousTxStore.lookup((ContinuousResourceId) x);
+                    }
+                })
+                .flatMap(Tools::stream)
+                .collect(Collectors.toList());
+        // the order is preserved by LinkedHashMap
+        Map<DiscreteResourceId, List<Resource>> resourceMap = resources.stream()
+                .collect(Collectors.groupingBy(x -> x.parent().get().id(), LinkedHashMap::new, Collectors.toList()));
 
-            for (Map.Entry<DiscreteResourceId, List<Resource>> entry : resourceMap.entrySet()) {
-                if (!unregister(discreteTxStore, continuousTxStore, entry.getKey(), entry.getValue())) {
-                    log.warn("Failed to unregister {}: Failed to remove {} values.",
-                            entry.getKey(), entry.getValue().size());
-                    return abortTransaction(tx);
-                }
+        for (Map.Entry<DiscreteResourceId, List<Resource>> entry : resourceMap.entrySet()) {
+            if (!unregister(discreteTxStore, continuousTxStore, entry.getKey(), entry.getValue())) {
+                log.warn("Failed to unregister {}: Failed to remove {} values.",
+                        entry.getKey(), entry.getValue().size());
+                log.debug("Failed to unregister {}: Failed to remove values: {}",
+                        entry.getKey(), entry.getValue());
+                return abortTransaction(tx);
             }
+        }
 
-            try {
-                CommitStatus status = commitTransaction(tx);
-                if (status == CommitStatus.SUCCESS) {
-                    List<ResourceEvent> events = resources.stream()
-                            .filter(x -> x.parent().isPresent())
-                            .map(x -> new ResourceEvent(RESOURCE_REMOVED, x))
-                            .collect(Collectors.toList());
-                    notifyDelegate(events);
-                    return true;
-                }
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+        return tx.commit().whenComplete((status, error) -> {
+            if (status == CommitStatus.SUCCESS) {
+                List<ResourceEvent> events = resources.stream()
+                        .filter(x -> x.parent().isPresent())
+                        .map(x -> new ResourceEvent(RESOURCE_REMOVED, x))
+                        .collect(Collectors.toList());
+                notifyDelegate(events);
+            } else {
                 String message = resources.stream()
                         .map(Resource::simpleTypeName)
                         .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
                         .entrySet().stream()
-                        .map(entry -> String.format("%d %s type resources", entry.getValue(), entry.getKey()))
+                        .map(e -> String.format("%d %s type resources", e.getValue(), e.getKey()))
                         .collect(Collectors.joining(", "));
-                log.warn("Failed to unregister {}: {}", message, e);
-                return false;
+                log.warn("Failed to unregister {}: Commit failed.", message, error);
             }
-        }
+        }).join() == CommitStatus.SUCCESS;
     }
 
     @Override
@@ -229,69 +215,51 @@ public class ConsistentResourceStore extends AbstractStore<ResourceEvent, Resour
         checkNotNull(resources);
         checkNotNull(consumer);
 
-        while (true) {
-            TransactionContext tx = service.transactionContextBuilder().build();
-            tx.begin();
+        TransactionContext tx = service.transactionContextBuilder().build();
+        tx.begin();
 
-            TransactionalDiscreteResourceSubStore discreteTxStore = discreteStore.transactional(tx);
-            TransactionalContinuousResourceSubStore continuousTxStore = continuousStore.transactional(tx);
-            for (Resource resource : resources) {
-                if (resource instanceof DiscreteResource) {
-                    if (!discreteTxStore.allocate(consumer.consumerId(), (DiscreteResource) resource)) {
-                        return abortTransaction(tx);
-                    }
-                } else if (resource instanceof ContinuousResource) {
-                    if (!continuousTxStore.allocate(consumer.consumerId(), (ContinuousResource) resource)) {
-                        return abortTransaction(tx);
-                    }
+        TransactionalDiscreteResourceSubStore discreteTxStore = discreteStore.transactional(tx);
+        TransactionalContinuousResourceSubStore continuousTxStore = continuousStore.transactional(tx);
+        for (Resource resource : resources) {
+            if (resource instanceof DiscreteResource) {
+                if (!discreteTxStore.allocate(consumer.consumerId(), (DiscreteResource) resource)) {
+                    return abortTransaction(tx);
                 }
-            }
-
-            try {
-                if (commitTransaction(tx) == CommitStatus.SUCCESS) {
-                    return true;
+            } else if (resource instanceof ContinuousResource) {
+                if (!continuousTxStore.allocate(consumer.consumerId(), (ContinuousResource) resource)) {
+                    return abortTransaction(tx);
                 }
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                log.warn("Failed to allocate {}: {}", resources, e);
-                return false;
             }
         }
+
+        return tx.commit().join() == CommitStatus.SUCCESS;
     }
 
     @Override
     public boolean release(List<ResourceAllocation> allocations) {
         checkNotNull(allocations);
 
-        while (true) {
-            TransactionContext tx = service.transactionContextBuilder().build();
-            tx.begin();
+        TransactionContext tx = service.transactionContextBuilder().build();
+        tx.begin();
 
-            TransactionalDiscreteResourceSubStore discreteTxStore = discreteStore.transactional(tx);
-            TransactionalContinuousResourceSubStore continuousTxStore = continuousStore.transactional(tx);
-            for (ResourceAllocation allocation : allocations) {
-                Resource resource = allocation.resource();
-                ResourceConsumerId consumerId = allocation.consumerId();
+        TransactionalDiscreteResourceSubStore discreteTxStore = discreteStore.transactional(tx);
+        TransactionalContinuousResourceSubStore continuousTxStore = continuousStore.transactional(tx);
+        for (ResourceAllocation allocation : allocations) {
+            Resource resource = allocation.resource();
+            ResourceConsumerId consumerId = allocation.consumerId();
 
-                if (resource instanceof DiscreteResource) {
-                    if (!discreteTxStore.release(consumerId, (DiscreteResource) resource)) {
-                        return abortTransaction(tx);
-                    }
-                } else if (resource instanceof ContinuousResource) {
-                    if (!continuousTxStore.release(consumerId, (ContinuousResource) resource)) {
-                        return abortTransaction(tx);
-                    }
+            if (resource instanceof DiscreteResource) {
+                if (!discreteTxStore.release((DiscreteResource) resource, consumerId)) {
+                    return abortTransaction(tx);
                 }
-            }
-
-            try {
-                if (commitTransaction(tx) == CommitStatus.SUCCESS) {
-                    return true;
+            } else if (resource instanceof ContinuousResource) {
+                if (!continuousTxStore.release((ContinuousResource) resource, consumerId)) {
+                    return abortTransaction(tx);
                 }
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                log.warn("Failed to release {}: {}", allocations, e);
-                return false;
             }
         }
+
+        return tx.commit().join() == CommitStatus.SUCCESS;
     }
 
     // computational complexity: O(1) if the resource is discrete type.
@@ -356,17 +324,6 @@ public class ConsistentResourceStore extends AbstractStore<ResourceEvent, Resour
         Stream<ContinuousResource> continuous = continuousStore.getAllocatedResources(parent, cls);
 
         return Stream.concat(discrete, continuous).collect(Collectors.toList());
-    }
-
-    /**
-     * Commits a transaction.
-     *
-     * @param tx the transaction to commit
-     * @return the transaction status
-     */
-    private CommitStatus commitTransaction(TransactionContext tx)
-            throws InterruptedException, ExecutionException, TimeoutException {
-        return tx.commit().get(DistributedPrimitive.DEFAULT_OPERATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,6 @@ import org.onosproject.net.provider.AbstractProvider;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.store.service.TestStorageService;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -88,7 +87,6 @@ public class MeterManagerTest {
     private Meter m2;
     private MeterRequest.Builder m1Request;
     private MeterRequest.Builder m2Request;
-    private MeterRequest.Builder m3Request;
 
     private Map<MeterId, Meter> meters = Maps.newHashMap();
 
@@ -168,11 +166,6 @@ public class MeterManagerTest {
                 .withUnit(Meter.Unit.KB_PER_SEC)
                 .withBands(Collections.singletonList(band));
 
-        m3Request = DefaultMeterRequest.builder()
-                .forDevice(did("1"))
-                .fromApp(APP_ID)
-                .withUnit(Meter.Unit.KB_PER_SEC)
-                .withBands(Collections.singletonList(band));
 
     }
 
@@ -225,30 +218,6 @@ public class MeterManagerTest {
     public void testMeterFeatures() {
         assertEquals(meterStore.getMaxMeters(MeterFeaturesKey.key(did("1"))), 255L);
         assertEquals(meterStore.getMaxMeters(MeterFeaturesKey.key(did("2"))), 2);
-    }
-
-    @Test
-    public void testMeterReuse() {
-        manager.submit(m1Request.add());
-        manager.submit(m3Request.add());
-        Collection<Meter> meters = manager.getMeters(did("1"));
-        Meter m = meters.iterator().next();
-        MeterRequest mr = DefaultMeterRequest.builder()
-                .forDevice(m.deviceId())
-                .fromApp(m.appId())
-                .withBands(m.bands())
-                .withUnit(m.unit())
-                .remove();
-        manager.withdraw(mr, m.id());
-        mr = DefaultMeterRequest.builder()
-                .forDevice(m.deviceId())
-                .fromApp(m.appId())
-                .withBands(m.bands())
-                .withUnit(m.unit())
-                .add();
-        Meter meter = manager.submit(mr);
-        assertTrue("Meter id not reused", m.id().equals(meter.id()));
-
     }
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
     'use strict';
 
     // references to injected services
-    var $log, fs, ts, ns, ee, qhs, ls;
+    var $log, $timeout, fs, ts, ns, ee, qhs;
 
     // internal state
     var enabled = true,
@@ -32,7 +32,7 @@
             dialogKeys: {},
             viewKeys: {},
             viewFn: null,
-            viewGestures: [],
+            viewGestures: []
         },
         seq = {},
         matching = false,
@@ -96,7 +96,7 @@
 
     var textFieldDoesNotBlock = {
         enter: 1,
-        esc: 1,
+        esc: 1
     };
 
     function textFieldInput() {
@@ -134,7 +134,7 @@
             vk = kh.viewKeys[key],
             kl = fs.isF(kh.viewKeys._keyListener),
             vcb = fs.isF(vk) || (fs.isA(vk) && fs.isF(vk[0])) || fs.isF(kh.viewFn),
-            token = 'keyev'; // indicate this was a key-pressed event
+            token = 'keyev';    // indicate this was a key-pressed event
 
         event.stopPropagation();
 
@@ -162,30 +162,13 @@
         }
     }
 
-    // functions to obtain localized strings deferred from the setup of the
-    //  global key data structures.
-    function qhlion() {
-        return ls.bundle('core.fw.QuickHelp');
-    }
-    function qhlionShowHide() {
-        return qhlion()('qh_hint_show_hide_qh');
-    }
-
-    function qhlionHintEsc() {
-        return qhlion()('qh_hint_esc');
-    }
-
-    function qhlionHintT() {
-        return qhlion()('qh_hint_t');
-    }
-
     function setupGlobalKeys() {
         angular.extend(keyHandler, {
             globalKeys: {
-                backSlash: [quickHelp, qhlionShowHide],
-                slash: [quickHelp, qhlionShowHide],
-                esc: [escapeKey, qhlionHintEsc],
-                T: [toggleTheme, qhlionHintT],
+                backSlash: [quickHelp, 'Show / hide Quick Help'],
+                slash: [quickHelp, 'Show / hide Quick Help'],
+                esc: [escapeKey, 'Dismiss dialog or cancel selections'],
+                T: [toggleTheme, "Toggle theme"]
             },
             globalFormat: ['backSlash', 'slash', 'esc', 'T'],
 
@@ -194,8 +177,8 @@
             maskedKeys: {
                 slash: 1,
                 backSlash: 1,
-                T: 1,
-            },
+                T: 1
+            }
         });
     }
 
@@ -244,7 +227,7 @@
     }
 
     function unexParam(fname, x) {
-        $log.warn(fname, ': unexpected parameter-- ', x);
+        $log.warn(fname, ": unexpected parameter-- ", x);
     }
 
     function setKeyBindings(keyArg) {
@@ -273,7 +256,7 @@
             globalKeys: gkeys,
             maskedKeys: masked,
             viewKeys: vkeys,
-            viewFunction: vfn,
+            viewFunction: vfn
         };
     }
 
@@ -318,16 +301,16 @@
 
     angular.module('onosUtil')
     .factory('KeyService',
-        ['$log', 'FnService', 'ThemeService', 'NavService',
-            'EeService', 'LionService',
+        ['$log', '$timeout', 'FnService', 'ThemeService', 'NavService',
+            'EeService',
 
-        function (_$log_, _fs_, _ts_, _ns_, _ee_, _ls_) {
+        function (_$log_, _$timeout_, _fs_, _ts_, _ns_, _ee_) {
             $log = _$log_;
+            $timeout = _$timeout_;
             fs = _fs_;
             ts = _ts_;
             ns = _ns_;
             ee = _ee_;
-            ls = _ls_;
 
             return {
                 bindQhs: function (_qhs_) {
@@ -371,7 +354,7 @@
                 enableGlobalKeys: function (b) {
                     globalEnabled = b;
                 },
-                checkNotGlobal: checkNotGlobal,
+                checkNotGlobal: checkNotGlobal
             };
     }]);
 

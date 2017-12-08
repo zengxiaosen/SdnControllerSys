@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.Matchers.nullValue;
-import static org.onosproject.pcep.server.LspType.WITH_SIGNALLING;
-import static org.onosproject.pcep.server.LspType.SR_WITHOUT_SIGNALLING;
-import static org.onosproject.pcep.server.LspType.WITHOUT_SIGNALLING_AND_WITHOUT_SR;
-import static org.onosproject.pcep.server.PcepAnnotationKeys.LSP_SIG_TYPE;
+import static org.onosproject.pcep.controller.LspType.WITH_SIGNALLING;
+import static org.onosproject.pcep.controller.LspType.SR_WITHOUT_SIGNALLING;
+import static org.onosproject.pcep.controller.LspType.WITHOUT_SIGNALLING_AND_WITHOUT_SR;
+import static org.onosproject.pcep.controller.PcepAnnotationKeys.LSP_SIG_TYPE;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,7 +34,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onlab.packet.IpAddress;
 import org.onosproject.cfg.ComponentConfigAdapter;
-import org.onosproject.core.GroupId;
+import org.onosproject.core.DefaultGroupId;
 import org.onosproject.incubator.net.tunnel.DefaultTunnel;
 import org.onosproject.incubator.net.tunnel.IpTunnelEndPoint;
 import org.onosproject.incubator.net.tunnel.Tunnel;
@@ -52,8 +52,8 @@ import org.onosproject.net.Path;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceServiceAdapter;
 import org.onosproject.net.provider.ProviderId;
-import org.onosproject.pcep.server.ClientCapability;
-import org.onosproject.pcep.server.PccId;
+import org.onosproject.pcep.controller.ClientCapability;
+import org.onosproject.pcep.controller.PccId;
 
 /**
  * Test for PCEP setup tunnel.
@@ -117,7 +117,7 @@ public class PcepSetupTunnelProviderTest {
                 .build();
 
         tunnel = new DefaultTunnel(pid, ipTunnelEndPointSrc, ipTunnelEndPointDst, Tunnel.Type.MPLS,
-                                   new GroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
+                                   new DefaultGroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
                                    path, annotations);
         controller.getClient(PccId.pccId(IpAddress.valueOf(0xC010101))).setCapability(
                 new ClientCapability(true, true, true, true, true));
@@ -162,7 +162,7 @@ public class PcepSetupTunnelProviderTest {
                 .build();
 
         tunnel = new DefaultTunnel(pid, ipTunnelEndPointSrc, ipTunnelEndPointDst, Tunnel.Type.MPLS,
-                                   new GroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
+                                   new DefaultGroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
                                    path, annotations);
         controller.getClient(PccId.pccId(IpAddress.valueOf(0xC010103))).setCapability(
                 new ClientCapability(true, true, true, true, true));
@@ -207,7 +207,7 @@ public class PcepSetupTunnelProviderTest {
                 .build();
 
         tunnel = new DefaultTunnel(pid, ipTunnelEndPointSrc, ipTunnelEndPointDst, Tunnel.Type.MPLS,
-                                   new GroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
+                                   new DefaultGroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
                                    path, annotations);
         controller.getClient(PccId.pccId(IpAddress.valueOf(0xC010101))).setCapability(
                 new ClientCapability(true, true, true, true, true));
@@ -252,7 +252,7 @@ public class PcepSetupTunnelProviderTest {
                 .build();
 
         tunnel = new DefaultTunnel(pid, ipTunnelEndPointSrc, ipTunnelEndPointDst, Tunnel.Type.MPLS,
-                                   new GroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
+                                   new DefaultGroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
                                    path, annotations);
         controller.getClient(PccId.pccId(IpAddress.valueOf(0xC010101))).setCapability(
                 new ClientCapability(true, true, true, true, true));

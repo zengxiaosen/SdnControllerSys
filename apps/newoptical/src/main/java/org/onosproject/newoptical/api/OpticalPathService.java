@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,10 @@ import org.onosproject.event.ListenerService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
-import org.onosproject.net.intent.Key;
-import org.onosproject.newoptical.OpticalConnectivity;
 
 import java.time.Duration;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * Service to setup optical domain connectivity.
@@ -43,7 +39,7 @@ public interface OpticalPathService extends ListenerService<OpticalPathEvent, Op
      * @param egress    egress port
      * @param bandwidth required bandwidth. No bandwidth is assured if null.
      * @param latency   required latency. No latency is assured if null.
-     * @return id of created connectivity if successful, null otherwise.
+     * @return ID of created connectivity if successful. null otherwise.
      */
     OpticalConnectivityId setupConnectivity(ConnectPoint ingress, ConnectPoint egress,
                                             Bandwidth bandwidth, Duration latency);
@@ -54,7 +50,7 @@ public interface OpticalPathService extends ListenerService<OpticalPathEvent, Op
      * @param path      multi-layer path along which connectivity will be set up
      * @param bandwidth required bandwidth. No bandwidth is assured if null.
      * @param latency   required latency. No latency is assured if null.
-     * @return id of created connectivity if successful, null otherwise.
+     * @return true if successful. false otherwise.
      */
     OpticalConnectivityId setupPath(Path path, Bandwidth bandwidth, Duration latency);
 
@@ -72,20 +68,4 @@ public interface OpticalPathService extends ListenerService<OpticalPathEvent, Op
      * @return list of link that compose a path. empty if ID is invalid.
      */
     Optional<List<Link>> getPath(OpticalConnectivityId id);
-
-    /**
-     * Lists collection of known OpticalConnectivity.
-     *
-     * @return collection of OpticalConnectivity
-     */
-    Collection<OpticalConnectivity> listConnectivity();
-
-    /**
-     * Lists intents generated from specified OpticalConnectivity.
-     *
-     * @param id OpticalConnectivity identifier
-     * @return set of Intent Key
-     */
-    Set<Key> listIntents(OpticalConnectivityId id);
-
 }

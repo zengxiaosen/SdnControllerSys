@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,12 +47,7 @@ public final class HostCodec extends AnnotatedCodec<Host> {
             jsonIpAddresses.add(ipAddress.toString());
         }
         result.set("ipAddresses", jsonIpAddresses);
-
-        final ArrayNode jsonLocations = result.putArray("locations");
-        for (final HostLocation location : host.locations()) {
-            jsonLocations.add(locationCodec.encode(location, context));
-        }
-        result.set("locations", jsonLocations);
+        result.set("location", locationCodec.encode(host.location(), context));
 
         return annotate(result, host, context);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,18 @@
  */
 package org.onosproject.net.intent.impl;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.junit.TestUtils;
 import org.onlab.junit.TestUtils.TestUtilsException;
+import org.onosproject.core.IdGenerator;
 import org.onosproject.event.Event;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
@@ -30,9 +35,9 @@ import org.onosproject.net.NetworkResource;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceListener;
-import org.onosproject.net.intent.AbstractIntentTest;
+import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.Key;
-import org.onosproject.net.intent.TopologyChangeDelegate;
+import org.onosproject.net.intent.MockIdGenerator;
 import org.onosproject.net.link.LinkEvent;
 import org.onosproject.net.resource.ResourceEvent;
 import org.onosproject.net.resource.ResourceListener;
@@ -41,22 +46,23 @@ import org.onosproject.net.topology.Topology;
 import org.onosproject.net.topology.TopologyEvent;
 import org.onosproject.net.topology.TopologyListener;
 
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 
 import static org.easymock.EasyMock.createMock;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.onosproject.net.NetTestTools.*;
-import static org.onosproject.net.resource.ResourceEvent.Type.RESOURCE_ADDED;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.onosproject.net.resource.ResourceEvent.Type.*;
+import static org.onosproject.net.NetTestTools.APP_ID;
+import static org.onosproject.net.NetTestTools.device;
+import static org.onosproject.net.NetTestTools.link;
 
 /**
  * Tests for the objective tracker.
  */
-public class ObjectiveTrackerTest extends AbstractIntentTest {
+public class ObjectiveTrackerTest {
     private static final int WAIT_TIMEOUT_SECONDS = 2;
     private Topology topology;
     private ObjectiveTracker tracker;
@@ -65,6 +71,7 @@ public class ObjectiveTrackerTest extends AbstractIntentTest {
     private TopologyListener listener;
     private DeviceListener deviceListener;
     private ResourceListener resourceListener;
+    private IdGenerator mockGenerator;
 
     /**
      * Initialization shared by all test cases.
@@ -72,7 +79,7 @@ public class ObjectiveTrackerTest extends AbstractIntentTest {
      * @throws TestUtilsException if any filed look ups fail
      */
     @Before
-    public void setUp() {
+    public void setUp() throws TestUtilsException {
         topology = createMock(Topology.class);
         tracker = new ObjectiveTracker();
         delegate = new TestTopologyChangeDelegate();
@@ -81,7 +88,9 @@ public class ObjectiveTrackerTest extends AbstractIntentTest {
         listener = TestUtils.getField(tracker, "listener");
         deviceListener = TestUtils.getField(tracker, "deviceListener");
         resourceListener = TestUtils.getField(tracker, "resourceListener");
-        super.setUp();
+        mockGenerator = new MockIdGenerator();
+        Intent.unbindIdGenerator(mockGenerator);
+        Intent.bindIdGenerator(mockGenerator);
     }
 
     /**
@@ -90,7 +99,7 @@ public class ObjectiveTrackerTest extends AbstractIntentTest {
     @After
     public void tearDown() {
         tracker.unsetDelegate(delegate);
-        super.tearDown();
+        Intent.unbindIdGenerator(mockGenerator);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.Optional;
 import org.onosproject.net.Port;
 import org.onosproject.net.optical.OchPort;
 import org.onosproject.net.optical.device.OchPortHelper;
+import org.onosproject.net.optical.impl.DefaultOchPort;
 
 import com.google.common.annotations.Beta;
 
@@ -48,6 +49,15 @@ public class OchPortMapper extends AbstractPortMapper<OchPort> {
     protected Optional<OchPort> mapPort(Port port) {
         if (port instanceof OchPort) {
             return Optional.of((OchPort) port);
+        } else if (port instanceof org.onosproject.net.OchPort) {
+            // TODO remove after deprecation of old OchPort is complete
+
+            // translate to new OchPort
+            org.onosproject.net.OchPort old = (org.onosproject.net.OchPort) port;
+            return Optional.of(new DefaultOchPort(old,
+                                                  old.signalType(),
+                                                  old.isTunable(),
+                                                  old.lambda()));
         }
 
         return OchPortHelper.asOchPort(port);

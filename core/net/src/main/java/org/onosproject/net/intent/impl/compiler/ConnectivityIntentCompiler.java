@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,8 +37,6 @@ import org.onosproject.net.intent.IntentCompiler;
 import org.onosproject.net.intent.IntentExtensionService;
 import org.onosproject.net.intent.constraint.BandwidthConstraint;
 import org.onosproject.net.intent.constraint.HashedPathSelectionConstraint;
-import org.onosproject.net.intent.constraint.MarkerConstraint;
-import org.onosproject.net.intent.constraint.PathViabilityConstraint;
 import org.onosproject.net.intent.impl.PathNotFoundException;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.net.resource.Resource;
@@ -105,9 +103,6 @@ public abstract class ConnectivityIntentCompiler<T extends ConnectivityIntent>
      * @return true if the path passes all constraints
      */
     protected boolean checkPath(Path path, List<Constraint> constraints) {
-        if (path == null) {
-            return false;
-        }
         for (Constraint constraint : constraints) {
             if (!constraint.validate(path, resourceService::isAvailable)) {
                 return false;
@@ -177,7 +172,6 @@ public abstract class ConnectivityIntentCompiler<T extends ConnectivityIntent>
         final List<Constraint> constraints = intent.constraints();
         ImmutableList<DisjointPath> filtered = FluentIterable.from(paths)
                 .filter(path -> checkPath(path, constraints))
-                .filter(path -> checkPath(path.backup(), constraints))
                 .toList();
         if (filtered.isEmpty()) {
             throw new PathNotFoundException(one, two);
@@ -366,23 +360,19 @@ public abstract class ConnectivityIntentCompiler<T extends ConnectivityIntent>
 
             // iterate over all constraints in order and return the weight of
             // the first one with fast fail over the first failure
-            Iterator<Constraint> it = constraints.stream()
-                    .filter(c -> !(c instanceof MarkerConstraint))
-                    .filter(c -> !(c instanceof PathViabilityConstraint))
-                    .iterator();
+            Iterator<Constraint> it = constraints.iterator();
 
             if (!it.hasNext()) {
-                return DEFAULT_HOP_WEIGHT;
+                return new ScalarWeight(HOP_WEIGHT_VALUE);
             }
 
             double cost = it.next().cost(edge.link(), resourceService::isAvailable);
             while (it.hasNext() && cost > 0) {
                 if (it.next().cost(edge.link(), resourceService::isAvailable) < 0) {
-                    // TODO shouldn't this be non-viable?
                     cost = -1;
                 }
             }
-            return ScalarWeight.toWeight(cost);
+            return new ScalarWeight(cost);
 
         }
     }

@@ -6,7 +6,6 @@ COMPILE_DEPS = [
     '//lib:snmp-core',
     '//lib:bti7000',
     '//lib:mibs-net-snmp',
-    '//lib:joda-time',
 ]
 
 TEST_DEPS = [

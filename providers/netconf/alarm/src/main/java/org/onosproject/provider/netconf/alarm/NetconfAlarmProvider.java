@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import org.onosproject.incubator.net.faultmanagement.alarm.AlarmTranslator;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.provider.AbstractProvider;
 import org.onosproject.net.provider.ProviderId;
-import org.onosproject.netconf.FilteringNetconfDeviceOutputEventListener;
 import org.onosproject.netconf.NetconfController;
 import org.onosproject.netconf.NetconfDevice;
 import org.onosproject.netconf.NetconfDeviceInfo;
@@ -38,6 +37,7 @@ import org.onosproject.netconf.NetconfDeviceListener;
 import org.onosproject.netconf.NetconfDeviceOutputEvent;
 import org.onosproject.netconf.NetconfDeviceOutputEventListener;
 import org.onosproject.netconf.NetconfSession;
+import org.onosproject.netconf.ctl.NetconfDeviceOutputEventListenerImpl;
 import org.slf4j.Logger;
 
 import java.io.ByteArrayInputStream;
@@ -103,7 +103,7 @@ public class NetconfAlarmProvider extends AbstractProvider implements AlarmProvi
 
     @Override
     public void triggerProbe(DeviceId deviceId) {
-        log.debug("Alarm probe triggered with {}", deviceId);
+        log.debug("Alarm probe triggered with " + deviceId);
     }
 
     private void triggerProbe(DeviceId deviceId, Collection<Alarm> alarms) {
@@ -111,8 +111,7 @@ public class NetconfAlarmProvider extends AbstractProvider implements AlarmProvi
         triggerProbe(deviceId);
     }
 
-    private class InternalNotificationListener
-            extends FilteringNetconfDeviceOutputEventListener
+    private class InternalNotificationListener extends NetconfDeviceOutputEventListenerImpl
             implements NetconfDeviceOutputEventListener {
 
         InternalNotificationListener(NetconfDeviceInfo deviceInfo) {

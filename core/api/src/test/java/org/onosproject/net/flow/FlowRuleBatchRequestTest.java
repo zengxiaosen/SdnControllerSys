@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 package org.onosproject.net.flow;
 
 import org.junit.Test;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchEntry;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchRequest;
 import org.onosproject.net.intent.IntentTestsMocks;
 
 import java.util.HashSet;
@@ -28,8 +25,8 @@ import java.util.Set;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.onosproject.net.flow.oldbatch.FlowRuleBatchEntry.FlowRuleOperation.ADD;
-import static org.onosproject.net.flow.oldbatch.FlowRuleBatchEntry.FlowRuleOperation.REMOVE;
+import static org.onosproject.net.flow.FlowRuleBatchEntry.FlowRuleOperation.ADD;
+import static org.onosproject.net.flow.FlowRuleBatchEntry.FlowRuleOperation.REMOVE;
 
 /**
  * Unit tests for the FlowRuleBatchRequest class.

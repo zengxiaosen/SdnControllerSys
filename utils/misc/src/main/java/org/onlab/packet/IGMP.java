@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -189,6 +189,32 @@ public abstract class IGMP extends BasePacket {
     }
 
     /**
+     * Deserialize an IGMP message.
+     *
+     * @param data bytes to deserialize
+     * @param offset offset to start deserializing from
+     * @param length length of the data to deserialize
+     * @return populated IGMP object
+     */
+    @Override
+    public IPacket deserialize(final byte[] data, final int offset,
+                               final int length) {
+
+        final IGMP igmp;
+        try {
+            igmp = IGMP.deserializer().deserialize(data, offset, length);
+        } catch (DeserializationException e) {
+            log.error("Deserialization exception", e);
+            return this;
+        }
+        this.igmpType = igmp.igmpType;
+        this.resField = igmp.resField;
+        this.checksum = igmp.checksum;
+        this.groups = igmp.groups;
+        return this;
+    }
+
+    /**
      * Deserializer function for IPv4 packets.
      *
      * @return deserializer function
@@ -197,19 +223,13 @@ public abstract class IGMP extends BasePacket {
         return (data, offset, length) -> {
             checkInput(data, offset, length, IGMPv2.HEADER_LENGTH);
 
-            final ByteBuffer bb = ByteBuffer.wrap(data, offset, length);
-            byte igmpType = bb.get();
-            boolean isV2;
-            if (igmpType == TYPE_IGMPV2_MEMBERSHIP_REPORT  || igmpType == TYPE_IGMPV2_LEAVE_GROUP ||
-                    length == IGMPv2.HEADER_LENGTH) {
-                isV2 = true;
-            } else {
-                isV2 = false;
-            }
+            // we will assume that this is IGMPv2 if the length is 8
+            boolean isV2 = length == IGMPv2.HEADER_LENGTH;
 
             IGMP igmp = isV2 ? new IGMPv2() : new IGMPv3();
 
-            igmp.igmpType = igmpType;
+            final ByteBuffer bb = ByteBuffer.wrap(data, offset, length);
+            igmp.igmpType = bb.get();
             igmp.resField = bb.get();
             igmp.checksum = bb.getShort();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,8 +106,8 @@ public class LispDistinguishedNameAddress extends LispAfiAddress {
                                                     throws LispWriterException {
             String distinguishedName = address.getDistinguishedName();
             byte[] nameBytes = distinguishedName.getBytes();
-            for (byte nameByte : nameBytes) {
-                byteBuf.writeByte(nameByte);
+            for (int i = 0; i < nameBytes.length; i++) {
+                byteBuf.writeByte(nameBytes[i]);
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Open Networking Foundation
+ * Copyright 2016 Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package org.onosproject.teyang.utils.topology;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static org.onosproject.tetopology.management.api.OptimizationType.NOT_OPTIMIZED;
 
 import java.util.List;
 import java.util.Map;
@@ -519,9 +518,7 @@ public final class NetworkConverter {
         org.onosproject.tetopology.management.api.DefaultNetwork network =
                 new org.onosproject.tetopology.management.api.DefaultNetwork(networkKeyId, supportingNetworkIds,
                                                                              teNodes, teLinks, teTopologyId,
-                                                                             serverProvided,
-                                                                             deviceId,
-                                                                             NOT_OPTIMIZED);
+                                                                             serverProvided, deviceId);
         return network;
     }
 

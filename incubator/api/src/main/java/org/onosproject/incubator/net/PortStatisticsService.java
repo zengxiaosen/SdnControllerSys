@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,32 +25,12 @@ import org.onosproject.net.statistic.Load;
 @Beta
 public interface PortStatisticsService {
 
-    /** Specifies the type of metric. */
-    enum MetricType {
-        /** Load is to be given in bytes/second. */
-        BYTES,
-
-        /** Load is to be given in packets/second. */
-        PACKETS
-    }
-
     /**
-     * Obtain the egress load for the given port in terms of bytes per second.
+     * Obtain the egress load for the given port.
      *
      * @param connectPoint the port to query
      * @return egress traffic load
      */
     Load load(ConnectPoint connectPoint);
-
-    /**
-     * Obtain the egress load for the given port in terms of the specified metric.
-     *
-     * @param connectPoint the port to query
-     * @param metricType   metric type
-     * @return egress traffic load
-     */
-    default Load load(ConnectPoint connectPoint, MetricType metricType) {
-        return load(connectPoint);
-    }
 
 }

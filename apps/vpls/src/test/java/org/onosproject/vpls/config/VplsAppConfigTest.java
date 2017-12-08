@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -246,28 +246,19 @@ public class VplsAppConfigTest {
                      vplsAppConfig.getVplsWithName(VPLS1).encap());
     }
 
-    public static class MockCfgDelegate implements ConfigApplyDelegate {
+    private class MockCfgDelegate implements ConfigApplyDelegate {
+
         @Override
         public void onApply(@SuppressWarnings("rawtypes") Config config) {
             config.apply();
         }
     }
 
-    /**
-     * Creates a basic VPLS config.
-     *
-     * @return the VPLS config
-     */
     private VplsConfig createInitialVpls() {
         Set<String> ifaces = new HashSet<>(Arrays.asList(IF1, IF2, IF3));
         return new VplsConfig(VPLS1, ifaces, EncapsulationType.NONE);
     }
 
-    /**
-     * Creates another basic VPLS config.
-     *
-     * @return the VPLS config
-     */
     private VplsConfig createNewVpls() {
         Set<String> ifaces = new HashSet<>(Arrays.asList(IF4, IF5));
         return new VplsConfig(NEWVPLS, ifaces, EncapsulationType.NONE);

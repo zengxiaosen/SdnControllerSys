@@ -6,7 +6,6 @@ COMPILE_DEPS = [
 
 TEST_DEPS = [
     '//lib:TEST_ADAPTERS',
-    '//lib:JACKSON',
 ]
 
 osgi_jar_with_tests (

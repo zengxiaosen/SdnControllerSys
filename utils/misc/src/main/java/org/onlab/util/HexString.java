@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Foundation
+ * Copyright 2014-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 package org.onlab.util;
 
 public final class HexString {
-
-    private static final char[] HEX_CHARS = "0123456789abcdef".toCharArray();
 
     private HexString() {
     }
@@ -47,15 +45,18 @@ public final class HexString {
         if (separator == null) {
             separator = "";
         }
-        int slen = bytes.length * (2 + separator.length()) - separator.length();
-        StringBuilder ret = new StringBuilder(slen);
-        boolean addSeparator = !separator.isEmpty();
-        for (int i = 0; i < bytes.length; i++) {
-            if (i > 0 && addSeparator) {
+        int i;
+        StringBuilder ret = new StringBuilder(bytes.length * 3 - 1);
+        String tmp;
+        for (i = 0; i < bytes.length; i++) {
+            if (i > 0) {
                 ret.append(separator);
             }
-            ret.append(HEX_CHARS[(bytes[i] >> 4) & 0xF]);
-            ret.append(HEX_CHARS[(bytes[i] & 0xF)]);
+            tmp = Integer.toHexString((bytes[i] & 0xff));
+            if (tmp.length() == 1) {
+                ret.append('0');
+            }
+            ret.append(tmp);
         }
         return ret.toString();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Foundation
+ * Copyright 2015-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package org.onosproject.vpls.cli.completer;
 
 import com.google.common.collect.Lists;
-import org.apache.karaf.shell.console.completer.ArgumentCompleter;
 import org.onosproject.cli.AbstractChoicesCompleter;
 import org.onosproject.vpls.cli.VplsCommandEnum;
 
@@ -30,19 +29,17 @@ public class VplsCommandCompleter extends AbstractChoicesCompleter {
 
     @Override
     public List<String> choices() {
-        ArgumentCompleter.ArgumentList argumentList = getArgumentList();
-        if (argumentList == null) {
-            return Collections.emptyList();
-        }
-        List<String> argList = Lists.newArrayList(argumentList.getArguments());
+        List<String> argumentList =
+                Lists.newArrayList(getArgumentList().getArguments());
         String argOne = null;
-        if (argList.size() > 1) {
-            argOne = argList.get(1);
+        if (argumentList.size() > 1) {
+            argOne = argumentList.get(1);
         }
         VplsCommandEnum vplsCommandEnum = VplsCommandEnum.enumFromString(argOne);
         if (vplsCommandEnum != null) {
             switch (vplsCommandEnum) {
                 case CREATE:
+                case CLEAN:
                 case LIST:
                     return Collections.emptyList();
                 default:

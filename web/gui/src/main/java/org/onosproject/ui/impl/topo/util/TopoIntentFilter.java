@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Foundation
+ *  Copyright 2016-present Open Networking Laboratory
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,7 +21,9 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.HostId;
 import org.onosproject.net.Link;
+import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.host.HostService;
 import org.onosproject.net.intent.FlowObjectiveIntent;
 import org.onosproject.net.intent.FlowRuleIntent;
 import org.onosproject.net.intent.HostToHostIntent;
@@ -50,6 +52,8 @@ import static org.onosproject.net.intent.IntentState.INSTALLED;
 public class TopoIntentFilter {
 
     private final IntentService intentService;
+    private final DeviceService deviceService;
+    private final HostService hostService;
     private final LinkService linkService;
 
     /**
@@ -58,17 +62,19 @@ public class TopoIntentFilter {
      * @param services service references bundle
      */
     public TopoIntentFilter(ServicesBundle services) {
-        this.intentService = services.intent();
-        this.linkService = services.link();
+        this.intentService = services.intentService();
+        this.deviceService = services.deviceService();
+        this.hostService = services.hostService();
+        this.linkService = services.linkService();
     }
 
     /**
      * Finds all path (host-to-host or point-to-point) intents that pertain
      * to the given hosts and devices.
      *
-     * @param hosts   set of hosts to query by
-     * @param devices set of devices to query by
-     * @param links   set of links to query by
+     * @param hosts         set of hosts to query by
+     * @param devices       set of devices to query by
+     * @param links       set of links to query by
      * @return set of intents that 'match' all hosts, devices and links given
      */
     public List<Intent> findPathIntents(Set<Host> hosts,

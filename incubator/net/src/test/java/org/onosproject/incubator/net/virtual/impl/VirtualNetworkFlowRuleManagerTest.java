@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Foundation
+ * Copyright 2016-present Open Networking Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,8 @@ import org.onosproject.incubator.net.virtual.NetworkId;
 import org.onosproject.incubator.net.virtual.VirtualNetwork;
 import org.onosproject.incubator.net.virtual.VirtualNetworkFlowRuleStore;
 import org.onosproject.incubator.net.virtual.VirtualNetworkStore;
+import org.onosproject.incubator.net.virtual.event.VirtualEvent;
+import org.onosproject.incubator.net.virtual.event.VirtualListenerRegistryManager;
 import org.onosproject.incubator.net.virtual.impl.provider.VirtualProviderManager;
 import org.onosproject.incubator.net.virtual.provider.AbstractVirtualProvider;
 import org.onosproject.incubator.net.virtual.provider.VirtualFlowRuleProvider;
@@ -49,7 +51,7 @@ import org.onosproject.net.flow.DefaultFlowEntry;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
+import org.onosproject.net.flow.FlowRuleBatchOperation;
 import org.onosproject.net.flow.FlowRuleEvent;
 import org.onosproject.net.flow.FlowRuleListener;
 import org.onosproject.net.flow.FlowRuleService;
@@ -59,6 +61,8 @@ import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.instructions.Instruction;
 import org.onosproject.net.flow.instructions.Instructions;
+import org.onosproject.net.intent.FakeIntentManager;
+import org.onosproject.net.intent.TestableIntentService;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.store.service.TestStorageService;
 
@@ -77,11 +81,14 @@ public class VirtualNetworkFlowRuleManagerTest extends VirtualNetworkTestUtil {
 
     private VirtualNetworkManager manager;
     private DistributedVirtualNetworkStore virtualNetworkManagerStore;
+    private TestableIntentService intentService = new FakeIntentManager();
     private ServiceDirectory testDirectory;
     private VirtualNetworkFlowRuleStore flowRuleStore;
     private VirtualProviderManager providerRegistryService;
 
     private EventDeliveryService eventDeliveryService;
+    VirtualListenerRegistryManager listenerRegistryManager =
+            VirtualListenerRegistryManager.getInstance();
 
     private VirtualNetworkFlowRuleManager vnetFlowRuleService1;
     private VirtualNetworkFlowRuleManager vnetFlowRuleService2;
@@ -114,10 +121,12 @@ public class VirtualNetworkFlowRuleManagerTest extends VirtualNetworkTestUtil {
 
         manager = new VirtualNetworkManager();
         manager.store = virtualNetworkManagerStore;
+        manager.intentService = intentService;
         TestUtils.setField(manager, "coreService", coreService);
 
         eventDeliveryService = new TestEventDispatcher();
         NetTestTools.injectEventDispatcher(manager, eventDeliveryService);
+        eventDeliveryService.addSink(VirtualEvent.class, listenerRegistryManager);
 
         appId = new TestApplicationId("FlowRuleManagerTest");
 
