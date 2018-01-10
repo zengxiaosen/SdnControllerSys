@@ -383,7 +383,6 @@ public class DefaultTopology extends AbstractModel implements Topology {
         for(int i=0; i< 5; i++){
             log.info(".........................");
         }
-        log.info("验证上报packetIn的交换机："+src.toString()+" , 目的交换机："+dst.toString()+")");
 
         DefaultTopologyVertex srcV = new DefaultTopologyVertex(src);
         DefaultTopologyVertex dstV = new DefaultTopologyVertex(dst);
@@ -392,23 +391,26 @@ public class DefaultTopology extends AbstractModel implements Topology {
             // src or dst not part of the current graph
             return ImmutableSet.of();
         }
-
+        //在search过程中用到了weight！
         GraphPathSearch.Result<TopologyVertex, TopologyEdge> result =
                 graphPathSearch().search(graph, srcV, dstV, weigher, maxPaths);
         ImmutableSet.Builder<Path> builder = ImmutableSet.builder();
+        log.info("上报packetIn的交换机："+src.toString()+",目的交换机："+dst.toString()+")" + ",path的条数："+result.paths().size());
+
         int j=0;
+        // Set<Path<V, E>> paths();
         for (org.onlab.graph.Path<TopologyVertex, TopologyEdge> path : result.paths()) {
-            log.info("根据源目取出的path的数量：" + result.paths().size());
-            log.info("path "+j+"................");
+            log.info("第 " + j + "条path "+"..........."+path.toString());
+
             for (TopologyEdge e : path.edges()) {
                 log.info("edge src,dst:" + e.link().src().deviceId().toString() + "," + e.link().dst().deviceId().toString());
             }
-            //return new DefaultPath(CORE_PROVIDER_ID, links, path.cost());
-            builder.add(networkPath(path));
             j++;
+            //builder.add(networkPath(path));
         }
-        // Set<Path<V, E>> paths();
+
         for (org.onlab.graph.Path<TopologyVertex, TopologyEdge> path : result.paths()) {
+
             builder.add(networkPath(path));
         }
         for(int i=0; i< 5; i++){
@@ -416,6 +418,8 @@ public class DefaultTopology extends AbstractModel implements Topology {
         }
         return builder.build();
     }
+
+    //目前走的这个
 
     public synchronized Set<Path> getPaths1(DeviceId src, DeviceId dst, LinkWeigher weigher,
                               int maxPaths, DeviceId hs) {

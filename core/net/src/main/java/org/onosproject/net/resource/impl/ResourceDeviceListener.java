@@ -255,10 +255,16 @@ final class ResourceDeviceListener implements DeviceListener {
      * @return bandwidth capacity
      */
     private Optional<Bandwidth> queryBandwidth(DeviceId did, PortNumber number) {
+
+
+
         // Check and use netcfg first.
         ConnectPoint cp = new ConnectPoint(did, number);
         BandwidthCapacity config = netcfgService.getConfig(cp, BandwidthCapacity.class);
         if (config != null) {
+            for(int i=0; i< 30; i++){
+                log.info("1kkkkkkkkkkkkkkkkkkkkkkkkk");
+            }
             log.trace("Registering configured bandwidth {} for {}/{}", config.capacity(), did, number);
             return Optional.of(config.capacity());
         }
@@ -266,9 +272,30 @@ final class ResourceDeviceListener implements DeviceListener {
         // populate bandwidth value, assuming portSpeed == bandwidth
         Port port = deviceService.getPort(did, number);
         if (port != null) {
+
             return Optional.of(Bandwidth.mbps(port.portSpeed()));
         }
         return Optional.empty();
+    }
+
+    private Optional<Bandwidth> queryBandwidth1(ConnectPoint cp) {
+
+
+
+        // Check and use netcfg first.
+        //ConnectPoint cp = new ConnectPoint(did, number);
+        BandwidthCapacity config = netcfgService.getConfig(cp, BandwidthCapacity.class);
+        if (config != null) {
+            for(int i=0; i< 30; i++){
+                log.info("1kkkkkkkkkkkkkkkkkkkkkkkkk");
+            }
+            //log.trace("Registering configured bandwidth {} for {}/{}", config.capacity(), did, number);
+            return Optional.of(config.capacity());
+        }else{
+            return null;
+        }
+
+
     }
 
     private Set<OchSignal> queryLambdas(DeviceId did, PortNumber port) {

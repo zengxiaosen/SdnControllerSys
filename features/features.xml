@@ -18,6 +18,10 @@
           name="onos-@FEATURE-VERSION">
     <repository>mvn:org.apache.karaf.features/standard/3.0.8/xml/features</repository>
 
+    <!--<feature name="onos-app-oxp" version="@FEATURE-VERSION" description="oxp">-->
+        <!--<bundle>mvn:org.onosproject/onos-app-oxp/@ONOS-VERSION</bundle>-->
+    <!--</feature>-->
+
     <feature name="onos-thirdparty-base" version="@FEATURE-VERSION"
              description="ONOS 3rd party dependencies">
         <bundle>mvn:commons-lang/commons-lang/2.6</bundle>

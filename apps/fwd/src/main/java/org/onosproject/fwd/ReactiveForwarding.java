@@ -42,13 +42,8 @@ import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.event.Event;
-import org.onosproject.net.ConnectPoint;
-import org.onosproject.net.DeviceId;
-import org.onosproject.net.Host;
-import org.onosproject.net.HostId;
-import org.onosproject.net.Link;
-import org.onosproject.net.Path;
-import org.onosproject.net.PortNumber;
+import org.onosproject.net.*;
+import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -85,8 +80,9 @@ import org.onosproject.store.service.EventuallyConsistentMap;
 import org.onosproject.store.service.WallClockTimestamp;
 import org.onosproject.store.service.MultiValuedTimestamp;
 import org.osgi.service.jdbc.DataSourceFactory;
+//import org.onosproject.incubator.net.PortStatisticsService;
 import org.slf4j.Logger;
-
+//import org.onosproject.incubator.net.PortStatisticsService;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.util.*;
@@ -104,6 +100,12 @@ public class ReactiveForwarding {
     private static final int DEFAULT_PRIORITY = 10;
 
     private final Logger log = getLogger(getClass());
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DeviceService deviceService;
+
+//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+//    protected PortStatisticsService portStatisticsService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected TopologyService topologyService;
@@ -133,9 +135,12 @@ public class ReactiveForwarding {
     protected FlowStatisticService flowStatisticService;
 
 //    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-//    protected org.onosproject.incubator.net.PortStatisticsService portStatisticsService;
+//    protected PortStatisticsService portStatisticsService;
+
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected StatisticService statisticService;
+
+
 
 
 
@@ -208,9 +213,9 @@ public class ReactiveForwarding {
             label = "Ignore (do not forward) IPv4 multicast packets; default is false")
     private boolean ignoreIpv4McastPackets = false;
 
-    @Property(name = "recordMetrics", boolValue = false,
+    @Property(name = "recordMetrics", boolValue = true,
             label = "Enable record metrics for reactive forwarding")
-    private boolean recordMetrics = false;
+    private boolean recordMetrics = true;
 
     private final TopologyListener topologyListener = new InternalTopologyListener();
 
@@ -233,6 +238,7 @@ public class ReactiveForwarding {
         //负责数据包在特定路径上转发的数据包处理器
         packetService.addProcessor(processor, PacketProcessor.director(2));
         topologyService.addListener(topologyListener);
+
         readComponentConfiguration(context);
         requestIntercepts();
 
@@ -453,8 +459,6 @@ public class ReactiveForwarding {
         public synchronized void process(PacketContext context) {
             // Stop processing if the packet has been handled, since we
             // can't do any more to it.
-
-
             if (context.isHandled()) {
                 return;
             }
@@ -470,6 +474,7 @@ public class ReactiveForwarding {
             ReactiveForwardMetrics macMetrics = null;
             macMetrics = createCounter(macAddress);
             inPacket(macMetrics);
+
 
             // Bail if this is deemed to be a control packet.
             if (isControlPacket(ethPkt)) {
@@ -526,13 +531,6 @@ public class ReactiveForwarding {
                 return;
             }
 
-
-
-            //log.info("case2.............................");
-//            log.info("源host对应的源switch是："+src.location().deviceId().toString());
-//            log.info("目的host对应的目的switch是："+dst.location().deviceId().toString());
-
-
             /*
             注意：这里的src.location().deviceId()是边缘交换机，但是和Dijkstra的getPaths里面的src交换机地址不同
             因为getPaths的src交换机指的是此时发出packetIn的交换机
@@ -541,29 +539,23 @@ public class ReactiveForwarding {
             // Otherwise, get a set of paths that lead from here to the
             // destination edge switch.
             // 保留了dijkstra，要用的话请把一下注释删掉用
+            Set<Path> paths =
+                    topologyService.getPaths(topologyService.currentTopology(),
+                                             pkt.receivedFrom().deviceId(),
+                                             dst.location().deviceId());
 
-
-
-                        Set<Path> paths =
-                                topologyService.getPaths(topologyService.currentTopology(),
-                                                         pkt.receivedFrom().deviceId(),
-                                                         dst.location().deviceId());
-
-
-            // 搭建了胖树拓扑
+             //搭建了胖树拓扑
 //            Set<Path> paths =
 //                    topologyService.getPaths1(topologyService.currentTopology(),
 //                            pkt.receivedFrom().deviceId(),
 //                            dst.location().deviceId(),
 //                            src.location().deviceId());
 
-
-
             //flowStatisticService.loadSummary(null);
 
-//            Set<Path> ChoicedPaths = myUpdatePaths(paths, pkt.receivedFrom().deviceId(),
-//                    dst.location().deviceId(),
-//                    src.location().deviceId());
+            Set<Path> ChoicedPaths = myUpdatePaths(paths, pkt.receivedFrom().deviceId(),
+                    dst.location().deviceId(),
+                    src.location().deviceId());
 
             // 在这里看下是否可以加入带宽等信息
 
@@ -576,8 +568,8 @@ public class ReactiveForwarding {
             // Otherwise, pick a path that does not lead back to where we
             // came from; if no such path, flood and bail.
             // 原本第一个参数是paths
-            //Path path = pickForwardPathIfPossible(ChoicedPaths, pkt.receivedFrom().port());
-            Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
+            Path path = pickForwardPathIfPossible(ChoicedPaths, pkt.receivedFrom().port());
+            //Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
             if (path == null) {
                 log.warn("Don't know where to go from here {} for {} -> {}",
                          pkt.receivedFrom(), ethPkt.getSourceMAC(), ethPkt.getDestinationMAC());
@@ -589,6 +581,33 @@ public class ReactiveForwarding {
             installRule(context, path.src().port(), macMetrics);
         }
 
+        private long getVportLoadCapability(ConnectPoint connectPoint) {
+            long vportCurSpeed = statisticService.vportload(connectPoint).rate() * 8;
+            return vportCurSpeed;
+        }
+
+        private long getVportMaxCapability(ConnectPoint connectPoint) {
+            Port port = deviceService.getPort(connectPoint.deviceId(), connectPoint.port());
+            long vportMaxSpeed = port.portSpeed() * 1000 * 1000;  //Bps
+            return vportMaxSpeed;
+        }
+
+        private long getIntraLinkLoadBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+            return Long.min(getVportLoadCapability(srcConnectPoint), getVportLoadCapability(dstConnectPoint));
+        }
+
+        private long getIntraLinkMaxBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+            return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
+        }
+
+        private long getIntraLinkRestBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+            return getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint) - getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint);
+        }
+
+        private Double getIntraLinkCapability(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+            return (Double.valueOf(getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint)) / Double.valueOf(getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint)) * 100);
+        }
+
         private synchronized Set<Path> myUpdatePaths(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1) {
             //flowStatisticService.loadSummaryPortInternal()
             Set<Path> result = new HashSet<>();
@@ -596,49 +615,25 @@ public class ReactiveForwarding {
             int i=0;
             int max_index = 0;
             long max_rate = 0;
-
             String sql = null;
             DBHelper db1 = null;
             ResultSet ret = null;
 
-
-            sql = "select * from Student";//SQL语句
-            db1 = new DBHelper(sql);//创建DBHelper对象
-            for(int kk=0; kk< 50; kk++){
-                log.info("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-            }
-            try {
-                ret = db1.pst.executeQuery();//执行语句，得到结果集
-                while (ret.next()) {
-                    String uid = ret.getString(1);
-                    String ufname = ret.getString(2);
-                    String no = ret.getString(3);
-
-                    log.info("kk" + uid + "\t" + ufname + "\t" + no + "\t"  );
-                }//显示数据
-                ret.close();
-                db1.close();//关闭连接
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
             for(Path path : paths){
                 int j=0;
                 indexPath.put(i, path);
-
-
-
-
                 for(Link link : path.links()){
 
-
-
-
-
-                    log.info("统计信息=====对于path " + i + " 的第 " + j + "条link的源节点： ");
+                    log.info("统计信息=====对于path " + i + " 的第 " + j + "条link： ");
+                    long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
+                    long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst());
+                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                    double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
+                    log.info("link的负载: " + IntraLinkLoadBw);
+                    log.info("link的最大带宽: " + IntraLinkMaxBw);
+                    log.info("link的剩余带宽: " + IntraLinkRestBw);
+                    log.info("link的带宽利用率: " + IntraLinkCapability);
                     SummaryFlowEntryWithLoad summaryFlowEntryWithLoad = flowStatisticService.loadSummaryPortInternal(link.src());
-                    //long rate = portStatisticsService.load(link.src()).rate();
-                    long rate = statisticService.load(link.src()).rate();
                     long latest = statisticService.load(link.src()).latest();
                     long epochtime = statisticService.load(link.src()).time();
                     long pr = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsReceived();
@@ -649,61 +644,8 @@ public class ReactiveForwarding {
                     log.info("packet_sended: " + ps);
                     log.info("rx_dropped: " + rx_dropped);
                     log.info("tx_dropped: " + tx_dropped);
-                    log.info("这个端点的流速rate: " + rate);
-                    log.info("这个端点的latest: " + latest);
-                    log.info("这个端点的epochtime: " + epochtime);
-                    double pk_loss = 0;
-                    if((pr+ps) != 0){
-                        pk_loss = (double)(rx_dropped+tx_dropped)/(pr+ps);
-                    }
-                    log.info("源节点丢包率： " + pk_loss);
-                    log.info("TotalLoad: " + summaryFlowEntryWithLoad.totalLoad().rate());
-
-
-
-
-
-
-
-                    log.info("统计信息=====对于path " + i + " 的第 " + j + "条link的目的节点： ");
-                    SummaryFlowEntryWithLoad summaryFlowEntryWithLoad1 = flowStatisticService.loadSummaryPortInternal(link.dst());
-                    //long rate = portStatisticsService.load(link.src()).rate();
-                    long rate1 = statisticService.load(link.dst()).rate();
-                    long latest1 = statisticService.load(link.dst()).latest();
-                    long epochtime1 = statisticService.load(link.dst()).time();
-                    long pr1 = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
-                    long ps1 = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
-                    long rx_dropped1 = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
-                    //Returns the number of packets dropped by TX.
-                    long tx_dropped1 = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
-                    log.info("packet_received: " + pr1);
-                    log.info("packet_sended: " + ps1);
-                    log.info("rx_dropped: " + rx_dropped1);
-                    log.info("tx_dropped: " + tx_dropped1);
-                    log.info("这个端点的流速rate: " + rate1);
-                    log.info("这个端点的latest: " + latest1);
-                    log.info("这个端点的epochtime: " + epochtime1);
-                    double pk_loss1 = 0;
-                    if((pr+ps) != 0){
-                        pk_loss1 = (double)(rx_dropped1+tx_dropped1)/(pr1+ps1);
-                    }
-                    log.info("目的节点节点丢包率： " + pk_loss1);
-
-
-
-                    //这里可以适配不同的策略
-                    //先用path中最大rate那个link代表path的权重吧
-//                    long maxPathRate = statisticService.load(statisticService.max(path)).rate();
-//
-//                    if(maxPathRate >= max_rate){
-//                        max_rate = maxPathRate;
-//                        max_index = i;
-//                    }
-
-
-
-
-
+                    long rx_tx_dropped = tx_dropped+rx_dropped;
+                    log.info("link丢包数： " + rx_tx_dropped);
 
                     j++;
                 }
@@ -756,6 +698,7 @@ public class ReactiveForwarding {
     private void packetOut(PacketContext context, PortNumber portNumber, ReactiveForwardMetrics macMetrics) {
         replyPacket(macMetrics);
         context.treatmentBuilder().setOutput(portNumber);
+        //OpenFlowCorePacketContext.send()
         context.send();
     }
 

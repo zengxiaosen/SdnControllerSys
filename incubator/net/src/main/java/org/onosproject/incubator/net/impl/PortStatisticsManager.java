@@ -73,6 +73,7 @@ public class PortStatisticsManager implements PortStatisticsService {
         log.info("Stopped");
     }
 
+
     @Override
     public Load load(ConnectPoint connectPoint) {
         DataPoint c = current.get(connectPoint);

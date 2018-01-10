@@ -15,6 +15,9 @@
  */
 package org.onlab.graph;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Set;
@@ -26,9 +29,11 @@ import java.util.Set;
 public class DijkstraGraphSearch<V extends Vertex, E extends Edge<V>>
         extends AbstractGraphPathSearch<V, E> {
 
+    private static final Logger log = LoggerFactory.getLogger(DijkstraGraphSearch.class);
     @Override
     protected Result<V, E> internalSearch(Graph<V, E> graph, V src, V dst,
                                EdgeWeigher<V, E> weigher, int maxPaths) {
+
 
         // Use the default result to remember cumulative costs and parent
         // edges to each each respective vertex.

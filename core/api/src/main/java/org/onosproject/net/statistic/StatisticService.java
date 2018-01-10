@@ -31,6 +31,8 @@ import java.util.Optional;
  */
 public interface StatisticService {
 
+    Load vportload(ConnectPoint connectPoint);
+
     /**
      * Obtain the load for a the ingress to the given link.
      *

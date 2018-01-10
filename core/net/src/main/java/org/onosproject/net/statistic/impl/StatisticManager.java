@@ -27,6 +27,7 @@ import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.GroupId;
+import org.onosproject.incubator.net.PortStatisticsService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
@@ -63,6 +64,9 @@ public class StatisticManager implements StatisticService {
     private final Logger log = getLogger(getClass());
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PortStatisticsService portStatisticsService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -82,6 +86,11 @@ public class StatisticManager implements StatisticService {
     public void deactivate() {
         flowRuleService.removeListener(listener);
         log.info("Stopped");
+    }
+
+    @Override
+    public Load vportload(ConnectPoint connectPoint) {
+        return portStatisticsService.load(connectPoint);
     }
 
     @Override

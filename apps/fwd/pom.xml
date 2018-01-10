@@ -62,15 +62,91 @@
             <artifactId>onos-cli</artifactId>
             <version>${project.version}</version>
         </dependency>
+<!--onos-incubator-api PortStatisticService -->
         <dependency>
             <groupId>org.onosproject</groupId>
-            <artifactId>onos-incubator</artifactId>
+            <artifactId>onos-incubator-api</artifactId>
             <version>1.9.3-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.containers</groupId>
+            <artifactId>jersey-container-servlet-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-core-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-app-routing-api</artifactId>
+            <version>1.9.3-SNAPSHOT</version>
+        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>org.onosproject</groupId>-->
+            <!--<artifactId>onos-incubator-core</artifactId>-->
+            <!--<version>1.9.3-SNAPSHOT</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.onosproject</groupId>-->
+            <!--<artifactId>onos-incubator-grpc</artifactId>-->
+            <!--<version>1.9.3-SNAPSHOT</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.onosproject</groupId>-->
+            <!--<artifactId>onos-incubator-grpc-dependencies</artifactId>-->
+            <!--<version>1.9.3-SNAPSHOT</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.onosproject</groupId>-->
+            <!--<artifactId>onos-incubator-net</artifactId>-->
+            <!--<version>1.9.3-SNAPSHOT</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.onosproject</groupId>-->
+            <!--<artifactId>onos-incubator-protobuf</artifactId>-->
+            <!--<version>1.9.3-SNAPSHOT</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.onosproject</groupId>-->
+            <!--<artifactId>onos-incubator-protobuf-dependencies</artifactId>-->
+            <!--<version>1.9.3-SNAPSHOT</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.onosproject</groupId>-->
+            <!--<artifactId>onos-incubator-protobuf-nb</artifactId>-->
+            <!--<version>1.9.3-SNAPSHOT</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.onosproject</groupId>-->
+            <!--<artifactId>onos-incubator-rpc</artifactId>-->
+            <!--<version>1.9.3-SNAPSHOT</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.onosproject</groupId>-->
+            <!--<artifactId>onos-incubator-rpc-grpc</artifactId>-->
+            <!--<version>1.9.3-SNAPSHOT</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.onosproject</groupId>-->
+            <!--<artifactId>onos-incubator-rpc-nb</artifactId>-->
+            <!--<version>1.9.3-SNAPSHOT</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.onosproject</groupId>-->
+            <!--<artifactId>onos-incubator-store</artifactId>-->
+            <!--<version>1.9.3-SNAPSHOT</version>-->
+        <!--</dependency>-->
+
+
+
+
+
         <dependency>
             <groupId>org.apache.karaf.shell</groupId>
             <artifactId>org.apache.karaf.shell.console</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.scr.annotations</artifactId>

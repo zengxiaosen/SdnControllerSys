@@ -30,6 +30,7 @@
     <description>ONOS sample applications</description>
 
     <modules>
+        <module>oxp</module>
         <module>acl</module>
         <module>roadm</module>
         <module>faultmanagement</module>
@@ -94,6 +95,13 @@
     </properties>
 
     <dependencies>
+        <!--<dependency>-->
+            <!--<groupId>org.onosproject</groupId>-->
+            <!--<artifactId>onos-incubator</artifactId>-->
+            <!--<version>1.9.3-SNAPSHOT</version>-->
+        <!--</dependency>-->
+
+
         <dependency>
             <groupId>org.onosproject</groupId>
             <artifactId>onos-api</artifactId>

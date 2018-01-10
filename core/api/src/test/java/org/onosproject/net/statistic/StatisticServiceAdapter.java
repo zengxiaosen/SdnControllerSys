@@ -30,6 +30,11 @@ import java.util.Optional;
  */
 public class StatisticServiceAdapter implements StatisticService {
     @Override
+    public Load vportload(ConnectPoint connectPoint) {
+        return null;
+    }
+
+    @Override
     public Load load(Link link) {
         return null;
     }

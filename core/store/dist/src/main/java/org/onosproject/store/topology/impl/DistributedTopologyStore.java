@@ -217,7 +217,7 @@ public class DistributedTopologyStore
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst) {
 
-        for(int i=0; i<30; i++){
+        for(int i=0; i<5; i++){
             log.info("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh");
         }
 

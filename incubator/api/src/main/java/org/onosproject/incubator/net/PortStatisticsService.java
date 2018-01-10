@@ -18,11 +18,12 @@ package org.onosproject.incubator.net;
 import com.google.common.annotations.Beta;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.statistic.Load;
+import org.osgi.service.component.annotations.Component;
 
 /**
  * Service for obtaining statistic information about device ports.
  */
-@Beta
+//@Beta
 public interface PortStatisticsService {
 
     /**
