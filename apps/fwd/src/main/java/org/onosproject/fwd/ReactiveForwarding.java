@@ -24,18 +24,7 @@ import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
-import org.onlab.packet.Ethernet;
-import org.onlab.packet.ICMP;
-import org.onlab.packet.ICMP6;
-import org.onlab.packet.IPv4;
-import org.onlab.packet.IPv6;
-import org.onlab.packet.Ip4Prefix;
-import org.onlab.packet.Ip6Prefix;
-import org.onlab.packet.MacAddress;
-import org.onlab.packet.TCP;
-import org.onlab.packet.TpPort;
-import org.onlab.packet.UDP;
-import org.onlab.packet.VlanId;
+import org.onlab.packet.*;
 import org.onlab.util.KryoNamespace;
 import org.onlab.util.Tools;
 import org.onosproject.cfg.ComponentConfigService;
@@ -450,6 +439,10 @@ public class ReactiveForwarding {
         log.info("Configured. Flow Priority is configured to {}", flowPriority);
     }
 
+
+
+
+
     /**
      * Packet processor responsible for forwarding packets along their paths.
      */
@@ -462,6 +455,13 @@ public class ReactiveForwarding {
             if (context.isHandled()) {
                 return;
             }
+
+            /**
+             *
+             * 收集网络信息
+             * Packet_In 消息 上报
+             *
+             */
 
             InboundPacket pkt = context.inPacket();
             Ethernet ethPkt = pkt.parsed();
@@ -505,6 +505,8 @@ public class ReactiveForwarding {
                 }
             }
             Host src = hostService.getHost(id_src);
+
+
             // Do we know who this is for? If not, flood and bail.
             Host dst = hostService.getHost(id);
             if (dst == null) {
@@ -512,12 +514,36 @@ public class ReactiveForwarding {
                 return;
             }
 
+
+            /**
+             * 测试case： 取ip地址
+             */
+
+//            for(int i=0; i< 5; i++){
+//                log.info("===ipv4地址！！！！！===================");
+//            }
+//
+//            Set<IpAddress> result_src = dst.ipAddresses();
+//            for(IpAddress ipAddress : result_src){
+//                String ipV4String = ipAddress.getIp4Address().toString();
+//                log.info(ipV4String);
+//            }
+//
+//            for(int i=0; i< 5; i++){
+//                log.info("==ipv4地址！！！！！=========================");
+//            }
+
+
+
+
             // Are we on an edge switch that our destination is on? If so,
             // simply forward out to the destination and bail.
 
-            log.info("---------------------------　一次选路信息　------------------------");
+            log.info("---------------------------　每一次选路信息　------------------------");
             log.info("源host:"+ id_src.mac().toString());
             log.info("目的host:"+ id.mac().toString());
+
+
 
 
             // 从同一个交换机进去和出去
@@ -538,32 +564,52 @@ public class ReactiveForwarding {
 
             // Otherwise, get a set of paths that lead from here to the
             // destination edge switch.
-            // 保留了dijkstra，要用的话请把一下注释删掉用
             Set<Path> paths =
                     topologyService.getPaths(topologyService.currentTopology(),
                                              pkt.receivedFrom().deviceId(),
                                              dst.location().deviceId());
 
-             //搭建了胖树拓扑
+            /**
+             * 负载均衡决策模块
+             * 选出TopK的决策路径
+             * 目前版本：决策出最佳路径： 1条
+             */
+
+            /**
+             *
+             * 配合mininet
+             * 此topologyService的getPaths1实现了
+             * 拓扑管理模块 和 拓扑计算模块
+             * 通过 IOC 技术继承进负载均衡模块当中
+             *
+             * 拓扑管理模块底层依赖 链路发现模块 传递的信息，方法： IOC 技术
+             *
+             */
 //            Set<Path> paths =
 //                    topologyService.getPaths1(topologyService.currentTopology(),
 //                            pkt.receivedFrom().deviceId(),
 //                            dst.location().deviceId(),
 //                            src.location().deviceId());
+//            flowStatisticService.loadSummary(null);
 
-            //flowStatisticService.loadSummary(null);
 
             Set<Path> ChoicedPaths = myUpdatePaths(paths, pkt.receivedFrom().deviceId(),
                     dst.location().deviceId(),
                     src.location().deviceId());
 
-            // 在这里看下是否可以加入带宽等信息
 
             if (paths.isEmpty()) {
                 // If there are no paths, flood and bail.
                 flood(context, macMetrics);
                 return;
             }
+
+            /**
+             *
+             * 根据负载均衡策略模块的结果
+             * 执行流表下发模块
+             *
+             */
 
             // Otherwise, pick a path that does not lead back to where we
             // came from; if no such path, flood and bail.
@@ -577,18 +623,27 @@ public class ReactiveForwarding {
                 return;
             }
 
+
             // Otherwise forward and be done with it.
             installRule(context, path.src().port(), macMetrics);
         }
 
         private long getVportLoadCapability(ConnectPoint connectPoint) {
-            long vportCurSpeed = statisticService.vportload(connectPoint).rate() * 8;
+            long vportCurSpeed = 0;
+            if(connectPoint != null){
+                //rate : bytes/s result : b/s
+                vportCurSpeed = statisticService.vportload(connectPoint).rate();
+            }
             return vportCurSpeed;
         }
 
         private long getVportMaxCapability(ConnectPoint connectPoint) {
             Port port = deviceService.getPort(connectPoint.deviceId(), connectPoint.port());
-            long vportMaxSpeed = port.portSpeed() * 1000 * 1000;  //Bps
+            long vportMaxSpeed = 0;
+            if(connectPoint != null){
+                vportMaxSpeed = port.portSpeed() * 1000000;  //portSpeed Mbps result : bps
+            }
+
             return vportMaxSpeed;
         }
 
@@ -609,46 +664,225 @@ public class ReactiveForwarding {
         }
 
         private synchronized Set<Path> myUpdatePaths(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1) {
+
+            /**
+             *
+             * flowStatisticService 是信息统计模块，
+             * 这里通过 IOC 技术注入到 负载均衡决策模块，
+             *
+             * Set<Path> paths 是 拓扑计算模块 根据源目ip 计算拓扑中此 (src, dst)对的所有等价路径
+             * topologyService 拓扑计算模块 是通过 IOC 技术注入到 伏在均衡决策模块
+             *
+             *
+             */
+
             //flowStatisticService.loadSummaryPortInternal()
             Set<Path> result = new HashSet<>();
             Map<Integer, Path> indexPath = new LinkedHashMap<>();
+
+            /**
+             *
+             *  数据库的IO：
+             *
+             *  实时监控数据
+             *  选路决策数据
+             *  历史流的数据
+             *  效果数据
+             *
+             *
+             */
             int i=0;
-            int max_index = 0;
-            long max_rate = 0;
             String sql = null;
             DBHelper db1 = null;
             ResultSet ret = null;
 
+            /**
+             *
+             * 对多条等价路径进行选路决策
+             *
+             */
+
             for(Path path : paths){
+
                 int j=0;
                 indexPath.put(i, path);
+                int rPathLength = path.links().size();
+
+
+                /**
+                 *
+                 *  FESM - TrustCom
+                 *
+                 *  since a path is composed by many switches and links,
+                 *  the average or the total traffic can't not reflect the real status of
+                 *  the path, so the critical switch and link will be selected to represent the status of the path
+                 *
+                 *
+                 *  the traffic of switch will be messured by packet count and byte count forward by switch.
+                 *  the traffic of link will be messured by the conrresponding port forwarding rate
+                 *
+                 *
+                 *  U = (h, p, b, r)
+                 *
+                 */
+                long pObject = 0;
+                long bObject = 0;
+                long rObject = 0;
                 for(Link link : path.links()){
 
                     log.info("统计信息=====对于path " + i + " 的第 " + j + "条link： ");
+
+                    /**
+                     * 链路link 信息监控
+                     *
+                     * "link的负载(bps): " + IntraLinkLoadBw
+                     * "link的最大带宽(bps): " + IntraLinkMaxBw
+                     * "link的剩余带宽(bps): " + IntraLinkRestBw
+                     * "link的带宽利用率(bps): " + IntraLinkCapability
+                     *
+                     *
+                     */
+
                     long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
-                    long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst());
+                    long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
                     long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
                     double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
-                    log.info("link的负载: " + IntraLinkLoadBw);
-                    log.info("link的最大带宽: " + IntraLinkMaxBw);
-                    log.info("link的剩余带宽: " + IntraLinkRestBw);
-                    log.info("link的带宽利用率: " + IntraLinkCapability);
-                    SummaryFlowEntryWithLoad summaryFlowEntryWithLoad = flowStatisticService.loadSummaryPortInternal(link.src());
-                    long latest = statisticService.load(link.src()).latest();
-                    long epochtime = statisticService.load(link.src()).time();
-                    long pr = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsReceived();
-                    long ps = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsSent();
-                    long rx_dropped = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
-                    long tx_dropped = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
-                    log.info("packet_received: " + pr);
-                    log.info("packet_sended: " + ps);
-                    log.info("rx_dropped: " + rx_dropped);
-                    log.info("tx_dropped: " + tx_dropped);
-                    long rx_tx_dropped = tx_dropped+rx_dropped;
-                    log.info("link丢包数： " + rx_tx_dropped);
+                    log.info("link的负载(bps): " + IntraLinkLoadBw);
+                    log.info("link的最大带宽(bps): " + IntraLinkMaxBw);
+                    log.info("link的剩余带宽(bps): " + IntraLinkRestBw);
+                    log.info("link的带宽利用率(bps): " + IntraLinkCapability);
+
+
+
+//                    SummaryFlowEntryWithLoad summaryFlowEntryWithLoad = flowStatisticService.loadSummaryPortInternal(link.src());
+//                    long latest = statisticService.load(link.src()).latest();
+//                    long epochtime = statisticService.load(link.src()).time();
+
+
+                    /**
+                     * link 源端口和目的端口 信息监控
+                     */
+
+                    /**
+                     * src
+                     *
+                     * some statistic of the src of this link:
+                     *
+                     * packetsReceived_src
+                     * packetsSent_src
+                     * bytesReceived_src
+                     * bytesSent_src
+                     * rx_dropped_src
+                     * tx_dropped_src
+                     * rx_tx_dropped_src
+                     */
+                    long packetsReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsReceived();
+                    long packetsSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsSent();
+                    long bytesReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesReceived();
+                    long bytesSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
+                    long rx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
+                    long tx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
+                    long rx_tx_dropped_src = rx_dropped_src+tx_dropped_src;
+
+                    /**
+                     * dst
+                     *
+                     * some statistic of the dst of this link:
+                     *
+                     * packetsReceived_dst
+                     * packetsSent_dst
+                     * bytesReceived_dst
+                     * bytesSent_dst
+                     * rx_dropped_dst
+                     * tx_dropped_dst
+                     * rx_tx_dropped_dst
+                     */
+                    long packetsReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
+                    long packetsSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
+                    long bytesReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
+                    long bytesSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesSent();
+                    long rx_dropped_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
+                    long tx_dropped_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
+                    log.info("packetsReceived_src: " + packetsReceived_src);
+                    log.info("packetsSent_src: " + packetsSent_src);
+                    log.info("bytesReceived_src(bytes): " + bytesReceived_src);
+                    log.info("bytesSent_src(bytes): " + bytesSent_src);
+                    log.info("rx_dropped_dst: " + rx_dropped_dst);
+                    log.info("tx_dropped_dst: " + tx_dropped_dst);
+                    long rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
+
+                    /**
+                     * U = (h, p, b, r)
+                     * h denotes the hop count
+                     * p denotes the transmitting packet count
+                     * b denotes the byte count of the critical
+                     * r denotes the forwarding rate of the critical port
+                     */
+                    if(IntraLinkLoadBw > rObject){
+                        pObject = Math.max(packetsSent_src, packetsReceived_dst);
+                        bObject = Math.max(bytesSent_src, bytesReceived_dst);
+                        rObject = IntraLinkLoadBw;
+                    }
 
                     j++;
                 }
+
+                /**
+                 * U = (h, p, b, r) ： 一条路径
+                 * h: hObject
+                 * p: pObject
+                 * b: bObject
+                 * r: rObject
+                 */
+                long hObject = (long)rPathLength;
+
+                /**
+                 * 特征工程
+                 * rh = 1.0/(e^h)
+                 * rp = 1.0/log(p+0.1)
+                 * rb = 1.0/log(b+0.1)
+                 * rr = 1.0/(1+e^(-r/50.0))
+                 *
+                 * so:
+                 *
+                 * the matrix R can be presented as the column vector for one path:
+                 * R = (rh, rp, rb, rr)
+                 *
+                 *
+                 */
+
+
+                double rh = 1.0 / (double)(Math.exp((double)hObject));
+                double rp = 1.0 / (double)(Math.log((double)(pObject + 0.1)));
+                double rb = 1.0 / (double)(Math.log((double)(bObject + 0.1)));
+                double rr = 1.0 / (double)(1 + Math.exp((double)((0-rObject) / 50.0)));
+
+                /**
+                 *
+                 *
+                 * B = (b1, b2, ..., bm)
+                 * B = AOR
+                 *
+                 * A = (a1, a2, ..., an)
+                 *
+                 * R = (rh, rp, rb, rr)
+                 *   = (0.4, 0.15, 0.15, 0.3)
+                 *
+                 */
+
+                double a1 = 0.4;
+                double a2 = 0.15;
+                double a3 = 0.15;
+                double a4 = 0.3;
+
+                double b1 = a1 * rh;
+                double b2 = a2 * rp;
+                double b3 = a3 * rb;
+                double b4 = a4 * rr;
+
+
+
+
                 i++;
             }
 

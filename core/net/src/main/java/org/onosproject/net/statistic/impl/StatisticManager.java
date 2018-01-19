@@ -43,10 +43,7 @@ import org.onosproject.net.statistic.StatisticService;
 import org.onosproject.net.statistic.StatisticStore;
 import org.slf4j.Logger;
 
-import java.util.Collections;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -192,6 +189,29 @@ public class StatisticManager implements StatisticService {
 
         return new DefaultLoad(aggregate(stats.current), aggregate(stats.previous));
     }
+
+//    private HashMap<FlowEntry, Long> flow_rate_interval(ConnectPoint connectPoint){
+//        Statistics stats = getStatistics(connectPoint);
+//        ImmutableSet<FlowEntry> allFlow_cur = stats.current;
+//        ImmutableSet<FlowEntry> allFlow_previous = stats.previous;
+//        HashMap<FlowEntry, Long> result = new HashMap<>();
+//        for(FlowEntry flowEntry : allFlow_cur){
+//            //只要在allFlow_previous
+//            if(allFlow_previous.contains(flowEntry)){
+//                long cur_bytes = flowEntry.bytes();
+//                for(FlowEntry flowEntry_pre : allFlow_previous){
+//                    //在FlowEntry class中重写hashcode 判断hashcode是否相同
+//                    long pre_bytes = flowEntry_pre.bytes();
+//                    long interval_bytes = cur_bytes - pre_bytes;
+//                    long rate_interval = interval_bytes / 10;
+//                    result.put(flowEntry, rate_interval);
+//                }
+//            }
+//        }
+//        return result;
+//    }
+
+
 
     /**
      * Returns statistics of the specified port.
