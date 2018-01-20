@@ -471,7 +471,14 @@ public class TrafficMonitor extends AbstractTopoMonitor {
         });
     }
 
+    /**
+     * 把值传给页面
+     * @param link
+     * @return
+     */
     private Load getLinkFlowLoad(Link link) {
+
+
         if (link != null && link.src().elementId() instanceof DeviceId) {
             return servicesBundle.flowStatsService().load(link);
         }
@@ -483,13 +490,55 @@ public class TrafficMonitor extends AbstractTopoMonitor {
         link.addLoad(getLinkFlowLoad(link.two()));
     }
 
+    /**
+     * 点击页面开启监控port的按钮
+     * 每5秒监控一次网络拓扑，采集各链路link的信息，评价总体link负载的均衡度，丢包率等
+     * @param link
+     */
     private void attachPortLoad(TrafficLink link) {
         // For bi-directional traffic links, use
         // the max link rate of either direction
         // (we choose 'one' since we know that is never null)
         Link one = link.one();
+
+
         Load egressSrc = servicesBundle.portStatsService().load(one.src());
         Load egressDst = servicesBundle.portStatsService().load(one.dst());
+
+
+        /**
+         * /root/onos/web/gui/src/main/java/org/onosproject/ui/impl/TrafficMonitor.java
+         * test statistic
+         */
+
+
+        if(egressDst != null && egressSrc != null){
+            log.info("======");
+            log.info("one.src().deviceId() : " + one.src().deviceId().toString());
+            log.info("one.dst().deviceId() : " + one.dst().deviceId().toString());
+            log.info("one.src().port() : " + one.src().port().toString());
+            log.info("one.dst().port() : " + one.dst().port().toString());
+            log.info("egressSrc.rate() : " + egressSrc.rate());
+            log.info("egressDst.rate() : " + egressDst.rate());
+            log.info("======");
+        }else{
+            /**
+             * load信息为空，此时设置为0
+             */
+            log.info("======");
+            log.info("one.src().deviceId() : " + one.src().deviceId().toString());
+            log.info("one.dst().deviceId() : " + one.dst().deviceId().toString());
+            log.info("one.src().port() : " + one.src().port().toString());
+            log.info("one.dst().port() : " + one.dst().port().toString());
+            log.info("egressSrc.rate() : " + 0);
+            log.info("egressDst.rate() : " + 0);
+            log.info("======");
+        }
+
+
+
+
+
         link.addLoad(maxLoad(egressSrc, egressDst), BPS_THRESHOLD);
 //        link.addLoad(maxLoad(egressSrc, egressDst), 10);    // DEBUG ONLY!!
     }
@@ -640,6 +689,7 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                               boolean showTraffic) {
         if (links != null) {
             for (Link link : links) {
+
                 TrafficLink tlink = linkMap.add(link);
                 tlink.tagFlavor(flavor);
                 tlink.optical(isOptical);

@@ -557,17 +557,14 @@ public class ReactiveForwarding {
                 return;
             }
 
+
+
+
+
             /*
             注意：这里的src.location().deviceId()是边缘交换机，但是和Dijkstra的getPaths里面的src交换机地址不同
             因为getPaths的src交换机指的是此时发出packetIn的交换机
              */
-
-            // Otherwise, get a set of paths that lead from here to the
-            // destination edge switch.
-            Set<Path> paths =
-                    topologyService.getPaths(topologyService.currentTopology(),
-                                             pkt.receivedFrom().deviceId(),
-                                             dst.location().deviceId());
 
             /**
              * 负载均衡决策模块
@@ -585,6 +582,19 @@ public class ReactiveForwarding {
              * 拓扑管理模块底层依赖 链路发现模块 传递的信息，方法： IOC 技术
              *
              */
+
+
+
+
+
+            // Otherwise, get a set of paths that lead from here to the
+            // destination edge switch.
+            Set<Path> paths =
+                    topologyService.getPaths(topologyService.currentTopology(),
+                                             pkt.receivedFrom().deviceId(),
+                                             dst.location().deviceId());
+
+
 //            Set<Path> paths =
 //                    topologyService.getPaths1(topologyService.currentTopology(),
 //                            pkt.receivedFrom().deviceId(),
@@ -603,6 +613,9 @@ public class ReactiveForwarding {
                 flood(context, macMetrics);
                 return;
             }
+
+
+
 
             /**
              *
@@ -626,6 +639,17 @@ public class ReactiveForwarding {
 
             // Otherwise forward and be done with it.
             installRule(context, path.src().port(), macMetrics);
+
+
+            /**
+             * 评价指标监控计算模块 路径如下：
+             * /root/onos/web/gui/src/main/java/org/onosproject/ui/impl/TrafficMonitor.java
+             *
+             * 目前的评价指标有：
+             * 总体link负载的均衡度
+             * 丢包率
+             */
+
         }
 
         private long getVportLoadCapability(ConnectPoint connectPoint) {
@@ -679,7 +703,7 @@ public class ReactiveForwarding {
             //flowStatisticService.loadSummaryPortInternal()
             Set<Path> result = new HashSet<>();
             Map<Integer, Path> indexPath = new LinkedHashMap<>();
-
+            Path finalPath = paths.iterator().next();
             /**
              *
              *  数据库的IO：
@@ -701,7 +725,7 @@ public class ReactiveForwarding {
              * 对多条等价路径进行选路决策
              *
              */
-
+            double maxScore = 0.0;
             for(Path path : paths){
 
                 int j=0;
@@ -754,7 +778,10 @@ public class ReactiveForwarding {
 
 
 
-//                    SummaryFlowEntryWithLoad summaryFlowEntryWithLoad = flowStatisticService.loadSummaryPortInternal(link.src());
+                    SummaryFlowEntryWithLoad summaryFlowEntryWithLoad = flowStatisticService.loadSummaryPortInternal(link.src());
+//                    for(int i1=0; i1<30; i1++){
+//                        log.info("kkkkkkkkkkkkkkkkk" + summaryFlowEntryWithLoad.getTotalLoad().rate() + " ");
+//                    }
 //                    long latest = statisticService.load(link.src()).latest();
 //                    long epochtime = statisticService.load(link.src()).time();
 
@@ -880,13 +907,18 @@ public class ReactiveForwarding {
                 double b3 = a3 * rb;
                 double b4 = a4 * rr;
 
+                double resultScore = b1 + b2 + b3 + b4;
+                if(resultScore > maxScore){
+                    finalPath = path;
+                }
 
 
 
                 i++;
             }
 
-            result.add(indexPath.get(0));
+            //result.add(indexPath.get(0));
+            result.add(finalPath);
             return result;
 
         }

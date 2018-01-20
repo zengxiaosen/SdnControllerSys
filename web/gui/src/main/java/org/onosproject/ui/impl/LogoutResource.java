@@ -27,6 +27,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 /**
+ * /root/onos/web/gui/src/main/java/org/onosproject/ui/impl/LogoutResource.java
  * Application upload resource.
  */
 @Path("logout")
