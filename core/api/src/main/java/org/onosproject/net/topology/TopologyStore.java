@@ -24,6 +24,7 @@ import org.onosproject.net.DisjointPath;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.store.Store;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
@@ -101,6 +102,8 @@ public interface TopologyStore extends Store<TopologyEvent, TopologyStoreDelegat
      */
     Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst);
     Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs);
+
+    LinkedList<Link> getAllPaths(Topology topology);
     /**
      * Computes and returns the set of shortest paths between src and dest.
      *

@@ -344,7 +344,11 @@ public class DefaultTopology extends AbstractModel implements Topology {
 
     public Set<Path> getPaths1(DeviceId src, DeviceId dst, DeviceId hs){
         //log.info("Topology端调用处1。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
-        return getPaths1(src, dst, linkWeight(), ALL_PATHS, hs);
+        return null;
+    }
+
+    public  LinkedList<Link> getAllPaths(){
+        return RealgetAllPaths();
     }
 
     /**
@@ -419,60 +423,37 @@ public class DefaultTopology extends AbstractModel implements Topology {
         return builder.build();
     }
 
-    //目前走的这个
 
-    public synchronized Set<Path> getPaths1(DeviceId src, DeviceId dst, LinkWeigher weigher,
-                              int maxPaths, DeviceId hs) {
-        //log.info("Topology端调用处2。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
-        for(int i=0; i< 5; i++){
-            log.info(".........................");
-        }
-        DefaultTopologyVertex srcV = new DefaultTopologyVertex(src);
-        DefaultTopologyVertex dstV = new DefaultTopologyVertex(dst);
+
+    /**
+     * 统计路径每link信息
+     * @return
+     */
+    public synchronized LinkedList<Link> RealgetAllPaths() {
+
+        /**
+         * result
+         */
+        LinkedList<Link> links = new LinkedList<Link>();
+
+        /**
+         * 得到所有的点
+         */
         Set<TopologyVertex> vertices = graph.getVertexes();
-        // src or dst not part of the current graph
-        if (!vertices.contains(srcV) || !vertices.contains(dstV)) {
-            return ImmutableSet.of();
-        }
-        log.info("验证上报packetIn的交换机："+src.toString()+ " , 源交换机： " + hs.toString()  + " , 目的交换机："+dst.toString()+")");
-        //        GraphPathSearch.Result<TopologyVertex, TopologyEdge> result =
-        //                graphPathSearch().search(graph, srcV, dstV, weigher, maxPaths);
-        Set<org.onlab.graph.Path<TopologyVertex, TopologyEdge>> myresult = mysearchPaths(graph, srcV, dstV, weigher, maxPaths, hs);
+        Set<TopologyEdge> edges = graph.getEdges();
 
-        ImmutableSet.Builder<Path> builder = ImmutableSet.builder();
-        // Set<Path<V, E>> paths();
+        for(TopologyEdge edge : edges){
+            Link link = edge.link();
+            links.add(link);
 
-
-        //展示
-        int j=1;
-        log.info("遍历取出的所有path, " + "path的数量是：" + myresult.size());
-        for (org.onlab.graph.Path<TopologyVertex, TopologyEdge> path : myresult) {
-            log.info("第 " + j + "条path "+"..........."+path.toString());
-
-            for (TopologyEdge e : path.edges()) {
-                log.info("edge src,dst:" + e.link().src().deviceId().toString() + "," + e.link().dst().deviceId().toString());
-            }
-            //builder.add(networkPath(path));
-            j++;
         }
 
+        return links;
 
-
-        //Set<org.onlab.graph.Path<TopologyVertex, TopologyEdge>> myChoicedResult = myChoicedPaths(graph, srcV, dstV, hs, myresult);
-
-
-        //在这里需要有选择的选路！，目前是遍历 v1
-        for (org.onlab.graph.Path<TopologyVertex, TopologyEdge> path : myresult) {
-
-            builder.add(networkPath(path));
-        }
-
-
-        for(int i=0; i< 5; i++){
-            log.info(".........................");
-        }
-        return builder.build();
     }
+
+
+
 
 
 

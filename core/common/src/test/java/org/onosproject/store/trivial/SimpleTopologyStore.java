@@ -40,6 +40,7 @@ import org.onosproject.net.topology.TopologyStoreDelegate;
 import org.onosproject.store.AbstractStore;
 import org.slf4j.Logger;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -96,6 +97,10 @@ public class SimpleTopologyStore
         return defaultTopology(topology).getCluster(clusterId);
     }
 
+    @Override
+    public LinkedList<Link> getAllPaths(Topology topology){
+        return null;
+    }
     @Override
     public Set<DeviceId> getClusterDevices(Topology topology, TopologyCluster cluster) {
         return defaultTopology(topology).getClusterDevices(cluster);

@@ -32,10 +32,7 @@ import org.onosproject.net.provider.AbstractProviderService;
 import org.onosproject.net.topology.*;
 import org.slf4j.Logger;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.Map;
+import java.util.*;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onosproject.net.topology.AdapterLinkWeigher.adapt;
@@ -151,6 +148,12 @@ public class TopologyManager
         //log.info("到目前为止hs的size: " + hs.size());
         return result;
         //return store.getPaths(topology, src, dst);
+    }
+
+    @Override
+    public synchronized LinkedList<Link> getAllPaths(Topology topology){
+        LinkedList<Link> links = store.getAllPaths(topology);
+        return links;
     }
 
     @Override

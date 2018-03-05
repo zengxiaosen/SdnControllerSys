@@ -21,6 +21,7 @@ import org.onosproject.net.DisjointPath;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
 
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,6 +34,10 @@ public class TopologyServiceAdapter implements TopologyService {
         return null;
     }
 
+    @Override
+    public LinkedList<Link> getAllPaths(Topology topology){
+        return null;
+    }
     @Override
     public boolean isLatest(Topology topology) {
         return false;

@@ -62,12 +62,7 @@ import org.onosproject.store.service.StorageService;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 
-import java.util.Collections;
-import java.util.Dictionary;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -231,6 +226,14 @@ public class DistributedTopologyStore
         //return defaultTopology(topology).getPaths(src, dst);
         return defaultTopology(topology).getPaths1(src, dst, hs);
     }
+
+    @Override
+    public LinkedList<Link> getAllPaths(Topology topology){
+        return defaultTopology(topology).getAllPaths();
+    }
+
+
+
 
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst,

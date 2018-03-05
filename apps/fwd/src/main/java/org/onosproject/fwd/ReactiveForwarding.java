@@ -32,6 +32,7 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.event.Event;
 import org.onosproject.net.*;
+import org.onosproject.net.topology.TopologyEdge;
 import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultTrafficSelector;
@@ -584,8 +585,8 @@ public class ReactiveForwarding {
              */
 
 
-
-
+/////////////////////////////////////////////////////////////////-just a test
+            Set<TopologyEdge> topologyEdgeset = null;
 
             // Otherwise, get a set of paths that lead from here to the
             // destination edge switch.
@@ -649,6 +650,19 @@ public class ReactiveForwarding {
              * 总体link负载的均衡度
              * 丢包率
              */
+
+            LinkedList<Link> LinksResult = topologyService.getAllPaths(topologyService.currentTopology());
+
+            /**
+             * show
+             */
+            for(Link link : LinksResult){
+                //
+                for(int i = 0; i< 50; i++){
+                    log.info(link.src().deviceId().toString() + " ===== " + link.dst().deviceId().toString());
+                }
+
+            }
 
         }
 

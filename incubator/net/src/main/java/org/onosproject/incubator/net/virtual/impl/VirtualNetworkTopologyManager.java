@@ -37,6 +37,7 @@ import org.onosproject.net.topology.TopologyGraph;
 import org.onosproject.net.topology.TopologyListener;
 import org.onosproject.net.topology.TopologyService;
 
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -87,6 +88,10 @@ public class VirtualNetworkTopologyManager
         return new DefaultTopology(PID, graph);
     }
 
+    @Override
+    public LinkedList<Link> getAllPaths(Topology topology){
+        return null;
+    }
     @Override
     public boolean isLatest(Topology topology) {
         Topology currentTopology = currentTopology();

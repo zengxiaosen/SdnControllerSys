@@ -22,6 +22,7 @@ import org.onosproject.net.DisjointPath;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
 
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
@@ -100,7 +101,7 @@ public interface TopologyService
      */
     Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst);
     Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs);
-
+    LinkedList<Link> getAllPaths(Topology topology);
 
     /**
      * Returns the set of all shortest paths, computed using the supplied
@@ -117,6 +118,8 @@ public interface TopologyService
     @Deprecated
     Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst,
                        LinkWeight weight);
+
+
 
     /**
      * Returns the set of all shortest paths, computed using the supplied
