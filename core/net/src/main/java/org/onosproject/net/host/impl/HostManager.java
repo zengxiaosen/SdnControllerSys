@@ -338,13 +338,13 @@ public class HostManager
             checkNotNull(hostId, HOST_ID_NULL);
             checkValidity();
             hostDescription = validateHost(hostDescription, hostId);
-            for(int i=0; i<3; i++) {
-                log.info("hostDetected........");
-            }
+//            for(int i=0; i<3; i++) {
+//                log.info("hostDetected........");
+//            }
             hashSet.add(hostId.toString().trim());
 
-            log.info("到目前为止host的个数："+ hashSet.size());
-            log.info("hostId:"+hostId);
+//            log.info("到目前为止host的个数："+ hashSet.size());
+//            log.info("hostId:"+hostId);
             if (!allowDuplicateIps) {
                 removeDuplicates(hostId, hostDescription);
             }

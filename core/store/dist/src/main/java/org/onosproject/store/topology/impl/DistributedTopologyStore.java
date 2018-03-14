@@ -153,9 +153,7 @@ public class DistributedTopologyStore
 
     @Modified
     protected void modified(ComponentContext context) {
-        for(int i=0; i<500; i++){
-            log.info("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
-        }
+
         Dictionary<?, ?> properties = context.getProperties();
 
         String newLinkWeightFunction = get(properties, "linkWeightFunction");
@@ -212,19 +210,18 @@ public class DistributedTopologyStore
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst) {
 
-        for(int i=0; i<5; i++){
-            log.info("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh");
-        }
 
-        log.info("store端调用的是DistributedTopologyStore。。。getPaths。。。。。。。。。。。。。。。。。。。。。。。。。。");
+
+        //log.info("store端调用的是DistributedTopologyStore。。。getPaths。。。。。。。。。。。。。。。。。。。。。。。。。。");
         //return defaultTopology(topology).getPaths(src, dst);
         return defaultTopology(topology).getPaths(src, dst);
     }
     @Override
     public Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs){
-        log.info("store端调用的是DistributedTopologyStore。。。getPaths1。。。。。。。。。。。。。。。。。。。。。。。。。。");
+        //log.info("store端调用的是DistributedTopologyStore。。。getPaths1。。。。。。。。。。。。。。。。。。。。。。。。。。");
         //return defaultTopology(topology).getPaths(src, dst);
-        return defaultTopology(topology).getPaths1(src, dst, hs);
+        //return defaultTopology(topology).getPaths1(src, dst, hs);
+        return null;
     }
 
     @Override
@@ -238,9 +235,9 @@ public class DistributedTopologyStore
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst,
                               LinkWeight weight) {
-        for(int i=0; i<2; i++){
-            log.info("2是不是被调用了DistributedTopologyStore。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
-        }
+//        for(int i=0; i<2; i++){
+//            log.info("2是不是被调用了DistributedTopologyStore。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
+//        }
         return getPaths(topology, src, dst, adapt(weight));
     }
 

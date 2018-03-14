@@ -506,6 +506,7 @@ public class SimpleDeviceStore
 
     @Override
     public List<PortStatistics> getPortStatistics(DeviceId deviceId) {
+
         Map<PortNumber, PortStatistics> portStats = devicePortStats.get(deviceId);
         if (portStats == null) {
             return Collections.emptyList();

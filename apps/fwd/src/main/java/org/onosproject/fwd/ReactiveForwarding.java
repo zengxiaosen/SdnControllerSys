@@ -72,11 +72,13 @@ import org.onosproject.store.service.MultiValuedTimestamp;
 import org.osgi.service.jdbc.DataSourceFactory;
 //import org.onosproject.incubator.net.PortStatisticsService;
 import org.slf4j.Logger;
+//import redis.clients.jedis.Jedis;
 //import org.onosproject.incubator.net.PortStatisticsService;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.util.*;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
@@ -444,10 +446,95 @@ public class ReactiveForwarding {
 
 
 
+
     /**
      * Packet processor responsible for forwarding packets along their paths.
      */
     private class ReactivePacketProcessor implements PacketProcessor {
+
+        /**
+         * 自研统计模块
+         * 对端口带宽的统计信息
+         * @param connectPoint
+         * @return
+         */
+
+
+        private long getVportLoadCapability(ConnectPoint connectPoint) {
+            long vportCurSpeed = 0;
+            if(connectPoint != null && statisticService.vportload(connectPoint) != null){
+                //rate : bytes/s result : b/s
+                vportCurSpeed = statisticService.vportload(connectPoint).rate() ;
+            }
+            return vportCurSpeed;
+        }
+
+        /**
+         * 这个方法是用来设定link最大的负载能达到多少
+         * @param connectPoint
+         * @return
+         */
+        //current port speed 应该是现在的port的流速，但onos代码有bug.....一直显示10G，没有任何变化
+        //目前解决这个bug的办法，在mininet设定带宽最大只能是100Mbps
+        private long getVportMaxCapability(ConnectPoint connectPoint) {
+            Port port = deviceService.getPort(connectPoint.deviceId(), connectPoint.port());
+            long vportMaxSpeed = 0;
+            if(connectPoint != null){
+                //vportMaxSpeed = port.portSpeed() * 1000000;  //portSpeed Mbps result : bps
+                vportMaxSpeed = 100*1000000;
+            }
+
+            return vportMaxSpeed;
+        }
+
+        /**
+         *
+         * @param srcConnectPoint
+         * @param dstConnectPoint
+         * @return
+         */
+        private long getIntraLinkLoadBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+            return Long.min(getVportLoadCapability(srcConnectPoint), getVportLoadCapability(dstConnectPoint));
+        }
+
+        /**
+         *
+         * @param srcConnectPoint
+         * @param dstConnectPoint
+         * @return
+         */
+        private long getIntraLinkMaxBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+            return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
+        }
+
+        /**
+         *
+         * @param srcConnectPoint
+         * @param dstConnectPoint
+         * @return
+         */
+        private long getIntraLinkRestBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+            return getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint) - getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint);
+        }
+
+        /**
+         *
+         * @param srcConnectPoint
+         * @param dstConnectPoint
+         * @return
+         */
+
+        private Double getIntraLinkCapability(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+            return (Double.valueOf(getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint)) / Double.valueOf(getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint)) * 100);
+        }
+
+
+        //////////////////////////
+
+        /**
+         * 包处理
+         * @param context packet processing context
+         */
 
         @Override
         public synchronized void process(PacketContext context) {
@@ -506,6 +593,9 @@ public class ReactiveForwarding {
                 }
             }
             Host src = hostService.getHost(id_src);
+//            for(int i=0; i< 50; i++){
+//                log.info("=====================" + src.toString());
+//            }
 
 
             // Do we know who this is for? If not, flood and bail.
@@ -540,9 +630,9 @@ public class ReactiveForwarding {
             // Are we on an edge switch that our destination is on? If so,
             // simply forward out to the destination and bail.
 
-            log.info("---------------------------　每一次选路信息　------------------------");
-            log.info("源host:"+ id_src.mac().toString());
-            log.info("目的host:"+ id.mac().toString());
+//            log.info("---------------------------　每一次选路信息　------------------------");
+//            log.info("源host:"+ id_src.mac().toString());
+//            log.info("目的host:"+ id.mac().toString());
 
 
 
@@ -604,9 +694,60 @@ public class ReactiveForwarding {
 //            flowStatisticService.loadSummary(null);
 
 
+            /**
+             * 网络拓扑中的所有link
+             */
+            LinkedList<Link> LinksResult = topologyService.getAllPaths(topologyService.currentTopology());
+            //Jedis jedidiss = new Jedis("127.0.0.1", 6379);
+
+            /**
+             * 根据 LinksResult中每条link，算出它的maxBandwidthCapacity
+             * 然后持久化到文件中
+             */
+
+            //这里的size是64,是双向的
+            log.info("allLinks: LinksResult.size(): " + LinksResult.size());
+
+            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+            for(Link link : LinksResult){
+                //log.info(link.src().toString() + "," + link.dst().toString());
+                long linkRestBandwidth = getIntraLinkRestBw(link.src(), link.dst());
+                long linkMaxBandwidth = getIntraLinkMaxBw(link.src(), link.dst());
+                long linkCurBandwidth = getIntraLinkLoadBw(link.src(), link.dst());
+                long VportSrc = getVportLoadCapability(link.src());
+                long VportDst = getVportLoadCapability(link.dst());
+                long linkload_src = statisticService.load(link.src()).rate();
+                long linkload_dst = statisticService.load(link.dst()).rate();
+                long maxCapacitySrc = getVportMaxCapability(link.src());
+                long maxCapacityDst = getVportMaxCapability(link.dst());
+
+
+//                log.info("linkRestBandwidth(b): " + linkRestBandwidth);
+//                log.info("linkMaxBandwidth(b): " + linkMaxBandwidth);
+//                log.info("linkCurBandwidth(b): " + linkCurBandwidth);
+//                log.info("VportSrc: " + VportSrc);
+//                log.info("VportDst: " + VportDst);
+//                log.info("maxCapacitySrc: " + maxCapacitySrc);
+//                log.info("maxCapacityDst: " + maxCapacityDst);
+
+
+//                都为0
+//                log.info("linkload_src: " + linkload_src);
+//                log.info("linkload_dst: " + linkload_dst);
+
+
+
+            }
+
+            /**
+             * 选择最优路径
+             */
+
             Set<Path> ChoicedPaths = myUpdatePaths(paths, pkt.receivedFrom().deviceId(),
                     dst.location().deviceId(),
-                    src.location().deviceId());
+                    src.location().deviceId(),
+                    LinksResult);
 
 
             if (paths.isEmpty()) {
@@ -651,57 +792,22 @@ public class ReactiveForwarding {
              * 丢包率
              */
 
-            LinkedList<Link> LinksResult = topologyService.getAllPaths(topologyService.currentTopology());
+
 
             /**
-             * show
+             * 评价指标---所有link负载的均衡度
+             * 如果写在这里，就是在每次处理packetin的时候统计，不符合需求..
              */
             for(Link link : LinksResult){
-                //
-                for(int i = 0; i< 50; i++){
-                    log.info(link.src().deviceId().toString() + " ===== " + link.dst().deviceId().toString());
-                }
+
 
             }
+            log.info("=====================================================================================================================================");
 
         }
 
-        private long getVportLoadCapability(ConnectPoint connectPoint) {
-            long vportCurSpeed = 0;
-            if(connectPoint != null){
-                //rate : bytes/s result : b/s
-                vportCurSpeed = statisticService.vportload(connectPoint).rate();
-            }
-            return vportCurSpeed;
-        }
 
-        private long getVportMaxCapability(ConnectPoint connectPoint) {
-            Port port = deviceService.getPort(connectPoint.deviceId(), connectPoint.port());
-            long vportMaxSpeed = 0;
-            if(connectPoint != null){
-                vportMaxSpeed = port.portSpeed() * 1000000;  //portSpeed Mbps result : bps
-            }
-
-            return vportMaxSpeed;
-        }
-
-        private long getIntraLinkLoadBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
-            return Long.min(getVportLoadCapability(srcConnectPoint), getVportLoadCapability(dstConnectPoint));
-        }
-
-        private long getIntraLinkMaxBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
-            return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
-        }
-
-        private long getIntraLinkRestBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
-            return getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint) - getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint);
-        }
-
-        private Double getIntraLinkCapability(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
-            return (Double.valueOf(getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint)) / Double.valueOf(getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint)) * 100);
-        }
-
-        private synchronized Set<Path> myUpdatePaths(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1) {
+        private synchronized Set<Path> myUpdatePaths(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1, LinkedList<Link> LinksResult) {
 
             /**
              *
@@ -768,7 +874,7 @@ public class ReactiveForwarding {
                 long rObject = 0;
                 for(Link link : path.links()){
 
-                    log.info("统计信息=====对于path " + i + " 的第 " + j + "条link： ");
+                    //log.info("统计信息=====对于path " + i + " 的第 " + j + "条link： ");
 
                     /**
                      * 链路link 信息监控
@@ -785,14 +891,15 @@ public class ReactiveForwarding {
                     long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
                     long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
                     double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
-                    log.info("link的负载(bps): " + IntraLinkLoadBw);
-                    log.info("link的最大带宽(bps): " + IntraLinkMaxBw);
-                    log.info("link的剩余带宽(bps): " + IntraLinkRestBw);
-                    log.info("link的带宽利用率(bps): " + IntraLinkCapability);
+
+//                    log.info("link的负载(bps): " + IntraLinkLoadBw);
+//                    log.info("link的最大带宽(bps): " + IntraLinkMaxBw);
+//                    log.info("link的剩余带宽(bps): " + IntraLinkRestBw);
+//                    log.info("link的带宽利用率(bps): " + IntraLinkCapability);
 
 
 
-                    SummaryFlowEntryWithLoad summaryFlowEntryWithLoad = flowStatisticService.loadSummaryPortInternal(link.src());
+                    //SummaryFlowEntryWithLoad summaryFlowEntryWithLoad = flowStatisticService.loadSummaryPortInternal(link.src());
 //                    for(int i1=0; i1<30; i1++){
 //                        log.info("kkkkkkkkkkkkkkkkk" + summaryFlowEntryWithLoad.getTotalLoad().rate() + " ");
 //                    }
@@ -817,12 +924,32 @@ public class ReactiveForwarding {
                      * tx_dropped_src
                      * rx_tx_dropped_src
                      */
-                    long packetsReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsReceived();
-                    long packetsSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsSent();
-                    long bytesReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesReceived();
-                    long bytesSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
-                    long rx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
-                    long tx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
+
+                    long packetsReceived_src = 0;
+                    if(link.src()!=null &&  link.src().deviceId() != null && link.src().port() !=null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                        packetsReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsReceived();
+                    }
+                    long packetsSent_src = 0;
+                    if(link.src()!=null && link.src().deviceId() !=null && link.src().port() != null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                        packetsSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsSent();
+                    }
+                    long bytesReceived_src = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                        bytesReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesReceived();
+                    }
+
+                    long bytesSent_src = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                        bytesSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
+                    }
+                    long rx_dropped_src = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                        rx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
+                    }
+                    long tx_dropped_src = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                        flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
+                    }
                     long rx_tx_dropped_src = rx_dropped_src+tx_dropped_src;
 
                     /**
@@ -838,18 +965,37 @@ public class ReactiveForwarding {
                      * tx_dropped_dst
                      * rx_tx_dropped_dst
                      */
-                    long packetsReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
-                    long packetsSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
-                    long bytesReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
-                    long bytesSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesSent();
-                    long rx_dropped_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
-                    long tx_dropped_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
-                    log.info("packetsReceived_src: " + packetsReceived_src);
-                    log.info("packetsSent_src: " + packetsSent_src);
-                    log.info("bytesReceived_src(bytes): " + bytesReceived_src);
-                    log.info("bytesSent_src(bytes): " + bytesSent_src);
-                    log.info("rx_dropped_dst: " + rx_dropped_dst);
-                    log.info("tx_dropped_dst: " + tx_dropped_dst);
+                    long packetsReceived_dst = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                        packetsReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
+                    }
+                    long packetsSent_dst = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                        packetsSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
+                    }
+                    long bytesReceived_dst = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                        bytesReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
+                    }
+                    long bytesSent_dst = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                        bytesSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesSent();
+                    }
+                    long rx_dropped_dst = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                        flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
+                    }
+                    long tx_dropped_dst = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                        flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
+                    }
+
+//                    log.info("packetsReceived_src: " + packetsReceived_src);
+//                    log.info("packetsSent_src: " + packetsSent_src);
+//                    log.info("bytesReceived_src(bytes): " + bytesReceived_src);
+//                    log.info("bytesSent_src(bytes): " + bytesSent_src);
+//                    log.info("rx_dropped_dst: " + rx_dropped_dst);
+//                    log.info("tx_dropped_dst: " + tx_dropped_dst);
                     long rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
 
                     /**
@@ -974,6 +1120,12 @@ public class ReactiveForwarding {
         }
     }
 
+    /**
+     *
+     * @param context
+     * @param portNumber
+     * @param macMetrics
+     */
     // Sends a packet out the specified port.
     private void packetOut(PacketContext context, PortNumber portNumber, ReactiveForwardMetrics macMetrics) {
         replyPacket(macMetrics);

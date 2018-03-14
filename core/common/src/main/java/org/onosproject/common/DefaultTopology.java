@@ -112,9 +112,7 @@ public class DefaultTopology extends AbstractModel implements Topology {
      * @param linkWeigher new default link-weight
      */
     public static void setDefaultLinkWeigher(LinkWeigher linkWeigher) {
-        for(int i=0; i<500; i++){
-            log.info("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
-        }
+
         log.info("Setting new default link-weight function to {}", linkWeigher);
         defaultLinkWeigher = linkWeigher;
     }
@@ -338,7 +336,7 @@ public class DefaultTopology extends AbstractModel implements Topology {
      * @return set of shortest paths
      */
     public Set<Path> getPaths(DeviceId src, DeviceId dst) {
-        log.info("Topology端调用处1。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
+        //log.info("Topology端调用处1。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
         return getPaths(src, dst, linkWeight(), ALL_PATHS);
     }
 
@@ -383,10 +381,9 @@ public class DefaultTopology extends AbstractModel implements Topology {
      */
     public Set<Path> getPaths(DeviceId src, DeviceId dst, LinkWeigher weigher,
                               int maxPaths) {
-        log.info("Topology端调用处2。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
-        for(int i=0; i< 5; i++){
-            log.info(".........................");
-        }
+
+        //log.info(".........................");
+
 
         DefaultTopologyVertex srcV = new DefaultTopologyVertex(src);
         DefaultTopologyVertex dstV = new DefaultTopologyVertex(dst);
@@ -399,16 +396,16 @@ public class DefaultTopology extends AbstractModel implements Topology {
         GraphPathSearch.Result<TopologyVertex, TopologyEdge> result =
                 graphPathSearch().search(graph, srcV, dstV, weigher, maxPaths);
         ImmutableSet.Builder<Path> builder = ImmutableSet.builder();
-        log.info("上报packetIn的交换机："+src.toString()+",目的交换机："+dst.toString()+")" + ",path的条数："+result.paths().size());
+        //log.info("上报packetIn的交换机："+src.toString()+",目的交换机："+dst.toString()+")" + ",path的条数："+result.paths().size());
 
         int j=0;
         // Set<Path<V, E>> paths();
         for (org.onlab.graph.Path<TopologyVertex, TopologyEdge> path : result.paths()) {
-            log.info("第 " + j + "条path "+"..........."+path.toString());
+//            log.info("第 " + j + "条path "+"..........."+path.toString());
 
-            for (TopologyEdge e : path.edges()) {
-                log.info("edge src,dst:" + e.link().src().deviceId().toString() + "," + e.link().dst().deviceId().toString());
-            }
+//            for (TopologyEdge e : path.edges()) {
+//                log.info("edge src,dst:" + e.link().src().deviceId().toString() + "," + e.link().dst().deviceId().toString());
+//            }
             j++;
             //builder.add(networkPath(path));
         }
@@ -417,9 +414,8 @@ public class DefaultTopology extends AbstractModel implements Topology {
 
             builder.add(networkPath(path));
         }
-        for(int i=0; i< 5; i++){
-            log.info(".........................");
-        }
+        //log.info(".........................");
+
         return builder.build();
     }
 
@@ -585,9 +581,9 @@ public class DefaultTopology extends AbstractModel implements Topology {
         // 上报交换机在第二层
         // myedge_j1严格来说应该属于result21，但是不想沾，属于分离型21（2代表srcV在第二层，1代表dstV在第一层）
         List<TopologyEdge> myedge_j1 = new ArrayList<TopologyEdge>();
-        log.info("上报packetin的交换机："+srcV.deviceId().toString() + ",源交换机:" + hs.toString() + "目的交换机：" + dstV.deviceId().toString());
+        //log.info("上报packetin的交换机："+srcV.deviceId().toString() + ",源交换机:" + hs.toString() + "目的交换机：" + dstV.deviceId().toString());
         for(TopologyEdge e : e1){
-            log.info("从上报交换机出发，通往的交换机节点有："+e.dst().deviceId().toString());
+            //log.info("从上报交换机出发，通往的交换机节点有："+e.dst().deviceId().toString());
             //通过打印得知，e1涵盖了所有与此交换机相连的边
             if(dstV.deviceId().toString().trim().equals(e.dst().deviceId().toString().trim())){
                 myedge_j1.add(e);

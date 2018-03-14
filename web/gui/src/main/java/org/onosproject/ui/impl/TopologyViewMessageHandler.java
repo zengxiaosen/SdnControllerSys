@@ -157,7 +157,9 @@ public class TopologyViewMessageHandler extends TopologyViewMessageHandlerBase {
 
     private static final String MY_APP_ID = "org.onosproject.gui";
 
-    private static final long TRAFFIC_PERIOD = 5000;
+    //页面的监控周期
+    //default: 5000
+    private static final long TRAFFIC_PERIOD = 3000;
     private static final long SUMMARY_PERIOD = 30000;
 
     private static final Comparator<? super ControllerNode> NODE_COMPARATOR =
@@ -167,7 +169,9 @@ public class TopologyViewMessageHandler extends TopologyViewMessageHandlerBase {
     private final Timer timer = new Timer("onos-topology-view");
 
     private static final int MAX_EVENTS = 1000;
-    private static final int MAX_BATCH_MS = 5000;
+
+    //default: 5000
+    private static final int MAX_BATCH_MS = 3000;
     private static final int MAX_IDLE_MS = 1000;
 
     private ApplicationId appId;

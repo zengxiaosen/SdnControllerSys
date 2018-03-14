@@ -18,13 +18,11 @@
 package org.onosproject.ui.impl;
 
 import com.google.common.collect.ImmutableList;
-import org.onosproject.net.Device;
-import org.onosproject.net.DeviceId;
-import org.onosproject.net.ElementId;
-import org.onosproject.net.Host;
-import org.onosproject.net.HostId;
-import org.onosproject.net.Link;
-import org.onosproject.net.PortNumber;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.eclipse.jetty.util.StringUtil;
+import org.onosproject.net.*;
+import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.instructions.Instruction;
@@ -38,21 +36,16 @@ import org.onosproject.net.intent.OpticalConnectivityIntent;
 import org.onosproject.net.intent.OpticalPathIntent;
 import org.onosproject.net.intent.PathIntent;
 import org.onosproject.net.statistic.Load;
+import org.onosproject.net.statistic.StatisticService;
 import org.onosproject.ui.impl.topo.util.IntentSelection;
 import org.onosproject.ui.impl.topo.util.ServicesBundle;
 import org.onosproject.ui.impl.topo.util.TopoIntentFilter;
 import org.onosproject.ui.impl.topo.util.TrafficLink;
 import org.onosproject.ui.impl.topo.util.TrafficLink.StatsType;
 import org.onosproject.ui.impl.topo.util.TrafficLinkMap;
-import org.onosproject.ui.topo.AbstractTopoMonitor;
-import org.onosproject.ui.topo.DeviceHighlight;
-import org.onosproject.ui.topo.Highlights;
+import org.onosproject.ui.topo.*;
 import org.onosproject.ui.topo.Highlights.Amount;
-import org.onosproject.ui.topo.HostHighlight;
 import org.onosproject.ui.topo.LinkHighlight.Flavor;
-import org.onosproject.ui.topo.NodeHighlight;
-import org.onosproject.ui.topo.NodeSelection;
-import org.onosproject.ui.topo.TopoUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,6 +69,12 @@ import static org.onosproject.ui.impl.TrafficMonitor.Mode.SELECTED_INTENT;
  * Encapsulates the behavior of monitoring specific traffic patterns.
  */
 public class TrafficMonitor extends AbstractTopoMonitor {
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected StatisticService statisticService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DeviceService deviceService;
 
     // 4 Kilo Bytes as threshold
     private static final double BPS_THRESHOLD = 4 * TopoUtils.KILO;
@@ -153,6 +152,9 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                 sendAllFlowTraffic();
                 break;
 
+            /**
+             * 在这里监控all_port_traffic_statistic
+             */
             case ALL_PORT_TRAFFIC:
                 clearSelection();
                 scheduleTask();
@@ -358,15 +360,103 @@ public class TrafficMonitor extends AbstractTopoMonitor {
         msgHandler.sendHighlights(new Highlights());
     }
 
+    /**2018 3 6
+     * 自研统计模块
+     * 对端口带宽的统计信息
+     * @param connectPoint
+     * @return
+     */
+
+
+    private long getVportLoadCapability(ConnectPoint connectPoint) {
+        long vportCurSpeed = 0;
+        if(connectPoint != null){
+            //rate : bytes/s result : b/s
+            if(statisticService.vportload(connectPoint) != null) {
+                vportCurSpeed = statisticService.vportload(connectPoint).rate();
+            }
+
+        }
+        return vportCurSpeed;
+    }
+
+    /**
+     * 2018 3 6
+     * @param connectPoint
+     * @return
+     */
+
+    private long getVportMaxCapability(ConnectPoint connectPoint) {
+        Port port = deviceService.getPort(connectPoint.deviceId(), connectPoint.port());
+        long vportMaxSpeed = 0;
+        if(connectPoint != null){
+            vportMaxSpeed = port.portSpeed() * 1000000;  //portSpeed Mbps result : bps
+        }
+
+        return vportMaxSpeed;
+    }
+
+    /**
+     * 2018 3 6
+     * @param srcConnectPoint
+     * @param dstConnectPoint
+     * @return
+     */
+    private long getIntraLinkLoadBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+        return Long.min(getVportLoadCapability(srcConnectPoint), getVportLoadCapability(dstConnectPoint));
+    }
+
+    /**
+     * 2018 3 6
+     * @param srcConnectPoint
+     * @param dstConnectPoint
+     * @return
+     */
+    private long getIntraLinkMaxBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+        return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
+    }
+
+    /**
+     * 2018 3 6
+     * @param srcConnectPoint
+     * @param dstConnectPoint
+     * @return
+     */
+    private long getIntraLinkRestBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+        return getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint) - getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint);
+    }
+
+    /**
+     * 2018 3 6
+     * @param srcConnectPoint
+     * @param dstConnectPoint
+     * @return
+     */
+
+    private Double getIntraLinkCapability(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+        return (Double.valueOf(getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint)) / Double.valueOf(getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint)) * 100);
+    }
+
+
+    //////////////////////////
+
     // =======================================================================
     // === Generate messages in JSON object node format
 
-    private Highlights trafficSummary(StatsType type) {
+
+
+    /** 2018 3 6
+     * 监控的核心方法
+     * @param type
+     * @return
+     */
+    private synchronized Highlights trafficSummary(StatsType type) {
         Highlights highlights = new Highlights();
 
         TrafficLinkMap linkMap = new TrafficLinkMap();
         compileLinks(linkMap);
         addEdgeLinks(linkMap);
+        double sum = 0;
 
         for (TrafficLink tlink : linkMap.biLinks()) {
             if (type == StatsType.FLOW_STATS) {
@@ -376,10 +466,98 @@ public class TrafficMonitor extends AbstractTopoMonitor {
             }
 
             // we only want to report on links deemed to have traffic
+            // 这里高亮显示port的带宽信息
             if (tlink.hasTraffic()) {
-                highlights.add(tlink.highlight(type));
+                //highlights.add(tlink.highlight(type));
+                LinkHighlight linkHighlight = tlink.highlight(type);
+                highlights.add(linkHighlight);
+                if(type == StatsType.PORT_STATS){
+
+                    /**
+                     * LinkHighlight实际上是：
+                     * highlightForStats(statsType);
+                     *
+                     *
+                     *   private LinkHighlight highlightForStats(StatsType type) {
+
+                     return new LinkHighlight(linkId(), SECONDARY_HIGHLIGHT)
+                     .setLabel(generateLabel(type));
+
+                     }
+                     */
+
+
+                    ConnectPoint src = tlink.key().src();
+                    ConnectPoint dst = tlink.key().dst();
+                    log.info("========= monitor ========================");
+
+                    log.info("src.toString(): " + src.toString());
+                    log.info("dst.toString(): " + dst.toString());
+                    log.info("src.elementId(): " + src.elementId());
+                    log.info("dst.elementId(): " + dst.elementId());
+                    log.info("src.port(): " + src.port().toString());
+                    log.info("dst.port(): " + dst.port().toString());
+//                  以下两个方法不可用，可能是这里的ConnectionPoint成员信息不完整导致
+
+//                    log.info("getVportLoadCapability(src): "+getVportLoadCapability(src));
+//                    log.info("getVportMaxCapability(src): " + getVportMaxCapability(src));
+
+//                  以下两个方法不可用，可能是这里的ConnectionPoint成员信息不完整导致
+//                    log.info("src: " + src.deviceId().toString() + " , " + src.port().toString());
+//                    log.info("dst: " + dst.deviceId().toString() + " , " + dst.port().toString());
+//                  不可用
+//                    long linkrestBandwidth = getIntraLinkRestBw(src, dst);
+//                    long linkmaxBandwidth = getIntraLinkMaxBw(src, dst);
+
+                    //linkHighlight.label()就是带宽
+                    log.info("linkId: " + tlink.linkId());
+                    log.info("link的带宽"+"label: " + linkHighlight.label());
+                    String bandwidth = linkHighlight.label();
+                    if(bandwidth.contains("M")){
+                        double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M")));
+                        sum += (temp * 1000);
+
+                    }else if(bandwidth.contains("K")){
+                        String tempETL = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
+                        //处理 “1,006.67”这种脏数据
+                        String tempString = "";
+                        if(tempETL.contains(",")){
+                            String[] tempStringArray = tempETL.split(",");
+                            tempString = tempStringArray[0] + tempStringArray[1];
+                        }
+                        log.info("curTemp: " + tempString);
+                        double temp = 0;
+                        if(tempString != null &&  tempString != "" && !tempString.equals("")){
+                            temp = Double.valueOf(tempString);
+                        }
+                        sum += temp;
+                    }
+                    log.info("curSUm: " +  sum);
+                    //默认的带宽capacity是10000M
+
+                    /**
+                     * 由于connectionpoint信息不完整，目前采取的策略是
+                     * 在Forwarding那个service上把每个link对应的maxBandwitch打入到redis中
+                     * 这里读redis
+                     */
+//                    log.info("linkrestBandwidth: " + linkrestBandwidth);
+//                    log.info("linkmaxBandwidth: " + linkmaxBandwidth);
+                    //sum
+
+                }
+            }else{
+                sum += 0;
             }
         }
+        //csv
+        /**
+         * 每5秒周期，计算出拓扑中所有link负载的均衡度
+         * 目前在mininet上设定的最大linkcapacity是10M
+         */
+        int TrafficLinkSize = linkMap.biLinks().size();
+        log.info("TrafficLinkSize: " + TrafficLinkSize);
+
+
         return highlights;
     }
 
@@ -492,7 +670,8 @@ public class TrafficMonitor extends AbstractTopoMonitor {
 
     /**
      * 点击页面开启监控port的按钮
-     * 每5秒监控一次网络拓扑，采集各链路link的信息，评价总体link负载的均衡度，丢包率等
+     * 每5秒监控一次网络拓扑，如果负载增大了，就更新数据，看最后一行。
+     * 采集各链路link的信息，评价总体link负载的均衡度，丢包率等
      * @param link
      */
     private void attachPortLoad(TrafficLink link) {
@@ -512,28 +691,28 @@ public class TrafficMonitor extends AbstractTopoMonitor {
          */
 
 
-        if(egressDst != null && egressSrc != null){
-            log.info("======");
-            log.info("one.src().deviceId() : " + one.src().deviceId().toString());
-            log.info("one.dst().deviceId() : " + one.dst().deviceId().toString());
-            log.info("one.src().port() : " + one.src().port().toString());
-            log.info("one.dst().port() : " + one.dst().port().toString());
-            log.info("egressSrc.rate() : " + egressSrc.rate());
-            log.info("egressDst.rate() : " + egressDst.rate());
-            log.info("======");
-        }else{
-            /**
-             * load信息为空，此时设置为0
-             */
-            log.info("======");
-            log.info("one.src().deviceId() : " + one.src().deviceId().toString());
-            log.info("one.dst().deviceId() : " + one.dst().deviceId().toString());
-            log.info("one.src().port() : " + one.src().port().toString());
-            log.info("one.dst().port() : " + one.dst().port().toString());
-            log.info("egressSrc.rate() : " + 0);
-            log.info("egressDst.rate() : " + 0);
-            log.info("======");
-        }
+//        if(egressDst != null && egressSrc != null){
+//            log.info("======");
+//            log.info("one.src().deviceId() : " + one.src().deviceId().toString());
+//            log.info("one.dst().deviceId() : " + one.dst().deviceId().toString());
+//            log.info("one.src().port() : " + one.src().port().toString());
+//            log.info("one.dst().port() : " + one.dst().port().toString());
+//            log.info("egressSrc.rate() : " + egressSrc.rate());
+//            log.info("egressDst.rate() : " + egressDst.rate());
+//            log.info("======");
+//        }else{
+//            /**
+//             * load信息为空，此时设置为0
+//             */
+//            log.info("======");
+//            log.info("one.src().deviceId() : " + one.src().deviceId().toString());
+//            log.info("one.dst().deviceId() : " + one.dst().deviceId().toString());
+//            log.info("one.src().port() : " + one.src().port().toString());
+//            log.info("one.dst().port() : " + one.dst().port().toString());
+//            log.info("egressSrc.rate() : " + 0);
+//            log.info("egressDst.rate() : " + 0);
+//            log.info("======");
+//        }
 
 
 

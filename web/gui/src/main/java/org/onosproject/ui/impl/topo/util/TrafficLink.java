@@ -23,7 +23,9 @@ import org.onosproject.ui.topo.BiLink;
 import org.onosproject.ui.topo.LinkHighlight;
 import org.onosproject.ui.topo.LinkHighlight.Flavor;
 import org.onosproject.ui.topo.TopoUtils;
+import org.slf4j.Logger;
 
+import static org.slf4j.LoggerFactory.getLogger;
 import static org.onosproject.ui.topo.LinkHighlight.Flavor.NO_HIGHLIGHT;
 import static org.onosproject.ui.topo.LinkHighlight.Flavor.PRIMARY_HIGHLIGHT;
 import static org.onosproject.ui.topo.LinkHighlight.Flavor.SECONDARY_HIGHLIGHT;
@@ -34,6 +36,8 @@ import static org.onosproject.ui.topo.LinkHighlight.Flavor.SECONDARY_HIGHLIGHT;
  * {@link LinkHighlight}s for showing traffic data on the topology view.
  */
 public class TrafficLink extends BiLink {
+
+    private final Logger log = getLogger(getClass());
 
     private static final String EMPTY = "";
     private static final String QUE = "?";
@@ -132,6 +136,9 @@ public class TrafficLink extends BiLink {
 
             case FLOW_STATS:
             case PORT_STATS:
+                ////////////////////////////////////////////////
+                String LinkPortResult = generateLabel(statsType);
+                //log.info("link的带宽"+LinkPortResult+"...");
                 return highlightForStats(statsType);
 
             case TAGGED:
@@ -142,18 +149,28 @@ public class TrafficLink extends BiLink {
         }
     }
 
+    /**
+     * 这里是对web页面的port信息做高亮统计
+     * @param type
+     * @return
+     */
     private LinkHighlight highlightForStats(StatsType type) {
+
+        //generateLabel(type)就是带宽信息
+
         return new LinkHighlight(linkId(), SECONDARY_HIGHLIGHT)
                 .setLabel(generateLabel(type));
     }
 
     private LinkHighlight highlightForFlowCount(StatsType type) {
+
         Flavor flavor = flows > 0 ? PRIMARY_HIGHLIGHT : SECONDARY_HIGHLIGHT;
         return new LinkHighlight(linkId(), flavor)
                 .setLabel(generateLabel(type));
     }
 
     private LinkHighlight highlightForTagging(StatsType type) {
+
         LinkHighlight hlite = new LinkHighlight(linkId(), taggedFlavor)
                 .setLabel(generateLabel(type));
         if (isOptical) {
@@ -165,6 +182,11 @@ public class TrafficLink extends BiLink {
         return hlite;
     }
 
+    /**
+     * 这里是页面左下角点击哪种类型的统计，然后实时统计
+     * @param type
+     * @return
+     */
     // Generates a string representation of the load, to be used as a label
     private String generateLabel(StatsType type) {
         switch (type) {
@@ -175,6 +197,8 @@ public class TrafficLink extends BiLink {
                 return TopoUtils.formatBytes(bytes);
 
             case PORT_STATS:
+                /////////////////////////////////////////////////////////////////
+
                 return TopoUtils.formatBitRate(rate);
 
             case TAGGED:

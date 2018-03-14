@@ -227,7 +227,7 @@ public class DeviceManager
     }
 
     @Override
-    public List<Port> getPorts(DeviceId deviceId) {
+    public synchronized List<Port> getPorts(DeviceId deviceId) {
         checkPermission(DEVICE_READ);
         checkNotNull(deviceId, DEVICE_ID_NULL);
         return store.getPorts(deviceId);

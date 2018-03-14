@@ -196,9 +196,9 @@ public class FlowStatisticManager implements FlowStatisticService {
 
     @Override
     public  synchronized SummaryFlowEntryWithLoad loadSummaryPortInternal(ConnectPoint cp) {
-        for (int i=0; i< 1; i++){
-            log.info("method:loadSummaryPortInternal..");
-        }
+//        for (int i=0; i< 1; i++){
+//            log.info("method:loadSummaryPortInternal..");
+//        }
         checkPermission(STATISTIC_READ);
 
         Set<FlowEntry> currentStats;
@@ -208,19 +208,19 @@ public class FlowStatisticManager implements FlowStatisticService {
         synchronized (statisticStore) {
              currentStats = statisticStore.getCurrentStatistic(cp);
             if (currentStats == null) {
-                log.info("currentStats是空。。。");
+                //log.info("currentStats是空。。。");
                 DefaultLoad defaultLoad = new DefaultLoad();
                 return new SummaryFlowEntryWithLoad(cp, defaultLoad);
             }else{
-                log.info("currentStats不是空。。。");
+                //log.info("currentStats不是空。。。");
             }
             previousStats = statisticStore.getPreviousStatistic(cp);
             if (previousStats == null) {
                 // previousStats基本都不是空
-                log.info("previousStats是空。。。");
+                //log.info("previousStats是空。。。");
                 return new SummaryFlowEntryWithLoad(cp, new DefaultLoad());
             }else{
-                log.info("previousStats不是空。。。");
+                //log.info("previousStats不是空。。。");
 
             }
             // copy to local flow entry

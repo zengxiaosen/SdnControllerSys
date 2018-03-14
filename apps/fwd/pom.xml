@@ -39,6 +39,11 @@
     </properties>
 
     <dependencies>
+        <!--<dependency>-->
+            <!--<groupId>redis.clients</groupId>-->
+            <!--<artifactId>jedis</artifactId>-->
+            <!--<version>2.9.0</version>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.compendium</artifactId>
@@ -137,7 +142,6 @@
             <!--<artifactId>onos-incubator-store</artifactId>-->
             <!--<version>1.9.3-SNAPSHOT</version>-->
         <!--</dependency>-->
-
 
 
 
