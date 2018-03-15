@@ -742,13 +742,27 @@ public class ReactiveForwarding {
 
             /**
              * 选择最优路径
+             * 来自trustCom
              */
 
-            Set<Path> ChoicedPaths = myUpdatePaths(paths, pkt.receivedFrom().deviceId(),
+            /**
+             * PathsDecision_FESM
+             *
+             */
+
+            Set<Path> Paths_FESM = PathsDecision_FESM(paths, pkt.receivedFrom().deviceId(),
                     dst.location().deviceId(),
                     src.location().deviceId(),
                     LinksResult);
 
+            /**
+             * PathsDecision_PLLB
+             * 自研算法
+             */
+            Set<Path> Paths_PLLB = PathsDecision_PLLB(paths, pkt.receivedFrom().deviceId(),
+                    dst.location().deviceId(),
+                    src.location().deviceId(),
+                    LinksResult);
 
             if (paths.isEmpty()) {
                 // If there are no paths, flood and bail.
@@ -769,7 +783,7 @@ public class ReactiveForwarding {
             // Otherwise, pick a path that does not lead back to where we
             // came from; if no such path, flood and bail.
             // 原本第一个参数是paths
-            Path path = pickForwardPathIfPossible(ChoicedPaths, pkt.receivedFrom().port());
+            Path path = pickForwardPathIfPossible(Paths_PLLB, pkt.receivedFrom().port());
             //Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
             if (path == null) {
                 log.warn("Don't know where to go from here {} for {} -> {}",
@@ -807,7 +821,258 @@ public class ReactiveForwarding {
         }
 
 
-        private synchronized Set<Path> myUpdatePaths(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1, LinkedList<Link> LinksResult) {
+        private synchronized Set<Path> PathsDecision_PLLB(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1, LinkedList<Link> LinksResult) {
+
+
+
+            //flowStatisticService.loadSummaryPortInternal()
+            Set<Path> result = new HashSet<>();
+            Map<Integer, Path> indexPath = new LinkedHashMap<>();
+            //Path finalPath = paths.iterator().next();
+            Path finalPath = null;
+
+            int i=0;
+            String sql = null;
+            DBHelper db1 = null;
+            ResultSet ret = null;
+
+            /**
+             *
+             * 对多条等价路径进行选路决策
+             *
+             */
+            double maxScore = 0.0;
+            for(Path path : paths){
+
+                int j=0;
+                indexPath.put(i, path);
+                int rPathLength = path.links().size();
+
+
+                /**
+                 *
+                 *  PathsDecision_PLLB
+                 *
+                 *  U = (h, p, b, r)
+                 *
+                 */
+                long pObject = 0;
+                long bObject = 0;
+                long rObject = 0;
+                double allLinkOfPath_BandWidth = 0;
+                ArrayList<Double> arrayList = new ArrayList<>();
+                for(Link link : path.links()){
+
+                    //log.info("统计信息=====对于path " + i + " 的第 " + j + "条link： ");
+
+                    /**
+                     * 链路link 信息监控
+                     *
+                     * "link的负载(bps): " + IntraLinkLoadBw
+                     *
+                     */
+
+                    long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
+
+
+//                    long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
+//                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+//                    double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
+
+                    arrayList.add((double)IntraLinkLoadBw);
+                    allLinkOfPath_BandWidth += IntraLinkLoadBw;
+
+
+                    /**
+                     * link 源端口和目的端口 信息监控
+                     */
+
+
+
+                    long packetsReceived_src = 0;
+                    if(link.src()!=null &&  link.src().deviceId() != null && link.src().port() !=null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                        packetsReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsReceived();
+                    }
+                    long packetsSent_src = 0;
+                    if(link.src()!=null && link.src().deviceId() !=null && link.src().port() != null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                        packetsSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsSent();
+                    }
+                    long bytesReceived_src = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                        bytesReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesReceived();
+                    }
+
+                    long bytesSent_src = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                        bytesSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
+                    }
+                    long rx_dropped_src = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                        rx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
+                    }
+                    long tx_dropped_src = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                        flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
+                    }
+                    long rx_tx_dropped_src = rx_dropped_src+tx_dropped_src;
+
+                    /**
+                     * dst
+                     */
+                    long packetsReceived_dst = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                        packetsReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
+                    }
+                    long packetsSent_dst = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                        packetsSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
+                    }
+                    long bytesReceived_dst = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                        bytesReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
+                    }
+                    long bytesSent_dst = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                        bytesSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesSent();
+                    }
+                    long rx_dropped_dst = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                        flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
+                    }
+                    long tx_dropped_dst = 0;
+                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                        flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
+                    }
+
+
+                    long rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
+
+                    /**
+                     * U = (h, p, b, r)
+                     * h denotes the hop count
+                     * p denotes the transmitting packet count
+                     * b denotes the byte count of the critical
+                     * r denotes the forwarding rate of the critical port
+                     */
+                    if(IntraLinkLoadBw > rObject){
+                        pObject = Math.max(packetsSent_src, packetsReceived_dst);
+                        bObject = Math.max(bytesSent_src, bytesReceived_dst);
+                        //rate
+                        rObject = IntraLinkLoadBw;
+                    }
+
+                    j++;
+                }
+
+
+                /**
+                 * 从检测路径模块得到的path中包含的link的数量
+                 */
+                double pathlinksSize = path.links().size();
+                /**
+                 * path中各个link的平均负载
+                 */
+                double pathMeanLoad = allLinkOfPath_BandWidth / pathlinksSize;
+                /**
+                 * 遍历arraylist(一条path中所有link的带宽信息）
+                 * 求负载的标准差（均衡度）
+                 *
+                 *
+                 * 标准差：
+                 * T= pow(bdInterval2_Sum, 1/2)
+                 * bdInterval2_Sum = bdInterval2的累加/N
+                 * bdInterval2 = pow(bdInterval, 2)
+                 * bdInterval = Math.abs(value - pathMeanLoad)
+                 * value: 遍历每条link，对应的负载（kbps）
+                 * pathMeanLoad： 所有link的平均负载（kbps）
+                 *
+                 */
+                double bdInterval2_Sum = 0;
+                for(int k=0; k< arrayList.size(); k++){
+                    double tempBandwidth = arrayList.get(k);
+                    double bdInterval = Math.abs(tempBandwidth - pathMeanLoad);
+                    //log.info("bdInterval : " + bdInterval);
+                    double bdInterval2 = Math.pow(bdInterval, 2);
+                    //log.info("bdInterval2 : " + bdInterval2);
+                    bdInterval2_Sum += bdInterval2;
+                }
+
+
+                /**
+                 * U = (h, p, b, r) ： 一条路径
+                 * h: hObject
+                 * p: pObject
+                 * b: bObject
+                 * r: rObject
+                 */
+                long hObject = (long)rPathLength;
+
+                /**
+                 * 特征工程
+                 * rh = 1.0/(e^h)
+                 * rp = 1.0/log(p+0.1)
+                 * rb = 1.0/log(b+0.1)
+                 * rr = 1.0/(1+e^(-r/50.0))
+                 *
+                 * so:
+                 *
+                 * the matrix R can be presented as the column vector for one path:
+                 * R = (rh, rp, rb, rr)
+                 *
+                 *
+                 */
+
+
+                double rh = 1.0 / (double)(Math.exp((double)hObject));
+                double rp = 1.0 / (double)(Math.log((double)(pObject + 0.1)));
+                double rb = 1.0 / (double)(Math.log((double)(bObject + 0.1)));
+                double rr = 1.0 / (double)(1 + Math.exp((double)((0-rObject) / 50.0)));
+
+                /**
+                 *
+                 *
+                 * B = (b1, b2, ..., bm)
+                 * B = AOR
+                 *
+                 * A = (a1, a2, ..., an)
+                 *
+                 * R = (rh, rp, rb, rr)
+                 *   = (0.4, 0.15, 0.15, 0.3)
+                 *
+                 */
+
+                double a1 = 0.4;
+                double a2 = 0.15;
+                double a3 = 0.15;
+                double a4 = 0.3;
+
+                double b1 = a1 * rh;
+                double b2 = a2 * rp;
+                double b3 = a3 * rb;
+                double b4 = a4 * rr;
+
+                double resultScore = b1 + b2 + b3 + b4;
+                if(resultScore > maxScore){
+                    finalPath = path;
+                }
+
+
+
+                i++;
+            }
+
+            //result.add(indexPath.get(0));
+            if(finalPath == null){
+                result.add(indexPath.get(0));
+            }else{
+                result.add(finalPath);
+            }
+            return result;
+
+        }
+
+
+        private synchronized Set<Path> PathsDecision_FESM(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1, LinkedList<Link> LinksResult) {
 
             /**
              *
@@ -823,7 +1088,8 @@ public class ReactiveForwarding {
             //flowStatisticService.loadSummaryPortInternal()
             Set<Path> result = new HashSet<>();
             Map<Integer, Path> indexPath = new LinkedHashMap<>();
-            Path finalPath = paths.iterator().next();
+            //Path finalPath = paths.iterator().next();
+            Path finalPath = null;
             /**
              *
              *  数据库的IO：
@@ -1078,12 +1344,24 @@ public class ReactiveForwarding {
             }
 
             //result.add(indexPath.get(0));
-            result.add(finalPath);
+            if(finalPath == null){
+                result.add(indexPath.get(0));
+            }else{
+                result.add(finalPath);
+            }
             return result;
 
         }
 
     }
+
+
+    /**
+     *
+     * @param
+     * @return
+     */
+
 
     // Indicates whether this is a control packet, e.g. LLDP, BDDP
     private boolean isControlPacket(Ethernet eth) {

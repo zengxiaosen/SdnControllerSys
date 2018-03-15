@@ -49,6 +49,7 @@ import org.onosproject.ui.topo.LinkHighlight.Flavor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -457,6 +458,11 @@ public class TrafficMonitor extends AbstractTopoMonitor {
         compileLinks(linkMap);
         addEdgeLinks(linkMap);
         double sum = 0;
+        /**
+         * key: String tlinkId
+         * value: Double BandWidth
+         */
+        HashMap<String, Double> tLinkId_BandWidth = new HashMap<>();
 
         for (TrafficLink tlink : linkMap.biLinks()) {
             if (type == StatsType.FLOW_STATS) {
@@ -478,25 +484,27 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                      * highlightForStats(statsType);
                      *
                      *
-                     *   private LinkHighlight highlightForStats(StatsType type) {
-
-                     return new LinkHighlight(linkId(), SECONDARY_HIGHLIGHT)
-                     .setLabel(generateLabel(type));
-
+                     *
+                     private LinkHighlight highlightForStats(StatsType type) {
+                         return new LinkHighlight(linkId(), SECONDARY_HIGHLIGHT)
+                         .setLabel(generateLabel(type));
                      }
+
+
                      */
 
 
                     ConnectPoint src = tlink.key().src();
                     ConnectPoint dst = tlink.key().dst();
-                    log.info("========= monitor ========================");
+//                    log.info("========= monitor ========================");
+//
+//                    log.info("src.toString(): " + src.toString());
+//                    log.info("dst.toString(): " + dst.toString());
+//                    log.info("src.elementId(): " + src.elementId());
+//                    log.info("dst.elementId(): " + dst.elementId());
+//                    log.info("src.port(): " + src.port().toString());
+//                    log.info("dst.port(): " + dst.port().toString());
 
-                    log.info("src.toString(): " + src.toString());
-                    log.info("dst.toString(): " + dst.toString());
-                    log.info("src.elementId(): " + src.elementId());
-                    log.info("dst.elementId(): " + dst.elementId());
-                    log.info("src.port(): " + src.port().toString());
-                    log.info("dst.port(): " + dst.port().toString());
 //                  以下两个方法不可用，可能是这里的ConnectionPoint成员信息不完整导致
 
 //                    log.info("getVportLoadCapability(src): "+getVportLoadCapability(src));
@@ -510,12 +518,14 @@ public class TrafficMonitor extends AbstractTopoMonitor {
 //                    long linkmaxBandwidth = getIntraLinkMaxBw(src, dst);
 
                     //linkHighlight.label()就是带宽
-                    log.info("linkId: " + tlink.linkId());
-                    log.info("link的带宽"+"label: " + linkHighlight.label());
+                    //log.info("linkId: " + tlink.linkId());
+                    //log.info("link的带宽"+"label: " + linkHighlight.label());
                     String bandwidth = linkHighlight.label();
+                    String tlinkId = tlink.linkId();
                     if(bandwidth.contains("M")){
-                        double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M")));
-                        sum += (temp * 1000);
+                        double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
+                        tLinkId_BandWidth.put(tlinkId, temp);
+                        sum += temp;
 
                     }else if(bandwidth.contains("K")){
                         String tempETL = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
@@ -525,14 +535,15 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                             String[] tempStringArray = tempETL.split(",");
                             tempString = tempStringArray[0] + tempStringArray[1];
                         }
-                        log.info("curTemp: " + tempString);
+                        //log.info("curTemp: " + tempString);
                         double temp = 0;
                         if(tempString != null &&  tempString != "" && !tempString.equals("")){
                             temp = Double.valueOf(tempString);
                         }
+                        tLinkId_BandWidth.put(tlinkId, temp);
                         sum += temp;
                     }
-                    log.info("curSUm: " +  sum);
+                    //log.info("curSUm: " +  sum);
                     //默认的带宽capacity是10000M
 
                     /**
@@ -546,19 +557,107 @@ public class TrafficMonitor extends AbstractTopoMonitor {
 
                 }
             }else{
+                double temp = 0;// 带宽设为0
+                String tlinkId = tlink.linkId();
+                tLinkId_BandWidth.put(tlinkId, temp);
                 sum += 0;
             }
         }
+
         //csv
         /**
          * 每5秒周期，计算出拓扑中所有link负载的均衡度
          * 目前在mininet上设定的最大linkcapacity是10M
          */
+
         int TrafficLinkSize = linkMap.biLinks().size();
-        log.info("TrafficLinkSize: " + TrafficLinkSize);
+        //log.info("TrafficLinkSize: " + TrafficLinkSize);
+
+        /**
+         * 每条link平均的带宽
+         */
+        double meanTrafficBandWidth = sum / TrafficLinkSize;
+        log.info("meanTrafficBandWidth: " + meanTrafficBandWidth);
+
+        /**
+         * 对tLinkId_BandWidth中每条link算负载的均衡度
+         *
+         * 标准差：
+         * T= pow(bdInterval2_Sum, 1/2)
+         * bdInterval2_Sum = bdInterval2的累加/N
+         * bdInterval2 = pow(bdInterval, 2)
+         * bdInterval = Math.abs(value - meanTrafficBandWidth)
+         * value: 遍历每条link，对应的负载（kbps）
+         * meanTrafficBandWidth： 所有link的平均负载（kbps）
+         *
+         */
+
+        double bdInterval2_Sum = 0;
+        for(Map.Entry<String, Double> entry : tLinkId_BandWidth.entrySet()){
+            //tLinkId
+            String key = entry.getKey();
+            //BandWidth
+            Double value = entry.getValue();
+            double bdInterval = Math.abs(value - meanTrafficBandWidth);
+            //log.info("bdInterval : " + bdInterval);
+            double bdInterval2 = Math.pow(bdInterval, 2);
+            //log.info("bdInterval2 : " + bdInterval2);
+            bdInterval2_Sum += bdInterval2;
+
+
+        }
+        //log.info("bdInterval2_Sum : " + bdInterval2_Sum);
+        //log.info("TrafficLinkSize : " + TrafficLinkSize);
+        /**
+         * 方差
+         */
+        double variance = bdInterval2_Sum / TrafficLinkSize;
+        //log.info("variance(方差）: " + variance);
+        /**
+         * 标准差
+         */
+        double standard_deviation = Math.pow(variance, 0.5);
+        log.info("标准差(网络拓扑所有link的负载均衡度）== " + standard_deviation);
+
+        File csvFile = new File("/home/zengxiaosen//BandWidthStandardDeviation.csv");
+        checkExist(csvFile);
+        boolean b = appendData(csvFile, standard_deviation+"");
+        if(b == true){
+            log.info("追加写成功..");
+        }else{
+            log.info("追加写失败..");
+        }
 
 
         return highlights;
+    }
+
+    public void checkExist(File file) {
+        //判断文件目录的存在
+        if(file.exists()){
+            //file exists
+        }else{
+            //file not exists, create it ...
+            try{
+                file.createNewFile();
+            }catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public boolean appendData(File csvFile, String data){
+        try{
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFile, true), "GBK"), 1024);
+            bw.write(data);
+            bw.write("\n");
+            //bw.flush();
+            bw.close();
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return false;
     }
 
     // create highlights for links, showing flows for selected devices.
