@@ -24,6 +24,7 @@ import org.eclipse.jetty.util.StringUtil;
 import org.onosproject.net.*;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.FlowEntry;
+import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.instructions.Instruction;
 import org.onosproject.net.flow.instructions.Instructions.OutputInstruction;
@@ -76,6 +77,9 @@ public class TrafficMonitor extends AbstractTopoMonitor {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected DeviceService deviceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected FlowRuleService flowRuleService;
 
     // 4 Kilo Bytes as threshold
     private static final double BPS_THRESHOLD = 4 * TopoUtils.KILO;

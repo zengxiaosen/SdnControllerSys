@@ -558,6 +558,11 @@ public class ReactiveForwarding {
                 return;
             }
 
+            /**
+             * macAddress: ethPkt.getSourceMAC()
+             * macAddress1 = ethPkt.getDestinationMAC();
+             */
+
             MacAddress macAddress = ethPkt.getSourceMAC();
             ReactiveForwardMetrics macMetrics = null;
             macMetrics = createCounter(macAddress);
@@ -577,8 +582,8 @@ public class ReactiveForwarding {
             }
 
             HostId id_src = HostId.hostId(macAddress);
-
-            HostId id = HostId.hostId(ethPkt.getDestinationMAC());
+            MacAddress macAddress1 = ethPkt.getDestinationMAC();
+            HostId id = HostId.hostId(macAddress1);
 
             // Do not process link-local addresses in any way.
             if (id.mac().isLinkLocal()) {
@@ -685,7 +690,6 @@ public class ReactiveForwarding {
                                              pkt.receivedFrom().deviceId(),
                                              dst.location().deviceId());
 
-
 //            Set<Path> paths =
 //                    topologyService.getPaths1(topologyService.currentTopology(),
 //                            pkt.receivedFrom().deviceId(),
@@ -698,6 +702,7 @@ public class ReactiveForwarding {
              * 网络拓扑中的所有link
              */
             LinkedList<Link> LinksResult = topologyService.getAllPaths(topologyService.currentTopology());
+
             //Jedis jedidiss = new Jedis("127.0.0.1", 6379);
 
             /**
@@ -708,19 +713,48 @@ public class ReactiveForwarding {
             //这里的size是64,是双向的
             log.info("allLinks: LinksResult.size(): " + LinksResult.size());
 
-            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //packetIn
+//            DeviceId dstDeviceId = dst.location().deviceId();
+//            DeviceId srcDeviceId = src.location().deviceId();
 
+
+            /**
+             * macAddress: ethPkt.getSourceMAC()
+             * macAddress1 = ethPkt.getDestinationMAC();
+             */
+
+            /**
+             * 根据linkResult得到所有的DeviceId
+             */
+
+            /**
+             * 遍历所有link的src端交换机中所有的流表，得到此交换机中的流
+             * 从而等价于遍历所有流
+             * 然后轮询遍历所有流的源目mac是否和packetin的流相同
+             * 如果相同则取此流的流速分析
+             * 若流速较大则为大流
+             * 否则，则为小流
+             *
+             * 大流选路采用PLLB算法（避免大流汇聚）
+             * 小流选路采用hash均分的方式
+             */
+
+            boolean isFlowFound = false;
+            String ObjectFlowId = "";
+            String ObjectFlowSpeed = "";
             for(Link link : LinksResult){
+
                 //log.info(link.src().toString() + "," + link.dst().toString());
-                long linkRestBandwidth = getIntraLinkRestBw(link.src(), link.dst());
-                long linkMaxBandwidth = getIntraLinkMaxBw(link.src(), link.dst());
-                long linkCurBandwidth = getIntraLinkLoadBw(link.src(), link.dst());
-                long VportSrc = getVportLoadCapability(link.src());
-                long VportDst = getVportLoadCapability(link.dst());
-                long linkload_src = statisticService.load(link.src()).rate();
-                long linkload_dst = statisticService.load(link.dst()).rate();
-                long maxCapacitySrc = getVportMaxCapability(link.src());
-                long maxCapacityDst = getVportMaxCapability(link.dst());
+
+//                long linkRestBandwidth = getIntraLinkRestBw(link.src(), link.dst());
+//                long linkMaxBandwidth = getIntraLinkMaxBw(link.src(), link.dst());
+//                long linkCurBandwidth = getIntraLinkLoadBw(link.src(), link.dst());
+//                long VportSrc = getVportLoadCapability(link.src());
+//                long VportDst = getVportLoadCapability(link.dst());
+//                long linkload_src = statisticService.load(link.src()).rate();
+//                long linkload_dst = statisticService.load(link.dst()).rate();
+//                long maxCapacitySrc = getVportMaxCapability(link.src());
+//                long maxCapacityDst = getVportMaxCapability(link.dst());
 
 
 //                log.info("linkRestBandwidth(b): " + linkRestBandwidth);
@@ -736,8 +770,74 @@ public class ReactiveForwarding {
 //                log.info("linkload_src: " + linkload_src);
 //                log.info("linkload_dst: " + linkload_dst);
 
+                DeviceId deviceId_src = link.src().deviceId();
+                DeviceId deviceId_dst = link.dst().deviceId();
+                log.info("link_src=" + deviceId_src.toString() + ",link_dst=" +deviceId_dst.toString());
+                for (FlowEntry r : flowRuleService.getFlowEntries(deviceId_src)) {
+
+                    log.info("flowid: " + r.id().toString() + ", flowBytes: " + r.bytes());
 
 
+                    boolean matchesSrc = false, matchesDst = false;
+
+
+                    /**
+                     * macAddress: ethPkt.getSourceMAC()
+                     * macAddress1 = ethPkt.getDestinationMAC();
+                     */
+
+                    for (Instruction i : r.treatment().allInstructions()) {
+                        if (i.type() == Instruction.Type.OUTPUT) {
+                            // if the flow has matching src and dst
+                            for (Criterion cr : r.selector().criteria()) {
+                                if (cr.type() == Criterion.Type.ETH_DST) {
+
+
+                                    //log.info(((EthCriterion) cr).mac().toString() + "--------" + macAddress1.toString());
+                                    //((EthCriterion) cr).mac() : 00:00:00:00:00:02
+                                    //deviceId_dst : of:00000000000007d1
+                                    if (((EthCriterion) cr).mac().equals(macAddress1)) {
+                                        matchesDst = true;
+                                    }
+                                } else if (cr.type() == Criterion.Type.ETH_SRC) {
+
+
+                                    //log.info(((EthCriterion) cr).mac().toString() + "==============" + macAddress.toString());
+                                    if (((EthCriterion) cr).mac().equals(macAddress)) {
+                                        matchesSrc = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (matchesDst && matchesSrc) {
+                        //log.info("找到packetIn所对应的流，源mac为" + macAddress.toString() + ", 目的mac为" + macAddress1.toString() + ", FlowId为" + r.id().toString());
+                        ObjectFlowId = r.id().toString();
+                        //计算流速
+                        isFlowFound = true;
+                        log.info("true");
+                        //ObjectFlowSpeed赋值
+
+
+
+                        break;
+
+
+                    }
+
+
+
+                }
+                if(isFlowFound == true){
+                    break;
+                }
+                log.info("======");
+
+            }
+
+            if(isFlowFound == true){
+                log.info("找到packetIn所对应的流，源mac为" + macAddress.toString() + ", 目的mac为" + macAddress1.toString() + ", FlowId为" + ObjectFlowId);
             }
 
             /**
@@ -991,12 +1091,22 @@ public class ReactiveForwarding {
                 for(int k=0; k< arrayList.size(); k++){
                     double tempBandwidth = arrayList.get(k);
                     double bdInterval = Math.abs(tempBandwidth - pathMeanLoad);
-                    //log.info("bdInterval : " + bdInterval);
+                    log.info("link " + k + " : ");
+                    log.info("选路阶段，bdInterval : " + bdInterval);
                     double bdInterval2 = Math.pow(bdInterval, 2);
-                    //log.info("bdInterval2 : " + bdInterval2);
+                    log.info("选路阶段，bdInterval2 : " + bdInterval2);
                     bdInterval2_Sum += bdInterval2;
                 }
-
+                /**
+                 * 方差
+                 */
+                double variance = bdInterval2_Sum / pathlinksSize;
+                log.info("选路阶段，variance(方差）: " + variance);
+                /**
+                 * 标准差
+                 */
+                double standard_deviation = Math.pow(variance, 0.5);
+                log.info("选路阶段，标准差(path所有link的负载均衡度）== " + standard_deviation);
 
                 /**
                  * U = (h, p, b, r) ： 一条路径
@@ -1027,7 +1137,7 @@ public class ReactiveForwarding {
                 double rp = 1.0 / (double)(Math.log((double)(pObject + 0.1)));
                 double rb = 1.0 / (double)(Math.log((double)(bObject + 0.1)));
                 double rr = 1.0 / (double)(1 + Math.exp((double)((0-rObject) / 50.0)));
-
+                double rs = 1.0 / (double)(Math.log((double)(standard_deviation + 1)));
                 /**
                  *
                  *
@@ -1041,17 +1151,18 @@ public class ReactiveForwarding {
                  *
                  */
 
-                double a1 = 0.4;
-                double a2 = 0.15;
-                double a3 = 0.15;
+                double a1 = 0.2;
+                //double a2 = 0.15;
+                double a3 = 0.1;
                 double a4 = 0.3;
+                double a5 = 0.4;
 
                 double b1 = a1 * rh;
-                double b2 = a2 * rp;
+                //double b2 = a2 * rp;
                 double b3 = a3 * rb;
                 double b4 = a4 * rr;
-
-                double resultScore = b1 + b2 + b3 + b4;
+                double b5 = a5 * rs;
+                double resultScore =  b1 + b3 + b4 + b5;
                 if(resultScore > maxScore){
                     finalPath = path;
                 }
@@ -1636,6 +1747,11 @@ public class ReactiveForwarding {
         log.trace("Searching for flow rules to remove from: " + id);
         log.trace("Removing flows w/ SRC=" + pair.src + ", DST=" + pair.dst);
         for (FlowEntry r : flowRuleService.getFlowEntries(id)) {
+
+            log.info("flowid: " + r.id().toString());
+            log.info("flowBytes: "  + r.bytes());
+            
+
             boolean matchesSrc = false, matchesDst = false;
             for (Instruction i : r.treatment().allInstructions()) {
                 if (i.type() == Instruction.Type.OUTPUT) {

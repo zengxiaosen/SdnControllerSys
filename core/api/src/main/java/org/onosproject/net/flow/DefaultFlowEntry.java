@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 public class DefaultFlowEntry extends DefaultFlowRule
     implements StoredFlowEntry {
+    //里面有id flowrule接口
 
     private static final Logger log = getLogger(DefaultFlowEntry.class);
 
