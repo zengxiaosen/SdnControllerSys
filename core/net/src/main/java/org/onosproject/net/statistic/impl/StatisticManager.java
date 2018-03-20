@@ -19,6 +19,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
+import org.apache.commons.lang.StringUtils;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -39,6 +40,7 @@ import org.onosproject.net.statistic.StatisticService;
 import org.onosproject.net.statistic.StatisticStore;
 import org.slf4j.Logger;
 
+import java.io.*;
 import java.util.*;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -250,15 +252,89 @@ public class StatisticManager implements StatisticService {
                 long flowRate = bytesTrans / 3;
                 String flowRateString = String.valueOf(flowRate);
                 StringBuffer sb = new StringBuffer();
-                sb.append(connectPoint.deviceId().toString()).append("|").append(connectPoint.port().toString()).append("|").append(key).append("|").append(flowRateString);
-                //sb:deviceId|portNumbers|flowId|flowRate
-                log.info("deviceId|portNumbers|flowId|flowRate:");
+                sb.append(key).append("|").append(connectPoint.deviceId().toString()).append("|").append(flowRateString).append("b/s");
+                //sb:flowId|deviceId|flowRate
+                log.info("flowId|deviceId|flowRate:");
                 log.info(sb.toString());
+                //update flow information to file
+                File csvFile = new File("/home/zengxiaosen/deviceId_FlowId_FlowRate.csv");
+                String filePath = "/home/zengxiaosen/deviceId_FlowId_FlowRate.csv";
+                checkExist(csvFile);
+                /**
+                 * sb:flowId|deviceId|flowRate
+                 * 取出文件中的所有flowId，如果有，同時deviceid一楊，則更新flowRate
+                 * 否則append添加
+                 */
+//                boolean b = appendData(csvFile, sb.toString(), filePath);
+//                if(b == true){
+//                    log.info("updateFlowInfomation写成功..");
+//                }else{
+//                    log.info("updateFlowInformation写失败..");
+//                }
+
+
             }
         }
 
 
         return new DefaultLoad(aggregate(stats.current), aggregate(stats.previous));
+    }
+
+
+
+    public void checkExist(File file) {
+        //判断文件目录的存在
+        if(file.exists()){
+            //file exists
+        }else{
+            //file not exists, create it ...
+            try{
+                file.createNewFile();
+            }catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * sb:flowId|deviceId|flowRate
+     * 取出文件中的所有flowId，如果有，同時deviceid一楊，則更新flowRate
+     * 否則append添加
+     *
+     * 這裏是直接append，待修復！！！
+     * 方法:只能read then write
+     */
+
+    public boolean appendData(File csvFile, String data, String filePath){
+        try{
+            BufferedReader br = new BufferedReader(new FileReader(filePath));
+            StringBuffer sb = new StringBuffer();
+            String temp = null;
+            int line = 0;
+            temp = br.readLine();
+            while(temp != null){
+                String FlowId = StringUtils.split(temp.trim(), "|")[0];
+                if(temp.contains(FlowId.trim())){
+                    continue;
+                }else{
+                    sb.append(temp).append("\n");
+                }
+                line ++;
+                temp = br.readLine();
+            }
+            br.close();
+
+
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFile, true), "GBK"), 1024);
+            bw.write(sb.toString());
+            bw.write("\n");
+            //bw.flush();
+            bw.close();
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return false;
     }
 
     //对流的统计

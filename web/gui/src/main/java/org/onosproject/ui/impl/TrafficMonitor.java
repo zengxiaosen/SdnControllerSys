@@ -662,7 +662,7 @@ public class TrafficMonitor extends AbstractTopoMonitor {
         double standard_deviation = Math.pow(variance, 0.5);
         log.info("标准差(网络拓扑所有link的负载均衡度）== " + standard_deviation);
 
-        File csvFile = new File("/home/zengxiaosen//BandWidthStandardDeviation.csv");
+        File csvFile = new File("/home/zengxiaosen/BandWidthStandardDeviation.csv");
         checkExist(csvFile);
         boolean b = appendData(csvFile, standard_deviation+"");
         if(b == true){

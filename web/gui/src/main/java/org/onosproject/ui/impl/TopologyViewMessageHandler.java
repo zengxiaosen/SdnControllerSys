@@ -692,17 +692,13 @@ public class TopologyViewMessageHandler extends TopologyViewMessageHandlerBase {
             //statisticService
             //HashMap<FlowEntry, Long> flow_rate_Of_LinkSrc = statisticService.flow_rate_interval(link.src());
             if (link.type() == Link.Type.OPTICAL) {
-                for(int i=0; i< 1; i++){
-                    log.info("1 TopologyViewMessageHandler:sendAllLinks");
-                }
+
                 sendMessage(composeLinkMessage(new LinkEvent(LINK_ADDED, link)));
             }
         }
         for (Link link : linkService.getLinks()) {
             if (link.type() != Link.Type.OPTICAL) {
-                for(int i=0; i< 1; i++){
-                    log.info("2 TopologyViewMessageHandler:sendAllLinks");
-                }
+
                 sendMessage(composeLinkMessage(new LinkEvent(LINK_ADDED, link)));
             }
         }
