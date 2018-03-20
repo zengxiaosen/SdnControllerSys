@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableSet;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.onlab.osgi.ServiceDirectory;
 import org.onlab.util.AbstractAccumulator;
 import org.onlab.util.Accumulator;
@@ -41,12 +43,7 @@ import org.onosproject.net.HostLocation;
 import org.onosproject.net.Link;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceListener;
-import org.onosproject.net.flow.DefaultTrafficSelector;
-import org.onosproject.net.flow.DefaultTrafficTreatment;
-import org.onosproject.net.flow.FlowRuleEvent;
-import org.onosproject.net.flow.FlowRuleListener;
-import org.onosproject.net.flow.TrafficSelector;
-import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.flow.*;
 import org.onosproject.net.host.HostEvent;
 import org.onosproject.net.host.HostListener;
 import org.onosproject.net.intent.HostToHostIntent;
@@ -59,6 +56,7 @@ import org.onosproject.net.intent.IntentState;
 import org.onosproject.net.intent.IntentService;
 import org.onosproject.net.link.LinkEvent;
 import org.onosproject.net.link.LinkListener;
+//import org.onosproject.net.statistic.StatisticService;
 import org.onosproject.ui.JsonUtils;
 import org.onosproject.ui.RequestHandler;
 import org.onosproject.ui.UiConnection;
@@ -67,15 +65,7 @@ import org.onosproject.ui.topo.Highlights;
 import org.onosproject.ui.topo.NodeSelection;
 import org.onosproject.ui.topo.PropertyPanel;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
@@ -97,6 +87,10 @@ import static org.onosproject.ui.topo.TopoJson.json;
  * Web socket capable of interacting with the GUI topology view.
  */
 public class TopologyViewMessageHandler extends TopologyViewMessageHandlerBase {
+
+
+//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+//    protected StatisticService statisticService;
 
     // incoming event types
     private static final String REQ_DETAILS = "requestDetails";
@@ -695,12 +689,20 @@ public class TopologyViewMessageHandler extends TopologyViewMessageHandlerBase {
     private void sendAllLinks() {
         // Send optical first, others later for layered rendering
         for (Link link : linkService.getLinks()) {
+            //statisticService
+            //HashMap<FlowEntry, Long> flow_rate_Of_LinkSrc = statisticService.flow_rate_interval(link.src());
             if (link.type() == Link.Type.OPTICAL) {
+                for(int i=0; i< 1; i++){
+                    log.info("1 TopologyViewMessageHandler:sendAllLinks");
+                }
                 sendMessage(composeLinkMessage(new LinkEvent(LINK_ADDED, link)));
             }
         }
         for (Link link : linkService.getLinks()) {
             if (link.type() != Link.Type.OPTICAL) {
+                for(int i=0; i< 1; i++){
+                    log.info("2 TopologyViewMessageHandler:sendAllLinks");
+                }
                 sendMessage(composeLinkMessage(new LinkEvent(LINK_ADDED, link)));
             }
         }

@@ -15,6 +15,7 @@
  */
 package org.onosproject.fwd;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
@@ -77,6 +78,7 @@ import org.slf4j.Logger;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -443,7 +445,71 @@ public class ReactiveForwarding {
     }
 
 
+    /**
+     * 自研统计结构体
+     */
 
+    private static class Statistics {
+        private final ImmutableSet<FlowEntry> current;
+        private final ImmutableSet<FlowEntry> previous;
+
+        public Statistics(Set<FlowEntry> current, Set<FlowEntry> previous) {
+            this.current = ImmutableSet.copyOf(checkNotNull(current));
+            this.previous = ImmutableSet.copyOf(checkNotNull(previous));
+        }
+
+        /**
+         * Returns flow entries as the current value.
+         *
+         * @return flow entries as the current value
+         */
+        public ImmutableSet<FlowEntry> current() {
+            return current;
+        }
+
+        /**
+         * Returns flow entries as the previous value.
+         *
+         * @return flow entries as the previous value
+         */
+        public ImmutableSet<FlowEntry> previous() {
+            return previous;
+        }
+
+        /**
+         * Validates values are not empty.
+         *
+         * @return false if either of the sets is empty. Otherwise, true.
+         */
+        public boolean isValid() {
+            return !(current.isEmpty() || previous.isEmpty());
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(current, previous);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (!(obj instanceof Statistics)) {
+                return false;
+            }
+            final Statistics other = (Statistics) obj;
+            return Objects.equals(this.current, other.current) && Objects.equals(this.previous, other.previous);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .add("current", current)
+                    .add("previous", previous)
+                    .toString();
+        }
+    }
 
 
 
@@ -729,120 +795,32 @@ public class ReactiveForwarding {
 
             /**
              * 遍历所有link的src端交换机中所有的流表，得到此交换机中的流
-             * 从而等价于遍历所有流
+             * 从而等价于遍历所有但凡交换机流表项目有的流
              * 然后轮询遍历所有流的源目mac是否和packetin的流相同
              * 如果相同则取此流的流速分析
+             * for example:
+             * A->B->C, C产生packetIn，应该取B中flow的流速判断是不是大流，因为此时C的流表项中根本就没有该匹配了多少字节数，而B中有，
+             * 所以用B的流出速度模拟C的流入速度
              * 若流速较大则为大流
              * 否则，则为小流
              *
              * 大流选路采用PLLB算法（避免大流汇聚）
              * 小流选路采用hash均分的方式
              */
+            boolean isBigFlow = false;
+            ConnectPoint curSwitchConnectionPoint = pkt.receivedFrom();
 
-            boolean isFlowFound = false;
-            String ObjectFlowId = "";
-            String ObjectFlowSpeed = "";
-            for(Link link : LinksResult){
+            //isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
-                //log.info(link.src().toString() + "," + link.dst().toString());
+            log.info("=============================================");
 
-//                long linkRestBandwidth = getIntraLinkRestBw(link.src(), link.dst());
-//                long linkMaxBandwidth = getIntraLinkMaxBw(link.src(), link.dst());
-//                long linkCurBandwidth = getIntraLinkLoadBw(link.src(), link.dst());
-//                long VportSrc = getVportLoadCapability(link.src());
-//                long VportDst = getVportLoadCapability(link.dst());
-//                long linkload_src = statisticService.load(link.src()).rate();
-//                long linkload_dst = statisticService.load(link.dst()).rate();
-//                long maxCapacitySrc = getVportMaxCapability(link.src());
-//                long maxCapacityDst = getVportMaxCapability(link.dst());
-
-
-//                log.info("linkRestBandwidth(b): " + linkRestBandwidth);
-//                log.info("linkMaxBandwidth(b): " + linkMaxBandwidth);
-//                log.info("linkCurBandwidth(b): " + linkCurBandwidth);
-//                log.info("VportSrc: " + VportSrc);
-//                log.info("VportDst: " + VportDst);
-//                log.info("maxCapacitySrc: " + maxCapacitySrc);
-//                log.info("maxCapacityDst: " + maxCapacityDst);
-
-
-//                都为0
-//                log.info("linkload_src: " + linkload_src);
-//                log.info("linkload_dst: " + linkload_dst);
-
-                DeviceId deviceId_src = link.src().deviceId();
-                DeviceId deviceId_dst = link.dst().deviceId();
-                log.info("link_src=" + deviceId_src.toString() + ",link_dst=" +deviceId_dst.toString());
-                for (FlowEntry r : flowRuleService.getFlowEntries(deviceId_src)) {
-
-                    log.info("flowid: " + r.id().toString() + ", flowBytes: " + r.bytes());
-
-
-                    boolean matchesSrc = false, matchesDst = false;
-
-
-                    /**
-                     * macAddress: ethPkt.getSourceMAC()
-                     * macAddress1 = ethPkt.getDestinationMAC();
-                     */
-
-                    for (Instruction i : r.treatment().allInstructions()) {
-                        if (i.type() == Instruction.Type.OUTPUT) {
-                            // if the flow has matching src and dst
-                            for (Criterion cr : r.selector().criteria()) {
-                                if (cr.type() == Criterion.Type.ETH_DST) {
-
-
-                                    //log.info(((EthCriterion) cr).mac().toString() + "--------" + macAddress1.toString());
-                                    //((EthCriterion) cr).mac() : 00:00:00:00:00:02
-                                    //deviceId_dst : of:00000000000007d1
-                                    if (((EthCriterion) cr).mac().equals(macAddress1)) {
-                                        matchesDst = true;
-                                    }
-                                } else if (cr.type() == Criterion.Type.ETH_SRC) {
-
-
-                                    //log.info(((EthCriterion) cr).mac().toString() + "==============" + macAddress.toString());
-                                    if (((EthCriterion) cr).mac().equals(macAddress)) {
-                                        matchesSrc = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (matchesDst && matchesSrc) {
-                        //log.info("找到packetIn所对应的流，源mac为" + macAddress.toString() + ", 目的mac为" + macAddress1.toString() + ", FlowId为" + r.id().toString());
-                        ObjectFlowId = r.id().toString();
-                        //计算流速
-                        isFlowFound = true;
-                        log.info("true");
-                        //ObjectFlowSpeed赋值
-
-
-
-                        break;
-
-
-                    }
-
-
-
-                }
-                if(isFlowFound == true){
-                    break;
-                }
-                log.info("======");
-
-            }
-
-            if(isFlowFound == true){
-                log.info("找到packetIn所对应的流，源mac为" + macAddress.toString() + ", 目的mac为" + macAddress1.toString() + ", FlowId为" + ObjectFlowId);
-            }
+//            if(isFlowFound == true){
+//                log.info("找到packetIn所对应的流，源mac为" + macAddress.toString() + ", 目的mac为" + macAddress1.toString() + ", FlowId为" + ObjectFlowId);
+//            }
 
             /**
              * 选择最优路径
-             * 来自trustCom
+             * 来自trustCom: FESM
              */
 
             /**
@@ -911,13 +889,116 @@ public class ReactiveForwarding {
             /**
              * 评价指标---所有link负载的均衡度
              * 如果写在这里，就是在每次处理packetin的时候统计，不符合需求..
+             * 我已經寫在統計模塊了。。。。
              */
-            for(Link link : LinksResult){
 
-
-            }
             log.info("=====================================================================================================================================");
 
+        }
+
+        private synchronized boolean ifBigFlowProcess(MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
+            boolean result = false;
+
+            //body
+
+            boolean isFlowFound = false;
+            String ObjectFlowId = "";
+            String ObjectFlowSpeed = "";
+            for(Link link : LinksResult){
+
+                DeviceId deviceId_src = link.src().deviceId();
+                DeviceId deviceId_dst = link.dst().deviceId();
+
+
+
+
+
+                for (FlowEntry r : flowRuleService.getFlowEntries(deviceId_src)) {
+                    //log.info(r.deviceId()+","+deviceId_src+","+deviceId_dst);
+                    //测试结果：r.deviceId() == deviceId_src
+                    boolean matchesSrc = false, matchesDst = false;
+                    boolean matchSrcAndDst = false;
+                    /**
+                     * 这条link的src交换机是否有目标流
+                     */
+                    matchSrcAndDst = ismatchSrcAndDst(r, matchesSrc, matchesDst, macAddress, macAddress1);
+
+                    /**
+                     * macAddress: ethPkt.getSourceMAC()
+                     * macAddress1 = ethPkt.getDestinationMAC();
+                     *
+                     * 计算该流流入C的速度：
+                     * for example:
+                     * A->B->C, C产生packetIn，应该取B中flow的流速判断是不是大流，因为此时C的流表项中根本就没有该匹配了多少字节数，而B中有，
+                     * 所以用B的流出速度模拟C的流入速度
+                     * 若流速较大则为大流
+                     *
+                     * 找到B->C这个link的计算方法：
+                     * matchSrcAndDst是判断link是否有目标流，但不一定就是B->C这条link
+                     * 找到这个link中的src有目标流，并且link的dst应该是curSwitch
+                     *
+                     *
+                     */
+                    //log.info(r.toString());
+                    if (matchSrcAndDst == true && link.dst().deviceId().toString().equals(curSwitchConnectionPoint.deviceId().toString()) ) {
+                        //log.info("找到packetIn所对应的流，源mac为" + macAddress.toString() + ", 目的mac为" + macAddress1.toString() + ", FlowId为" + r.id().toString());
+                        ObjectFlowId = r.id().toString();
+                        //log.info(r.toString());
+                        //计算流速
+                        //long flowRateOutOfB = r.bytes() / r.life();//约等于flowRateInOfC
+                        long flowRateOutOfB = 1;
+                        ObjectFlowSpeed = flowRateOutOfB + "";
+                        isFlowFound = true;
+//                        for(int kkk=0; kkk< 1000; kkk++){
+//                            log.info("true");
+//                        }
+                        //ObjectFlowSpeed赋值
+
+                        break;
+                    }
+                }
+                /**bug待修复
+                 * 版本二记得还要加个条件，就是A->B->C，C产生packetIn，那么判断这个有flow的link是不是最近的B
+                 */
+                if(isFlowFound == true){
+                    break;
+                }
+
+            }
+            //大小流评判标准，用hedera？
+            //bug待解决
+            Double Strench = 5.0;
+            if(isFlowFound && Double.valueOf(ObjectFlowSpeed) > Strench){
+                result = true;
+            }
+
+            //result
+            return result;
+        }
+
+        private boolean ismatchSrcAndDst(FlowEntry r, boolean matchesSrc, boolean matchesDst, MacAddress macAddress, MacAddress macAddress1) {
+            boolean result = false;
+            for (Instruction i : r.treatment().allInstructions()) {
+                if (i.type() == Instruction.Type.OUTPUT) {
+                    // if the flow has matching src and dst
+                    for (Criterion cr : r.selector().criteria()) {
+                        if (cr.type() == Criterion.Type.ETH_DST) {
+                            if (((EthCriterion) cr).mac().equals(macAddress1)) {
+                                matchesDst = true;
+                            }
+                        } else if (cr.type() == Criterion.Type.ETH_SRC) {
+                            if (((EthCriterion) cr).mac().equals(macAddress)) {
+                                matchesSrc = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (matchesDst && matchesSrc) {
+                result = true;
+            }
+            return result;
         }
 
 

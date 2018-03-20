@@ -21,8 +21,10 @@ import org.onosproject.core.GroupId;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
+import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
 
+import java.util.HashMap;
 import java.util.Optional;
 
 /**
@@ -61,6 +63,15 @@ public class StatisticServiceAdapter implements StatisticService {
 
     @Override
     public Load load(Link link, ApplicationId appId, Optional<GroupId> groupId) {
+        return null;
+    }
+    /**
+     * 自研.增加对流速的统计
+     * @param connectPoint
+     * @return
+     */
+    @Override
+    public HashMap<FlowEntry, Long> flow_rate_interval(ConnectPoint connectPoint){
         return null;
     }
 }

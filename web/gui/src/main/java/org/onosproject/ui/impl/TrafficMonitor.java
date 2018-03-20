@@ -472,6 +472,8 @@ public class TrafficMonitor extends AbstractTopoMonitor {
             if (type == StatsType.FLOW_STATS) {
                 attachFlowLoad(tlink);
             } else if (type == StatsType.PORT_STATS) {
+                //test two function
+                attachFlowLoad(tlink);
                 attachPortLoad(tlink);
             }
 
@@ -481,6 +483,9 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                 //highlights.add(tlink.highlight(type));
                 LinkHighlight linkHighlight = tlink.highlight(type);
                 highlights.add(linkHighlight);
+                /**
+                 * 目前我准备在这开启监控
+                 */
                 if(type == StatsType.PORT_STATS){
 
                     /**
@@ -500,6 +505,8 @@ public class TrafficMonitor extends AbstractTopoMonitor {
 
                     ConnectPoint src = tlink.key().src();
                     ConnectPoint dst = tlink.key().dst();
+
+
 //                    log.info("========= monitor ========================");
 //
 //                    log.info("src.toString(): " + src.toString());
@@ -525,6 +532,7 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                     //log.info("linkId: " + tlink.linkId());
                     //log.info("link的带宽"+"label: " + linkHighlight.label());
                     String bandwidth = linkHighlight.label();
+
                     String tlinkId = tlink.linkId();
                     if(bandwidth.contains("M")){
                         double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
@@ -548,16 +556,12 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                         sum += temp;
                     }
                     //log.info("curSUm: " +  sum);
-                    //默认的带宽capacity是10000M
 
-                    /**
-                     * 由于connectionpoint信息不完整，目前采取的策略是
-                     * 在Forwarding那个service上把每个link对应的maxBandwitch打入到redis中
-                     * 这里读redis
-                     */
-//                    log.info("linkrestBandwidth: " + linkrestBandwidth);
-//                    log.info("linkmaxBandwidth: " + linkmaxBandwidth);
                     //sum
+
+
+                }else{
+                    //type == StatsType.FLOW_STATS
 
                 }
             }else{
@@ -567,6 +571,41 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                 sum += 0;
             }
         }
+
+//        for(TrafficLink trafficLink : linkMap.biLinks()){
+//
+//
+//            String linkId = trafficLink.linkId();
+//            //log.info("linkId: " + linkId);
+//            ConnectPoint linkOneSrc = trafficLink.one().src();
+//            //log.info("linkOneSrc: " + linkOneSrc.toString());
+//
+//            /**
+//             StatisticManager.java
+//             对流的统计
+//             connectPoint暂定为流的src交换机
+//             private HashMap<FlowEntry, Long> flow_rate_interval(ConnectPoint connectPoint)
+//             */
+//
+//
+////            HashMap<FlowEntry, Long> flow_rate_Of_LinkSrc = statisticService.flow_rate_interval(linkOneSrc);
+//
+////            if(flow_rate_Of_LinkSrc == null){
+////                log.info("flow_rate_Of_LinkSrc 为空！");
+////            }
+////             else{
+////                for(Map.Entry<FlowEntry, Long> entryLongEntry : flow_rate_Of_LinkSrc.entrySet()){
+////                    if(entryLongEntry.getKey() != null && entryLongEntry.getValue() != null){
+////                        String flowId = entryLongEntry.getKey().id().toString();
+////                        String flowRate = entryLongEntry.getValue().toString();
+////                        log.info("flowId: " + flowId);
+////                        log.info("flowRate: " + flowRate);
+////                    }
+////
+////                }
+////            }
+//
+//        }
 
         //csv
         /**
@@ -767,6 +806,7 @@ public class TrafficMonitor extends AbstractTopoMonitor {
     }
 
     private void attachFlowLoad(TrafficLink link) {
+
         link.addLoad(getLinkFlowLoad(link.one()));
         link.addLoad(getLinkFlowLoad(link.two()));
     }
@@ -792,8 +832,8 @@ public class TrafficMonitor extends AbstractTopoMonitor {
          * /root/onos/web/gui/src/main/java/org/onosproject/ui/impl/TrafficMonitor.java
          * test statistic
          */
-
-
+//
+//
 //        if(egressDst != null && egressSrc != null){
 //            log.info("======");
 //            log.info("one.src().deviceId() : " + one.src().deviceId().toString());

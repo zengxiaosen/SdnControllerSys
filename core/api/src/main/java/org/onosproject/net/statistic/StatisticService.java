@@ -20,8 +20,10 @@ import org.onosproject.core.GroupId;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
+import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
 
+import java.util.HashMap;
 import java.util.Optional;
 
 /**
@@ -41,6 +43,12 @@ public interface StatisticService {
      */
     Load load(Link link);
 
+    /**
+     * 自研.增加对流速的统计
+     * @param connectPoint
+     * @return
+     */
+    HashMap<FlowEntry, Long> flow_rate_interval(ConnectPoint connectPoint);
     /**
      * Obtain the load for the given port.
      *
