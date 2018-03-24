@@ -163,11 +163,11 @@ public class TopologyManager
         checkNotNull(topology, TOPOLOGY_NULL);
         checkNotNull(src, DEVICE_ID_NULL);
         checkNotNull(dst, DEVICE_ID_NULL);
-        log.info("开始执行算法");
+        //log.info("开始执行算法");
         Set<Path> result = store.getPaths1(topology, src, dst, hs);
-        log.info("算法执行结果");
-        log.info("对于源目分别是：" + src.toString() + "," + dst.toString());
-        log.info("得到了" + result.size() + "条path");
+        //log.info("算法执行结果");
+        //log.info("对于源目分别是：" + src.toString() + "," + dst.toString());
+        //log.info("得到了" + result.size() + "条path");
         //hs.add(src.toString().trim());
         //log.info("到目前为止hs的size: " + hs.size());
         return result;

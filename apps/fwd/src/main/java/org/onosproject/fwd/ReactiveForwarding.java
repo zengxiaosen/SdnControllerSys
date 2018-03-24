@@ -755,12 +755,12 @@ public class ReactiveForwarding {
                     topologyService.getPaths(topologyService.currentTopology(),
                                              pkt.receivedFrom().deviceId(),
                                              dst.location().deviceId());
-
-//            Set<Path> paths =
-//                    topologyService.getPaths1(topologyService.currentTopology(),
-//                            pkt.receivedFrom().deviceId(),
-//                            dst.location().deviceId(),
-//                            src.location().deviceId());
+            //getPaths1是利用Dijkstra choose path
+            Set<Path> paths_DijkStra =
+                    topologyService.getPaths1(topologyService.currentTopology(),
+                            pkt.receivedFrom().deviceId(),
+                            dst.location().deviceId(),
+                            src.location().deviceId());
 //            flowStatisticService.loadSummary(null);
 
 
@@ -777,7 +777,7 @@ public class ReactiveForwarding {
              */
 
             //这里的size是64,是双向的
-            log.info("allLinks: LinksResult.size(): " + LinksResult.size());
+            //log.info("allLinks: LinksResult.size(): " + LinksResult.size());
 
             //packetIn
 //            DeviceId dstDeviceId = dst.location().deviceId();
@@ -812,7 +812,7 @@ public class ReactiveForwarding {
 
             //isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
-            log.info("=============================================");
+            //log.info("=============================================");
 
 //            if(isFlowFound == true){
 //                log.info("找到packetIn所对应的流，源mac为" + macAddress.toString() + ", 目的mac为" + macAddress1.toString() + ", FlowId为" + ObjectFlowId);
@@ -860,8 +860,13 @@ public class ReactiveForwarding {
 
             // Otherwise, pick a path that does not lead back to where we
             // came from; if no such path, flood and bail.
-            // 原本第一个参数是paths
-            Path path = pickForwardPathIfPossible(Paths_PLLB, pkt.receivedFrom().port());
+            /**
+             * 第一個參數：
+             * paths_DijkStra：Dijkstra
+             * Paths_PLLB : PLLB
+             * Paths_FESM : FESM
+             */
+            Path path = pickForwardPathIfPossible(Paths_FESM, pkt.receivedFrom().port());
             //Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
             if (path == null) {
                 log.warn("Don't know where to go from here {} for {} -> {}",
@@ -892,7 +897,7 @@ public class ReactiveForwarding {
              * 我已經寫在統計模塊了。。。。
              */
 
-            log.info("=====================================================================================================================================");
+            //log.info("=====================================================================================================================================");
 
         }
 
@@ -1172,22 +1177,22 @@ public class ReactiveForwarding {
                 for(int k=0; k< arrayList.size(); k++){
                     double tempBandwidth = arrayList.get(k);
                     double bdInterval = Math.abs(tempBandwidth - pathMeanLoad);
-                    log.info("link " + k + " : ");
-                    log.info("选路阶段，bdInterval : " + bdInterval);
+                    //log.info("link " + k + " : ");
+                    //log.info("选路阶段，bdInterval : " + bdInterval);
                     double bdInterval2 = Math.pow(bdInterval, 2);
-                    log.info("选路阶段，bdInterval2 : " + bdInterval2);
+                    //log.info("选路阶段，bdInterval2 : " + bdInterval2);
                     bdInterval2_Sum += bdInterval2;
                 }
                 /**
                  * 方差
                  */
                 double variance = bdInterval2_Sum / pathlinksSize;
-                log.info("选路阶段，variance(方差）: " + variance);
+                //log.info("选路阶段，variance(方差）: " + variance);
                 /**
                  * 标准差
                  */
                 double standard_deviation = Math.pow(variance, 0.5);
-                log.info("选路阶段，标准差(path所有link的负载均衡度）== " + standard_deviation);
+                //log.info("选路阶段，标准差(path所有link的负载均衡度）== " + standard_deviation);
 
                 /**
                  * U = (h, p, b, r) ： 一条路径

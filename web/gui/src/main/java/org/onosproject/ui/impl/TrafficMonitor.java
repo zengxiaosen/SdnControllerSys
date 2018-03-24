@@ -462,11 +462,17 @@ public class TrafficMonitor extends AbstractTopoMonitor {
         compileLinks(linkMap);
         addEdgeLinks(linkMap);
         double sum = 0;
+        double sum_UsedRate = 0;
         /**
          * key: String tlinkId
          * value: Double BandWidth
          */
         HashMap<String, Double> tLinkId_BandWidth = new HashMap<>();
+        /**
+         * key: String tlinkId
+         * value: Double BandwidthUsedRate
+         */
+        HashMap<String, Double> tLinkId_BandWidthUsedRate = new HashMap<>();
 
         for (TrafficLink tlink : linkMap.biLinks()) {
             if (type == StatsType.FLOW_STATS) {
@@ -536,8 +542,11 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                     String tlinkId = tlink.linkId();
                     if(bandwidth.contains("M")){
                         double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
+                        log.info("=====bandwidth: " + temp + ", 帶寬利用率： " + temp/10000);
                         tLinkId_BandWidth.put(tlinkId, temp);
+                        tLinkId_BandWidthUsedRate.put(tlinkId, temp/10000);
                         sum += temp;
+                        sum_UsedRate += temp/10000;
 
                     }else if(bandwidth.contains("K")){
                         String tempETL = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
@@ -552,8 +561,11 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                         if(tempString != null &&  tempString != "" && !tempString.equals("")){
                             temp = Double.valueOf(tempString);
                         }
+                        log.info("=====bandwidth: " + temp  + ", 帶寬利用率： " + temp/10000);
                         tLinkId_BandWidth.put(tlinkId, temp);
+                        tLinkId_BandWidthUsedRate.put(tlinkId, temp/10000);
                         sum += temp;
+                        sum_UsedRate += temp/10000;
                     }
                     //log.info("curSUm: " +  sum);
 
@@ -568,7 +580,9 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                 double temp = 0;// 带宽设为0
                 String tlinkId = tlink.linkId();
                 tLinkId_BandWidth.put(tlinkId, temp);
+                tLinkId_BandWidthUsedRate.put(tlinkId, temp/10000);
                 sum += 0;
+                sum_UsedRate += 0;
             }
         }
 
@@ -621,9 +635,13 @@ public class TrafficMonitor extends AbstractTopoMonitor {
          */
         double meanTrafficBandWidth = sum / TrafficLinkSize;
         log.info("meanTrafficBandWidth: " + meanTrafficBandWidth);
+        /**
+         * 每条link平均的带宽利用率
+         */
+        double meanTrafficBandWidthUsedRate = sum_UsedRate / TrafficLinkSize;
 
         /**
-         * 对tLinkId_BandWidth中每条link算负载的均衡度
+         * 对tLinkId_BandWidth中每条link算负载的均衡度(用帶寬的均衡度判斷）
          *
          * 标准差：
          * T= pow(bdInterval2_Sum, 1/2)
@@ -649,22 +667,41 @@ public class TrafficMonitor extends AbstractTopoMonitor {
 
 
         }
+
+        /**
+         * 對tLinkId_BandWidth中每條link的帶寬利用率算方差 來表示負載 的均衡度
+         *
+         */
+        double bdInterval3_Sum = 0;
+        for(Map.Entry<String, Double> entry : tLinkId_BandWidthUsedRate.entrySet()){
+            String key = entry.getKey();
+            Double value = entry.getValue();
+            double bdInterval = Math.abs(value - meanTrafficBandWidthUsedRate);
+            double bdInterval3 = Math.pow(bdInterval, 2);
+            bdInterval3_Sum += bdInterval3;
+        }
+
+
         //log.info("bdInterval2_Sum : " + bdInterval2_Sum);
         //log.info("TrafficLinkSize : " + TrafficLinkSize);
         /**
          * 方差
          */
         double variance = bdInterval2_Sum / TrafficLinkSize;
+        double variance_of_usedRate = bdInterval3_Sum / TrafficLinkSize;
         //log.info("variance(方差）: " + variance);
         /**
          * 标准差
          */
         double standard_deviation = Math.pow(variance, 0.5);
-        log.info("标准差(网络拓扑所有link的负载均衡度）== " + standard_deviation);
+        double standard_deviation_usedRate = Math.pow(variance_of_usedRate, 0.5);
+        log.info("标准差(网络拓扑所有link帶寬的標準差）== " + standard_deviation);
+        log.info("標準差(網絡拓撲所有link帶寬利用率的標準差) == " + standard_deviation_usedRate);
 
-        File csvFile = new File("/home/zengxiaosen/BandWidthStandardDeviation.csv");
+        File csvFile = new File("/home/zengxiaosen/BandWidthUsedRateStandardDeviation.csv");
         checkExist(csvFile);
-        boolean b = appendData(csvFile, standard_deviation+"");
+        //boolean b = appendData(csvFile, standard_deviation+"");
+        boolean b = appendData(csvFile, standard_deviation_usedRate+"");
         if(b == true){
             log.info("追加写成功..");
         }else{

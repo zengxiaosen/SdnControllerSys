@@ -220,8 +220,8 @@ public class DistributedTopologyStore
     public Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs){
         //log.info("store端调用的是DistributedTopologyStore。。。getPaths1。。。。。。。。。。。。。。。。。。。。。。。。。。");
         //return defaultTopology(topology).getPaths(src, dst);
-        //return defaultTopology(topology).getPaths1(src, dst, hs);
-        return null;
+        return defaultTopology(topology).getPaths1(src, dst, hs);
+        //return null;
     }
 
     @Override

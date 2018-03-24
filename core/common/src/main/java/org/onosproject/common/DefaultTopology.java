@@ -39,17 +39,7 @@ import org.onosproject.net.Path;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.net.statistic.FlowStatisticService;
-import org.onosproject.net.topology.ClusterId;
-import org.onosproject.net.topology.DefaultTopologyCluster;
-import org.onosproject.net.topology.DefaultTopologyVertex;
-import org.onosproject.net.topology.GraphDescription;
-import org.onosproject.net.topology.HopCountLinkWeight;
-import org.onosproject.net.topology.LinkWeigher;
-import org.onosproject.net.topology.Topology;
-import org.onosproject.net.topology.TopologyCluster;
-import org.onosproject.net.topology.TopologyEdge;
-import org.onosproject.net.topology.TopologyGraph;
-import org.onosproject.net.topology.TopologyVertex;
+import org.onosproject.net.topology.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -342,7 +332,7 @@ public class DefaultTopology extends AbstractModel implements Topology {
 
     public Set<Path> getPaths1(DeviceId src, DeviceId dst, DeviceId hs){
         //log.info("Topology端调用处1。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
-        return null;
+        return getPaths1(src, dst, linkWeightDijkstra(), ALL_PATHS);
     }
 
     public  LinkedList<Link> getAllPaths(){
@@ -361,6 +351,8 @@ public class DefaultTopology extends AbstractModel implements Topology {
     public Set<Path> getPaths(DeviceId src, DeviceId dst, LinkWeigher weigher) {
         return getPaths(src, dst, weigher, ALL_PATHS);
     }
+
+
 
     /**
      * Computes on-demand the set of shortest paths between source and
@@ -393,8 +385,48 @@ public class DefaultTopology extends AbstractModel implements Topology {
             return ImmutableSet.of();
         }
         //在search过程中用到了weight！
+        //dijkstra: graphPathSearchDijkstra
         GraphPathSearch.Result<TopologyVertex, TopologyEdge> result =
                 graphPathSearch().search(graph, srcV, dstV, weigher, maxPaths);
+        ImmutableSet.Builder<Path> builder = ImmutableSet.builder();
+        //log.info("上报packetIn的交换机："+src.toString()+",目的交换机："+dst.toString()+")" + ",path的条数："+result.paths().size());
+
+        int j=0;
+        // Set<Path<V, E>> paths();
+        for (org.onlab.graph.Path<TopologyVertex, TopologyEdge> path : result.paths()) {
+//            log.info("第 " + j + "条path "+"..........."+path.toString());
+
+//            for (TopologyEdge e : path.edges()) {
+//                log.info("edge src,dst:" + e.link().src().deviceId().toString() + "," + e.link().dst().deviceId().toString());
+//            }
+            j++;
+            //builder.add(networkPath(path));
+        }
+
+        for (org.onlab.graph.Path<TopologyVertex, TopologyEdge> path : result.paths()) {
+
+            builder.add(networkPath(path));
+        }
+        //log.info(".........................");
+
+        return builder.build();
+    }
+
+    public Set<Path> getPaths1(DeviceId src, DeviceId dst, LinkWeigher weigher, int maxPaths){
+        //log.info(".........................");
+
+
+        DefaultTopologyVertex srcV = new DefaultTopologyVertex(src);
+        DefaultTopologyVertex dstV = new DefaultTopologyVertex(dst);
+        Set<TopologyVertex> vertices = graph.getVertexes();
+        if (!vertices.contains(srcV) || !vertices.contains(dstV)) {
+            // src or dst not part of the current graph
+            return ImmutableSet.of();
+        }
+        //在search过程中用到了weight！
+        //dijkstra: graphPathSearchDijkstra
+        GraphPathSearch.Result<TopologyVertex, TopologyEdge> result =
+                graphPathSearchDijkstra().search(graph, srcV, dstV, weigher, maxPaths);
         ImmutableSet.Builder<Path> builder = ImmutableSet.builder();
         //log.info("上报packetIn的交换机："+src.toString()+",目的交换机："+dst.toString()+")" + ",path的条数："+result.paths().size());
 
@@ -1208,18 +1240,28 @@ public class DefaultTopology extends AbstractModel implements Topology {
 
     private GraphPathSearch<TopologyVertex, TopologyEdge> graphPathSearch() {
         return defaultGraphPathSearch != null ? defaultGraphPathSearch : DIJKSTRA;
+        //return DIJKSTRA;
+    }
+
+    private GraphPathSearch<TopologyVertex, TopologyEdge> graphPathSearchDijkstra() {
+        return DIJKSTRA != null ? DIJKSTRA : defaultGraphPathSearch;
+        //return DIJKSTRA;
+    }
+
+    private LinkWeigher linkWeightDijkstra(){
+        return hopCountWeigher;
     }
 
     private LinkWeigher linkWeight() {
 
-        for(int i=0; i<3; i++){
-            log.info("=====defaultLinkWeigher信息=====hopCountWeigher=====");
-        }
-        log.info("defaultLinkWeigher 是不是空： " + (defaultLinkWeigher == null));
+//        for(int i=0; i<3; i++){
+//            log.info("=====defaultLinkWeigher信息=====hopCountWeigher=====");
+//        }
+        //log.info("defaultLinkWeigher 是不是空： " + (defaultLinkWeigher == null));
         //defaultLinkWeigher基本上都是空的
         //log.info("defaultLinkWeigher: " + defaultLinkWeigher.toString());
         //足以证明dijkstra走的是hopweight,是基于条数走的
-        log.info("hopCountWeigher: " + hopCountWeigher.toString());
+        //log.info("hopCountWeigher: " + hopCountWeigher.toString());
         //log.info(hopCountWeigher);
         //会经过这里去取哪种linkWeigher
         return defaultLinkWeigher != null ? defaultLinkWeigher : hopCountWeigher;
