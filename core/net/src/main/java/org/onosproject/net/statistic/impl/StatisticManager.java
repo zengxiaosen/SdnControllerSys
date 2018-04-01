@@ -233,6 +233,7 @@ public class StatisticManager implements StatisticService {
         for(FlowEntry flowEntry1 : stats.current){
 //            log.info("currentFlowId: " + flowEntry1.id().toString());
 //            log.info("currentFlowBytes: " + flowEntry1.bytes() + "");
+
             flowCurrent_idBytes1.put(flowEntry1.id().toString().trim(), flowEntry1.bytes());
         }
 
@@ -254,8 +255,8 @@ public class StatisticManager implements StatisticService {
                 StringBuffer sb = new StringBuffer();
                 sb.append(key).append("|").append(connectPoint.deviceId().toString()).append("|").append(flowRateString).append("b/s");
                 //sb:flowId|deviceId|flowRate
-                log.info("flowId|deviceId|flowRate:");
-                log.info(sb.toString());
+//                log.info("flowId|deviceId|flowRate:");
+//                log.info(sb.toString());
                 //update flow information to file
                 File csvFile = new File("/home/zengxiaosen/deviceId_FlowId_FlowRate.csv");
                 String filePath = "/home/zengxiaosen/deviceId_FlowId_FlowRate.csv";
@@ -265,6 +266,10 @@ public class StatisticManager implements StatisticService {
                  * 取出文件中的所有flowId，如果有，同時deviceid一楊，則更新flowRate
                  * 否則append添加
                  */
+
+                ProToRedis proToRedis = new ProToRedis(sb.toString());
+                proToRedis.start();
+
 //                boolean b = appendData(csvFile, sb.toString(), filePath);
 //                if(b == true){
 //                    log.info("updateFlowInfomation写成功..");

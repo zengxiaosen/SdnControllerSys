@@ -17,6 +17,7 @@ package org.onosproject.fwd;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
+import org.apache.commons.lang.StringUtils;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -75,6 +76,7 @@ import org.osgi.service.jdbc.DataSourceFactory;
 import org.slf4j.Logger;
 //import redis.clients.jedis.Jedis;
 //import org.onosproject.incubator.net.PortStatisticsService;
+import java.io.*;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.util.*;
@@ -756,11 +758,12 @@ public class ReactiveForwarding {
                                              pkt.receivedFrom().deviceId(),
                                              dst.location().deviceId());
             //getPaths1是利用Dijkstra choose path
+            //Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs);
             Set<Path> paths_DijkStra =
                     topologyService.getPaths1(topologyService.currentTopology(),
-                            pkt.receivedFrom().deviceId(),
                             dst.location().deviceId(),
-                            src.location().deviceId());
+                            src.location().deviceId(),
+                            pkt.receivedFrom().deviceId());
 //            flowStatisticService.loadSummary(null);
 
 
@@ -807,10 +810,9 @@ public class ReactiveForwarding {
              * 大流选路采用PLLB算法（避免大流汇聚）
              * 小流选路采用hash均分的方式
              */
-            boolean isBigFlow = false;
+
             ConnectPoint curSwitchConnectionPoint = pkt.receivedFrom();
 
-            //isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
             //log.info("=============================================");
 
@@ -837,7 +839,9 @@ public class ReactiveForwarding {
              * PathsDecision_PLLB
              * 自研算法
              */
-            Set<Path> Paths_PLLB = PathsDecision_PLLB(paths, pkt.receivedFrom().deviceId(),
+            boolean isBigFlow = false;
+            isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+            Set<Path> Paths_PLLB = PathsDecision_PLLB(isBigFlow, paths, pkt.receivedFrom().deviceId(),
                     dst.location().deviceId(),
                     src.location().deviceId(),
                     LinksResult);
@@ -862,11 +866,13 @@ public class ReactiveForwarding {
             // came from; if no such path, flood and bail.
             /**
              * 第一個參數：
-             * paths_DijkStra：Dijkstra
+             *
              * Paths_PLLB : PLLB
              * Paths_FESM : FESM
              */
-            Path path = pickForwardPathIfPossible(Paths_FESM, pkt.receivedFrom().port());
+            Set<Path> mypllb_pathset = Paths_PLLB != null ? Paths_PLLB : paths_DijkStra;
+            Set<Path> myfesm_pathset = Paths_FESM != null ? Paths_FESM : paths_DijkStra;
+            Path path = pickForwardPathIfPossible(mypllb_pathset, pkt.receivedFrom().port());
             //Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
             if (path == null) {
                 log.warn("Don't know where to go from here {} for {} -> {}",
@@ -905,8 +911,8 @@ public class ReactiveForwarding {
             boolean result = false;
 
             //body
+            String resultflowRate = "";
 
-            boolean isFlowFound = false;
             String ObjectFlowId = "";
             String ObjectFlowSpeed = "";
             for(Link link : LinksResult){
@@ -951,9 +957,13 @@ public class ReactiveForwarding {
                         //log.info(r.toString());
                         //计算流速
                         //long flowRateOutOfB = r.bytes() / r.life();//约等于flowRateInOfC
-                        long flowRateOutOfB = 1;
-                        ObjectFlowSpeed = flowRateOutOfB + "";
-                        isFlowFound = true;
+                        //give it a very small item to init
+                        String flowRateOutOfB = "0.01";
+                        //read file update by monitor module
+                        File flowRateFile = new File("/home/zengxiaosen/flowId_flowRate.csv");
+                        flowRateOutOfB = getflowRateFromMonitorModule(flowRateFile, ObjectFlowId, curSwitchConnectionPoint.deviceId().toString());
+
+                        resultflowRate = flowRateOutOfB;
 //                        for(int kkk=0; kkk< 1000; kkk++){
 //                            log.info("true");
 //                        }
@@ -962,23 +972,71 @@ public class ReactiveForwarding {
                         break;
                     }
                 }
-                /**bug待修复
-                 * 版本二记得还要加个条件，就是A->B->C，C产生packetIn，那么判断这个有flow的link是不是最近的B
-                 */
-                if(isFlowFound == true){
-                    break;
-                }
+
 
             }
-            //大小流评判标准，用hedera？
+            //大小流评判标准
             //bug待解决
             Double Strench = 5.0;
-            if(isFlowFound && Double.valueOf(ObjectFlowSpeed) > Strench){
-                result = true;
-            }
+            log.info(resultflowRate);
+//            if(Double.valueOf(ObjectFlowSpeed) > Strench){
+//                result = true;
+//            }
+            result = true;
 
             //result
             return result;
+        }
+
+        public void checkExist(File file) {
+            //判断文件目录的存在
+            if(file.exists()){
+                //file exists
+            }else{
+                //file not exists, create it ...
+                try{
+                    file.createNewFile();
+                }catch (IOException e){
+                    e.printStackTrace();
+                }
+            }
+        }
+
+
+
+        public String getflowRateFromMonitorModule(File csvFile, String ObjectFlowId, String curSwitch_deviceId){
+            //如果是沒有這個key就append，有這個key就更改
+
+            try {
+                //read
+                FileInputStream fis = new FileInputStream(csvFile);
+                BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+                String line = null;
+                int ifhavingkey = 0;
+                int rowhavingkey = 0;
+                while((line = br.readLine()) != null){
+                    if(line.contains(ObjectFlowId)){
+                        ifhavingkey = 1;
+                        log.info("找到flowrate===判斷大小流模塊");
+                        //get the flow rate
+                        String[] result = StringUtils.split(line, ",");
+                        String flowRate = result[1];
+                        return flowRate;
+                        
+                    }
+                }
+                fis.close();
+                br.close();
+                if(ifhavingkey == 0){
+                    log.info("沒有找到flowrate===判斷大小流模塊");
+                }
+
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            return "0.01";
         }
 
         private boolean ismatchSrcAndDst(FlowEntry r, boolean matchesSrc, boolean matchesDst, MacAddress macAddress, MacAddress macAddress1) {
@@ -1007,8 +1065,12 @@ public class ReactiveForwarding {
         }
 
 
-        private synchronized Set<Path> PathsDecision_PLLB(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1, LinkedList<Link> LinksResult) {
+        private synchronized Set<Path> PathsDecision_PLLB(boolean isBigFlow, Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1, LinkedList<Link> LinksResult) {
 
+            //test
+            //thread
+//            Proc p = new Proc();
+//            p.start();
 
 
             //flowStatisticService.loadSummaryPortInternal()
@@ -1045,6 +1107,7 @@ public class ReactiveForwarding {
                 long pObject = 0;
                 long bObject = 0;
                 long rObject = 0;
+                long maxPortBwObject = 0;
                 double allLinkOfPath_BandWidth = 0;
                 ArrayList<Double> arrayList = new ArrayList<>();
                 for(Link link : path.links()){
@@ -1059,6 +1122,8 @@ public class ReactiveForwarding {
                      */
 
                     long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
+                    long maxPortLoadBw = Math.max(getVportLoadCapability(link.src()), getVportLoadCapability(link.dst()));
+
 
 
 //                    long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
@@ -1147,6 +1212,10 @@ public class ReactiveForwarding {
                         rObject = IntraLinkLoadBw;
                     }
 
+                    if(maxPortLoadBw > maxPortBwObject){
+                        maxPortBwObject = maxPortLoadBw;
+                    }
+
                     j++;
                 }
 
@@ -1221,6 +1290,7 @@ public class ReactiveForwarding {
 
                 double rh = 1.0 / (double)(Math.exp((double)hObject));
                 double rp = 1.0 / (double)(Math.log((double)(pObject + 0.1)));
+                double rmaxPortBw = 1.0 / (double)(Math.log((double)(maxPortBwObject + 0.1)));
                 double rb = 1.0 / (double)(Math.log((double)(bObject + 0.1)));
                 double rr = 1.0 / (double)(1 + Math.exp((double)((0-rObject) / 50.0)));
                 double rs = 1.0 / (double)(Math.log((double)(standard_deviation + 1)));
@@ -1237,18 +1307,19 @@ public class ReactiveForwarding {
                  *
                  */
 
-                double a1 = 0.2;
+                //double a1 = 0.1;
                 //double a2 = 0.15;
                 double a3 = 0.1;
-                double a4 = 0.3;
+                double a4 = 0.1;
                 double a5 = 0.4;
-
-                double b1 = a1 * rh;
+                double a6 = 0.4;
+                //double b1 = a1 * rh;
                 //double b2 = a2 * rp;
                 double b3 = a3 * rb;
                 double b4 = a4 * rr;
                 double b5 = a5 * rs;
-                double resultScore =  b1 + b3 + b4 + b5;
+                double b6 = a6 * rmaxPortBw;
+                double resultScore = b3 + b4 + b5 + b6;
                 if(resultScore > maxScore){
                     finalPath = path;
                 }

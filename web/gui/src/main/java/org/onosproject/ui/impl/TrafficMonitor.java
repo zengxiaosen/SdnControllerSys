@@ -538,17 +538,18 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                     //log.info("linkId: " + tlink.linkId());
                     //log.info("link的带宽"+"label: " + linkHighlight.label());
                     String bandwidth = linkHighlight.label();
-
+                    double level = 10000000;
                     String tlinkId = tlink.linkId();
                     if(bandwidth.contains("M")){
                         double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
-                        log.info("=====bandwidth: " + temp + ", 帶寬利用率： " + temp/10000);
+                        log.info("=====bandwidth: " + temp + ", 帶寬利用率： " + temp/level);
                         tLinkId_BandWidth.put(tlinkId, temp);
-                        tLinkId_BandWidthUsedRate.put(tlinkId, temp/10000);
+                        tLinkId_BandWidthUsedRate.put(tlinkId, temp/level);
                         sum += temp;
-                        sum_UsedRate += temp/10000;
+                        sum_UsedRate += temp/level;
 
                     }else if(bandwidth.contains("K")){
+                        double level1 = 10000000;
                         String tempETL = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
                         //处理 “1,006.67”这种脏数据
                         String tempString = "";
@@ -561,11 +562,11 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                         if(tempString != null &&  tempString != "" && !tempString.equals("")){
                             temp = Double.valueOf(tempString);
                         }
-                        log.info("=====bandwidth: " + temp  + ", 帶寬利用率： " + temp/10000);
+                        log.info("=====bandwidth(M: " + temp  + ", 帶寬利用率： " + temp/level1);
                         tLinkId_BandWidth.put(tlinkId, temp);
-                        tLinkId_BandWidthUsedRate.put(tlinkId, temp/10000);
+                        tLinkId_BandWidthUsedRate.put(tlinkId, temp/level1);
                         sum += temp;
-                        sum_UsedRate += temp/10000;
+                        sum_UsedRate += temp/level1;
                     }
                     //log.info("curSUm: " +  sum);
 
@@ -577,10 +578,11 @@ public class TrafficMonitor extends AbstractTopoMonitor {
 
                 }
             }else{
+                double level2 = 10000000;
                 double temp = 0;// 带宽设为0
                 String tlinkId = tlink.linkId();
                 tLinkId_BandWidth.put(tlinkId, temp);
-                tLinkId_BandWidthUsedRate.put(tlinkId, temp/10000);
+                tLinkId_BandWidthUsedRate.put(tlinkId, temp/level2);
                 sum += 0;
                 sum_UsedRate += 0;
             }
