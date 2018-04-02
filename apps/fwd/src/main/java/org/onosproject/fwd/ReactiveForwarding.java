@@ -965,9 +965,10 @@ public class ReactiveForwarding {
                         File flowRateFile = new File("/home/zengxiaosen/flowId_flowRate.csv");
                         String flowRateOutOfB = getflowRateFromMonitorModule(flowRateFile, ObjectFlowId, curSwitchConnectionPoint.deviceId().toString());
                         resultflowRate = flowRateOutOfB;
-                        log.info("match....");
-                        log.info("flowRate: " + resultflowRate);
-                        log.info("ObjectFlowId: " + ObjectFlowId);
+//                        log.info("match....");
+//                        log.info("flowRate: " + resultflowRate);
+//                        log.info("ObjectFlowId: " + ObjectFlowId);
+
 //                        for(int kkk=0; kkk< 1000; kkk++){
 //                            log.info("true");
 //                        }
@@ -986,9 +987,9 @@ public class ReactiveForwarding {
              * small flow : 1b~1Mb
              */
             String flowSpeedEtl;
-            flowSpeedEtl = resultflowRate.substring(0, resultflowRate.indexOf("b"));
+            //flowSpeedEtl = resultflowRate.substring(0, resultflowRate.indexOf("b"));
 
-            log.info(flowSpeedEtl);
+            log.info("------" + resultflowRate);
 //            if(Double.valueOf(ObjectFlowSpeed) < Strench && Double.valueOf(ObjectFlowSpeed) > 1.0){
 //                result = false;
 //            }
