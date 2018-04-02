@@ -538,7 +538,7 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                     //log.info("linkId: " + tlink.linkId());
                     //log.info("link的带宽"+"label: " + linkHighlight.label());
                     String bandwidth = linkHighlight.label();
-                    double level = 10000000;
+                    double level = 100000;
                     String tlinkId = tlink.linkId();
                     if(bandwidth.contains("M")){
                         double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
@@ -549,7 +549,7 @@ public class TrafficMonitor extends AbstractTopoMonitor {
                         sum_UsedRate += temp/level;
 
                     }else if(bandwidth.contains("K")){
-                        double level1 = 10000000;
+                        double level1 = 100000;
                         String tempETL = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
                         //处理 “1,006.67”这种脏数据
                         String tempString = "";
@@ -578,7 +578,7 @@ public class TrafficMonitor extends AbstractTopoMonitor {
 
                 }
             }else{
-                double level2 = 10000000;
+                double level2 = 100000;
                 double temp = 0;// 带宽设为0
                 String tlinkId = tlink.linkId();
                 tLinkId_BandWidth.put(tlinkId, temp);
