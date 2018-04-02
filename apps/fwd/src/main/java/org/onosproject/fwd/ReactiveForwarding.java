@@ -856,14 +856,8 @@ public class ReactiveForwarding {
                             pkt.receivedFrom().deviceId());
                 Paths_Choise = paths_DijkStra;
             }else if(choise == 4){
-                int hashcode = (src.location().deviceId().toString() + dst.location().deviceId().toString()).hashCode() % paths.size();
-                int j=0;
-                Set<Path> paths_ecmp;
-                for(Path path : paths){
-                    if(j == hashcode){
-                        paths_ecmp.add(path);
-                    }
-                }
+
+                Set<Path> paths_ecmp = PathsDecision_ECMP(paths, src.location().deviceId().toString(), dst.location().deviceId().toString());
                 Paths_Choise = paths_ecmp;
             }
 
@@ -928,6 +922,18 @@ public class ReactiveForwarding {
 
             //log.info("=====================================================================================================================================");
 
+        }
+
+        private synchronized Set<Path> PathsDecision_ECMP(Set<Path> paths, String src, String dst){
+            Set<Path> result = new HashSet<>();
+            int hashcode = (src + dst).hashCode() % paths.size();
+            int j=0;
+            for(Path path : paths){
+                if(j == hashcode){
+                    result.add(path);
+                }
+            }
+            return result;
         }
 
         private synchronized boolean ifBigFlowProcess(MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
