@@ -872,7 +872,7 @@ public class ReactiveForwarding {
              */
             Set<Path> mypllb_pathset = Paths_PLLB != null ? Paths_PLLB : paths_DijkStra;
             Set<Path> myfesm_pathset = Paths_FESM != null ? Paths_FESM : paths_DijkStra;
-            Path path = pickForwardPathIfPossible(mypllb_pathset, pkt.receivedFrom().port());
+            Path path = pickForwardPathIfPossible(myfesm_pathset, pkt.receivedFrom().port());
             //Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
             if (path == null) {
                 log.warn("Don't know where to go from here {} for {} -> {}",
