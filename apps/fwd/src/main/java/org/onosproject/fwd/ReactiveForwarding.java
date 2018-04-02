@@ -984,6 +984,8 @@ public class ReactiveForwarding {
             /**
              * small flow : 1b~1Mb
              */
+            String flowSpeedEtl = ObjectFlowSpeed.substring(0, ObjectFlowSpeed.indexOf("b"));
+            log.info(flowSpeedEtl);
 //            if(Double.valueOf(ObjectFlowSpeed) < Strench && Double.valueOf(ObjectFlowSpeed) > 1.0){
 //                result = false;
 //            }
