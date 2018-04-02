@@ -914,7 +914,8 @@ public class ReactiveForwarding {
             String resultflowRate = "";
 
             String ObjectFlowId = "";
-            String ObjectFlowSpeed = "";
+            //init with a very small number
+            String ObjectFlowSpeed = "0.01b/s";
             for(Link link : LinksResult){
 
                 DeviceId deviceId_src = link.src().deviceId();
@@ -984,7 +985,9 @@ public class ReactiveForwarding {
             /**
              * small flow : 1b~1Mb
              */
-            String flowSpeedEtl = ObjectFlowSpeed.substring(0, ObjectFlowSpeed.indexOf("b"));
+            String flowSpeedEtl;
+            flowSpeedEtl = resultflowRate.substring(0, resultflowRate.indexOf("b"));
+
             log.info(flowSpeedEtl);
 //            if(Double.valueOf(ObjectFlowSpeed) < Strench && Double.valueOf(ObjectFlowSpeed) > 1.0){
 //                result = false;
