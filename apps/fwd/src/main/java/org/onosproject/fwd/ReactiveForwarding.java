@@ -987,12 +987,19 @@ public class ReactiveForwarding {
              * small flow : 1b~1Mb
              */
             String flowSpeedEtl;
-            //flowSpeedEtl = resultflowRate.substring(0, resultflowRate.indexOf("b"));
+            /**
+             * if resultflowRate is null : means the big flow monitor function is not init by the website
+             * using the solution track same as big flow
+             */
+            if(resultflowRate == null ||  resultflowRate.equals("")){
+                return true;
+            }
+            flowSpeedEtl = resultflowRate.substring(0, resultflowRate.indexOf("b"));
 
             log.info("------" + resultflowRate);
-//            if(Double.valueOf(ObjectFlowSpeed) < Strench && Double.valueOf(ObjectFlowSpeed) > 1.0){
-//                result = false;
-//            }
+            if(Double.valueOf(flowSpeedEtl) < Strench && Double.valueOf(flowSpeedEtl) > 1.0){
+                result = false;
+            }
 
             //result
             return result;
