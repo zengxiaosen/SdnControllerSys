@@ -830,7 +830,7 @@ public class ReactiveForwarding {
              * 2 dijkstra
              * 3 ecmp
              */
-            Set<Path> Paths_Choise;
+            Set<Path> Paths_Choise = new HashSet<>();
 
             int choise = 1;
 
