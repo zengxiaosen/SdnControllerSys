@@ -759,12 +759,6 @@ public class ReactiveForwarding {
                                              dst.location().deviceId());
             //getPaths1是利用Dijkstra choose path
             //Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs);
-            Set<Path> paths_DijkStra =
-                    topologyService.getPaths1(topologyService.currentTopology(),
-                            dst.location().deviceId(),
-                            src.location().deviceId(),
-                            pkt.receivedFrom().deviceId());
-//            flowStatisticService.loadSummary(null);
 
 
             /**
@@ -830,21 +824,50 @@ public class ReactiveForwarding {
              *
              */
 
-            Set<Path> Paths_FESM = PathsDecision_FESM(paths, pkt.receivedFrom().deviceId(),
-                    dst.location().deviceId(),
-                    src.location().deviceId(),
-                    LinksResult);
-
             /**
-             * PathsDecision_PLLB
-             * 自研算法
+             * 0 fesm
+             * 1 pllb
+             * 2 dijkstra
+             * 3 ecmp
              */
-            boolean isBigFlow = false;
-            isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
-            Set<Path> Paths_PLLB = PathsDecision_PLLB(isBigFlow, paths, pkt.receivedFrom().deviceId(),
-                    dst.location().deviceId(),
-                    src.location().deviceId(),
-                    LinksResult);
+            Set<Path> Paths_Choise;
+
+            int choise = 1;
+
+            if(choise == 0){
+                Set<Path> Paths_FESM = PathsDecision_FESM(paths, pkt.receivedFrom().deviceId(),
+                        dst.location().deviceId(),
+                        src.location().deviceId(),
+                        LinksResult);
+                Paths_Choise = Paths_FESM;
+            }else if(choise == 1){
+                boolean isBigFlow = false;
+                isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+                Set<Path> Paths_PLLB = PathsDecision_PLLB(isBigFlow, paths, pkt.receivedFrom().deviceId(),
+                        dst.location().deviceId(),
+                        src.location().deviceId(),
+                        LinksResult);
+                Paths_Choise = Paths_PLLB;
+            }else if(choise == 3){
+                Set<Path> paths_DijkStra =
+                    topologyService.getPaths1(topologyService.currentTopology(),
+                            dst.location().deviceId(),
+                            src.location().deviceId(),
+                            pkt.receivedFrom().deviceId());
+                Paths_Choise = paths_DijkStra;
+            }else if(choise == 4){
+                int hashcode = (src.location().deviceId().toString() + dst.location().deviceId().toString()).hashCode() % paths.size();
+                int j=0;
+                Set<Path> paths_ecmp;
+                for(Path path : paths){
+                    if(j == hashcode){
+                        paths_ecmp.add(path);
+                    }
+                }
+                Paths_Choise = paths_ecmp;
+            }
+
+
 
             if (paths.isEmpty()) {
                 // If there are no paths, flood and bail.
@@ -870,9 +893,9 @@ public class ReactiveForwarding {
              * Paths_PLLB : PLLB
              * Paths_FESM : FESM
              */
-            Set<Path> mypllb_pathset = Paths_PLLB != null ? Paths_PLLB : paths_DijkStra;
-            Set<Path> myfesm_pathset = Paths_FESM != null ? Paths_FESM : paths_DijkStra;
-            Path path = pickForwardPathIfPossible(mypllb_pathset, pkt.receivedFrom().port());
+//            Set<Path> mypllb_pathset = Paths_PLLB != null ? Paths_PLLB : paths_DijkStra;
+//            Set<Path> myfesm_pathset = Paths_FESM != null ? Paths_FESM : paths_DijkStra;
+            Path path = pickForwardPathIfPossible(Paths_Choise, pkt.receivedFrom().port());
             //Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
             if (path == null) {
                 log.warn("Don't know where to go from here {} for {} -> {}",
