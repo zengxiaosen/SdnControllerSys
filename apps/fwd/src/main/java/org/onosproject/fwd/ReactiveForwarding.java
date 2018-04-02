@@ -982,7 +982,7 @@ public class ReactiveForwarding {
             }
             //大小流评判标准
             //1M/s
-            Double Strench = 1000000.0;
+            Double Strench = 10.0;
             /**
              * small flow : 1b~1Mb
              */
@@ -996,10 +996,10 @@ public class ReactiveForwarding {
             }
             flowSpeedEtl = resultflowRate.substring(0, resultflowRate.indexOf("b"));
 
-            log.info("------" + resultflowRate);
-            if(Double.valueOf(flowSpeedEtl) < Strench && Double.valueOf(flowSpeedEtl) > 1.0){
-                result = false;
-            }
+            //log.info("------" + resultflowRate);
+//            if(Double.valueOf(flowSpeedEtl) < Strench && Double.valueOf(flowSpeedEtl) > 1.0){
+//                result = false;
+//            }
 
             //result
             return result;
