@@ -984,9 +984,9 @@ public class ReactiveForwarding {
             /**
              * small flow : 1b~1Mb
              */
-            if(Double.valueOf(ObjectFlowSpeed) < Strench && Double.valueOf(ObjectFlowSpeed) > 1){
-                result = false;
-            }
+//            if(Double.valueOf(ObjectFlowSpeed) < Strench && Double.valueOf(ObjectFlowSpeed) > 1.0){
+//                result = false;
+//            }
 
             //result
             return result;
