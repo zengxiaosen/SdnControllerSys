@@ -154,7 +154,7 @@ public class NettyMessagingManager implements MessagingService {
         channels.setTestOnBorrow(true);
         channels.setTestOnReturn(true);
         channels.setMinEvictableIdleTimeMillis(60_000L);
-        channels.setTimeBetweenEvictionRunsMillis(30_000L);
+        channels.setTimeBetweenEvictionRunsMillis(50_000L);
         initEventLoopGroup();
         startAcceptingConnections();
         started.set(true);
