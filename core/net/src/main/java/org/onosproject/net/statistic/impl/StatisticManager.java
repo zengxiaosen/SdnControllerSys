@@ -87,7 +87,7 @@ public class StatisticManager implements StatisticService {
     }
 
     @Override
-    public synchronized Load vportload(ConnectPoint connectPoint) {
+    public  Load vportload(ConnectPoint connectPoint) {
         return portStatisticsService.load(connectPoint);
     }
 

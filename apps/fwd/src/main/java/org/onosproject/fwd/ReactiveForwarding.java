@@ -924,7 +924,7 @@ public class ReactiveForwarding {
 
         }
 
-        private synchronized Set<Path> PathsDecision_ECMP(Set<Path> paths, String src, String dst){
+        private  Set<Path> PathsDecision_ECMP(Set<Path> paths, String src, String dst){
             Set<Path> result = new HashSet<>();
             int hashcode = (src + dst).hashCode() % paths.size();
             int j=0;
@@ -936,7 +936,7 @@ public class ReactiveForwarding {
             return result;
         }
 
-        private synchronized boolean ifBigFlowProcess(MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
+        private  boolean ifBigFlowProcess(MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
             boolean result = true;
 
             //body
@@ -1111,7 +1111,7 @@ public class ReactiveForwarding {
         }
 
 
-        private synchronized Set<Path> PathsDecision_PLLB(boolean isBigFlow, Set<Path> paths, DeviceId recvId, DeviceId dstid, DeviceId srcId, LinkedList<Link> LinksResult) {
+        private  Set<Path> PathsDecision_PLLB(boolean isBigFlow, Set<Path> paths, DeviceId recvId, DeviceId dstid, DeviceId srcId, LinkedList<Link> LinksResult) {
 
             /**
              * sBigFlow, paths, pkt.receivedFrom().deviceId(),
@@ -1406,7 +1406,7 @@ public class ReactiveForwarding {
         }
 
 
-        private synchronized Set<Path> PathsDecision_FESM(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1, LinkedList<Link> LinksResult) {
+        private  Set<Path> PathsDecision_FESM(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1, LinkedList<Link> LinksResult) {
 
             /**
              *

@@ -195,7 +195,7 @@ public class FlowStatisticManager implements FlowStatisticService {
     }
 
     @Override
-    public  synchronized SummaryFlowEntryWithLoad loadSummaryPortInternal(ConnectPoint cp) {
+    public   SummaryFlowEntryWithLoad loadSummaryPortInternal(ConnectPoint cp) {
 //        for (int i=0; i< 1; i++){
 //            log.info("method:loadSummaryPortInternal..");
 //        }
