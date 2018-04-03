@@ -250,7 +250,7 @@ public class StatisticManager implements StatisticService {
                 long flowBytesNow = stringLongEntry.getValue();
                 long flowBytesPrevious = flowCurrent_idBytes2.get(key);
                 long bytesTrans = flowBytesNow - flowBytesPrevious;
-                long flowRate = bytesTrans / 3;
+                long flowRate = bytesTrans / 5;
                 String flowRateString = String.valueOf(flowRate);
                 StringBuffer sb = new StringBuffer();
                 sb.append(key).append("|").append(connectPoint.deviceId().toString()).append("|").append(flowRateString).append("b/s");
@@ -359,7 +359,7 @@ public class StatisticManager implements StatisticService {
                     //在FlowEntry class中重写hashcode 判断hashcode是否相同
                     long pre_bytes = flowEntry_pre.bytes();
                     long interval_bytes = cur_bytes - pre_bytes;
-                    long rate_interval = interval_bytes / 3;
+                    long rate_interval = interval_bytes / 5;
                     result.put(flowEntry, rate_interval);
                 }
             }

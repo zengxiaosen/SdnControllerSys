@@ -67,7 +67,7 @@ public class UiWebSocket
 
     private static final String TOPO = "topo";
 
-    private static final long MAX_AGE_MS = 30_000;
+    private static final long MAX_AGE_MS = 50_000;
 
     private static final byte PING = 0x9;
     private static final byte PONG = 0xA;

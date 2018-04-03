@@ -102,7 +102,11 @@ public class ProToRedis extends Thread {
                 bw.write(s_key+","+s_value);
                 bw.write("\n");
             }else{
-                //含有，should update value
+                //含有，udate值
+                //這裏暫時把新的flowrate寫到高行,reactiveforwarding 模塊讀最新值就好
+                bw.write(s_key+","+s_value);
+                bw.write("\n");
+
             }
 
             bw.close();
