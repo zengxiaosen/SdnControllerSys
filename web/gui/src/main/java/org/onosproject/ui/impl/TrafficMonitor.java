@@ -19,15 +19,12 @@ package org.onosproject.ui.impl;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.onosproject.net.Device;
-import org.onosproject.net.DeviceId;
-import org.onosproject.net.ElementId;
-import org.onosproject.net.Host;
-import org.onosproject.net.HostId;
-import org.onosproject.net.Link;
-import org.onosproject.net.PortNumber;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.onosproject.net.*;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.FlowEntry;
+import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.instructions.Instruction;
 import org.onosproject.net.flow.instructions.Instructions.OutputInstruction;
@@ -40,6 +37,7 @@ import org.onosproject.net.intent.OpticalConnectivityIntent;
 import org.onosproject.net.intent.OpticalPathIntent;
 import org.onosproject.net.intent.PathIntent;
 import org.onosproject.net.link.LinkService;
+import org.onosproject.net.statistic.StatisticService;
 import org.onosproject.ui.impl.topo.util.IntentSelection;
 import org.onosproject.ui.impl.topo.util.ServicesBundle;
 import org.onosproject.ui.impl.topo.util.TopoIntentFilter;
@@ -70,6 +68,8 @@ import static org.onosproject.net.DefaultEdgeLink.createEdgeLink;
 import static org.onosproject.ui.impl.TrafficMonitorBase.Mode.RELATED_INTENTS;
 import static org.onosproject.ui.impl.TrafficMonitorBase.Mode.SELECTED_INTENT;
 
+
+
 /**
  * Encapsulates the behavior of monitoring specific traffic patterns.
  */
@@ -77,6 +77,15 @@ public class TrafficMonitor extends TrafficMonitorBase {
 
     private static final Logger log =
             LoggerFactory.getLogger(TrafficMonitor.class);
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected StatisticService statisticService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DeviceService deviceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected FlowRuleService flowRuleService;
 
     private final TopologyViewMessageHandler msgHandler;
     private final TopoIntentFilter intentFilter;
@@ -224,6 +233,8 @@ public class TrafficMonitor extends TrafficMonitorBase {
         msgHandler.sendHighlights(trafficSummary(StatsType.FLOW_STATS));
     }
 
+
+
     @Override
     protected void sendAllPortTrafficBits() {
         log.debug("sendAllPortTrafficBits");
@@ -253,6 +264,8 @@ public class TrafficMonitor extends TrafficMonitorBase {
         log.debug("sendClearHighlights");
         msgHandler.sendHighlights(new Highlights());
     }
+
+
 
     @Override
     protected void clearSelection() {
@@ -323,7 +336,7 @@ public class TrafficMonitor extends TrafficMonitorBase {
                 allBut.remove(current);
                 secondary = allBut;
                 log.debug("Highlight intent: {} ([{}] of {})",
-                          current.id(), selectedIntents.index(), count);
+                        current.id(), selectedIntents.index(), count);
             }
 
             highlightIntentLinks(highlights, primary, secondary);
@@ -339,7 +352,7 @@ public class TrafficMonitor extends TrafficMonitorBase {
             Set<Intent> primary = new HashSet<>();
             primary.add(current);
             log.debug("Highlight traffic for intent: {} ([{}] of {})",
-                      current.id(), selectedIntents.index(), selectedIntents.size());
+                    current.id(), selectedIntents.index(), selectedIntents.size());
 
             highlightIntentLinksWithTraffic(highlights, primary);
             highlights.subdueAllElse(Amount.MINIMALLY);
@@ -359,7 +372,7 @@ public class TrafficMonitor extends TrafficMonitorBase {
 
         // get egress links from device, and include edge links
         Set<Link> links = new HashSet<>(services.link()
-                                                .getDeviceEgressLinks(deviceId));
+                .getDeviceEgressLinks(deviceId));
         Set<Host> hosts = services.host().getConnectedHosts(deviceId);
         if (hosts != null) {
             for (Host host : hosts) {
