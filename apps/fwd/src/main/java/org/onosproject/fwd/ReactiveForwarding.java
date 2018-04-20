@@ -600,6 +600,8 @@ public class ReactiveForwarding {
          * @return
          */
         private long getIntraLinkLoadBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+//            log.info("aaaaa : " + getVportLoadCapability(srcConnectPoint));
+//            log.info("bbbbb : " + getVportLoadCapability(dstConnectPoint));
             return Long.min(getVportLoadCapability(srcConnectPoint), getVportLoadCapability(dstConnectPoint));
         }
 
@@ -653,6 +655,7 @@ public class ReactiveForwarding {
              *
              * 收集网络信息
              * Packet_In 消息 上报
+             *
              *
              */
             InboundPacket pkt = context.inPacket();
@@ -1147,11 +1150,6 @@ public class ReactiveForwarding {
              LinksResult
              */
             if(isBigFlow == true){
-                //test
-                //thread
-//            Proc p = new Proc();
-//            p.start();
-
 
                 //flowStatisticService.loadSummaryPortInternal()
                 Set<Path> result = new HashSet<>();
@@ -1181,30 +1179,21 @@ public class ReactiveForwarding {
                      *
                      *  PathsDecision_PLLB
                      *
-                     *  U = (h, p, b, r)
+                     *  ChokeLinkPassbytes: link bytes
                      *
                      */
-                    long pObject = 0;
-                    long bObject = 0;
-                    long rObject = 0;
-                    long maxPortBwObject = 0;
+
+
                     double allLinkOfPath_BandWidth = 0;
+                    double allLinkOfPath_RestBandWidth = 0;
+                    //if there is no traffic in this link, that means the link bandwidth is 100M
+                    long ChokePointRestBandWidth = 100*1000000;
+                    long ChokeLinkPassbytes = 0;
                     ArrayList<Double> arrayList = new ArrayList<>();
+                    long IntraLinkMaxBw = 100 * 1000000;
                     for(Link link : path.links()){
 
-                        //log.info("统计信息=====对于path " + i + " 的第 " + j + "条link： ");
-
-                        /**
-                         * 链路link 信息监控
-                         *
-                         * "link的负载(bps): " + IntraLinkLoadBw
-                         *
-                         */
-
                         long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
-                        long maxPortLoadBw = Math.max(getVportLoadCapability(link.src()), getVportLoadCapability(link.dst()));
-
-
 
 //                    long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
 //                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
@@ -1212,22 +1201,15 @@ public class ReactiveForwarding {
 
                         arrayList.add((double)IntraLinkLoadBw);
                         allLinkOfPath_BandWidth += IntraLinkLoadBw;
+                        long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
 
+                        allLinkOfPath_RestBandWidth += IntraLinkRestBw;
 
                         /**
                          * link 源端口和目的端口 信息监控
                          */
 
 
-
-                        long packetsReceived_src = 0;
-                        if(link.src()!=null &&  link.src().deviceId() != null && link.src().port() !=null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                            packetsReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsReceived();
-                        }
-                        long packetsSent_src = 0;
-                        if(link.src()!=null && link.src().deviceId() !=null && link.src().port() != null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                            packetsSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsSent();
-                        }
                         long bytesReceived_src = 0;
                         if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
                             bytesReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesReceived();
@@ -1250,14 +1232,7 @@ public class ReactiveForwarding {
                         /**
                          * dst
                          */
-                        long packetsReceived_dst = 0;
-                        if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                            packetsReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
-                        }
-                        long packetsSent_dst = 0;
-                        if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                            packetsSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
-                        }
+
                         long bytesReceived_dst = 0;
                         if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
                             bytesReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
@@ -1279,21 +1254,15 @@ public class ReactiveForwarding {
                         long rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
 
                         /**
-                         * U = (h, p, b, r)
-                         * h denotes the hop count
-                         * p denotes the transmitting packet count
+                         * the choke point link means(the min restBandWidth)
                          * b denotes the byte count of the critical
-                         * r denotes the forwarding rate of the critical port
+                         * r denotes the forwarding rate
                          */
-                        if(IntraLinkLoadBw > rObject){
-                            pObject = Math.max(packetsSent_src, packetsReceived_dst);
-                            bObject = Math.max(bytesSent_src, bytesReceived_dst);
-                            //rate
-                            rObject = IntraLinkLoadBw;
-                        }
-
-                        if(maxPortLoadBw > maxPortBwObject){
-                            maxPortBwObject = maxPortLoadBw;
+                        if(IntraLinkRestBw < ChokePointRestBandWidth){
+                            //choise the choke point
+                            ChokeLinkPassbytes = Math.max(bytesSent_src, bytesReceived_dst);
+                            //ChokePointRestBandWidth
+                            ChokePointRestBandWidth = IntraLinkRestBw;
                         }
 
                         j++;
@@ -1309,102 +1278,26 @@ public class ReactiveForwarding {
                      */
                     double pathMeanLoad = allLinkOfPath_BandWidth / pathlinksSize;
                     /**
-                     * 遍历arraylist(一条path中所有link的带宽信息）
-                     * 求负载的标准差（均衡度）
-                     *
-                     *
-                     * 标准差：
-                     * T= pow(bdInterval2_Sum, 1/2)
-                     * bdInterval2_Sum = bdInterval2的累加/N
-                     * bdInterval2 = pow(bdInterval, 2)
-                     * bdInterval = Math.abs(value - pathMeanLoad)
-                     * value: 遍历每条link，对应的负载（kbps）
-                     * pathMeanLoad： 所有link的平均负载（kbps）
-                     *
+                     * the mean restBandWidth of all link at this path
                      */
-                    double bdInterval2_Sum = 0;
-                    for(int k=0; k< arrayList.size(); k++){
-                        double tempBandwidth = arrayList.get(k);
-                        double bdInterval = Math.abs(tempBandwidth - pathMeanLoad);
-                        //log.info("link " + k + " : ");
-                        //log.info("选路阶段，bdInterval : " + bdInterval);
-                        double bdInterval2 = Math.pow(bdInterval, 2);
-                        //log.info("选路阶段，bdInterval2 : " + bdInterval2);
-                        bdInterval2_Sum += bdInterval2;
-                    }
-                    /**
-                     * 方差
-                     */
-                    double variance = bdInterval2_Sum / pathlinksSize;
-                    //log.info("选路阶段，variance(方差）: " + variance);
-                    /**
-                     * 标准差
-                     */
-                    double standard_deviation = Math.pow(variance, 0.5);
-                    //log.info("选路阶段，标准差(path所有link的负载均衡度）== " + standard_deviation);
+                    double pathMeanRestBw = allLinkOfPath_RestBandWidth / pathlinksSize;
 
                     /**
-                     * U = (h, p, b, r) ： 一条路径
-                     * h: hObject
-                     * p: pObject
-                     * b: bObject
-                     * r: rObject
-                     */
-                    long hObject = (long)rPathLength;
-
-                    /**
-                     * 特征工程
-                     * rh = 1.0/(e^h)
-                     * rp = 1.0/log(p+0.1)
-                     * rb = 1.0/log(b+0.1)
-                     * rr = 1.0/(1+e^(-r/50.0))
-                     *
-                     * so:
-                     *
-                     * the matrix R can be presented as the column vector for one path:
-                     * R = (rh, rp, rb, rr)
-                     *
+                     * 特征工程(all between 0~1 )
+                     * rb = 1.0/log(b+1) + 1
+                     * rrestBW = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
                      *
                      */
 
+                    double feature_ChokeLinkPassbytes = 1.0 / (double)(Math.log((double)(ChokeLinkPassbytes + 1))) + 1;
+                    double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
+                    double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
 
-                    double rh = 1.0 / (double)(Math.exp((double)hObject));
-                    double rp = 1.0 / (double)(Math.log((double)(pObject + 0.1)));
-                    double rmaxPortBw = 1.0 / (double)(Math.log((double)(maxPortBwObject + 0.1)));
-                    double rb = 1.0 / (double)(Math.log((double)(bObject + 0.1)));
-                    double rr = 1.0 / (double)(1 + Math.exp((double)((0-rObject) / 50.0)));
-                    double rs = 1.0 / (double)(Math.log((double)(standard_deviation + 1)));
-                    /**
-                     *
-                     *
-                     * B = (b1, b2, ..., bm)
-                     * B = AOR
-                     *
-                     * A = (a1, a2, ..., an)
-                     *
-                     * R = (rh, rp, rb, rr)
-                     *   = (0.4, 0.15, 0.15, 0.3)
-                     *
-                     */
 
-                    //double a1 = 0.1;
-                    //double a2 = 0.15;
-                    double a3 = 0.1;
-                    double a4 = 0.1;
-                    double a5 = 0.4;
-                    double a6 = 0.4;
-                    //double b1 = a1 * rh;
-                    //double b2 = a2 * rp;
-                    double b3 = a3 * rb;
-                    double b4 = a4 * rr;
-                    double b5 = a5 * rs;
-                    double b6 = a6 * rmaxPortBw;
-                    double resultScore = b3 + b4 + b5 + b6;
+                    double resultScore = feature_ChokePointRestBandWidth * 0.7 + feature_pathMeanRestBw * 0.2 + feature_ChokeLinkPassbytes * 0.1;
                     if(resultScore > maxScore){
                         finalPath = path;
                     }
-
-
 
                     i++;
                 }
