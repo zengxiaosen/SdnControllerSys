@@ -251,8 +251,8 @@ public class StatisticManager implements StatisticService {
                 StringBuffer sb = new StringBuffer();
                 sb.append(key).append("|").append(connectPoint.deviceId().toString()).append("|").append(flowRateString).append("b/s");
                 //sb:flowId|deviceId|flowRate
-//                log.info("flowId|deviceId|flowRate:");
-//                log.info(sb.toString());
+                log.info("flowId|deviceId|flowRate:");
+                log.info(sb.toString());
                 //update flow information to file
                 File csvFile = new File("/home/zengxiaosen/deviceId_FlowId_FlowRate.csv");
                 String filePath = "/home/zengxiaosen/deviceId_FlowId_FlowRate.csv";
@@ -265,13 +265,6 @@ public class StatisticManager implements StatisticService {
 
                 ProToRedis proToRedis = new ProToRedis(sb.toString());
                 proToRedis.start();
-
-//                boolean b = appendData(csvFile, sb.toString(), filePath);
-//                if(b == true){
-//                    log.info("updateFlowInfomation写成功..");
-//                }else{
-//                    log.info("updateFlowInformation写失败..");
-//                }
 
 
             }

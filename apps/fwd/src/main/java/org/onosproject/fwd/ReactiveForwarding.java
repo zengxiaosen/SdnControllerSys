@@ -1297,6 +1297,7 @@ public class ReactiveForwarding {
                     log.info("feature_ChokePointRestBandWidth: " + feature_ChokePointRestBandWidth);
                     log.info("feature_pathMeanRestBw: " + feature_pathMeanRestBw);
                     double resultScore = feature_ChokePointRestBandWidth * 0.7 + feature_pathMeanRestBw * 0.2 + feature_ChokeLinkPassbytes * 0.1;
+                    log.info("resultScore: " + resultScore);
                     if(resultScore > maxScore){
                         finalPath = path;
                     }
