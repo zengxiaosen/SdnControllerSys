@@ -382,7 +382,19 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      * @param type
      * @return
      */
-    protected Highlights trafficSummary(TrafficLink.StatsType type) {
+
+    protected Highlights trafficSummary(TrafficLink.StatsType type){
+        Highlights highlights = new Highlights();
+        Set<TrafficLink> linksWithTraffic = computeLinksWithTraffic(type);
+        Set<TrafficLink> aggregatedLinks = doAggregation(linksWithTraffic);
+
+        for (TrafficLink tlink : aggregatedLinks) {
+            highlights.add(tlink.highlight(type));
+        }
+        return highlights;
+    }
+
+    protected Highlights mytrafficSummary(TrafficLink.StatsType type) {
         Highlights highlights = new Highlights();
         TrafficLinkMap linkMap = new TrafficLinkMap();
         TrafficLinkMap linkMapForFlow = new TrafficLinkMap();
@@ -460,17 +472,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 //                    log.info("src.port(): " + src.port().toString());
 //                    log.info("dst.port(): " + dst.port().toString());
 
-//                  以下两个方法不可用，可能是这里的ConnectionPoint成员信息不完整导致
 
-//                    log.info("getVportLoadCapability(src): "+getVportLoadCapability(src));
-//                    log.info("getVportMaxCapability(src): " + getVportMaxCapability(src));
-
-//                  以下两个方法不可用，可能是这里的ConnectionPoint成员信息不完整导致
-//                    log.info("src: " + src.deviceId().toString() + " , " + src.port().toString());
-//                    log.info("dst: " + dst.deviceId().toString() + " , " + dst.port().toString());
-//                  不可用
-//                    long linkrestBandwidth = getIntraLinkRestBw(src, dst);
-//                    long linkmaxBandwidth = getIntraLinkMaxBw(src, dst);
 
                     //linkHighlight.label()就是带宽
                     //log.info("linkId: " + tlink.linkId());
@@ -532,7 +534,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         //Set<TrafficLink> aggregatedLinks = doAggregation(linksWithTraffic);
 
         for (TrafficLink tlink : linksWithTraffic) {
-            //highlights.add(tlink.highlight(type));
+            highlights.add(tlink.highlight(type));
         }
 
 
