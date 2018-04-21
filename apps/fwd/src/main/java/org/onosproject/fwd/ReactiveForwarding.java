@@ -875,7 +875,7 @@ public class ReactiveForwarding {
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
                 boolean isBigFlow = true;
-                isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+                //isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
                 Set<Path> Paths_PLLB = PathsDecision_PLLB(isBigFlow, paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
                         src.location().deviceId(),
