@@ -384,8 +384,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      */
 
     protected Highlights trafficSummary(TrafficLink.StatsType type){
-
-        log.info("type: " + type.toString());
         Highlights highlights = new Highlights();
         Set<TrafficLink> linksWithTraffic = computeLinksWithTraffic(type);
         Set<TrafficLink> aggregatedLinks = doAggregation(linksWithTraffic);
