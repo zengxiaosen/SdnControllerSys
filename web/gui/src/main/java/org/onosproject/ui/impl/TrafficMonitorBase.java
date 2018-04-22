@@ -750,6 +750,13 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         Load egressSrc = services.portStats().load(one.src(), metricType);
         Load egressDst = services.portStats().load(one.dst(), metricType);
         link.addLoad(maxLoad(egressSrc, egressDst), metricType == BYTES ? BPS_THRESHOLD : 0);
+
+        Load flowLoad_oneLink = getLinkFlowLoad(link.one());
+        Load flowload_twoLink = getLinkFlowLoad(link.two());
+
+        log.info("flowLoad_oneLink: " + flowLoad_oneLink);
+        log.info("flowload_twoLink: " + flowload_twoLink);
+
     }
 
     /**
