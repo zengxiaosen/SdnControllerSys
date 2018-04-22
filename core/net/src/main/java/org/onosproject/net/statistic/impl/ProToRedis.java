@@ -32,7 +32,7 @@ public class ProToRedis extends Thread {
             String s_key = sb_key.toString().trim();
             String s_value = flowId_deviceId_flowRate[2].toString().trim();
             //unique
-            File csvFile = new File("/home/zengxiaosen/flowId_flowRate.csv");
+            File csvFile = new File("../../../../../../../../../../flowId_flowRate.csv");
             //disunique
             //File csvFile1 = new File("/home/zengxiaosen/flowId_flowRate_all.csv");
             checkExist(csvFile);

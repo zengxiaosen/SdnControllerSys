@@ -251,20 +251,20 @@ public class StatisticManager implements StatisticService {
                 StringBuffer sb = new StringBuffer();
                 sb.append(key).append("|").append(connectPoint.deviceId().toString()).append("|").append(flowRateString).append("b/s");
                 //sb:flowId|deviceId|flowRate
-                log.info("flowId|deviceId|flowRate:");
-                log.info(sb.toString());
+//                log.info("flowId|deviceId|flowRate:");
+//                log.info(sb.toString());
                 //update flow information to file
-//                File csvFile = new File("/home/zengxiaosen/deviceId_FlowId_FlowRate.csv");
-//                String filePath = "/home/zengxiaosen/deviceId_FlowId_FlowRate.csv";
-//                checkExist(csvFile);
+                File csvFile = new File("../../../../../../../../../../deviceId_FlowId_FlowRate.csv");
+                String filePath = "../../../../../../../../../../deviceId_FlowId_FlowRate.csv";
+                checkExist(csvFile);
                 /**
                  * sb:flowId|deviceId|flowRate
                  * 取出文件中的所有flowId，如果有，同時deviceid一楊，則更新flowRate
                  * 否則append添加
                  */
 
-//                ProToRedis proToRedis = new ProToRedis(sb.toString());
-//                proToRedis.start();
+                ProToRedis proToRedis = new ProToRedis(sb.toString());
+                proToRedis.start();
 
 
             }
