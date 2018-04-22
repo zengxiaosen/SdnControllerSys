@@ -533,9 +533,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
         //Set<TrafficLink> aggregatedLinks = doAggregation(linksWithTraffic);
 
-        for (TrafficLink tlink : linksWithTraffic) {
-            highlights.add(tlink.highlight(type));
-        }
+        //for (TrafficLink tlink : linksWithTraffic) {
+        //    highlights.add(tlink.highlight(type));
+        //}
 
 
         //csv
