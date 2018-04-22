@@ -22,7 +22,7 @@ public class ProToRedis extends Thread {
 
     //310000413e7182|of:0000000000000bbd|0b/s
     public void run(){
-        synchronized (ProToRedis.class){
+        //synchronized (ProToRedis.class){
             String[] flowId_deviceId_flowRate = StringUtils.split(s.trim(), "|");
 
             log.info(flowId_deviceId_flowRate[0] + "|" + flowId_deviceId_flowRate[1]);
@@ -32,7 +32,7 @@ public class ProToRedis extends Thread {
             String s_key = sb_key.toString().trim();
             String s_value = flowId_deviceId_flowRate[2].toString().trim();
             //unique
-            File csvFile = new File("../../../../../../../../../../flowId_flowRate.csv");
+            File csvFile = new File("/home/lihaifeng/flowId_flowRate.csv");
             //disunique
             //File csvFile1 = new File("/home/zengxiaosen/flowId_flowRate_all.csv");
             checkExist(csvFile);
@@ -53,7 +53,7 @@ public class ProToRedis extends Thread {
                 e.printStackTrace();
             }
 
-        }
+        //}
     }
 
     public void checkExist(File file) {

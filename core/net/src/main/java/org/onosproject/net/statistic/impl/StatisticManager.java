@@ -254,8 +254,7 @@ public class StatisticManager implements StatisticService {
 //                log.info("flowId|deviceId|flowRate:");
 //                log.info(sb.toString());
                 //update flow information to file
-                File csvFile = new File("../../../../../../../../../../deviceId_FlowId_FlowRate.csv");
-                String filePath = "../../../../../../../../../../deviceId_FlowId_FlowRate.csv";
+                File csvFile = new File("/home/lihaifeng/deviceId_FlowId_FlowRate.csv");
                 checkExist(csvFile);
                 /**
                  * sb:flowId|deviceId|flowRate
