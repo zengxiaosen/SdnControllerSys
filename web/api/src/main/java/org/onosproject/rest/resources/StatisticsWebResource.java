@@ -61,7 +61,6 @@ public class StatisticsWebResource  extends AbstractWebResource {
 
     /**
      * Gets load statistics for all links or for a specific link.
-     * 获取所有链接或特定链接的加载统计信息。
      *
      * @onos.rsModel StatisticsFlowsLink
      * @param deviceId (optional) device ID for a specific link
