@@ -875,8 +875,10 @@ public class ReactiveForwarding {
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
                 boolean isBigFlow = true;
+                Double curFlowSpeed = MatchAndComputeThisFlowRate(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
                 isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
-                Set<Path> Paths_PLLB = PathsDecision_PLLB(isBigFlow, paths, pkt.receivedFrom().deviceId(),
+
+                Set<Path> Paths_PLLB = PathsDecision_PLLB(curFlowSpeed, isBigFlow, paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
                         src.location().deviceId(),
                         LinksResult);
@@ -966,6 +968,86 @@ public class ReactiveForwarding {
             return result;
         }
 
+
+
+
+        private  Double MatchAndComputeThisFlowRate(MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
+            boolean result = true;
+
+            //body
+            String resultflowRate = "";
+
+            String ObjectFlowId = "";
+            //init with a very small number
+            String ObjectFlowSpeed = "10b/s";
+            for(Link link : LinksResult){
+
+                DeviceId deviceId_src = link.src().deviceId();
+                DeviceId deviceId_dst = link.dst().deviceId();
+
+
+
+
+
+                for (FlowEntry r : flowRuleService.getFlowEntries(deviceId_src)) {
+                    //log.info(r.deviceId()+","+deviceId_src+","+deviceId_dst);
+                    //测试结果：r.deviceId() == deviceId_src
+                    boolean matchesSrc = false, matchesDst = false;
+                    boolean matchSrcAndDst = false;
+                    /**
+                     * 这条link的src交换机是否有目标流
+                     */
+                    matchSrcAndDst = ismatchSrcAndDst(r, matchesSrc, matchesDst, macAddress, macAddress1);
+
+                    /**
+                     * macAddress: ethPkt.getSourceMAC()
+                     * macAddress1 = ethPkt.getDestinationMAC();
+                     *
+                     * 计算该流流入C的速度：
+                     * for example:
+                     * A->B->C, C产生packetIn，应该取B中flow的流速判断是不是大流，因为此时C的流表项中根本就没有该匹配了多少字节数，而B中有，
+                     * 所以用B的流出速度模拟C的流入速度
+                     * 若流速较大则为大流
+                     *
+                     * 找到B->C这个link的计算方法：
+                     * matchSrcAndDst是判断link是否有目标流，但不一定就是B->C这条link
+                     * 找到这个link中的src有目标流，并且link的dst应该是curSwitch
+                     *
+                     * && link.dst().deviceId().toString().equals(curSwitchConnectionPoint.deviceId().toString())
+                     *
+                     */
+                    //log.info(r.toString());
+                    if (matchSrcAndDst == true && link.dst().deviceId().toString().equals(curSwitchConnectionPoint.deviceId().toString())) {
+                        //log.info("找到packetIn所对应的流，源mac为" + macAddress.toString() + ", 目的mac为" + macAddress1.toString() + ", FlowId为" + r.id().toString());
+                        ObjectFlowId = r.id().toString();
+                        //log.info(r.toString());
+
+                        //read file update by monitor module
+                        File flowRateFile = new File("/home/lihaifeng/flowId_flowRate.csv");
+                        String flowRateOutOfB = getflowRateFromMonitorModule(flowRateFile, ObjectFlowId, curSwitchConnectionPoint.deviceId().toString());
+                        resultflowRate = flowRateOutOfB;
+
+                    }
+                }
+
+            }
+
+            String flowSpeedEtl;
+            /**
+             * if resultflowRate is null : means the big flow monitor function is not init by the website
+             * using the solution track same as big flow
+             */
+            if(resultflowRate == null ||  resultflowRate.equals("")){
+                resultflowRate = "10b/s";
+            }
+            flowSpeedEtl = resultflowRate.substring(0, resultflowRate.indexOf("b"));
+
+            Double resultFlowSpeed = Double.valueOf(flowSpeedEtl);
+            return resultFlowSpeed;
+        }
+
+
+
         private  boolean ifBigFlowProcess(MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
             boolean result = true;
 
@@ -1037,13 +1119,12 @@ public class ReactiveForwarding {
                     }
                 }
 
-
             }
             //大小流评判标准
             //1M/s
-            Double Strench = 10.0;
+            Double Strench = 9.0;
             /**
-             * small flow : 1b~1Mb
+             * small flow : 1b-100b
              */
             String flowSpeedEtl;
             /**
@@ -1143,7 +1224,7 @@ public class ReactiveForwarding {
         }
 
 
-        private  Set<Path> PathsDecision_PLLB(boolean isBigFlow, Set<Path> paths, DeviceId recvId, DeviceId dstid, DeviceId srcId, LinkedList<Link> LinksResult) {
+        private  Set<Path> PathsDecision_PLLB(Double curFlowSpeed, boolean isBigFlow, Set<Path> paths, DeviceId recvId, DeviceId dstid, DeviceId srcId, LinkedList<Link> LinksResult) {
 
             /**
              * sBigFlow, paths, pkt.receivedFrom().deviceId(),
@@ -1292,9 +1373,10 @@ public class ReactiveForwarding {
                      */
 
                     double feature_ChokeLinkPassbytes = 1.0 / (double)(Math.log((double)(ChokeLinkPassbytes + 1))) + 1;
-                    double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
-                    double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
-
+                    //double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
+                    double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1));
+                    //double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
+                    double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
 //                    log.info("feature_ChokeLinkPassbytes: " + feature_ChokeLinkPassbytes);
 //                    log.info("feature_ChokePointRestBandWidth: " + feature_ChokePointRestBandWidth);
 //                    log.info("feature_pathMeanRestBw: " + feature_pathMeanRestBw);
