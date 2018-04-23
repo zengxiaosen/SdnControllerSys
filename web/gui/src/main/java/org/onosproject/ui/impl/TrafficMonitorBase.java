@@ -754,8 +754,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         Load flowLoad_oneLink = getLinkFlowLoad(link.one());
         Load flowload_twoLink = getLinkFlowLoad(link.two());
 
-        log.info("flowLoad_oneLink: " + flowLoad_oneLink);
-        log.info("flowload_twoLink: " + flowload_twoLink);
+//        log.info("flowLoad_oneLink: " + flowLoad_oneLink);
+//        log.info("flowload_twoLink: " + flowload_twoLink);
 
     }
 

@@ -875,7 +875,7 @@ public class ReactiveForwarding {
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
                 boolean isBigFlow = true;
-                //isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+                isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
                 Set<Path> Paths_PLLB = PathsDecision_PLLB(isBigFlow, paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
                         src.location().deviceId(),
@@ -974,7 +974,7 @@ public class ReactiveForwarding {
 
             String ObjectFlowId = "";
             //init with a very small number
-            String ObjectFlowSpeed = "0.01b/s";
+            String ObjectFlowSpeed = "10b/s";
             for(Link link : LinksResult){
 
                 DeviceId deviceId_src = link.src().deviceId();
@@ -1021,12 +1021,12 @@ public class ReactiveForwarding {
 
 
                         //read file update by monitor module
-                        File flowRateFile = new File("/home/zengxiaosen/flowId_flowRate.csv");
+                        File flowRateFile = new File("/home/lihaifeng/flowId_flowRate.csv");
                         String flowRateOutOfB = getflowRateFromMonitorModule(flowRateFile, ObjectFlowId, curSwitchConnectionPoint.deviceId().toString());
                         resultflowRate = flowRateOutOfB;
-//                        log.info("match....");
-//                        log.info("flowRate: " + resultflowRate);
-//                        log.info("ObjectFlowId: " + ObjectFlowId);
+                        log.info("match....");
+                        log.info("flowRate: " + resultflowRate);
+                        log.info("ObjectFlowId: " + ObjectFlowId);
 
 //                        for(int kkk=0; kkk< 1000; kkk++){
 //                            log.info("true");
@@ -1082,7 +1082,7 @@ public class ReactiveForwarding {
 
         public String getflowRateFromMonitorModule(File csvFile, String ObjectFlowId, String curSwitch_deviceId){
             //如果是沒有這個key就append，有這個key就更改
-            String resultFLowRate = "0.01b/s";
+            String resultFLowRate = "10b/s";
             try {
                 //read
                 FileInputStream fis = new FileInputStream(csvFile);
@@ -1097,7 +1097,9 @@ public class ReactiveForwarding {
                         //get the flow rate
                         String[] result = StringUtils.split(line, ",");
                         String flowRate = result[1];
-                        resultFLowRate = flowRate;
+                        if(!flowRate.equals("0b/s")){
+                            resultFLowRate = flowRate;
+                        }
 
                     }
                 }
