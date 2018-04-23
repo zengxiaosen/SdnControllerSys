@@ -1028,9 +1028,9 @@ public class ReactiveForwarding {
                         log.info("flowRate: " + resultflowRate);
                         log.info("ObjectFlowId: " + ObjectFlowId);
 
-//                        for(int kkk=0; kkk< 1000; kkk++){
-//                            log.info("true");
-//                        }
+                        for(int kkk=0; kkk< 10; kkk++){
+                            log.info("true");
+                        }
                         //ObjectFlowSpeed赋值
 
                         //break;
