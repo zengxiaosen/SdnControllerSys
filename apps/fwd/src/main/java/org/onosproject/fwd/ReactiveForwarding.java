@@ -866,7 +866,7 @@ public class ReactiveForwarding {
              */
             Set<Path> Paths_Choise = new HashSet<>();
 
-            int choise = 0;
+            int choise = 1;
             if(choise == 0){
                 Set<Path> Paths_FESM = PathsDecision_FESM(paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
@@ -1233,14 +1233,12 @@ public class ReactiveForwarding {
             if(isBigFlow == true){
 
                 //flowStatisticService.loadSummaryPortInternal()
-                Set<Path> result = new HashSet<>();
+                Set<Path> result = new HashSet<Path>();
                 Map<Integer, Path> indexPath = new LinkedHashMap<>();
                 //Path finalPath = paths.iterator().next();
                 Path finalPath = null;
 
                 int i=0;
-                ResultSet ret = null;
-
                 /**
                  *
                  * 对多条等价路径进行选路决策
