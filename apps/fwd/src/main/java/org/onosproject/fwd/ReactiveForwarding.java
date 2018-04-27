@@ -1030,8 +1030,8 @@ public class ReactiveForwarding {
 
                         //read file update by monitor module
                         String flowRateOutOfB2 = getflowRateFromMonitorModule2(ObjectFlowId, flowId_FlowRate_Map);
-                        log.info("matchSrcAndDst == true");
-                        log.info("flowRateOutOfB2: "+ flowRateOutOfB2);
+//                        log.info("matchSrcAndDst == true");
+//                        log.info("flowRateOutOfB2: "+ flowRateOutOfB2);
                         resultflowRate = flowRateOutOfB2;
 
                     }
@@ -1167,9 +1167,11 @@ public class ReactiveForwarding {
             for(Map.Entry<String, String> entry : curSwitch_deviceId.entrySet()){
                 String entrykey = entry.getKey();
                 String entryValue = entry.getValue();
-                log.info("map.size: " + curSwitch_deviceId.size());
-                log.info(entrykey);
-                log.info(entryValue);
+                for(int i=0; i< 3; i++){
+                    log.info("map.size: " + curSwitch_deviceId.size());
+                    log.info(entrykey);
+                    log.info(entryValue);
+                }
                 if(entrykey.contains(ObjectFlowId)){
                     //log.info("match...");
                     resultFLowRate = entryValue;

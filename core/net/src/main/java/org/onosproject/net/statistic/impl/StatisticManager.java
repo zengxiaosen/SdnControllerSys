@@ -272,8 +272,8 @@ public class StatisticManager implements StatisticService {
 //                log.info("flowId|deviceId|flowRate:");
 //                log.info(sb.toString());
                 //update flow information to file
-                File csvFile = new File("/home/lihaifeng/deviceId_FlowId_FlowRate.csv");
-                checkExist(csvFile);
+//                File csvFile = new File("/home/lihaifeng/deviceId_FlowId_FlowRate.csv");
+//                checkExist(csvFile);
                 /**
                  * sb:flowId|deviceId|flowRate
                  * 取出文件中的所有flowId，如果有，同時deviceid一楊，則更新flowRate
