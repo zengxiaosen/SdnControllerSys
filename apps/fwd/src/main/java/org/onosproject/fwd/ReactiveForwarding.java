@@ -1029,9 +1029,9 @@ public class ReactiveForwarding {
                         //log.info(r.toString());
 
                         //read file update by monitor module
-                        File flowRateFile = new File("/home/lihaifeng/flowId_flowRate.csv");
-                        //String flowRateOutOfB = getflowRateFromMonitorModule(flowRateFile, ObjectFlowId, curSwitchConnectionPoint.deviceId().toString());
                         String flowRateOutOfB2 = getflowRateFromMonitorModule2(ObjectFlowId, curSwitchConnectionPoint.deviceId().toString(), flowId_FlowRate_Map);
+                        log.info("matchSrcAndDst == true");
+                        log.info("flowRateOutOfB2: "+ flowRateOutOfB2);
                         resultflowRate = flowRateOutOfB2;
 
                     }
@@ -1169,43 +1169,15 @@ public class ReactiveForwarding {
             for(Map.Entry<String, String> entry : curSwitch_deviceId.entrySet()){
                 String entrykey = entry.getKey();
                 String entryValue = entry.getValue();
-                log.info("map.size: " + curSwitch_deviceId.size());
-                log.info(entrykey);
-                log.info(entryValue);
+//                log.info("map.size: " + curSwitch_deviceId.size());
+//                log.info(entrykey);
+//                log.info(entryValue);
                 if(entrykey.contains(ObjectFlowId)){
-                    log.info("match...");
+                    //log.info("match...");
+                    resultFLowRate = entryValue;
                 }
             }
-//            try {
-//                //read
-//                FileInputStream fis = new FileInputStream(csvFile);
-//                BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-//                String line = null;
-//                int ifhavingkey = 0;
-//                int rowhavingkey = 0;
-//                while((line = br.readLine()) != null){
-//                    if(line.contains(ObjectFlowId)){
-//                        ifhavingkey = 1;
-//                        //log.info("找到flowrate===判斷大小流模塊");
-//                        //get the flow rate
-//                        String[] result = StringUtils.split(line, ",");
-//                        String flowRate = result[1];
-//                        if(!flowRate.equals("0b/s")){
-//                            resultFLowRate = flowRate;
-//                        }
-//
-//                    }
-//                }
-//                fis.close();
-//                br.close();
-//                if(ifhavingkey == 0){
-//                    //log.info("沒有找到flowrate===判斷大小流模塊");
-//                }
-//
-//
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
+
 
             return resultFLowRate;
         }
