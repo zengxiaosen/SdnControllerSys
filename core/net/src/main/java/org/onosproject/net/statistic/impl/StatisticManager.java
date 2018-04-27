@@ -282,7 +282,9 @@ public class StatisticManager implements StatisticService {
                 //async
 //                ProToRedis proToRedis = new ProToRedis(sb.toString(), flowId_flowRate);
 //                proToRedis.start();
-                flowId_flowRate.put(key, flowRateString+"b/s");
+                StringBuffer sbkey = new StringBuffer();
+                sbkey.append(key).append("|").append(connectPoint.deviceId().toString());
+                flowId_flowRate.put(sbkey.toString(), flowRateString+"b/s");
 
             }
         }
