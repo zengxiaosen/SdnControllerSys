@@ -1232,6 +1232,10 @@ public class ReactiveForwarding {
              */
             if(isBigFlow == true){
 
+                for(int kkk=0; kkk < 2; kkk++){
+                    log.info("kkkkkkkkkkkkkkkkkkkkkkkkk");
+                }
+
                 //flowStatisticService.loadSummaryPortInternal()
                 Set<Path> result = new HashSet<Path>();
                 Map<Integer, Path> indexPath = new LinkedHashMap<>();
@@ -1446,7 +1450,7 @@ public class ReactiveForwarding {
 
                     //log.info("resultScore: " + resultScore);
                     //there are some problem
-                    double resultScore = feature_ChokePointRestBandWidth * 0.5 + feature_preAddFlowToThisPath_AllStandardDeviation * 0.2 + feature_pathMeanRestBw * 0.2 + feature_ChokeLinkPassbytes * 0.1;
+                    double resultScore = feature_ChokePointRestBandWidth * 5 + feature_preAddFlowToThisPath_AllStandardDeviation * 2 + feature_pathMeanRestBw * 2 + feature_ChokeLinkPassbytes * 1;
                     //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
                     log.info("resultScore: "+ resultScore);
                     if(resultScore > maxScore){
@@ -1463,19 +1467,20 @@ public class ReactiveForwarding {
                     result.add(finalPath);
                 }
                 return result;
-            }else{
-                int hashvalue = (srcId.toString()+dstid.toString()).hashCode()%paths.size();
-                Set<Path> result = new HashSet<>();
-                //result.add(paths[hashvalue]);
-                int j=0;
-                for(Path path : paths){
-                    if(j == hashvalue){
-                        result.add(path);
-                    }
-                    j++;
-                }
-                return result;
             }
+
+            int hashvalue = (srcId.toString()+dstid.toString()).hashCode()%paths.size();
+            Set<Path> result = new HashSet<>();
+            //result.add(paths[hashvalue]);
+            int j=0;
+            for(Path path : paths){
+                if(j == hashvalue){
+                    result.add(path);
+                }
+                j++;
+            }
+            return result;
+
 
         }
 
