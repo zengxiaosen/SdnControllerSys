@@ -875,7 +875,8 @@ public class ReactiveForwarding {
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
                 boolean isBigFlow = true;
-                Double curFlowSpeed = MatchAndComputeThisFlowRate(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+                Double curFlowSpeed = 10.0;
+                //Double curFlowSpeed = MatchAndComputeThisFlowRate(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
                 //isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
                 Set<Path> Paths_PLLB = PathsDecision_PLLB(curFlowSpeed, isBigFlow, paths, pkt.receivedFrom().deviceId(),
@@ -1025,9 +1026,9 @@ public class ReactiveForwarding {
 
                         //read file update by monitor module
                         //////////////////////////////////////////////////////////////////////////////////////////
-//                        File flowRateFile = new File("/home/lihaifeng/flowId_flowRate.csv");
-//                        String flowRateOutOfB = getflowRateFromMonitorModule(flowRateFile, ObjectFlowId, curSwitchConnectionPoint.deviceId().toString());
-//                        resultflowRate = flowRateOutOfB;
+                        File flowRateFile = new File("/home/lihaifeng/flowId_flowRate.csv");
+                        String flowRateOutOfB = getflowRateFromMonitorModule(flowRateFile, ObjectFlowId, curSwitchConnectionPoint.deviceId().toString());
+                        resultflowRate = flowRateOutOfB;
 
                     }
                 }
