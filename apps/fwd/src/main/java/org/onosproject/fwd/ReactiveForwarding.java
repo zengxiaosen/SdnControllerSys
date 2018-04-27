@@ -1023,7 +1023,7 @@ public class ReactiveForwarding {
                      */
                     //log.info(r.toString());
                     //&& link.dst().deviceId().toString().equals(curSwitchConnectionPoint.deviceId().toString())
-                    if (matchSrcAndDst == true && link.dst().deviceId().toString().equals(curSwitchConnectionPoint.deviceId().toString())) {
+                    if (matchSrcAndDst == true ) {
                         //log.info("找到packetIn所对应的流，源mac为" + macAddress.toString() + ", 目的mac为" + macAddress1.toString() + ", FlowId为" + r.id().toString());
                         ObjectFlowId = r.id().toString();
                         //log.info(r.toString());
