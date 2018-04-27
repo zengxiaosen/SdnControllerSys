@@ -113,6 +113,7 @@ public class TopologyViewMessageHandler extends TopologyViewMessageHandlerBase {
     private static final String SEL_INTENT = "selectIntent";
     private static final String REQ_ALL_TRAFFIC = "requestAllTraffic";
     private static final String REQ_DEV_LINK_FLOWS = "requestDeviceLinkFlows";
+    private static final String MY_REQ_DEV_LINK_FLOWS = "myrequestDeviceLinkFlows";
     private static final String CANCEL_TRAFFIC = "cancelTraffic";
     private static final String REQ_SUMMARY = "requestSummary";
     private static final String CANCEL_SUMMARY = "cancelSummary";
@@ -246,6 +247,7 @@ public class TopologyViewMessageHandler extends TopologyViewMessageHandlerBase {
 
                 new ReqAllTraffic(),
                 new ReqDevLinkFlows(),
+                new myReqDevLinkFlows(),
                 new ReqRelatedIntents(),
                 new ReqNextIntent(),
                 new ReqPrevIntent(),
@@ -636,6 +638,16 @@ public class TopologyViewMessageHandler extends TopologyViewMessageHandlerBase {
         @Override
         public void process(ObjectNode payload) {
             traffic.monitor(Mode.DEV_LINK_FLOWS, makeNodeSelection(payload));
+        }
+    }
+    ////////////////////////myReqDevLinkFlows////////////////////////////////////////
+    private final class myReqDevLinkFlows extends RequestHandler{
+        private myReqDevLinkFlows(){
+            super(MY_REQ_DEV_LINK_FLOWS);
+        }
+        @Override
+        public void process(ObjectNode payload){
+            traffic.mymonitor();
         }
     }
 

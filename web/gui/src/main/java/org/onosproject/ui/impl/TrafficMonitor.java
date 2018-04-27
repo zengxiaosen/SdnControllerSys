@@ -167,6 +167,10 @@ public class TrafficMonitor extends TrafficMonitorBase {
         }
     }
 
+    public synchronized void mymonitor(){
+        scheduleTask();
+    }
+
     // TODO: move this out to the "h2h/multi-intent app"
 
     /**

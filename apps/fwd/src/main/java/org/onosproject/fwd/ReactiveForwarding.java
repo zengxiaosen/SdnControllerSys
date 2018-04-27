@@ -1469,7 +1469,7 @@ public class ReactiveForwarding {
                         sumpownode += t4;
                     }
                     double preAddFlowToThisPath_AllStandardDeviation = Math.sqrt(sumpownode)/sizeOf_otherPathLinksRestBw;
-                    log.info("preAddFlowToThisPath_AllStandardDeviation: " + preAddFlowToThisPath_AllStandardDeviation);
+                    //log.info("preAddFlowToThisPath_AllStandardDeviation: " + preAddFlowToThisPath_AllStandardDeviation);
                     // -------------------------------------
                     /**
                      * 特征工程(all between 0~1 )
@@ -1492,7 +1492,7 @@ public class ReactiveForwarding {
                     //there are some problem
                     double resultScore = feature_ChokePointRestBandWidth * 5 + feature_preAddFlowToThisPath_AllStandardDeviation * 2 + feature_pathMeanRestBw * 2 + feature_ChokeLinkPassbytes * 1;
                     //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
-                    log.info("resultScore: "+ resultScore);
+                    //log.info("resultScore: "+ resultScore);
                     if(resultScore > maxScore){
                         finalPath = path;
                     }
