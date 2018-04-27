@@ -877,11 +877,10 @@ public class ReactiveForwarding {
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
                 ConcurrentHashMap<String, String> FlowId_FlowRate = statisticService.getFlowId_flowRate();
-                log.info("map.size(): " + FlowId_FlowRate.size());
 
                 boolean isBigFlow = true;
                 Double curFlowSpeed1 = 10.0;
-                //Double curFlowSpeed1 = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+                curFlowSpeed1 = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
                 //isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
                 Set<Path> Paths_PLLB = PathsDecision_PLLB(curFlowSpeed1, isBigFlow, paths, pkt.receivedFrom().deviceId(),
@@ -1024,7 +1023,7 @@ public class ReactiveForwarding {
                      */
                     //log.info(r.toString());
                     //&& link.dst().deviceId().toString().equals(curSwitchConnectionPoint.deviceId().toString())
-                    if (matchSrcAndDst == true) {
+                    if (matchSrcAndDst == true && link.dst().deviceId().toString().equals(curSwitchConnectionPoint.deviceId().toString())) {
                         //log.info("找到packetIn所对应的流，源mac为" + macAddress.toString() + ", 目的mac为" + macAddress1.toString() + ", FlowId为" + r.id().toString());
                         ObjectFlowId = r.id().toString();
                         //log.info(r.toString());
@@ -1170,8 +1169,12 @@ public class ReactiveForwarding {
             for(Map.Entry<String, String> entry : curSwitch_deviceId.entrySet()){
                 String entrykey = entry.getKey();
                 String entryValue = entry.getValue();
+                log.info("map.size: " + curSwitch_deviceId.size());
                 log.info(entrykey);
                 log.info(entryValue);
+                if(entrykey.contains(ObjectFlowId)){
+                    log.info("match...");
+                }
             }
 //            try {
 //                //read
