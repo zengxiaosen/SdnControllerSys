@@ -1232,9 +1232,7 @@ public class ReactiveForwarding {
              */
             if(isBigFlow == true){
 
-                for(int kkk=0; kkk < 2; kkk++){
-                    log.info("kkkkkkkkkkkkkkkkkkkkkkkkk");
-                }
+
 
                 //flowStatisticService.loadSummaryPortInternal()
                 Set<Path> result = new HashSet<Path>();
@@ -1468,7 +1466,9 @@ public class ReactiveForwarding {
                 }
                 return result;
             }
-
+            for(int kkk=0; kkk < 2; kkk++){
+                log.info("kkkkkkkkkkkkkkkkkkkkkkkkk");
+            }
             int hashvalue = (srcId.toString()+dstid.toString()).hashCode()%paths.size();
             Set<Path> result = new HashSet<>();
             //result.add(paths[hashvalue]);
