@@ -879,6 +879,7 @@ public class ReactiveForwarding {
                 ConcurrentHashMap<String, String> FlowId_FlowRate = statisticService.getFlowId_flowRate();
 
                 boolean isBigFlow = true;
+                //init with a small number
                 Double curFlowSpeed1 = 10.0;
                 curFlowSpeed1 = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
                 isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
@@ -1111,7 +1112,7 @@ public class ReactiveForwarding {
 
 
                         //read file update by monitor module
-                        String flowRateOutOfB = getflowRateFromMonitorModule2(ObjectFlowId, flowId_FlowRate);
+                        String flowRateOutOfB = getflowRateFromMonitorModule3(ObjectFlowId, flowId_FlowRate);
                         resultflowRate = flowRateOutOfB;
 
 
@@ -1161,6 +1162,27 @@ public class ReactiveForwarding {
             }
         }
 
+
+        public String getflowRateFromMonitorModule3(String ObjectFlowId, ConcurrentHashMap<String, String> curSwitch_deviceId){
+            //如果是沒有這個key就append，有這個key就更改
+            String resultFLowRate = "10b/s";
+            for(Map.Entry<String, String> entry : curSwitch_deviceId.entrySet()){
+                String entrykey = entry.getKey();
+                String entryValue = entry.getValue();
+                for(int i=0; i< 3; i++){
+                    log.info("map.size: " + curSwitch_deviceId.size());
+                    log.info(entrykey);
+                    log.info(entryValue);
+                }
+                if(entrykey.contains(ObjectFlowId)){
+                    //log.info("match...");
+                    resultFLowRate = entryValue;
+                }
+            }
+
+
+            return resultFLowRate;
+        }
         public String getflowRateFromMonitorModule2(String ObjectFlowId, ConcurrentHashMap<String, String> curSwitch_deviceId){
             //如果是沒有這個key就append，有這個key就更改
             String resultFLowRate = "10b/s";
@@ -1254,9 +1276,6 @@ public class ReactiveForwarding {
              LinksResult
              */
             if(isBigFlow == true){
-
-
-
                 //flowStatisticService.loadSummaryPortInternal()
                 Set<Path> result = new HashSet<Path>();
                 Map<Integer, Path> indexPath = new LinkedHashMap<>();
@@ -1489,9 +1508,7 @@ public class ReactiveForwarding {
                 }
                 return result;
             }
-            for(int kkk=0; kkk < 2; kkk++){
-                log.info("kkkkkkkkkkkkkkkkkkkkkkkkk");
-            }
+
             int hashvalue = (srcId.toString()+dstid.toString()).hashCode()%paths.size();
             Set<Path> result = new HashSet<>();
             //result.add(paths[hashvalue]);
@@ -1503,8 +1520,6 @@ public class ReactiveForwarding {
                 j++;
             }
             return result;
-
-
         }
 
 

@@ -234,7 +234,7 @@ public class TrafficMonitor extends TrafficMonitorBase {
     }
 
 
-
+    ////////////////////////////StatsType.PORT_STATS///////////////////////////////
     @Override
     protected void sendAllPortTrafficBits() {
         log.debug("sendAllPortTrafficBits");

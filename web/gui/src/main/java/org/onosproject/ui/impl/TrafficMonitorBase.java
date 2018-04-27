@@ -137,7 +137,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     private final Timer timer;
     private TimerTask trafficTask = null;
-
+    private TimerTask myPortStatusTrafficUpdateTask = null;
+    private final Timer timer1;
     /**
      * Constructs the monitor, initializing the task period and
      * services bundle reference.
@@ -150,6 +151,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         this.trafficPeriod = trafficPeriod;
         this.services = servicesBundle;
         timer = new Timer("uiTopo-" + getClass().getSimpleName());
+        timer1 = new Timer("statisticTopo-" + getClass().getSimpleName());
     }
 
     /**
@@ -261,7 +263,11 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         if (trafficTask == null) {
             log.debug("Starting up background traffic task...");
             trafficTask = new TrafficUpdateTask();
+            //new MyPortStatusTrafficUpdateTask();
+            myPortStatusTrafficUpdateTask = new MyPortStatusTrafficUpdateTask();
             timer.schedule(trafficTask, trafficPeriod, trafficPeriod);
+            timer1.schedule(myPortStatusTrafficUpdateTask, trafficPeriod, trafficPeriod);
+
         } else {
             log.debug("(traffic task already running)");
         }
@@ -271,6 +277,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      * Cancels the background monitor task.
      */
     protected synchronized void cancelTask() {
+        if(myPortStatusTrafficUpdateTask != null){
+            myPortStatusTrafficUpdateTask.cancel();
+            myPortStatusTrafficUpdateTask = null;
+        }
         if (trafficTask != null) {
             trafficTask.cancel();
             trafficTask = null;
@@ -382,7 +392,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      * @param type
      * @return
      */
-
+    ///////////////////////////////////////////////TrafficLink.StatsType.PORT_STATS///////////////////////////////////////////////////////
     protected Highlights trafficSummary(TrafficLink.StatsType type){
         Highlights highlights = new Highlights();
         Set<TrafficLink> linksWithTraffic = computeLinksWithTraffic(type);
@@ -655,6 +665,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         }
         return false;
     }
+
+
     /**
      * Generates a set of "traffic links" encapsulating information about the
      * traffic on each link (that is deemed to have traffic).
@@ -662,6 +674,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      * @param type the type of statistics to be displayed
      * @return the set of links with traffic
      */
+    /////////////////////////////////////////////////////TrafficLink.StatsType.PORT_STATS////////////////////////////////////////////////////////
     protected Set<TrafficLink> computeLinksWithTraffic(TrafficLink.StatsType type) {
         TrafficLinkMap linkMap = new TrafficLinkMap();
         compileLinks(linkMap);
@@ -792,6 +805,21 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return linksWithTraffic;
     }
 
+
+    private class MyPortStatusTrafficUpdateTask extends TimerTask{
+        @Override
+        public void run(){
+            try{
+                for(int i=0; i< 50; i++){
+                    log.info("zengxiaosen");
+                }
+                sendAllPortTrafficBits();
+            }catch (Exception e){
+                log.warn("Unable to process MyPortStatusTrafficUpdateTask  due to {}", e.getMessage());
+                log.warn("Boom!", e);
+            }
+        }
+    }
 
     // =======================================================================
     // === Background Task
