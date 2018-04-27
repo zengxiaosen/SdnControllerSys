@@ -881,7 +881,7 @@ public class ReactiveForwarding {
 
                 boolean isBigFlow = true;
                 Double curFlowSpeed = 10.0;
-                //Double curFlowSpeed = MatchAndComputeThisFlowRate(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+                Double curFlowSpeed = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
                 //isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
                 Set<Path> Paths_PLLB = PathsDecision_PLLB(curFlowSpeed, isBigFlow, paths, pkt.receivedFrom().deviceId(),
@@ -977,7 +977,7 @@ public class ReactiveForwarding {
 
 
 
-        private  Double MatchAndComputeThisFlowRate(MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
+        private  Double MatchAndComputeThisFlowRate(ConcurrentHashMap<String, String> flowId_FlowRate_Map, MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
             boolean result = true;
 
             //body
@@ -1030,10 +1030,10 @@ public class ReactiveForwarding {
                         //log.info(r.toString());
 
                         //read file update by monitor module
-                        //////////////////////////////////////////////////////////////////////////////////////////
                         File flowRateFile = new File("/home/lihaifeng/flowId_flowRate.csv");
-                        String flowRateOutOfB = getflowRateFromMonitorModule(flowRateFile, ObjectFlowId, curSwitchConnectionPoint.deviceId().toString());
-                        resultflowRate = flowRateOutOfB;
+                        //String flowRateOutOfB = getflowRateFromMonitorModule(flowRateFile, ObjectFlowId, curSwitchConnectionPoint.deviceId().toString());
+                        String flowRateOutOfB2 = getflowRateFromMonitorModule2(ObjectFlowId, curSwitchConnectionPoint.deviceId().toString(), flowId_FlowRate_Map);
+                        resultflowRate = flowRateOutOfB2;
 
                     }
                 }
@@ -1164,7 +1164,48 @@ public class ReactiveForwarding {
             }
         }
 
+        public String getflowRateFromMonitorModule2(String csvFile, String ObjectFlowId, ConcurrentHashMap<String, String> curSwitch_deviceId){
+            //如果是沒有這個key就append，有這個key就更改
+            String resultFLowRate = "10b/s";
+            for(Map.Entry<String, String> entry : curSwitch_deviceId.entrySet()){
+                String entrykey = entry.getKey();
+                String entryValue = entry.getValue();
+                log.info(entrykey);
+                log.info(entryValue);
+            }
+//            try {
+//                //read
+//                FileInputStream fis = new FileInputStream(csvFile);
+//                BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+//                String line = null;
+//                int ifhavingkey = 0;
+//                int rowhavingkey = 0;
+//                while((line = br.readLine()) != null){
+//                    if(line.contains(ObjectFlowId)){
+//                        ifhavingkey = 1;
+//                        //log.info("找到flowrate===判斷大小流模塊");
+//                        //get the flow rate
+//                        String[] result = StringUtils.split(line, ",");
+//                        String flowRate = result[1];
+//                        if(!flowRate.equals("0b/s")){
+//                            resultFLowRate = flowRate;
+//                        }
+//
+//                    }
+//                }
+//                fis.close();
+//                br.close();
+//                if(ifhavingkey == 0){
+//                    //log.info("沒有找到flowrate===判斷大小流模塊");
+//                }
+//
+//
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
 
+            return resultFLowRate;
+        }
 
         public String getflowRateFromMonitorModule(File csvFile, String ObjectFlowId, String curSwitch_deviceId){
             //如果是沒有這個key就append，有這個key就更改
