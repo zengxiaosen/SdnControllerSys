@@ -95,6 +95,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 //导入的静态方法
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
@@ -864,9 +865,10 @@ public class ReactiveForwarding {
              * 2 dijkstra
              * 3 ecmp
              */
+
             Set<Path> Paths_Choise = new HashSet<>();
 
-            int choise = 0;
+            int choise = 1;
             if(choise == 0){
                 Set<Path> Paths_FESM = PathsDecision_FESM(paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
@@ -874,6 +876,10 @@ public class ReactiveForwarding {
                         LinksResult);
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
+                ConcurrentHashMap<String, String> FlowId_FlowRate = statisticService.getFlowId_flowRate();
+                for(int kk=0; kk < 10; kk++){
+                    log.info("map.size(): " + FlowId_FlowRate.size());
+                }
                 boolean isBigFlow = true;
                 Double curFlowSpeed = 10.0;
                 //Double curFlowSpeed = MatchAndComputeThisFlowRate(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);

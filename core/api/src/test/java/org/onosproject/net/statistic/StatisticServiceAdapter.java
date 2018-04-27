@@ -24,11 +24,22 @@ import org.onosproject.net.Path;
 import org.onosproject.net.flow.FlowRule;
 
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Test adapter for statistics service.
  */
 public class StatisticServiceAdapter implements StatisticService {
+
+    @Override
+    public ConcurrentHashMap<String, String> getFlowId_flowRate() {
+        return null;
+    }
+
+    @Override
+    public void setFlowId_flowRate(ConcurrentHashMap<String, String> flowId_flowRate) {
+
+    }
 
     @Override
     public Load vportload(ConnectPoint connectPoint) {

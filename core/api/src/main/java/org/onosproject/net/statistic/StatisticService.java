@@ -23,6 +23,7 @@ import org.onosproject.net.Path;
 import org.onosproject.net.flow.FlowRule;
 
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service for obtaining statistic information about link in the system.
@@ -30,6 +31,10 @@ import java.util.Optional;
  * amount of hammering occurring at the dataplane.
  */
 public interface StatisticService {
+
+    ConcurrentHashMap<String, String> getFlowId_flowRate();
+    void setFlowId_flowRate(ConcurrentHashMap<String, String> flowId_flowRate);
+
     Load vportload(ConnectPoint connectPoint);
     /**
      * Obtain the load for a the ingress to the given link.

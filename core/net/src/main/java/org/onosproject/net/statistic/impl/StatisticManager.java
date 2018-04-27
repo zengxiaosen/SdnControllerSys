@@ -80,6 +80,7 @@ import org.slf4j.Logger;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -106,6 +107,18 @@ public class StatisticManager implements StatisticService {
     protected PortStatisticsService portStatisticsService;
 
     private final InternalFlowRuleListener listener = new InternalFlowRuleListener();
+    @Override
+    public  ConcurrentHashMap<String, String> getFlowId_flowRate() {
+        return flowId_flowRate;
+    }
+    @Override
+    public void setFlowId_flowRate(ConcurrentHashMap<String, String> flowId_flowRate) {
+        StatisticManager.flowId_flowRate = flowId_flowRate;
+    }
+
+    public static ConcurrentHashMap<String, String> flowId_flowRate;
+
+
 
     @Activate
     public void activate() {

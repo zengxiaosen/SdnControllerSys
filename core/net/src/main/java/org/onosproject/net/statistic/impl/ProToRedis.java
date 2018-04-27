@@ -4,6 +4,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 
 import java.io.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -33,6 +34,10 @@ public class ProToRedis extends Thread {
             String s_value = flowId_deviceId_flowRate[2].toString().trim();
             //unique
             File csvFile = new File("/home/lihaifeng/flowId_flowRate.csv");
+            ConcurrentHashMap<String, String> test = StatisticManager.flowId_flowRate;
+            for(int kk=0; kk < 5; kk++){
+                test.put("testkey"+kk, "testvalue");
+            }
             //disunique
             //File csvFile1 = new File("/home/zengxiaosen/flowId_flowRate_all.csv");
             checkExist(csvFile);
