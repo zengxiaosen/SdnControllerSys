@@ -116,7 +116,7 @@ public class StatisticManager implements StatisticService {
         StatisticManager.flowId_flowRate = flowId_flowRate;
     }
 
-    public static ConcurrentHashMap<String, String> flowId_flowRate;
+    public static ConcurrentHashMap<String, String> flowId_flowRate = new ConcurrentHashMap<>();
 
 
 
