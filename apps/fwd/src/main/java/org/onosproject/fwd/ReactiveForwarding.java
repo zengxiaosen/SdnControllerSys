@@ -1441,7 +1441,7 @@ public class ReactiveForwarding {
 //                    log.info("feature_ChokeLinkPassbytes: " + feature_ChokeLinkPassbytes);
 //                    log.info("feature_ChokePointRestBandWidth: " + feature_ChokePointRestBandWidth);
 //                    log.info("feature_pathMeanRestBw: " + feature_pathMeanRestBw);
-
+                    log.info("feature_preAddFlowToThisPath_AllStandardDeviation: " + feature_preAddFlowToThisPath_AllStandardDeviation);
 
                     //log.info("resultScore: " + resultScore);
                     double resultScore = feature_ChokePointRestBandWidth * 0.5 + feature_preAddFlowToThisPath_AllStandardDeviation * 0.2 + feature_pathMeanRestBw * 0.2 + feature_ChokeLinkPassbytes * 0.1;
