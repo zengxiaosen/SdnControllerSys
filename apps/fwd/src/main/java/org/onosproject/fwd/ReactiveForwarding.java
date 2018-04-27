@@ -881,7 +881,7 @@ public class ReactiveForwarding {
                 boolean isBigFlow = true;
                 Double curFlowSpeed1 = 10.0;
                 curFlowSpeed1 = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
-                //isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+                isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
                 Set<Path> Paths_PLLB = PathsDecision_PLLB(curFlowSpeed1, isBigFlow, paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
@@ -1029,7 +1029,7 @@ public class ReactiveForwarding {
                         //log.info(r.toString());
 
                         //read file update by monitor module
-                        String flowRateOutOfB2 = getflowRateFromMonitorModule2(ObjectFlowId, curSwitchConnectionPoint.deviceId().toString(), flowId_FlowRate_Map);
+                        String flowRateOutOfB2 = getflowRateFromMonitorModule2(ObjectFlowId, flowId_FlowRate_Map);
                         log.info("matchSrcAndDst == true");
                         log.info("flowRateOutOfB2: "+ flowRateOutOfB2);
                         resultflowRate = flowRateOutOfB2;
@@ -1055,7 +1055,7 @@ public class ReactiveForwarding {
 
 
 
-        private  boolean ifBigFlowProcess(MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
+        private  boolean ifBigFlowProcess(ConcurrentHashMap<String, String> flowId_FlowRate, MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
             boolean result = true;
 
             //body
@@ -1101,7 +1101,8 @@ public class ReactiveForwarding {
                      *
                      */
                     //log.info(r.toString());
-                    if (matchSrcAndDst == true && link.dst().deviceId().toString().equals(curSwitchConnectionPoint.deviceId().toString())) {
+                    //&& link.dst().deviceId().toString().equals(curSwitchConnectionPoint.deviceId().toString())
+                    if (matchSrcAndDst == true ) {
                         //log.info("找到packetIn所对应的流，源mac为" + macAddress.toString() + ", 目的mac为" + macAddress1.toString() + ", FlowId为" + r.id().toString());
                         ObjectFlowId = r.id().toString();
                         //log.info(r.toString());
@@ -1110,8 +1111,7 @@ public class ReactiveForwarding {
 
 
                         //read file update by monitor module
-                        File flowRateFile = new File("/home/lihaifeng/flowId_flowRate.csv");
-                        String flowRateOutOfB = getflowRateFromMonitorModule(flowRateFile, ObjectFlowId, curSwitchConnectionPoint.deviceId().toString());
+                        String flowRateOutOfB = getflowRateFromMonitorModule2(ObjectFlowId, flowId_FlowRate);
                         resultflowRate = flowRateOutOfB;
                         log.info("match....");
                         log.info("flowRate: " + resultflowRate);
@@ -1163,7 +1163,7 @@ public class ReactiveForwarding {
             }
         }
 
-        public String getflowRateFromMonitorModule2(String csvFile, String ObjectFlowId, ConcurrentHashMap<String, String> curSwitch_deviceId){
+        public String getflowRateFromMonitorModule2(String ObjectFlowId, ConcurrentHashMap<String, String> curSwitch_deviceId){
             //如果是沒有這個key就append，有這個key就更改
             String resultFLowRate = "10b/s";
             for(Map.Entry<String, String> entry : curSwitch_deviceId.entrySet()){
