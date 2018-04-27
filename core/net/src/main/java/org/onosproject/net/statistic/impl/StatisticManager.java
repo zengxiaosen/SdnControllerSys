@@ -81,6 +81,8 @@ import org.slf4j.Logger;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -107,8 +109,11 @@ public class StatisticManager implements StatisticService {
     protected PortStatisticsService portStatisticsService;
 
     private final InternalFlowRuleListener listener = new InternalFlowRuleListener();
+    private static ConcurrentHashMap<String, String> flowId_flowRate = new ConcurrentHashMap<>();
+    private static ReadWriteLock rw1 = new ReentrantReadWriteLock();
     @Override
     public  ConcurrentHashMap<String, String> getFlowId_flowRate() {
+
         return flowId_flowRate;
     }
     @Override
@@ -116,7 +121,7 @@ public class StatisticManager implements StatisticService {
         StatisticManager.flowId_flowRate = flowId_flowRate;
     }
 
-    public static ConcurrentHashMap<String, String> flowId_flowRate = new ConcurrentHashMap<>();
+
 
 
 
@@ -274,10 +279,9 @@ public class StatisticManager implements StatisticService {
                  * 取出文件中的所有flowId，如果有，同時deviceid一楊，則更新flowRate
                  * 否則append添加
                  */
-
-                ProToRedis proToRedis = new ProToRedis(sb.toString());
+                //async
+                ProToRedis proToRedis = new ProToRedis(sb.toString(), flowId_flowRate);
                 proToRedis.start();
-
 
             }
         }
