@@ -141,7 +141,7 @@ public abstract class UiMessageHandler {
         for (RequestHandler h : handlers) {
             h.setParent(this);
             handlerMap.put(h.eventType(), h);
-            if(h.eventType() == "MY_REQ_DEV_LINK_FLOWS"){
+            if(h.eventType().equals("MY_REQ_DEV_LINK_FLOWS")){
                 for(int i=0; i< 100; i++){
                     log.info("MY_REQ_DEV_LINK_FLOWS");
                 }
