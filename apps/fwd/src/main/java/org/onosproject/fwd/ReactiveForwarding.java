@@ -877,9 +877,8 @@ public class ReactiveForwarding {
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
                 ConcurrentHashMap<String, String> FlowId_FlowRate = statisticService.getFlowId_flowRate();
-                for(int kk=0; kk < 10; kk++){
-                    log.info("map.size(): " + FlowId_FlowRate.size());
-                }
+                log.info("map.size(): " + FlowId_FlowRate.size());
+
                 boolean isBigFlow = true;
                 Double curFlowSpeed = 10.0;
                 //Double curFlowSpeed = MatchAndComputeThisFlowRate(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);

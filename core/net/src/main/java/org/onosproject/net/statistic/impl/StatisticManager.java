@@ -112,7 +112,7 @@ public class StatisticManager implements StatisticService {
     private static ConcurrentHashMap<String, String> flowId_flowRate = new ConcurrentHashMap<>();
     private static ReadWriteLock rw1 = new ReentrantReadWriteLock();
     @Override
-    public  synchronized ConcurrentHashMap<String, String> getFlowId_flowRate() {
+    public ConcurrentHashMap<String, String> getFlowId_flowRate() {
 
         return flowId_flowRate;
     }
@@ -280,8 +280,9 @@ public class StatisticManager implements StatisticService {
                  * 否則append添加
                  */
                 //async
-                ProToRedis proToRedis = new ProToRedis(sb.toString(), flowId_flowRate);
-                proToRedis.start();
+//                ProToRedis proToRedis = new ProToRedis(sb.toString(), flowId_flowRate);
+//                proToRedis.start();
+                flowId_flowRate.put(key, flowRateString+"b/s");
 
             }
         }
