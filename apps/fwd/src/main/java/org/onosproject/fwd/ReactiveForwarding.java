@@ -1438,7 +1438,7 @@ public class ReactiveForwarding {
                     double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1));
                     //double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
                     double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
-                    double feature_preAddFlowToThisPath_AllStandardDeviation = 1.0/(double)(Math.log((double)preAddFlowToThisPath_AllStandardDeviation + 1));
+                    double feature_preAddFlowToThisPath_AllStandardDeviation = 1.0/(double)(Math.log((double)preAddFlowToThisPath_AllStandardDeviation + 1) + 1);
 //                    log.info("feature_ChokeLinkPassbytes: " + feature_ChokeLinkPassbytes);
 //                    log.info("feature_ChokePointRestBandWidth: " + feature_ChokePointRestBandWidth);
 //                    log.info("feature_pathMeanRestBw: " + feature_pathMeanRestBw);
@@ -1447,7 +1447,7 @@ public class ReactiveForwarding {
                     //log.info("resultScore: " + resultScore);
                     //there are some problem
                     //double resultScore = feature_ChokePointRestBandWidth * 0.5 + feature_preAddFlowToThisPath_AllStandardDeviation * 0.2 + feature_pathMeanRestBw * 0.2 + feature_ChokeLinkPassbytes * 0.1;
-                    double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2)/(0.4*preAddFlowToThisPath_AllStandardDeviation);
+                    double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
                     log.info("resultScore: "+ resultScore);
                     if(resultScore > maxScore){
                         finalPath = path;
