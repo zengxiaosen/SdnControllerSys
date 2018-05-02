@@ -877,9 +877,25 @@ public class ReactiveForwarding {
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
                 ConcurrentHashMap<String, String> FlowId_FlowRate = statisticService.getFlowId_flowRate();
-                for(Map.Entry<String, String> entry : FlowId_FlowRate.entrySet()){
-                    log.info("key:" + entry.getKey());
-                    log.info("value:" + entry.getValue());
+                File csvFile = new File("/home/lihaifeng/z_test.csv");
+                try {
+                    //read
+                    FileInputStream fis = new FileInputStream(csvFile);
+                    BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+                    String line = null;
+                    BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFile, true), "GBK"), 1024);
+                    for(Map.Entry<String, String> entry : FlowId_FlowRate.entrySet()){
+                        log.info("key:" + entry.getKey());
+                        log.info("value:" + entry.getValue());
+                        bw.write("key:" + entry.getKey());
+                        bw.write("\n");
+                        bw.write("value:" + entry.getValue());
+                        bw.write("\n");
+                    }
+                    bw.close();
+
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
 
                 boolean isBigFlow = true;
