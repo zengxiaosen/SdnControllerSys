@@ -112,13 +112,38 @@ public class StatisticManager implements StatisticService {
     private static ConcurrentHashMap<String, String> flowId_flowRate = new ConcurrentHashMap<>();
     private static ReadWriteLock rw1 = new ReentrantReadWriteLock();
     @Override
-    public synchronized ConcurrentHashMap<String, String> getFlowId_flowRate() {
-
-        return flowId_flowRate;
+    public ConcurrentHashMap<String, String> getFlowId_flowRate() {
+        rw1.readLock().lock();
+        try{
+            return flowId_flowRate;
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            rw1.readLock().unlock();
+        }
+        //rw1.readLock().unlock();
     }
     @Override
-    public synchronized void setFlowId_flowRate(ConcurrentHashMap<String, String> flowId_flowRate) {
-        StatisticManager.flowId_flowRate = flowId_flowRate;
+    public void setFlowId_flowRate(ConcurrentHashMap<String, String> flowId_flowRate) {
+        rw1.writeLock().lock();
+        try{
+            StatisticManager.flowId_flowRate = flowId_flowRate;
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            rw1.writeLock().unlock();
+        }
+    }
+
+    public void setFlowId_flowRateKV(String key, String value){
+        rw1.writeLock().lock();
+        try{
+            flowId_flowRate.put(key, value);
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            rw1.writeLock().unlock();
+        }
     }
 
 
@@ -285,7 +310,8 @@ public class StatisticManager implements StatisticService {
                 StringBuffer sbkey = new StringBuffer();
                 sbkey.append(key).append("|").append(connectPoint.deviceId().toString());
                 //log.info(sbkey.toString()+"|"+flowRateString+"b/s");
-                flowId_flowRate.put(sbkey.toString(), flowRateString+"b/s");
+                //flowId_flowRate.put(sbkey.toString(), flowRateString+"b/s");
+                setFlowId_flowRateKV(sbkey.toString(), flowRateString+"b/s");
                 //log.info("flowId_flowRate.size: " + flowId_flowRate.size());
 
             }
