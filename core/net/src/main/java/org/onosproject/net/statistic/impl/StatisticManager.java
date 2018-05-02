@@ -114,15 +114,12 @@ public class StatisticManager implements StatisticService {
     @Override
     public ConcurrentHashMap<String, String> getFlowId_flowRate() {
         rw1.readLock().lock();
-        try{
-            return flowId_flowRate;
-        }catch (Exception e){
-            e.printStackTrace();
-        }finally {
-            rw1.readLock().unlock();
-        }
+        ConcurrentHashMap<String, String> temp = new ConcurrentHashMap<>(flowId_flowRate);
+        rw1.readLock().unlock();
+        return temp;
         //rw1.readLock().unlock();
     }
+
     @Override
     public void setFlowId_flowRate(ConcurrentHashMap<String, String> flowId_flowRate) {
         rw1.writeLock().lock();
