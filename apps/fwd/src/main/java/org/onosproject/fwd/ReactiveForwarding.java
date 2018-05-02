@@ -905,7 +905,7 @@ public class ReactiveForwarding {
                 boolean isBigFlow = true;
                 //init with a small number
                 Double curFlowSpeed1 = 10.0;
-//                curFlowSpeed1 = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+                curFlowSpeed1 = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 //                isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
                 Set<Path> Paths_PLLB = PathsDecision_PLLB(curFlowSpeed1, isBigFlow, paths, pkt.receivedFrom().deviceId(),
@@ -1071,6 +1071,8 @@ public class ReactiveForwarding {
                 }
 
             }
+
+
 
             String flowSpeedEtl;
             /**
