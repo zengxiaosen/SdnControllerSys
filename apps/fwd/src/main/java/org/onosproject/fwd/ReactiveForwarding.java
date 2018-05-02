@@ -904,7 +904,11 @@ public class ReactiveForwarding {
 
 
 
-
+            if(Paths_Choise.size() == 0){
+                for(int k4=0; k4 < 10; k4++){
+                    log.info("Paths_Choise.size() == 0");
+                }
+            }
 
 
             /**
@@ -927,9 +931,9 @@ public class ReactiveForwarding {
 
             // Otherwise, pick a path that does not lead back to where we
             // came from; if no such path, flood and bail.如果存在路径的话，从给定集合中选择一条不返回指定端口的路径。
-//            Path path = Paths_Choise.size() == 0 ? pickForwardPathIfPossible(paths, pkt.receivedFrom().port())
-//                    : pickForwardPathIfPossible(Paths_Choise, pkt.receivedFrom().port());
-            Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
+            Path path = Paths_Choise.size() == 0 ? pickForwardPathIfPossible(paths, pkt.receivedFrom().port())
+                    : pickForwardPathIfPossible(Paths_Choise, pkt.receivedFrom().port());
+//            Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
 
             if (path == null) {
                 log.warn("Don't know where to go from here {} for {} -> {}",
