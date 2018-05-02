@@ -448,8 +448,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             if (tlink.hasTraffic()) {
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
-                LinkHighlight linkHighlight1 = new LinkHighlight(linkHighlight);
-                highlights.add(linkHighlight1);
+                //LinkHighlight linkHighlight1 = new LinkHighlight(linkHighlight);
+                highlights.add(linkHighlight);
                 /**
                  * 目前我准备在这开启监控
                  */
