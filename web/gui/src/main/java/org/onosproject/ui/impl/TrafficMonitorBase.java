@@ -393,7 +393,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      * @return
      */
     ///////////////////////////////////////////////TrafficLink.StatsType.PORT_STATS///////////////////////////////////////////////////////
-    protected Highlights trafficSummaryV1(TrafficLink.StatsType type){
+    protected Highlights trafficSummary(TrafficLink.StatsType type){
         Highlights highlights = new Highlights();
         Set<TrafficLink> linksWithTraffic = computeLinksWithTraffic(type);
         Set<TrafficLink> aggregatedLinks = doAggregation(linksWithTraffic);
@@ -404,7 +404,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return highlights;
     }
 
-    protected Highlights trafficSummary(TrafficLink.StatsType type) {
+    protected Highlights trafficSummaryV2(TrafficLink.StatsType type) {
         Highlights highlights = new Highlights();
         TrafficLinkMap linkMap = new TrafficLinkMap();
         //TrafficLinkMap linkMapForFlow = new TrafficLinkMap();
@@ -448,7 +448,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             if (tlink.hasTraffic()) {
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
-                highlights.add(linkHighlight);
+                LinkHighlight linkHighlight1 = new LinkHighlight(linkHighlight);
+                highlights.add(linkHighlight1);
                 /**
                  * 目前我准备在这开启监控
                  */
