@@ -112,12 +112,12 @@ public class StatisticManager implements StatisticService {
     private static ConcurrentHashMap<String, String> flowId_flowRate = new ConcurrentHashMap<>();
     private static ReadWriteLock rw1 = new ReentrantReadWriteLock();
     @Override
-    public ConcurrentHashMap<String, String> getFlowId_flowRate() {
+    public synchronized ConcurrentHashMap<String, String> getFlowId_flowRate() {
 
         return flowId_flowRate;
     }
     @Override
-    public void setFlowId_flowRate(ConcurrentHashMap<String, String> flowId_flowRate) {
+    public synchronized void setFlowId_flowRate(ConcurrentHashMap<String, String> flowId_flowRate) {
         StatisticManager.flowId_flowRate = flowId_flowRate;
     }
 
