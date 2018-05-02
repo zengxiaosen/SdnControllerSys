@@ -904,11 +904,11 @@ public class ReactiveForwarding {
 
 
 
-            if(Paths_Choise.size() == 0){
-                for(int k4=0; k4 < 10; k4++){
-                    log.info("Paths_Choise.size() == 0");
-                }
+
+            for(int k4=0; k4 < 10; k4++){
+                log.info("Paths_Choise.size() : " + Paths_Choise.size());
             }
+
 
 
             /**
