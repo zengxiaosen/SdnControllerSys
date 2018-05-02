@@ -876,9 +876,9 @@ public class ReactiveForwarding {
                         LinksResult);
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
-                //ConcurrentHashMap<String, String> FlowId_FlowRate = statisticService.getFlowId_flowRate();
+                ConcurrentHashMap<String, String> FlowId_FlowRate = statisticService.getFlowId_flowRate();
 
-                ConcurrentHashMap<String, String> FlowId_FlowRate = new ConcurrentHashMap<>();
+                //ConcurrentHashMap<String, String> FlowId_FlowRate = new ConcurrentHashMap<>();
 
 
 //                File csvFile = new File("/home/lihaifeng/z_test.csv");
