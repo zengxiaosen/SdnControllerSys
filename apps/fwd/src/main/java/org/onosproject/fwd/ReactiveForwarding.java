@@ -1993,6 +1993,7 @@ public class ReactiveForwarding {
                 .makeTemporary(flowTimeout)
                 .add();
 
+
         //通过流对象服务，转发出转发对象。在指定的设备上安装流规则
         flowObjectiveService.forward(context.inPacket().receivedFrom().deviceId(),
                                      forwardingObjective);

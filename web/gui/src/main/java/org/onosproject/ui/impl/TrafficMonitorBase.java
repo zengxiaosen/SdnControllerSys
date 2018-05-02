@@ -810,9 +810,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         @Override
         public void run(){
             try{
-                for(int i=0; i< 50; i++){
-                    log.info("zengxiaosen");
-                }
+//                for(int i=0; i< 50; i++){
+//                    log.info("zengxiaosen");
+//                }
                 sendAllPortTrafficBits();
             }catch (Exception e){
                 log.warn("Unable to process MyPortStatusTrafficUpdateTask  due to {}", e.getMessage());
