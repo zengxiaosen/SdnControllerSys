@@ -877,6 +877,10 @@ public class ReactiveForwarding {
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
                 ConcurrentHashMap<String, String> FlowId_FlowRate = statisticService.getFlowId_flowRate();
+                for(Map.Entry<String, String> entry : FlowId_FlowRate.entrySet()){
+                    log.info("key:" + entry.getKey());
+                    log.info("value:" + entry.getValue());
+                }
 
                 boolean isBigFlow = true;
                 //init with a small number
@@ -904,10 +908,10 @@ public class ReactiveForwarding {
 
 
 
-
-            for(int k4=0; k4 < 1; k4++){
-                log.info("Paths_Choise.size() : " + Paths_Choise.size());
-            }
+//
+//            for(int k4=0; k4 < 1; k4++){
+//                log.info("Paths_Choise.size() : " + Paths_Choise.size());
+//            }
 
 
 
@@ -1829,8 +1833,8 @@ public class ReactiveForwarding {
     // specified port if possible.如果可能的话，从给定集合中选择一条不返回指定端口的路径。
     private Path pickForwardPathIfPossible(Set<Path> paths, PortNumber notToPort) {
         for (Path path : paths) {
-            log.info(path.src().port().toString());
-            log.info(notToPort.toString());
+//            log.info(path.src().port().toString());
+//            log.info(notToPort.toString());
             if (!path.src().port().equals(notToPort)) {
                 return path;
             }
