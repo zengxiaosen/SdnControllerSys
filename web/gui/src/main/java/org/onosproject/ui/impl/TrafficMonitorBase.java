@@ -393,7 +393,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      * @return
      */
     ///////////////////////////////////////////////TrafficLink.StatsType.PORT_STATS///////////////////////////////////////////////////////
-    protected Highlights trafficSummary(TrafficLink.StatsType type){
+    protected Highlights trafficSummaryV1(TrafficLink.StatsType type){
         Highlights highlights = new Highlights();
         Set<TrafficLink> linksWithTraffic = computeLinksWithTraffic(type);
         Set<TrafficLink> aggregatedLinks = doAggregation(linksWithTraffic);
@@ -404,14 +404,14 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return highlights;
     }
 
-    protected Highlights mytrafficSummary(TrafficLink.StatsType type) {
+    protected Highlights trafficSummary(TrafficLink.StatsType type) {
         Highlights highlights = new Highlights();
         TrafficLinkMap linkMap = new TrafficLinkMap();
-        TrafficLinkMap linkMapForFlow = new TrafficLinkMap();
+        //TrafficLinkMap linkMapForFlow = new TrafficLinkMap();
         compileLinks(linkMap);
         addEdgeLinks(linkMap);
-        compileLinks(linkMapForFlow);
-        addEdgeLinks(linkMapForFlow);
+        //compileLinks(linkMapForFlow);
+        //addEdgeLinks(linkMapForFlow);
         double sum = 0;
         double sum_UsedRate = 0;
         /**
@@ -426,12 +426,12 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         HashMap<String, Double> tLinkId_BandWidthUsedRate = new HashMap<>();
         Set<TrafficLink> linksWithTraffic = new HashSet<>();
 
-        for(TrafficLink  tlink1 : linkMapForFlow.biLinks()){
-            if(type == TrafficLink.StatsType.PORT_STATS){
-                //對流也要做一份處理
-                attachFlowLoad(tlink1);
-            }
-        }
+//        for(TrafficLink  tlink1 : linkMapForFlow.biLinks()){
+//            if(type == TrafficLink.StatsType.PORT_STATS){
+//                //對流也要做一份處理
+//                attachFlowLoad(tlink1);
+//            }
+//        }
 
         for (TrafficLink tlink : linkMap.biLinks()) {
             if (type == TrafficLink.StatsType.FLOW_STATS) {
@@ -625,7 +625,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         log.info("标准差(网络拓扑所有link帶寬的標準差）== " + standard_deviation);
         log.info("標準差(網絡拓撲所有link帶寬利用率的標準差) == " + standard_deviation_usedRate);
 
-        File csvFile = new File("/home/zengxiaosen/BandWidthUsedRateStandardDeviation.csv");
+        File csvFile = new File("/home/lihaifeng/BandWidthUsedRateStandardDeviation.csv");
         checkExist(csvFile);
         //boolean b = appendData(csvFile, standard_deviation+"");
         boolean b = appendData(csvFile, standard_deviation_usedRate+"");
