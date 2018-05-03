@@ -868,7 +868,7 @@ public class ReactiveForwarding {
 
             Set<Path> Paths_Choise = new HashSet<>();
 
-            int choise = 0;
+            int choise = 1;
             if(choise == 0){
                 Set<Path> Paths_FESM = PathsDecision_FESM(paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
@@ -876,9 +876,9 @@ public class ReactiveForwarding {
                         LinksResult);
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
-                //ConcurrentHashMap<String, String> FlowId_FlowRate = statisticService.getFlowId_flowRate();
+                ConcurrentHashMap<String, String> FlowId_FlowRate = statisticService.getFlowId_flowRate();
 
-                ConcurrentHashMap<String, String> FlowId_FlowRate = new ConcurrentHashMap<>();
+                //ConcurrentHashMap<String, String> FlowId_FlowRate = new ConcurrentHashMap<>();
 
 
 //                File csvFile = new File("/home/lihaifeng/z_test.csv");
@@ -1223,13 +1223,13 @@ public class ReactiveForwarding {
             for(Map.Entry<String, String> entry : curSwitch_deviceId.entrySet()){
                 String entrykey = entry.getKey();
                 String entryValue = entry.getValue();
-                for(int i=0; i< 3; i++){
-                    log.info("map.size: " + curSwitch_deviceId.size());
-                    log.info(entrykey);
-                    log.info(entryValue);
-                }
+//                for(int i=0; i< 3; i++){
+//                    log.info("map.size: " + curSwitch_deviceId.size());
+//                    log.info(entrykey);
+//                    log.info(entryValue);
+//                }
                 if(entrykey.contains(ObjectFlowId)){
-                    //log.info("match...");
+                    log.info("match...");
                     resultFLowRate = entryValue;
                 }
             }
