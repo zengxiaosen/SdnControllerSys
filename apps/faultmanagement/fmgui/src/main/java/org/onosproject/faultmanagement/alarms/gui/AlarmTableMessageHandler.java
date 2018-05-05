@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.onosproject.faultmanagement.alarms.gui;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
-import org.joda.time.DateTime;
 import org.onosproject.incubator.net.faultmanagement.alarm.Alarm;
 import org.onosproject.net.DeviceId;
 import org.onosproject.ui.RequestHandler;
@@ -29,10 +28,10 @@ import org.onosproject.ui.table.cell.TimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Set;
 
-import static java.lang.Long.parseLong;
 import static org.onosproject.incubator.net.faultmanagement.alarm.AlarmId.alarmId;
 
 /**
@@ -123,11 +122,11 @@ public class AlarmTableMessageHandler extends UiMessageHandler {
         private void populateRow(TableModel.Row row, Alarm alarm) {
             log.debug("populateRow: row = {} alarm = {}", row, alarm);
 
-            row.cell(ID, alarm.id().fingerprint())
+            row.cell(ID, alarm.id())
                     .cell(DEVICE_ID_STR, alarm.deviceId())
                     .cell(DESCRIPTION, alarm.description())
                     .cell(SOURCE, alarm.source())
-                    .cell(TIME_RAISED, new DateTime(alarm.timeRaised()))
+                    .cell(TIME_RAISED, Instant.ofEpochMilli(alarm.timeRaised()))
                     .cell(SEVERITY, alarm.severity());
         }
     }
@@ -144,7 +143,7 @@ public class AlarmTableMessageHandler extends UiMessageHandler {
             log.debug("payload = {}", payload);
 
             String id = string(payload, ID, "(none)");
-            Alarm alarm = AlarmServiceUtil.lookupAlarm(alarmId(parseLong(id)));
+            Alarm alarm = AlarmServiceUtil.lookupAlarm(alarmId(id));
             ObjectNode rootNode = objectNode();
             ObjectNode data = objectNode();
             rootNode.set(DETAILS, data);
@@ -156,13 +155,13 @@ public class AlarmTableMessageHandler extends UiMessageHandler {
             } else {
                 rootNode.put(RESULT, "Found item with id '" + id + "'");
 
-                data.put(ID, alarm.id().fingerprint());
+                data.put(ID, alarm.id().toString());
                 data.put(DESCRIPTION, alarm.description());
                 data.put(DEVICE_ID_STR, alarm.deviceId().toString());
                 data.put(SOURCE, alarm.source().toString());
                 long timeRaised = alarm.timeRaised();
                 data.put(TIME_RAISED,
-                        formatTime(timeRaised)
+                         formatTime(timeRaised)
                 );
                 data.put(TIME_UPDATED, formatTime(alarm.timeUpdated()));
                 data.put(TIME_CLEARED, formatTime(alarm.timeCleared()));
@@ -178,6 +177,6 @@ public class AlarmTableMessageHandler extends UiMessageHandler {
         if (msSinceStartOfEpoch == null) {
             return "-";
         }
-        return new TimeFormatter().format(new DateTime(msSinceStartOfEpoch));
+        return new TimeFormatter().format(Instant.ofEpochMilli(msSinceStartOfEpoch));
     }
 }

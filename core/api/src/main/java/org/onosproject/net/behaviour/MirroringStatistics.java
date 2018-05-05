@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,28 @@
 
 package org.onosproject.net.behaviour;
 
-import com.google.common.base.MoreObjects;
-
 import java.util.Map;
 import java.util.Objects;
+
+import com.google.common.base.MoreObjects;
 
 /**
  * Represents statistics associated to a mirroring.
  */
 public final class MirroringStatistics {
 
-    private MirroringName mirroringName;
-    private int txBytes;
-    private int txPackets;
+    private final MirroringName mirroringName;
+    private final long txBytes;
+    private final long txPackets;
+
+    /**
+     * Hide private constructor to prevent calls to new().
+     */
+    private MirroringStatistics() {
+        mirroringName = null;
+        txBytes = 0;
+        txPackets = 0;
+    }
 
     /**
      * Statistics associated to a named mirroring.
@@ -37,7 +46,7 @@ public final class MirroringStatistics {
      * @param bytes transmitted bytes
      * @param packets transmitted packets
      */
-    private MirroringStatistics(String name, int bytes, int packets) {
+    private MirroringStatistics(String name, long bytes, long packets) {
         this.mirroringName = MirroringName.mirroringName(name);
         this.txBytes = bytes;
         this.txPackets = packets;
@@ -78,7 +87,7 @@ public final class MirroringStatistics {
      *
      * @return the packets
      */
-    public long packtes() {
+    public long packets() {
         return txPackets;
     }
 
@@ -107,7 +116,7 @@ public final class MirroringStatistics {
         return MoreObjects.toStringHelper(getClass())
                 .add("name", name())
                 .add("tx_bytes", bytes())
-                .add("tx_packets", packtes())
+                .add("tx_packets", packets())
                 .toString();
     }
 

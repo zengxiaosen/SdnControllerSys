@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,9 +104,7 @@ public class WideCommunityInteger implements BgpValueType {
 
         while (listIterator.hasNext()) {
             Integer integer = listIterator.next();
-            if (integer instanceof Integer) {
-                c.writeInt(integer);
-            }
+            c.writeInt(integer);
         }
 
         int length = c.writerIndex() - iLengthIndex;

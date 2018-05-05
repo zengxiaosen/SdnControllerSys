@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,11 @@
  */
 package org.onosproject.net.optical.intent.impl.compiler;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.easymock.EasyMock;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -25,13 +28,12 @@ import org.onosproject.TestApplicationId;
 import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.core.IdGenerator;
 import org.onosproject.net.AbstractProjectableModel;
 import org.onosproject.net.Annotations;
 import org.onosproject.net.ChannelSpacing;
-import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.CltSignalType;
 import org.onosproject.net.ConnectPoint;
+import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.DefaultDevice;
 import org.onosproject.net.DefaultPort;
 import org.onosproject.net.Device;
@@ -43,6 +45,14 @@ import org.onosproject.net.OduSignalUtils;
 import org.onosproject.net.Port;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.TributarySlot;
+import org.onosproject.net.behaviour.TributarySlotQuery;
+import org.onosproject.net.device.DeviceServiceAdapter;
+import org.onosproject.net.driver.Behaviour;
+import org.onosproject.net.driver.DefaultDriver;
+import org.onosproject.net.driver.Driver;
+import org.onosproject.net.driver.DriverServiceAdapter;
+import org.onosproject.net.driver.TestBehaviourImpl;
+import org.onosproject.net.driver.TestBehaviourTwoImpl;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
@@ -50,13 +60,14 @@ import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criteria;
 import org.onosproject.net.flow.instructions.Instructions;
+import org.onosproject.net.intent.AbstractIntentTest;
 import org.onosproject.net.intent.FlowRuleIntent;
 import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.IntentExtensionService;
 import org.onosproject.net.intent.IntentId;
 import org.onosproject.net.intent.IntentServiceAdapter;
+import org.onosproject.net.intent.IntentSetMultimap;
 import org.onosproject.net.intent.Key;
-import org.onosproject.net.intent.MockIdGenerator;
 import org.onosproject.net.intent.OpticalCircuitIntent;
 import org.onosproject.net.optical.OchPort;
 import org.onosproject.net.optical.OduCltPort;
@@ -64,22 +75,6 @@ import org.onosproject.net.optical.impl.DefaultOchPort;
 import org.onosproject.net.optical.impl.DefaultOduCltPort;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.net.resource.MockResourceService;
-import org.onosproject.net.intent.IntentSetMultimap;
-import org.onosproject.net.behaviour.TributarySlotQuery;
-import org.onosproject.net.device.DeviceServiceAdapter;
-import org.onosproject.net.driver.Behaviour;
-import org.onosproject.net.driver.DefaultDriver;
-import org.onosproject.net.driver.Driver;
-import org.onosproject.net.driver.DriverHandler;
-import org.onosproject.net.driver.DriverService;
-import org.onosproject.net.driver.DriverServiceAdapter;
-import org.onosproject.net.driver.TestBehaviourImpl;
-import org.onosproject.net.driver.TestBehaviourTwoImpl;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -89,23 +84,17 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
-import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.everyItem;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
-import static org.onosproject.net.AnnotationKeys.STATIC_PORT;
 import static org.onosproject.net.AnnotationKeys.PORT_NAME;
+import static org.onosproject.net.AnnotationKeys.STATIC_PORT;
 import static org.onosproject.net.Device.Type.ROADM;
 import static org.onosproject.net.DeviceId.deviceId;
 import static org.onosproject.net.NetTestTools.APP_ID;
 
-public class OpticalCircuitIntentCompilerTest {
+public class OpticalCircuitIntentCompilerTest extends AbstractIntentTest {
 
     private static final String DEV1 = "of:1";
     private static final String DEV2 = "of:2";
@@ -117,7 +106,6 @@ public class OpticalCircuitIntentCompilerTest {
 
     private CoreService coreService;
     private IntentExtensionService intentExtensionService;
-    private final IdGenerator idGenerator = new MockIdGenerator();
     private OpticalCircuitIntentCompiler sut;
 
     private final ApplicationId appId = new TestApplicationId("test");
@@ -212,31 +200,7 @@ public class OpticalCircuitIntentCompilerTest {
     /**
      * Mocks the driver service so it will appear supporting TributarySlotQuery Behaviour in the test.
      */
-    private static class MockDriverServiceWithTs implements DriverService {
-        @Override
-        public Driver getDriver(String driverName) {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public Set<Driver> getDrivers() {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public Set<Driver> getDrivers(Class<? extends Behaviour> withBehaviour) {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public Driver getDriver(String mfr, String hw, String sw) {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
+    private static class MockDriverServiceWithTs extends DriverServiceAdapter {
         @Override
         public Driver getDriver(DeviceId deviceId) {
             DefaultDriver ddp = new DefaultDriver("foo.base", new ArrayList<>(), "Circus", "lux", "1.2a",
@@ -247,43 +211,12 @@ public class OpticalCircuitIntentCompilerTest {
                     ImmutableMap.of("foo", "bar"));
             return ddp;
         }
-
-        @Override
-        public DriverHandler createHandler(DeviceId deviceId,
-                String... credentials) {
-            // TODO Auto-generated method stub
-            return null;
-        }
     }
 
     /**
      * Mocks the driver service so it will appear not-supporting TributarySlotQuery Behaviour in the test.
      */
-    private static class MockDriverServiceNoTs implements DriverService {
-        @Override
-        public Driver getDriver(String driverName) {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public Set<Driver> getDrivers() {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public Set<Driver> getDrivers(Class<? extends Behaviour> withBehaviour) {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public Driver getDriver(String mfr, String hw, String sw) {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
+    private static class MockDriverServiceNoTs extends DriverServiceAdapter {
         @Override
         public Driver getDriver(DeviceId deviceId) {
             DefaultDriver ddp = new DefaultDriver("foo.base", new ArrayList<>(), "Circus", "lux", "1.2a",
@@ -291,13 +224,6 @@ public class OpticalCircuitIntentCompilerTest {
                                     TestBehaviourImpl.class),
                     ImmutableMap.of("foo", "bar"));
             return ddp;
-        }
-
-        @Override
-        public DriverHandler createHandler(DeviceId deviceId,
-                String... credentials) {
-            // TODO Auto-generated method stub
-            return null;
         }
     }
 
@@ -377,8 +303,7 @@ public class OpticalCircuitIntentCompilerTest {
         sut.intentService = new TestIntentService();
         sut.intentSetMultimap = new MockIntentSetMultimap();
 
-        Intent.unbindIdGenerator(idGenerator);
-        Intent.bindIdGenerator(idGenerator);
+        super.setUp();
 
         intentExtensionService = createMock(IntentExtensionService.class);
         intentExtensionService.registerCompiler(OpticalCircuitIntent.class, sut);
@@ -398,11 +323,6 @@ public class OpticalCircuitIntentCompilerTest {
         sut.cfgService = mockConfigService;
         replay(mockConfigService);
 
-    }
-
-    @After
-    public void tearDown() {
-        Intent.unbindIdGenerator(idGenerator);
     }
 
     /**

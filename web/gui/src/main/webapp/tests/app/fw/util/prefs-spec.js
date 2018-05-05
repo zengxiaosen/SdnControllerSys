@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ describe('factory: fw/util/prefs.js', function() {
 
     it('should define api functions', function () {
         expect(fs.areFunctions(ps, [
-            'getPrefs', 'asNumbers', 'setPrefs',
+            'getPrefs', 'asNumbers', 'setPrefs', 'mergePrefs',
             'addListener', 'removeListener'
         ])).toBe(true);
     });
@@ -57,5 +57,8 @@ describe('factory: fw/util/prefs.js', function() {
 
     // === Tests for setPrefs()
     // TODO unit tests for setPrefs()
+
+    // === Tests for mergePrefs()
+    // TODO unit tests for mergePrefs()
 
 });

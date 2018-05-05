@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import org.onlab.packet.MacAddress;
 import org.onlab.packet.VlanId;
 import org.onosproject.cluster.ClusterService;
 import org.onosproject.cluster.NodeId;
+import org.onosproject.mastership.MastershipAdminService;
 import org.onosproject.mastership.MastershipService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Device;
@@ -58,6 +59,7 @@ import java.util.concurrent.TimeUnit;
 import static org.onlab.util.Tools.toHex;
 import static org.onosproject.net.HostId.hostId;
 import static org.onosproject.net.Link.Type.DIRECT;
+import static org.onosproject.net.MastershipRole.MASTER;
 import static org.onosproject.net.PortNumber.portNumber;
 import static org.onosproject.net.device.DeviceEvent.Type.*;
 import static org.onosproject.provider.nil.NullProviders.SCHEME;
@@ -78,6 +80,7 @@ public abstract class TopologySimulator {
 
     protected ClusterService clusterService;
     protected MastershipService mastershipService;
+    protected MastershipAdminService mastershipAdminService;
 
     protected DeviceAdminService deviceService;
     protected HostService hostService;
@@ -93,7 +96,7 @@ public abstract class TopologySimulator {
 
     protected final List<DeviceId> deviceIds = Lists.newArrayList();
 
-    private DeviceListener deviceEventCounter = new DeviceEventCounter();
+    private final DeviceListener deviceEventCounter = new DeviceEventCounter();
 
     /**
      * Initializes a new topology simulator with access to the specified service
@@ -118,6 +121,7 @@ public abstract class TopologySimulator {
 
         this.clusterService = directory.get(ClusterService.class);
         this.mastershipService = directory.get(MastershipService.class);
+        this.mastershipAdminService = directory.get(MastershipAdminService.class);
 
         this.deviceService = directory.get(DeviceAdminService.class);
         this.hostService = directory.get(HostService.class);
@@ -144,6 +148,7 @@ public abstract class TopologySimulator {
      * Sets up network topology simulation.
      */
     public void setUpTopology() {
+        deviceIds.clear();
         prepareForDeviceEvents(deviceCount);
         createDevices();
         waitForDeviceEvents();
@@ -177,9 +182,7 @@ public abstract class TopologySimulator {
      * @param i index of the device id in the list.
      */
     protected void createDevice(int i) {
-        DeviceId id = DeviceId.deviceId(SCHEME + ":" + toHex(i));
-        deviceIds.add(id);
-        createDevice(id, i);
+        createDevice(DeviceId.deviceId(SCHEME + ":" + toHex(i)), i);
     }
 
     /**
@@ -205,6 +208,8 @@ public abstract class TopologySimulator {
                 new DefaultDeviceDescription(id.uri(), type,
                                              "ON.Lab", "0.1", "0.1", "1234",
                                              new ChassisId(chassisId));
+        deviceIds.add(id);
+        mastershipAdminService.setRoleSync(localNode, id, MASTER);
         deviceProviderService.deviceConnected(id, desc);
         deviceProviderService.updatePorts(id, buildPorts(portCount));
     }
@@ -289,6 +294,7 @@ public abstract class TopologySimulator {
             deviceLatch.await(maxWaitSeconds, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             log.warn("Device events did not arrive in time");
+            Thread.currentThread().interrupt();
         }
         deviceService.removeListener(deviceEventCounter);
     }
@@ -326,6 +332,8 @@ public abstract class TopologySimulator {
         prepareForDeviceEvents(deviceIds.size());
         deviceIds.forEach(deviceProviderService::deviceDisconnected);
         waitForDeviceEvents();
+        mastershipService.getDevicesOf(localNode).forEach(mastershipService::relinquishMastership);
+        deviceIds.forEach(mastershipService::relinquishMastership);
         deviceIds.clear();
     }
 
@@ -388,8 +396,12 @@ public abstract class TopologySimulator {
     protected List<PortDescription> buildPorts(int portCount) {
         List<PortDescription> ports = Lists.newArrayList();
         for (int i = 1; i <= portCount; i++) {
-            ports.add(new DefaultPortDescription(PortNumber.portNumber(i), true,
-                                                 Port.Type.COPPER, 0));
+            ports.add(DefaultPortDescription.builder()
+                    .withPortNumber(PortNumber.portNumber(i))
+                    .isEnabled(true)
+                    .type(Port.Type.COPPER)
+                    .portSpeed(0)
+                    .build());
         }
         return ports;
     }

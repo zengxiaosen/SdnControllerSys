@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,24 +15,93 @@
  */
 package org.onosproject.fwd;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.lang.StringUtils;
+//apache 的OSGi框架felix
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Modified;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
-import org.apache.felix.scr.annotations.Service;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
-import org.onlab.packet.*;
+import org.apache.felix.scr.annotations.Service;
+
+//onlab提供的网络数据包的类
+import org.onlab.packet.Ethernet;
+import org.onlab.packet.ICMP;
+import org.onlab.packet.ICMP6;
+import org.onlab.packet.IPv4;
+import org.onlab.packet.IPv6;
+import org.onlab.packet.Ip4Prefix;
+import org.onlab.packet.Ip6Prefix;
+import org.onlab.packet.MacAddress;
+import org.onlab.packet.TCP;
+import org.onlab.packet.TpPort;
+import org.onlab.packet.UDP;
+import org.onlab.packet.VlanId;
+
 import org.onlab.util.KryoNamespace;
 import org.onlab.util.Tools;
 import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.event.Event;
+import org.onosproject.net.ConnectPoint;
+import org.onosproject.net.DeviceId;
+import org.onosproject.net.Host;
+import org.onosproject.net.HostId;
+import org.onosproject.net.Link;
+import org.onosproject.net.Path;
+import org.onosproject.net.PortNumber;
+import org.onosproject.net.flow.DefaultTrafficSelector;
+import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.FlowEntry;
+import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.flow.TrafficSelector;
+import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.flow.criteria.Criterion;
+import org.onosproject.net.flow.criteria.EthCriterion;
+import org.onosproject.net.flow.instructions.Instruction;
+import org.onosproject.net.flow.instructions.Instructions;
+import org.onosproject.net.flowobjective.DefaultForwardingObjective;
+import org.onosproject.net.flowobjective.FlowObjectiveService;
+import org.onosproject.net.flowobjective.ForwardingObjective;
+import org.onosproject.net.host.HostService;
+import org.onosproject.net.link.LinkEvent;
+import org.onosproject.net.packet.InboundPacket;
+import org.onosproject.net.packet.PacketContext;
+import org.onosproject.net.packet.PacketPriority;
+import org.onosproject.net.packet.PacketProcessor;
+import org.onosproject.net.packet.PacketService;
+import org.onosproject.net.topology.TopologyEvent;
+import org.onosproject.net.topology.TopologyListener;
+import org.onosproject.net.topology.TopologyService;
+
+//onos存储相关的类
+import org.onosproject.store.serializers.KryoNamespaces;
+import org.onosproject.store.service.EventuallyConsistentMap;
+import org.onosproject.store.service.MultiValuedTimestamp;
+import org.onosproject.store.service.StorageService;
+import org.onosproject.store.service.WallClockTimestamp;
+
+//OSGi定义的组件的上下文环境
+import org.osgi.service.component.ComponentContext;
+import org.slf4j.Logger;
+
+import java.util.Dictionary;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+//导入的静态方法
+import static java.util.concurrent.Executors.newSingleThreadExecutor;
+import static org.onlab.util.Tools.groupedThreads;
+import static org.slf4j.LoggerFactory.getLogger;
+
+//
 import org.onosproject.net.*;
 import org.onosproject.net.topology.TopologyEdge;
 import org.onosproject.net.config.NetworkConfigService;
@@ -81,28 +150,46 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
+import org.apache.commons.lang.StringUtils;
+import org.apache.felix.scr.annotations.Activate;
+import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.Deactivate;
+import org.apache.felix.scr.annotations.Modified;
+import org.apache.felix.scr.annotations.Property;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.Service;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.onlab.packet.*;
+import org.onlab.util.KryoNamespace;
+import org.onlab.util.Tools;
+import org.onosproject.cfg.ComponentConfigService;
+import org.onosproject.core.ApplicationId;
+import org.onosproject.core.CoreService;
+import org.onosproject.event.Event;
+import org.onosproject.net.*;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Sample reactive forwarding application.
+ * 被动转发应用样例
  */
+//声明此类作为一个组件来激活，并且强制立即激活
 @Component(immediate = true)
 @Service(value = ReactiveForwarding.class)
 public class ReactiveForwarding {
-
+    //默认超时时间
     private static final int DEFAULT_TIMEOUT = 10;
+    //默认优先级
     private static final int DEFAULT_PRIORITY = 10;
 
     private final Logger log = getLogger(getClass());
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected DeviceService deviceService;
-
-//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-//    protected PortStatisticsService portStatisticsService;
-
+    //将服务标记为应用程序所依赖的服务，应用程序激活前，保证必须有一个服务的实例被加载
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected TopologyService topologyService;
 
@@ -130,113 +217,127 @@ public class ReactiveForwarding {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowStatisticService flowStatisticService;
 
-//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-//    protected PortStatisticsService portStatisticsService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected StatisticService statisticService;
-
-
-
-
-
+    //本类的一个内部私有类
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
 
     private  EventuallyConsistentMap<MacAddress, ReactiveForwardMetrics> metrics;
 
     private ApplicationId appId;
 
+    //property注解定义组件可以通过ComponentContext().getProperties()得到的属性
+    //只转发packet-out消息，默认为假
     @Property(name = "packetOutOnly", boolValue = false,
             label = "Enable packet-out only forwarding; default is false")
     private boolean packetOutOnly = false;
-
+    //第一个数据包使用OFPP_TABLE端口转发，而不是使用真实的端口，默认为假
     @Property(name = "packetOutOfppTable", boolValue = false,
             label = "Enable first packet forwarding using OFPP_TABLE port " +
                     "instead of PacketOut with actual port; default is false")
     private boolean packetOutOfppTable = false;
 
+    //配置安装的流规则的Flow Timeout,默认是10s
     @Property(name = "flowTimeout", intValue = DEFAULT_TIMEOUT,
             label = "Configure Flow Timeout for installed flow rules; " +
                     "default is 10 sec")
     private int flowTimeout = DEFAULT_TIMEOUT;
 
+    //配置安装的流规则的优先级，默认是10,最大的优先级
     @Property(name = "flowPriority", intValue = DEFAULT_PRIORITY,
             label = "Configure Flow Priority for installed flow rules; " +
                     "default is 10")
     private int flowPriority = DEFAULT_PRIORITY;
 
+    //开启IPV6转发，默认为假
     @Property(name = "ipv6Forwarding", boolValue = false,
             label = "Enable IPv6 forwarding; default is false")
     private boolean ipv6Forwarding = false;
 
+    //只匹配目的mac地址，默认为假
     @Property(name = "matchDstMacOnly", boolValue = false,
             label = "Enable matching Dst Mac Only; default is false")
     private boolean matchDstMacOnly = false;
 
+    //匹配Vlan ID,默认为假
     @Property(name = "matchVlanId", boolValue = false,
             label = "Enable matching Vlan ID; default is false")
     private boolean matchVlanId = false;
 
+    //匹配IPv4地址，默认为假
     @Property(name = "matchIpv4Address", boolValue = false,
             label = "Enable matching IPv4 Addresses; default is false")
     private boolean matchIpv4Address = false;
 
+    //匹配ipv4的DSCP和ENC，默认为假
     @Property(name = "matchIpv4Dscp", boolValue = false,
             label = "Enable matching IPv4 DSCP and ECN; default is false")
     private boolean matchIpv4Dscp = false;
-
+    //匹配Ipv6的地址，默认为假
     @Property(name = "matchIpv6Address", boolValue = false,
             label = "Enable matching IPv6 Addresses; default is false")
     private boolean matchIpv6Address = false;
 
+    //匹配IPv6流标签，默认为假
     @Property(name = "matchIpv6FlowLabel", boolValue = false,
             label = "Enable matching IPv6 FlowLabel; default is false")
     private boolean matchIpv6FlowLabel = false;
 
-
-
+    //匹配TCP，DUP端口号，默认为假
     @Property(name = "matchTcpUdpPorts", boolValue = false,
             label = "Enable matching TCP/UDP ports; default is false")
     private boolean matchTcpUdpPorts = false;
 
+    //匹配ICMPv4和ICMPv6字段，默认为假
     @Property(name = "matchIcmpFields", boolValue = false,
             label = "Enable matching ICMPv4 and ICMPv6 fields; " +
                     "default is false")
     private boolean matchIcmpFields = false;
 
-
+    //忽略（不转发）IP4多路广播，默认为假
     @Property(name = "ignoreIPv4Multicast", boolValue = false,
             label = "Ignore (do not forward) IPv4 multicast packets; default is false")
     private boolean ignoreIpv4McastPackets = false;
 
-    @Property(name = "recordMetrics", boolValue = true,
+    //记录被动转发的度量，默认为假
+    @Property(name = "recordMetrics", boolValue = false,
             label = "Enable record metrics for reactive forwarding")
-    private boolean recordMetrics = true;
+    private boolean recordMetrics = false;
 
+    //拓扑监听器
     private final TopologyListener topologyListener = new InternalTopologyListener();
+    //java的线程执行接口
+    private ExecutorService blackHoleExecutor;
 
-
+    //OSGi的组件启动时自动调用的方法，
     @Activate
     public void activate(ComponentContext context) {
+        //Kryo是一个快速序列化，反序列化的工具。
+        //定义名称空间
         KryoNamespace.Builder metricSerializer = KryoNamespace.newBuilder()
                 .register(KryoNamespaces.API)
                 .register(ReactiveForwardMetrics.class)
                 .register(MultiValuedTimestamp.class);
-        metrics =  storageService.<MacAddress, ReactiveForwardMetrics>eventuallyConsistentMapBuilder()
+        //根据名称空间和时间戳生成存储服务，
+        metrics =  storageService.<MacAddress, ReactiveForwardMetrics> eventuallyConsistentMapBuilder()
                 .withName("metrics-fwd")
                 .withSerializer(metricSerializer)
                 .withTimestampProvider((key, metricsData) -> new
                         MultiValuedTimestamp<>(new WallClockTimestamp(), System.nanoTime()))
                 .build();
+        //java.util.concurrent，黑洞执行类
+        blackHoleExecutor = newSingleThreadExecutor(groupedThreads("onos/app/fwd",
+                                                                   "black-hole-fixer",
+                                                                   log));
 
-        cfgService.registerProperties(getClass());
+        cfgService.registerProperties(getClass());//ComponentConfigService
         appId = coreService.registerApplication("org.onosproject.fwd");
-        //负责数据包在特定路径上转发的数据包处理器
+
         packetService.addProcessor(processor, PacketProcessor.director(2));
         topologyService.addListener(topologyListener);
-
         readComponentConfiguration(context);
-        requestIntercepts();
+        requestIntercepts();//截取请求
 
         log.info("Started", appId.id());
     }
@@ -244,10 +345,12 @@ public class ReactiveForwarding {
     @Deactivate
     public void deactivate() {
         cfgService.unregisterProperties(getClass(), false);
-        withdrawIntercepts();
+        withdrawIntercepts();//
         flowRuleService.removeFlowRulesById(appId);
         packetService.removeProcessor(processor);
         topologyService.removeListener(topologyListener);
+        blackHoleExecutor.shutdown();
+        blackHoleExecutor = null;
         processor = null;
         log.info("Stopped");
     }
@@ -255,14 +358,17 @@ public class ReactiveForwarding {
     @Modified
     public void modified(ComponentContext context) {
         readComponentConfiguration(context);
-        requestIntercepts();
+        requestIntercepts();//截取请求
     }
 
     /**
      * Request packet in via packet service.
+     * 通过数据包服务请求获得数据包，在inactivate方法中被调用
      */
     private void requestIntercepts() {
+        //构建流量选择器
         TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
+        //选择以太网类型
         selector.matchEthType(Ethernet.TYPE_IPV4);
         packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
         selector.matchEthType(Ethernet.TYPE_ARP);
@@ -278,6 +384,7 @@ public class ReactiveForwarding {
 
     /**
      * Cancel request for packet in via packet service.
+     * 取消数据包服务的拦截请求，在deactivate方法中被调用
      */
     private void withdrawIntercepts() {
         TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
@@ -291,7 +398,7 @@ public class ReactiveForwarding {
 
     /**
      * Extracts properties from the component configuration context.
-     *
+     *从component配置上下文中提取属性,在invactivate方法中被调用
      * @param context the component context
      */
     private void readComponentConfiguration(ComponentContext context) {
@@ -446,80 +553,11 @@ public class ReactiveForwarding {
         log.info("Configured. Flow Priority is configured to {}", flowPriority);
     }
 
-
-    /**
-     * 自研统计结构体
-     */
-
-    private static class Statistics {
-        private final ImmutableSet<FlowEntry> current;
-        private final ImmutableSet<FlowEntry> previous;
-
-        public Statistics(Set<FlowEntry> current, Set<FlowEntry> previous) {
-            this.current = ImmutableSet.copyOf(checkNotNull(current));
-            this.previous = ImmutableSet.copyOf(checkNotNull(previous));
-        }
-
-        /**
-         * Returns flow entries as the current value.
-         *
-         * @return flow entries as the current value
-         */
-        public ImmutableSet<FlowEntry> current() {
-            return current;
-        }
-
-        /**
-         * Returns flow entries as the previous value.
-         *
-         * @return flow entries as the previous value
-         */
-        public ImmutableSet<FlowEntry> previous() {
-            return previous;
-        }
-
-        /**
-         * Validates values are not empty.
-         *
-         * @return false if either of the sets is empty. Otherwise, true.
-         */
-        public boolean isValid() {
-            return !(current.isEmpty() || previous.isEmpty());
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(current, previous);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (!(obj instanceof Statistics)) {
-                return false;
-            }
-            final Statistics other = (Statistics) obj;
-            return Objects.equals(this.current, other.current) && Objects.equals(this.previous, other.previous);
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                    .add("current", current)
-                    .add("previous", previous)
-                    .toString();
-        }
-    }
-
-
-
     /**
      * Packet processor responsible for forwarding packets along their paths.
+     * 负责在他们路径上的数据包的处理
      */
     private class ReactivePacketProcessor implements PacketProcessor {
-
         /**
          * 自研统计模块
          * 对端口带宽的统计信息
@@ -603,24 +641,22 @@ public class ReactiveForwarding {
          * 包处理
          * @param context packet processing context
          */
-
         @Override
-        public synchronized void process(PacketContext context) {
+        public void process(PacketContext context) {
             // Stop processing if the packet has been handled, since we
             // can't do any more to it.
+
             if (context.isHandled()) {
                 return;
             }
-
             /**
              *
              * 收集网络信息
              * Packet_In 消息 上报
              *
              */
-
             InboundPacket pkt = context.inPacket();
-            Ethernet ethPkt = pkt.parsed();
+            Ethernet ethPkt = pkt.parsed();//从数据包中解析出以太网的信息
 
             if (ethPkt == null) {
                 return;
@@ -630,16 +666,14 @@ public class ReactiveForwarding {
              * macAddress: ethPkt.getSourceMAC()
              * macAddress1 = ethPkt.getDestinationMAC();
              */
-
             MacAddress macAddress = ethPkt.getSourceMAC();
             ReactiveForwardMetrics macMetrics = null;
             macMetrics = createCounter(macAddress);
-            inPacket(macMetrics);
+            inPacket(macMetrics);//增加packet_in数据包的计数
 
-
-            // Bail if this is deemed to be a control packet.
+            // Bail if this is deemed to be a control packet.如果这被认为是一个控制包，释放。
             if (isControlPacket(ethPkt)) {
-                droppedPacket(macMetrics);
+                droppedPacket(macMetrics);//只是增加丢弃数据包的计数
                 return;
             }
 
@@ -648,37 +682,31 @@ public class ReactiveForwarding {
                 droppedPacket(macMetrics);
                 return;
             }
-
+            //HostId包含Mac和VlanId
+            // HostId id = HostId.hostId(ethPkt.getDestinationMAC());//得到目的主机的mac
             HostId id_src = HostId.hostId(macAddress);
             MacAddress macAddress1 = ethPkt.getDestinationMAC();
             HostId id = HostId.hostId(macAddress1);
 
-            // Do not process link-local addresses in any way.
-            if (id.mac().isLinkLocal()) {
+            // Do not process LLDP MAC address in any way.不处理LLDP的mac地址
+            if (id.mac().isLldp()) {
                 droppedPacket(macMetrics);
                 return;
             }
 
-            // Do not process IPv4 multicast packets, let mfwd handle them
+            // Do not process IPv4 multicast packets, let mfwd handle them，不处理IPv4多播数据包
             if (ignoreIpv4McastPackets && ethPkt.getEtherType() == Ethernet.TYPE_IPV4) {
                 if (id.mac().isMulticast()) {
                     return;
                 }
             }
             Host src = hostService.getHost(id_src);
-//            for(int i=0; i< 50; i++){
-//                log.info("=====================" + src.toString());
-//            }
-
-
-            // Do we know who this is for? If not, flood and bail.
+            // Do we know who this is for? If not, flood and bail.如果主机服务中没有这个主机，flood然后丢弃
             Host dst = hostService.getHost(id);
             if (dst == null) {
                 flood(context, macMetrics);
                 return;
             }
-
-
             /**
              * 测试case： 取ip地址
              */
@@ -698,8 +726,6 @@ public class ReactiveForwarding {
 //            }
 
 
-
-
             // Are we on an edge switch that our destination is on? If so,
             // simply forward out to the destination and bail.
 
@@ -707,25 +733,15 @@ public class ReactiveForwarding {
 //            log.info("源host:"+ id_src.mac().toString());
 //            log.info("目的host:"+ id.mac().toString());
 
-
-
-
-            // 从同一个交换机进去和出去
+            // Are we on an edge switch that our destination is on? If so,
+            // simply forward out to the destination and bail.如果是目的主机链接的边缘交换机发过来的，简单安装流规则，然后释放。
             if (pkt.receivedFrom().deviceId().equals(dst.location().deviceId())) {
-
                 if (!context.inPacket().receivedFrom().port().equals(dst.location().port())) {
-
-                    //log.info("case1.............................");
                     installRule(context, dst.location().port(), macMetrics);
                 }
                 return;
             }
-
-
-
-
-
-            /*
+ /*
             注意：这里的src.location().deviceId()是边缘交换机，但是和Dijkstra的getPaths里面的src交换机地址不同
             因为getPaths的src交换机指的是此时发出packetIn的交换机
              */
@@ -751,21 +767,38 @@ public class ReactiveForwarding {
 /////////////////////////////////////////////////////////////////-just a test
             Set<TopologyEdge> topologyEdgeset = null;
 
+            /**
+             * 根据 LinksResult中每条link，算出它的maxBandwidthCapacity
+             * 然后持久化到文件中
+             */
+
+            //这里的size是64,是双向的
+            //log.info("allLinks: LinksResult.size(): " + LinksResult.size());
+
+            //packetIn
+//            DeviceId dstDeviceId = dst.location().deviceId();
+//            DeviceId srcDeviceId = src.location().deviceId();
+
             // Otherwise, get a set of paths that lead from here to the
-            // destination edge switch.
+            // destination edge switch.如果不是边缘交换机，则通过拓扑服务，得到从这里到达目地边缘交换机的路径集合。
             Set<Path> paths =
                     topologyService.getPaths(topologyService.currentTopology(),
                                              pkt.receivedFrom().deviceId(),
                                              dst.location().deviceId());
-            //getPaths1是利用Dijkstra choose path
-            //Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs);
+
+
+
+            if (paths.isEmpty()) {
+                // If there are no paths, flood and bail.//如果得到的路径为空，则flood然后释放
+                flood(context, macMetrics);
+                return;
+            }
 
 
             /**
              * 网络拓扑中的所有link
              */
             LinkedList<Link> LinksResult = topologyService.getAllPaths(topologyService.currentTopology());
-
             //Jedis jedidiss = new Jedis("127.0.0.1", 6379);
 
             /**
@@ -806,8 +839,6 @@ public class ReactiveForwarding {
              */
 
             ConnectPoint curSwitchConnectionPoint = pkt.receivedFrom();
-
-
             //log.info("=============================================");
 
 //            if(isFlowFound == true){
@@ -833,7 +864,6 @@ public class ReactiveForwarding {
             Set<Path> Paths_Choise = new HashSet<>();
 
             int choise = 1;
-
             if(choise == 0){
                 Set<Path> Paths_FESM = PathsDecision_FESM(paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
@@ -841,20 +871,20 @@ public class ReactiveForwarding {
                         LinksResult);
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
-                boolean isBigFlow = false;
-                isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+                boolean isBigFlow = true;
+                //isBigFlow = ifBigFlowProcess(macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
                 Set<Path> Paths_PLLB = PathsDecision_PLLB(isBigFlow, paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
                         src.location().deviceId(),
                         LinksResult);
                 Paths_Choise = Paths_PLLB;
             }else if(choise == 3){
-                Set<Path> paths_DijkStra =
-                    topologyService.getPaths1(topologyService.currentTopology(),
-                            dst.location().deviceId(),
-                            src.location().deviceId(),
-                            pkt.receivedFrom().deviceId());
-                Paths_Choise = paths_DijkStra;
+//                Set<Path> paths_DijkStra =
+//                        topologyService.getPaths1(topologyService.currentTopology(),
+//                                dst.location().deviceId(),
+//                                src.location().deviceId(),
+//                                pkt.receivedFrom().deviceId());
+//                Paths_Choise = paths_DijkStra;
             }else if(choise == 4){
 
                 Set<Path> paths_ecmp = PathsDecision_ECMP(paths, src.location().deviceId().toString(), dst.location().deviceId().toString());
@@ -862,12 +892,6 @@ public class ReactiveForwarding {
             }
 
 
-
-            if (paths.isEmpty()) {
-                // If there are no paths, flood and bail.
-                flood(context, macMetrics);
-                return;
-            }
 
 
 
@@ -889,19 +913,21 @@ public class ReactiveForwarding {
              */
 //            Set<Path> mypllb_pathset = Paths_PLLB != null ? Paths_PLLB : paths_DijkStra;
 //            Set<Path> myfesm_pathset = Paths_FESM != null ? Paths_FESM : paths_DijkStra;
-            Path path = pickForwardPathIfPossible(Paths_Choise, pkt.receivedFrom().port());
-            //Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
+
+            // Otherwise, pick a path that does not lead back to where we
+            // came from; if no such path, flood and bail.如果存在路径的话，从给定集合中选择一条不返回指定端口的路径。
+            Path path = Paths_Choise.size() == 0 ? pickForwardPathIfPossible(paths, pkt.receivedFrom().port())
+                    : pickForwardPathIfPossible(Paths_Choise, pkt.receivedFrom().port());
+
             if (path == null) {
                 log.warn("Don't know where to go from here {} for {} -> {}",
-                         pkt.receivedFrom(), ethPkt.getSourceMAC(), ethPkt.getDestinationMAC());
+                        pkt.receivedFrom(), ethPkt.getSourceMAC(), ethPkt.getDestinationMAC());
                 flood(context, macMetrics);
                 return;
             }
 
-
-            // Otherwise forward and be done with it.
+            // Otherwise forward and be done with it.最后安装流规则
             installRule(context, path.src().port(), macMetrics);
-
 
             /**
              * 评价指标监控计算模块 路径如下：
@@ -923,6 +949,7 @@ public class ReactiveForwarding {
             //log.info("=====================================================================================================================================");
 
         }
+
 
         private  Set<Path> PathsDecision_ECMP(Set<Path> paths, String src, String dst){
             Set<Path> result = new HashSet<>();
@@ -1134,7 +1161,7 @@ public class ReactiveForwarding {
 
                 int i=0;
                 String sql = null;
-                DBHelper db1 = null;
+                //DBHelper db1 = null;
                 ResultSet ret = null;
 
                 /**
@@ -1437,7 +1464,7 @@ public class ReactiveForwarding {
              */
             int i=0;
             String sql = null;
-            DBHelper db1 = null;
+            //DBHelper db1 = null;
             ResultSet ret = null;
 
             /**
@@ -1689,40 +1716,29 @@ public class ReactiveForwarding {
 
     }
 
-
-    /**
-     *
-     * @param
-     * @return
-     */
-
-
-    // Indicates whether this is a control packet, e.g. LLDP, BDDP
+    // Indicates whether this is a control packet, e.g. LLDP, BDDP，判断数据包是否是一个控制数据包
     private boolean isControlPacket(Ethernet eth) {
         short type = eth.getEtherType();
         return type == Ethernet.TYPE_LLDP || type == Ethernet.TYPE_BSN;
     }
 
-    // Indicated whether this is an IPv6 multicast packet.
+    // Indicated whether this is an IPv6 multicast packet.判断是否是IP6广播数据包
     private boolean isIpv6Multicast(Ethernet eth) {
         return eth.getEtherType() == Ethernet.TYPE_IPV6 && eth.isMulticast();
     }
 
     // Selects a path from the given set that does not lead back to the
-    // specified port if possible.
-    // 这里选很明显用了贪心
+    // specified port if possible.如果可能的话，从给定集合中选择一条不返回指定端口的路径。
     private Path pickForwardPathIfPossible(Set<Path> paths, PortNumber notToPort) {
-        Path lastPath = null;
         for (Path path : paths) {
-            lastPath = path;
             if (!path.src().port().equals(notToPort)) {
                 return path;
             }
         }
-        return lastPath;
+        return null;
     }
 
-    // Floods the specified packet if permissible.
+    // Floods the specified packet if permissible.如果允许的话，对该数据包泛洪
     private void flood(PacketContext context, ReactiveForwardMetrics macMetrics) {
         if (topologyService.isBroadcastPoint(topologyService.currentTopology(),
                                              context.inPacket().receivedFrom())) {
@@ -1732,30 +1748,24 @@ public class ReactiveForwarding {
         }
     }
 
-    /**
-     *
-     * @param context
-     * @param portNumber
-     * @param macMetrics
-     */
-    // Sends a packet out the specified port.
+    // Sends a packet out the specified port.从指定的端口发送数据包,由数据包的上下文发送数据包
     private void packetOut(PacketContext context, PortNumber portNumber, ReactiveForwardMetrics macMetrics) {
-        replyPacket(macMetrics);
+        replyPacket(macMetrics);//只是一个简单的计数
         context.treatmentBuilder().setOutput(portNumber);
-        //OpenFlowCorePacketContext.send()
         context.send();
     }
 
-    // Install a rule forwarding the packet to the specified port.
+    // Install a rule forwarding the packet to the specified port.安装一条流转发数据包到指定的端口
     private void installRule(PacketContext context, PortNumber portNumber, ReactiveForwardMetrics macMetrics) {
         //
         // We don't support (yet) buffer IDs in the Flow Service so
-        // packet out first.
+        // packet out first.我们现在还不支持流服务的缓存ID，所以，先转发出去
         //
         Ethernet inPkt = context.inPacket().parsed();
         TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
 
         // If PacketOutOnly or ARP packet than forward directly to output port
+        // 如果是PacketOutOnly或者ARP数据包，直接转发到输出端口
         if (packetOutOnly || inPkt.getEtherType() == Ethernet.TYPE_ARP) {
             packetOut(context, portNumber, macMetrics);
             return;
@@ -1863,10 +1873,13 @@ public class ReactiveForwarding {
                 }
             }
         }
+
+        //流量处理器，负责添加流表中的指令
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .setOutput(portNumber)
                 .build();
 
+        //构建流规则对象，输入流量处理器treatement，selectorBuilder,优先级，appid,流的持续时间
         ForwardingObjective forwardingObjective = DefaultForwardingObjective.builder()
                 .withSelector(selectorBuilder.build())
                 .withTreatment(treatment)
@@ -1876,15 +1889,16 @@ public class ReactiveForwarding {
                 .makeTemporary(flowTimeout)
                 .add();
 
+        //通过流对象服务，转发出转发对象。在指定的设备上安装流规则
         flowObjectiveService.forward(context.inPacket().receivedFrom().deviceId(),
                                      forwardingObjective);
-        forwardPacket(macMetrics);
+        forwardPacket(macMetrics);//增加转发数据包的计数
         //
         // If packetOutOfppTable
         //  Send packet back to the OpenFlow pipeline to match installed flow
         // Else
         //  Send packet direction on the appropriate port
-        //
+        //如果packetOutOfppTable为真，那么将数据包转发到交换机的TABLE端口，流水线的开始。
         if (packetOutOfppTable) {
             packetOut(context, PortNumber.TABLE, macMetrics);
         } else {
@@ -1892,7 +1906,7 @@ public class ReactiveForwarding {
         }
     }
 
-
+    //拓扑监听器的实现类
     private class InternalTopologyListener implements TopologyListener {
         @Override
         public void event(TopologyEvent event) {
@@ -1901,8 +1915,9 @@ public class ReactiveForwarding {
                 reasons.forEach(re -> {
                     if (re instanceof LinkEvent) {
                         LinkEvent le = (LinkEvent) re;
-                        if (le.type() == LinkEvent.Type.LINK_REMOVED) {
-                            fixBlackhole(le.subject().src());
+                        //如果出现了链路删除并且黑洞执行不是空，那么
+                        if (le.type() == LinkEvent.Type.LINK_REMOVED && blackHoleExecutor != null) {
+                            blackHoleExecutor.submit(() -> fixBlackhole(le.subject().src()));
                         }
                     }
                 });
@@ -1910,8 +1925,9 @@ public class ReactiveForwarding {
         }
     }
 
+    //修复黑洞？？
     private void fixBlackhole(ConnectPoint egress) {
-        Set<FlowEntry> rules = getFlowRulesFrom(egress);
+        Set<FlowEntry> rules = getFlowRulesFrom(egress);//从指定的点获得所有的流规则
         Set<SrcDstPair> pairs = findSrcDstPairs(rules);
 
         Map<DeviceId, Set<Path>> srcPaths = new HashMap<>();
@@ -1923,7 +1939,7 @@ public class ReactiveForwarding {
             if (srcHost != null && dstHost != null) {
                 DeviceId srcId = srcHost.location().deviceId();
                 DeviceId dstId = dstHost.location().deviceId();
-                log.trace("SRC ID is " + srcId + ", DST ID is " + dstId);
+                log.trace("SRC ID is {}, DST ID is {}", srcId, dstId);
 
                 cleanFlowRules(sd, egress.deviceId());
 
@@ -1967,14 +1983,9 @@ public class ReactiveForwarding {
 
     // Removes flow rules off specified device with specific SrcDstPair
     private void cleanFlowRules(SrcDstPair pair, DeviceId id) {
-        log.trace("Searching for flow rules to remove from: " + id);
-        log.trace("Removing flows w/ SRC=" + pair.src + ", DST=" + pair.dst);
+        log.trace("Searching for flow rules to remove from: {}", id);
+        log.trace("Removing flows w/ SRC={}, DST={}", pair.src, pair.dst);
         for (FlowEntry r : flowRuleService.getFlowEntries(id)) {
-
-            log.info("flowid: " + r.id().toString());
-            log.info("flowBytes: "  + r.bytes());
-            
-
             boolean matchesSrc = false, matchesDst = false;
             for (Instruction i : r.treatment().allInstructions()) {
                 if (i.type() == Instruction.Type.OUTPUT) {
@@ -1993,7 +2004,7 @@ public class ReactiveForwarding {
                 }
             }
             if (matchesDst && matchesSrc) {
-                log.trace("Removed flow rule from device: " + id);
+                log.trace("Removed flow rule from device: {}", id);
                 flowRuleService.removeFlowRules((FlowRule) r);
             }
         }
@@ -2001,6 +2012,7 @@ public class ReactiveForwarding {
     }
 
     // Returns a set of src/dst MAC pairs extracted from the specified set of flow entries
+    //从指定的流表中找到所有的src/dst mac地址对
     private Set<SrcDstPair> findSrcDstPairs(Set<FlowEntry> rules) {
         ImmutableSet.Builder<SrcDstPair> builder = ImmutableSet.builder();
         for (FlowEntry r : rules) {
@@ -2017,6 +2029,7 @@ public class ReactiveForwarding {
         return builder.build();
     }
 
+    //创造计数器
     private ReactiveForwardMetrics createCounter(MacAddress macAddress) {
         ReactiveForwardMetrics macMetrics = null;
         if (recordMetrics) {
@@ -2031,6 +2044,7 @@ public class ReactiveForwarding {
         return macMetrics;
     }
 
+    //增加转发计数
     private void  forwardPacket(ReactiveForwardMetrics macmetrics) {
         if (recordMetrics) {
             macmetrics.incrementForwardedPacket();
@@ -2038,6 +2052,7 @@ public class ReactiveForwarding {
         }
     }
 
+    //增加收到的数据包的计数
     private void inPacket(ReactiveForwardMetrics macmetrics) {
         if (recordMetrics) {
             macmetrics.incrementInPacket();
@@ -2045,13 +2060,15 @@ public class ReactiveForwarding {
         }
     }
 
+    //增加回复的数据包的计数
     private void replyPacket(ReactiveForwardMetrics macmetrics) {
         if (recordMetrics) {
-            macmetrics.incremnetReplyPacket();
+            macmetrics.incremnetReplyPacket();//增加返回数据包的计数
             metrics.put(macmetrics.getMacAddress(), macmetrics);
         }
     }
 
+    //增加丢弃数据包的计数
     private void droppedPacket(ReactiveForwardMetrics macmetrics) {
         if (recordMetrics) {
             macmetrics.incrementDroppedPacket();
@@ -2075,6 +2092,7 @@ public class ReactiveForwarding {
         }
     }
 
+    //从指定的链接点获得所有的流规则
     private Set<FlowEntry> getFlowRulesFrom(ConnectPoint egress) {
         ImmutableSet.Builder<FlowEntry> builder = ImmutableSet.builder();
         flowRuleService.getFlowEntries(egress.deviceId()).forEach(r -> {
@@ -2093,6 +2111,7 @@ public class ReactiveForwarding {
     }
 
     // Wrapper class for a source and destination pair of MAC addresses
+    //源和目的MAC地址的包装类
     private final class SrcDstPair {
         final MacAddress src;
         final MacAddress dst;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,16 +35,13 @@ import org.onosproject.net.Path;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.provider.ProviderId;
-import org.slf4j.Logger;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.onosproject.net.topology.AdapterLinkWeigher.adapt;
-import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Helper class for path service.
@@ -55,8 +52,6 @@ import static org.slf4j.LoggerFactory.getLogger;
 public abstract class AbstractPathService
     implements PathService {
 
-    private final Logger log = getLogger(getClass());
-
     private static final String ELEMENT_ID_NULL = "Element ID cannot be null";
     private static final EdgeLink NOT_HOST = new NotHost();
 
@@ -64,31 +59,16 @@ public abstract class AbstractPathService
     private static final PortNumber P0 = PortNumber.portNumber(0);
 
     protected static final LinkWeigher DEFAULT_WEIGHER =
-            adapt(new HopCountLinkWeight());
+            new HopCountLinkWeigher();
 
     protected TopologyService topologyService;
 
     protected HostService hostService;
 
-    private static HashSet<String> hashSet = new HashSet<>();
-
-
-    @Override
-    public Set<Path> getPaths(ElementId src, ElementId dst, LinkWeight weight) {
-        return getPaths(src, dst, adapt(weight));
-    }
-
     @Override
     public Set<Path> getPaths(ElementId src, ElementId dst, LinkWeigher weigher) {
         checkNotNull(src, ELEMENT_ID_NULL);
         checkNotNull(dst, ELEMENT_ID_NULL);
-        for(int i=0; i<40; i++){
-            log.info("1跪求有没有经过");
-        }
-
-//        hashSet.add(src.toString().trim());
-//        log.info("目前hashset的size是" +  hashSet.size());
-//        log.info("elementId_src: " + src.toString() + ",elementId_dst: " + dst.toString());
 
         LinkWeigher internalWeigher = weigher != null ? weigher : DEFAULT_WEIGHER;
 
@@ -112,9 +92,6 @@ public abstract class AbstractPathService
 
         // Otherwise get all paths between the source and destination edge
         // devices.
-        for(int i=0; i<40; i++){
-            log.info("2跪求有没有经过");
-        }
         Topology topology = topologyService.currentTopology();
         Set<Path> paths = topologyService.getPaths(topology, srcDevice,
                 dstDevice, internalWeigher);
@@ -123,8 +100,37 @@ public abstract class AbstractPathService
     }
 
     @Override
-    public Set<DisjointPath> getDisjointPaths(ElementId src, ElementId dst, LinkWeight weight) {
-        return getDisjointPaths(src, dst, adapt(weight));
+    public Stream<Path> getKShortestPaths(ElementId src, ElementId dst,
+                                          LinkWeigher weigher) {
+        checkNotNull(src, ELEMENT_ID_NULL);
+        checkNotNull(dst, ELEMENT_ID_NULL);
+
+        LinkWeigher internalWeigher = weigher != null ? weigher : DEFAULT_WEIGHER;
+
+        // Get the source and destination edge locations
+        EdgeLink srcEdge = getEdgeLink(src, true);
+        EdgeLink dstEdge = getEdgeLink(dst, false);
+
+        // If either edge is null, bail with no paths.
+        if (srcEdge == null || dstEdge == null) {
+            return Stream.empty();
+        }
+
+        DeviceId srcDevice = srcEdge != NOT_HOST ? srcEdge.dst().deviceId() : (DeviceId) src;
+        DeviceId dstDevice = dstEdge != NOT_HOST ? dstEdge.src().deviceId() : (DeviceId) dst;
+
+        // If the source and destination are on the same edge device, there
+        // is just one path, so build it and return it.
+        if (srcDevice.equals(dstDevice)) {
+            return Stream.of(edgeToEdgePath(srcEdge, dstEdge, null, internalWeigher));
+        }
+
+        // Otherwise get all paths between the source and destination edge
+        // devices.
+        Topology topology = topologyService.currentTopology();
+
+        return topologyService.getKShortestPaths(topology, srcDevice, dstDevice, internalWeigher)
+                .map(path -> edgeToEdgePath(srcEdge, dstEdge, path, internalWeigher));
     }
 
     @Override
@@ -159,12 +165,6 @@ public abstract class AbstractPathService
                 srcDevice, dstDevice, internalWeigher);
 
         return edgeToEdgePathsDisjoint(srcEdge, dstEdge, paths, internalWeigher);
-    }
-
-    @Override
-    public Set<DisjointPath> getDisjointPaths(ElementId src, ElementId dst, LinkWeight weight,
-                                              Map<Link, Object> riskProfile) {
-        return getDisjointPaths(src, dst, adapt(weight), riskProfile);
     }
 
     @Override
@@ -269,7 +269,7 @@ public abstract class AbstractPathService
         }
         if (dstLink != NOT_HOST) {
             links.add(dstLink);
-            cost = cost.merge(weigher.weight(new DefaultTopologyEdge(null, null, srcLink)));
+            cost = cost.merge(weigher.weight(new DefaultTopologyEdge(null, null, dstLink)));
         }
         return new DefaultPath(PID, links, cost);
     }

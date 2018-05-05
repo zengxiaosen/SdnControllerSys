@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -243,16 +243,13 @@ public interface OspfInterface {
      *
      * @param ospfMessage received OSPF message
      * @param ctx         channel handler context instance.
-     * @throws Exception might throws exception
      */
-    void processOspfMessage(OspfMessage ospfMessage, ChannelHandlerContext ctx) throws Exception;
+    void processOspfMessage(OspfMessage ospfMessage, ChannelHandlerContext ctx);
 
     /**
      * Represents an interface is up and connected.
-     *
-     * @throws Exception might throws exception
      */
-    void interfaceUp() throws Exception;
+    void interfaceUp();
 
     /**
      * Starts the timer which waits for configured seconds and sends Delayed Ack Packet.

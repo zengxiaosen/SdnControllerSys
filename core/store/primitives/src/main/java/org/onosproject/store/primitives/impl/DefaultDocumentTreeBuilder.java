@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ public class DefaultDocumentTreeBuilder<V> extends DocumentTreeBuilder<V> {
 
     @Override
     public AsyncDocumentTree<V> buildDocumentTree() {
-        return primitiveCreator.newAsyncDocumentTree(name(), serializer());
+        return primitiveCreator.newAsyncDocumentTree(name(), serializer(), ordering());
     }
 
     //TODO
@@ -47,6 +47,8 @@ public class DefaultDocumentTreeBuilder<V> extends DocumentTreeBuilder<V> {
     @Deprecated
     @Override
     public AsyncDocumentTree<V> build() {
-        return primitiveCreator.newAsyncDocumentTree(name(), serializer(), executorSupplier());
+        AsyncDocumentTree<V> tree = primitiveCreator.newAsyncDocumentTree(name(), serializer(), ordering());
+        tree = relaxedReadConsistency() ? DistributedPrimitives.newCachingDocumentTree(tree) : tree;
+        return tree;
     }
 }

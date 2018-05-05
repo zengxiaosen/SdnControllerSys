@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,12 @@
  */
 package org.onlab.util;
 
-import static java.nio.file.Files.delete;
-import static java.nio.file.Files.walkFileTree;
-import static org.onlab.util.GroupedThreadFactory.groupedThreadFactory;
-import static org.slf4j.LoggerFactory.getLogger;
+import com.google.common.base.Charsets;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.UnsignedLongs;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +32,10 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Dictionary;
@@ -51,13 +57,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import org.slf4j.Logger;
-
-import com.google.common.base.Charsets;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.UnsignedLongs;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.nio.file.Files.delete;
+import static java.nio.file.Files.walkFileTree;
+import static org.onlab.util.GroupedThreadFactory.groupedThreadFactory;
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Miscellaneous utility methods.
@@ -69,7 +73,7 @@ public abstract class Tools {
 
     private static final Logger log = getLogger(Tools.class);
 
-    private static Random random = new Random();
+    private static Random random = new SecureRandom();
 
     /**
      * Returns a thread factory that produces threads named according to the
@@ -158,7 +162,7 @@ public abstract class Tools {
      * @param collection collection to test
      * @return true if null or empty; false otherwise
      */
-    public static boolean isNullOrEmpty(Collection collection) {
+    public static boolean isNullOrEmpty(Collection<?> collection) {
         return collection == null || collection.isEmpty();
     }
 
@@ -242,6 +246,17 @@ public abstract class Tools {
      */
     public static String toHex(long value, int width) {
         return Strings.padStart(UnsignedLongs.toString(value, 16), width, '0');
+    }
+
+    /**
+     * Returns a string encoding in hex of the given long value with prefix
+     * '0x'.
+     *
+     * @param value long value to encode as hex string
+     * @return hex string
+     */
+    public static String toHexWithPrefix(long value) {
+        return "0x" + Long.toHexString(value);
     }
 
     /**
@@ -373,7 +388,8 @@ public abstract class Tools {
         try {
             Thread.sleep(ms);
         } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted", e);
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted", e);
         }
     }
 
@@ -445,7 +461,8 @@ public abstract class Tools {
         try {
             Thread.sleep(random.nextInt(ms));
         } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted", e);
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted", e);
         }
     }
 
@@ -459,7 +476,8 @@ public abstract class Tools {
         try {
             Thread.sleep(ms, nanos);
         } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted", e);
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted", e);
         }
     }
 
@@ -662,7 +680,11 @@ public abstract class Tools {
             CompletableFuture<T> future,
             Executor orderedExecutor,
             Executor threadPoolExecutor) {
-        BlockingAwareFuture<T> newFuture = new BlockingAwareFuture<T>();
+        if (future.isDone()) {
+            return future;
+        }
+
+        BlockingAwareFuture<T> newFuture = new BlockingAwareFuture<>();
         future.whenComplete((result, error) -> {
             Runnable completer = () -> {
                 if (future.isCompletedExceptionally()) {
@@ -813,4 +835,45 @@ public abstract class Tools {
         }
     }
 
+    /**
+     * Creates OffsetDateTime instance from epoch milliseconds,
+     * using system default time zone.
+     *
+     * @param epochMillis to convert
+     * @return OffsetDateTime
+     */
+    public static OffsetDateTime defaultOffsetDataTime(long epochMillis) {
+        return OffsetDateTime.ofInstant(Instant.ofEpochMilli(epochMillis),
+                                        ZoneId.systemDefault());
+    }
+
+    /**
+     * Returns smaller of the two Comparable values.
+     *
+     * @param l an argument
+     * @param r another argument
+     * @return the smaller of {@code l} or {@code r}
+     * @param <C> Comparable type
+     * @throws NullPointerException if any of the arguments were null.
+     */
+    public static <C extends Comparable<? super C>> C min(C l, C r) {
+        checkNotNull(l, "l cannot be null");
+        checkNotNull(r, "r cannot be null");
+        return l.compareTo(r) <= 0 ? l : r;
+    }
+
+    /**
+     * Returns larger of the two Comparable values.
+     *
+     * @param l an argument
+     * @param r another argument
+     * @return the larger of {@code l} or {@code r}
+     * @param <C> Comparable type
+     * @throws NullPointerException if any of the arguments were null.
+     */
+    public static <C extends Comparable<? super C>> C max(C l, C r) {
+        checkNotNull(l, "l cannot be null");
+        checkNotNull(r, "r cannot be null");
+        return l.compareTo(r) >= 0 ? l : r;
+    }
 }

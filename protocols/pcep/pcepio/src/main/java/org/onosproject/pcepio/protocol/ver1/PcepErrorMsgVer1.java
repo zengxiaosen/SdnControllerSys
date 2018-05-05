@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ public class PcepErrorMsgVer1 implements PcepErrorMsg {
        <error-list>                   ::=<error>[<error-list>]
      */
 
-    protected static final Logger log = LoggerFactory.getLogger(PcepOpenMsgVer1.class);
+    private static final Logger log = LoggerFactory.getLogger(PcepOpenMsgVer1.class);
     public static final byte PACKET_VERSION = 1;
     public static final int PACKET_MINIMUM_LENGTH = 12;
     public static final PcepType MSG_TYPE = PcepType.ERROR;

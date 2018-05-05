@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ final class OpenFlowDeviceValueMapper {
      */
     private static <I, O> O lookup(BiMap<I, O> map, I input, Class<O> cls) {
         if (!map.containsKey(input)) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     String.format("No mapping found for %s when converting to %s", input, cls.getName()));
         }
 

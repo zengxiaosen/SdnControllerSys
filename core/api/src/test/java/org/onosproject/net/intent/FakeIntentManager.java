@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 package org.onosproject.net.intent;
+
+import com.google.common.collect.ImmutableMap;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,6 +39,7 @@ public class FakeIntentManager implements TestableIntentService {
     private final Set<IntentListener> listeners = new HashSet<>();
 
     private final Map<Class<? extends Intent>, IntentCompiler<? extends Intent>> compilers = new HashMap<>();
+    private final Map<Class<? extends Intent>, IntentInstaller<? extends Intent>> installers = new HashMap<>();
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final List<IntentException> exceptions = new ArrayList<>();
@@ -245,6 +248,26 @@ public class FakeIntentManager implements TestableIntentService {
     @Override
     public Map<Class<? extends Intent>, IntentCompiler<? extends Intent>> getCompilers() {
         return Collections.unmodifiableMap(compilers);
+    }
+
+    @Override
+    public <T extends Intent> void registerInstaller(Class<T> cls, IntentInstaller<T> installer) {
+        installers.put(cls, installer);
+    }
+
+    @Override
+    public <T extends Intent> void unregisterInstaller(Class<T> cls) {
+        installers.remove(cls);
+    }
+
+    @Override
+    public Map<Class<? extends Intent>, IntentInstaller<? extends Intent>> getInstallers() {
+        return ImmutableMap.copyOf(installers);
+    }
+
+    @Override
+    public <T extends Intent> IntentInstaller<T> getInstaller(Class<T> cls) {
+        return (IntentInstaller<T>) installers.get(cls);
     }
 
     private void registerSubclassCompilerIfNeeded(Intent intent) {

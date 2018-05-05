@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.onosproject.drivers.fujitsu;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
+import org.onosproject.netconf.DatastoreId;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -30,6 +31,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.onosproject.drivers.fujitsu.FujitsuVoltXmlUtilityMock.*;
+import static org.onosproject.netconf.DatastoreId.*;
 
 
 /**
@@ -229,10 +231,15 @@ public class FujitsuVoltAlertConfigTest {
         }
 
         @Override
-        public boolean verifyEditConfig(String target, String mode, String request) {
+        public boolean verifyEditConfig(String targetConfiguration, String mode, String newConfiguration) {
+            return verifyEditConfig(DatastoreId.datastore(targetConfiguration), mode, newConfiguration);
+        }
+
+        @Override
+        public boolean verifyEditConfig(DatastoreId target, String mode, String request) {
             boolean result;
 
-            assertTrue("Incorrect target", target.equals(TEST_RUNNING));
+            assertTrue("Incorrect target", target.equals(RUNNING));
             assertNull("Incorrect mode", mode);
 
             request = request.replaceAll(TEST_DUPLICATE_SPACES_REGEX, TEST_SPACE);

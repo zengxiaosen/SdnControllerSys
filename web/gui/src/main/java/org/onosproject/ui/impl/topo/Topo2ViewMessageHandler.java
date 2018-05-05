@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,11 +40,10 @@ import java.util.Set;
 
     The original topology view message handler was broken into two classes
     TopologyViewMessageHandler, and TopologyViewMessageHandlerBase.
-    We do not need to follow that model necessarily. Starting with a
-    single class, and breaking it apart later if necessary.
 
-    Need to figure out the connection between this message handler and the
-    new way of doing things with UiTopoSession...
+    We do not need to follow that model necessarily. Instead, we have this
+    class and Topo2Jsonifier, which takes UiModel objects and renders them
+    as JSON objects.
 
  */
 
@@ -67,10 +66,13 @@ public class Topo2ViewMessageHandler extends UiMessageHandler {
     private static final String CURRENT_LAYOUT = "topo2CurrentLayout";
     private static final String CURRENT_REGION = "topo2CurrentRegion";
     private static final String PEER_REGIONS = "topo2PeerRegions";
+    private static final String OVERLAYS = "topo2Overlays";
 
 
     private UiTopoSession topoSession;
     private Topo2Jsonifier t2json;
+    private Topo2OverlayCache overlay2Cache;
+    private Topo2TrafficMessageHandler trafficHandler;
 
 
     @Override
@@ -79,8 +81,28 @@ public class Topo2ViewMessageHandler extends UiMessageHandler {
 
         // get the topo session from the UiWebSocket
         topoSession = ((UiWebSocket) connection).topoSession();
-        t2json = new Topo2Jsonifier(directory);
+        t2json = new Topo2Jsonifier(directory, connection.userName());
     }
+
+    /**
+     * Sets a reference to the overlay cache for interacting with registered
+     * overlays.
+     *
+     * @param overlay2Cache the overlay cache
+     */
+    public void setOverlayCache(Topo2OverlayCache overlay2Cache) {
+        this.overlay2Cache = overlay2Cache;
+    }
+
+    /**
+     * Sets a reference to the traffic message handler.
+     *
+     * @param traffic the traffic message handler instance
+     */
+    public void setTrafficHandler(Topo2TrafficMessageHandler traffic) {
+        trafficHandler = traffic;
+    }
+
 
     @Override
     protected Collection<RequestHandler> createRequestHandlers() {
@@ -93,7 +115,6 @@ public class Topo2ViewMessageHandler extends UiMessageHandler {
     }
 
     // ==================================================================
-
 
     private ObjectNode mkLayoutMessage(UiTopoLayout currentLayout) {
         List<UiTopoLayout> crumbs = topoSession.breadCrumbs();
@@ -110,9 +131,12 @@ public class Topo2ViewMessageHandler extends UiMessageHandler {
     private ObjectNode mkPeersMessage(UiTopoLayout currentLayout) {
         Set<UiNode> peers = topoSession.getPeerNodes(currentLayout);
         ObjectNode peersPayload = objectNode();
-        peersPayload.set("peers", t2json.closedNodes(peers));
+        String rid = currentLayout.regionId().toString();
+        peersPayload.set("peers", t2json.closedNodes(rid, peers));
         return peersPayload;
     }
+
+    // ==================================================================
 
 
     private final class Topo2Start extends RequestHandler {
@@ -186,14 +210,12 @@ public class Topo2ViewMessageHandler extends UiMessageHandler {
         @Override
         public void process(ObjectNode payload) {
             // client view has gone away; so shut down server-side processing
-            // TODO: implement...
 
             log.debug("topo2Stop: {}", payload);
+            trafficHandler.ceaseAndDesist();
 
             // OLD CODE DID THE FOLLOWING...
-//            removeListeners();
 //            stopSummaryMonitoring();
-//            traffic.stopMonitoring();
         }
     }
 
@@ -204,7 +226,10 @@ public class Topo2ViewMessageHandler extends UiMessageHandler {
 
         @Override
         public void process(ObjectNode payload) {
-            t2json.updateMeta(payload);
+            // NOTE: metadata for a node is stored within the context of the
+            //       current region.
+            String rid = topoSession.currentLayout().regionId().toString();
+            t2json.updateMeta(rid, payload);
         }
     }
 

@@ -76,7 +76,7 @@ def defaultUser():
 
 # Module vars, initialized below
 HOME = ONOS_ROOT = ONOS_USER = None
-ONOS_APPS = ONOS_WEB_USER = ONOS_WEB_PASS = ONOS_TAR = None
+ONOS_APPS = ONOS_WEB_USER = ONOS_WEB_PASS = ONOS_TAR = JAVA_OPTS = None
 
 def initONOSEnv():
     """Initialize ONOS environment (and module) variables
@@ -99,6 +99,7 @@ def initONOSEnv():
     ONOS_USER = sd( 'ONOS_USER', defaultUser() )
     ONOS_APPS = sd( 'ONOS_APPS',
                      'drivers,openflow,fwd,proxyarp,mobility' )
+    JAVA_OPTS = sd( 'JAVA_OPTS', '-Xms128m -Xmx512m' )
     # ONOS_WEB_{USER,PASS} isn't respected by onos-karaf:
     environ.update( ONOS_WEB_USER='karaf', ONOS_WEB_PASS='karaf' )
     ONOS_WEB_USER = sd( 'ONOS_WEB_USER', 'karaf' )
@@ -363,14 +364,11 @@ class ONOSNode( Controller ):
             time.sleep( 1 )
         info( ' ssh-port' )
         waitListening( server=self, port=KarafPort, callback=self.sanityCheck )
-        info( ' openflow-port' )
-        waitListening( server=self, port=OpenFlowPort,
-                       callback=self.sanityCheck )
-        info( ' client' )
+        info( ' protocol' )
         while True:
             result = quietRun( '%s -h %s "apps -a"' %
                                ( self.client, self.IP() ), shell=True )
-            if 'openflow' in result:
+            if 'openflow' in result or 'p4runtime' in result:
                 break
             info( '.' )
             self.sanityCheck()
@@ -379,7 +377,7 @@ class ONOSNode( Controller ):
         while True:
             result = quietRun( '%s -h %s "nodes"' %
                                ( self.client, self.IP() ), shell=True )
-            nodeStr = 'id=%s, address=%s:%s, state=READY, updated' %\
+            nodeStr = 'id=%s, address=%s:%s, state=READY' %\
                       ( self.IP(), self.IP(), CopycatPort )
             if nodeStr in result:
                 break

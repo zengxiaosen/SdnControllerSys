@@ -2,17 +2,14 @@
     'use strict';
 
     // injected refs
-    var $log, ps, sus, gs, flash, ts;
-
-    // api from topo
-    var api;
+    var $log, ps, sus, gs, flash, ts, t2mss;
 
     // configuration
     var showLogicErrors = true,
         idIns = 'topo2-p-instance',
         instOpts = {
             edge: 'left',
-            width: 20
+            width: 20,
         };
 
     // internal state
@@ -61,15 +58,14 @@
             .classed('affinity', false);
         el.classed('affinity', true);
 
-        // suppress all elements except nodes whose master is this instance
-        api.showMastership(d.id);
+        t2mss.setMastership(d.id);
     }
 
     function cancelAffinity() {
         d3.selectAll('.onosInst')
             .classed('mastership affinity', false);
 
-        api.showMastership(null);
+        t2mss.setMastership(null);
     }
 
     function attachUiBadge(svg) {
@@ -98,24 +94,24 @@
             instSvg = {
                 width: 170,
                 height: 85,
-                viewBox: '0 0 170 85'
+                viewBox: '0 0 170 85',
             },
             headRect = {
                 x: rox,
                 y: roy,
                 width: rw,
-                height: rhh
+                height: rhh,
             },
             bodyRect = {
                 x: rox,
                 y: roy + rhh,
                 width: rw,
-                height: rbh
+                height: rbh,
             },
             titleAttr = {
                 class: 'instTitle',
                 x: tx,
-                y: 27
+                y: 27,
             };
 
         var onoses = oiBox.el().selectAll('.onosInst')
@@ -181,7 +177,7 @@
                 svg.append('text').attr({
                     class: 'instLabel ' + id,
                     x: tx,
-                    y: ty
+                    y: ty,
                 }).text(label);
                 ty += 18;
             }
@@ -212,12 +208,11 @@
     // ==========================
     function logicError(msg) {
         if (showLogicErrors) {
-            $log.warn('TopoInstService: ' + msg);
+            $log.warn('Topo2InstService: ' + msg);
         }
     }
 
-    function initInst(_api_) {
-        api = _api_;
+    function initInst() {
         oiBox = ps.createPanel(idIns, instOpts);
         oiBox.show();
 
@@ -271,24 +266,25 @@
     angular.module('ovTopo2')
         .factory('Topo2InstanceService', [
             '$log', 'PanelService', 'SvgUtilService', 'GlyphService',
-            'FlashService', 'ThemeService',
+            'FlashService', 'ThemeService', 'Topo2MastershipService',
 
-            function (_$log_, _ps_, _sus_, _gs_, _flash_, _ts_) {
+            function (_$log_, _ps_, _sus_, _gs_, _flash_, _ts_, _t2mss_) {
                 $log = _$log_;
                 ps = _ps_;
                 sus = _sus_;
                 gs = _gs_;
                 flash = _flash_;
                 ts = _ts_;
+                t2mss = _t2mss_;
 
                 return {
                     initInst: initInst,
                     allInstances: allInstances,
                     destroy: destroy,
                     toggle: toggle,
-                    isVisible: function () { return oiBox.isVisible(); }
+                    isVisible: function () { return oiBox.isVisible(); },
                 };
-            }
+            },
         ]);
 
 })();

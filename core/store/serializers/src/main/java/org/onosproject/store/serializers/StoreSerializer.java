@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,10 @@ import org.onosproject.store.service.Serializer;
 
 /**
  * Service to serialize Objects into byte array.
+ *
+ * @deprecated since 1.11 ("Loon")
  */
+@Deprecated
 public interface StoreSerializer extends Serializer {
 
     /**

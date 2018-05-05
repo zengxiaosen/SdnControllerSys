@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -167,7 +167,7 @@ public class VbngConfigurationManager implements VbngConfigurationService {
                 return publicIpAddress;
             }
 
-            int prefixLen = prefix.getKey().prefixLength();
+            double prefixLen = prefix.getKey().prefixLength();
             int availableIpNum = (int) Math.pow(2,
                     IpPrefix.MAX_INET_MASK_LENGTH - prefixLen) - 1;
             for (int i = 1; i <= availableIpNum; i++) {
@@ -263,7 +263,7 @@ public class VbngConfigurationManager implements VbngConfigurationService {
 
                 // Judge whether the prefix of this public IP address is used
                 // up, if so, update the IP prefix status.
-                int prefixLen = prefix.getKey().prefixLength();
+                double prefixLen = prefix.getKey().prefixLength();
                 int availableIpNum = (int) Math.pow(2,
                         IpPrefix.MAX_INET_MASK_LENGTH - prefixLen) - 1;
                 int usedIpNum = 0;
@@ -280,10 +280,10 @@ public class VbngConfigurationManager implements VbngConfigurationService {
                 return true;
             }
         }
-        if (!isPublicIpExist) {
-            log.info("The public IP address {} retrieved from XOS mapping does "
-                    + "not exist", publicIpAddress);
-        }
+
+        log.info("The public IP address {} retrieved from XOS mapping does "
+                + "not exist", publicIpAddress);
+
         return false;
     }
 

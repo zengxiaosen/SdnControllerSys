@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,15 +23,13 @@
 
     'use strict';
 
-    var $log, wss;
+    var t2rns;
 
     // Internal
     var breadcrumbContainer,
-        breadcrumbs,
-        layout;
+        breadcrumbs;
 
     function init() {
-        $log.debug("Topo2BreadcrumbService Initiated");
         breadcrumbs = [];
         breadcrumbContainer = d3.select('#breadcrumbs');
 
@@ -49,27 +47,18 @@
     }
 
     function navigateToRegion(data, index) {
-
         if (index === breadcrumbs.length - 1) {
             return;
         }
 
         // Remove breadcrumbs after index;
         breadcrumbs.splice(index + 1);
-
-        wss.sendEvent('topo2navRegion', {
-            dir: 'up',
-            rid: data.id
-        });
-
-        layout.createForceElements();
-        layout.transitionDownRegion();
+        t2rns.navigateToRegion(data.id);
 
         render();
     }
 
     function render() {
-
         var selection = breadcrumbContainer.selectAll('.breadcrumb')
             .data(breadcrumbs);
 
@@ -90,7 +79,6 @@
     }
 
     function hide() {
-
         var view = d3.select('body');
         view.classed('breadcrumb--hidden', true);
 
@@ -107,24 +95,21 @@
             });
     }
 
-    function addLayout(_layout_) {
-        layout = _layout_;
-    }
+    // TODO: Remove references
+    function addLayout(_layout_) {}
 
     angular.module('ovTopo2')
     .factory('Topo2BreadcrumbService', [
-        '$log', 'WebSocketService',
-        function (_$log_, _wss_) {
-
-            $log = _$log_;
-            wss = _wss_;
+        'Topo2RegionNavigationService',
+        function (_t2rns_) {
+            t2rns = _t2rns_;
 
             return {
                 init: init,
                 addBreadcrumb: addBreadcrumb,
                 addLayout: addLayout,
-                hide: hide
+                hide: hide,
             };
-        }
+        },
     ]);
 })();

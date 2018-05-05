@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package org.onosproject.openflow.controller;
 
 import org.onosproject.net.Device;
 import org.projectfloodlight.openflow.protocol.OFFactory;
+import org.projectfloodlight.openflow.protocol.OFFeaturesReply;
 import org.projectfloodlight.openflow.protocol.OFMessage;
 import org.projectfloodlight.openflow.protocol.OFMeterFeatures;
 import org.projectfloodlight.openflow.protocol.OFPortDesc;
@@ -81,6 +82,14 @@ public interface OpenFlowSwitch {
     OFMeterFeatures getMeterFeatures();
 
     /**
+     * Fetches the features of this switch.
+     * @return unmodifiable features
+     */
+    default OFFeaturesReply features() {
+        return null;
+    }
+
+    /**
      * Provides the factory for this OF version.
      * @return OF version specific factory.
      */
@@ -99,6 +108,15 @@ public interface OpenFlowSwitch {
      * @return the switch dpid in long format
      */
     long getId();
+
+    /**
+     * Gets the datapathId of the switch.
+     *
+     * @return the switch dpid
+     */
+    default Dpid getDpid() {
+        return new Dpid(getId());
+    }
 
     /**
      * fetch the manufacturer description.

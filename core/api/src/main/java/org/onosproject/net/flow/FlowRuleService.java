@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,16 @@ public interface FlowRuleService
     int getFlowRuleCount();
 
     /**
+     * Returns the number of flow rules for the given device.
+     *
+     * @param deviceId device identifier
+     * @return number of flow rules for the given device
+     */
+    default int getFlowRuleCount(DeviceId deviceId) {
+        return 0;
+    }
+
+    /**
      * Returns the collection of flow entries applied on the specified device.
      * This will include flow rules which may not yet have been applied to
      * the device.
@@ -62,6 +72,18 @@ public interface FlowRuleService
     default Iterable<FlowEntry> getFlowEntriesByLiveType(DeviceId deviceId,
                                                  FlowEntry.FlowLiveType liveType) {
         return Iterables.filter(getFlowEntries(deviceId), fe -> fe.liveType() == liveType);
+    }
+
+    /**
+     * Returns a list of rules filtered by device id and flow state.
+     *
+     * @param deviceId the device id to lookup
+     * @param flowState the flow state to lookup
+     * @return collection of flow entries
+     */
+    default Iterable<FlowEntry> getFlowEntriesByState(DeviceId deviceId,
+                                                 FlowEntry.FlowEntryState flowState) {
+        return Iterables.filter(getFlowEntries(deviceId), fe -> fe.state() == flowState);
     }
 
     // TODO: add createFlowRule factory method and execute operations method
@@ -143,4 +165,14 @@ public interface FlowRuleService
      * @return collection of flow table statistics
      */
     Iterable<TableStatisticsEntry> getFlowTableStatistics(DeviceId deviceId);
+
+    /**
+     * Returns number of flow rules in ADDED state for specified device.
+     *
+     * @param deviceId device identifier
+     * @return number of flow rules in ADDED state
+     */
+    default long getActiveFlowRuleCount(DeviceId deviceId) {
+        return 0;
+    }
 }

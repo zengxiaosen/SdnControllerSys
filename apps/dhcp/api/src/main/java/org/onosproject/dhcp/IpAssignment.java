@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -310,7 +310,6 @@ public final class IpAssignment {
         private void validateInputs() {
             checkNotNull(ipAddress, "IP Address must be specified");
             checkNotNull(assignmentStatus, "Assignment Status must be specified");
-            checkNotNull(leasePeriod, "Lease Period must be specified");
             checkNotNull(timeStamp, "Timestamp must be specified");
 
             switch (assignmentStatus) {

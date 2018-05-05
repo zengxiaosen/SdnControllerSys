@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -196,8 +196,8 @@ public final class OpticalPortConfig extends Config<ConnectPoint> {
     }
 
     /**
-     * Sets the output lambda index, or updates it if already set. A null argument
-     * removes this field.
+     * Sets the output lambda center frequency, or updates it if already set.
+     * A null argument removes this field.
      *
      * @param index the output lambda
      * @return this OpticalPortConfig instance

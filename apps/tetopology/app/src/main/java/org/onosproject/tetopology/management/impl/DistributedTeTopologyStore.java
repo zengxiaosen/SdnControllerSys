@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package org.onosproject.tetopology.management.impl;
 
+import static org.onosproject.tetopology.management.api.OptimizationType.NOT_OPTIMIZED;
 import static org.onosproject.tetopology.management.api.TeTopologyEvent.Type.LINK_ADDED;
 import static org.onosproject.tetopology.management.api.TeTopologyEvent.Type.LINK_REMOVED;
 import static org.onosproject.tetopology.management.api.TeTopologyEvent.Type.LINK_UPDATED;
@@ -124,7 +125,6 @@ import org.onosproject.tetopology.management.api.node.TtpKey;
 import org.onosproject.tetopology.management.api.node.TunnelTerminationPoint;
 import org.slf4j.Logger;
 
-import com.esotericsoftware.kryo.serializers.JavaSerializer;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -137,6 +137,7 @@ public class DistributedTeTopologyStore
     extends AbstractStore<TeTopologyEvent, TeTopologyStoreDelegate>
     implements TeTopologyStore {
     private static final String STORE_NAME = "TE_NETWORK_TOPOLOGY_STORE";
+    private static final String COUNTER_NAME = "TeTopology-TeTopologyId";
     private static final String TETOPOLOGYKEY_INTERNALTETOPOLOGY = "TeTopologyKey-InternalTeTopology";
     private static final String NETWORKID_NETWORK = "NetworkId-InternalNetwork";
     private static final String TENODEKEY_INTERNALTENODE = "TeNodeKey-InternalTeNode";
@@ -212,7 +213,6 @@ public class DistributedTeTopologyStore
                     .register(CommonTopologyData.class)
                     .register(KeyId.class)
                     .register(OptimizationType.class)
-                    .register(new JavaSerializer(), BitSet.class)
                     .register(InternalTeTopology.class)
                     .register(InternalNetwork.class)
                     .register(InternalTerminationPoint.class)
@@ -340,7 +340,7 @@ public class DistributedTeTopologyStore
                   .build();
         ttpMap = ttpConsistentMap.asJavaMap();
 
-        nextTeTopologyId = storageService.getAtomicCounter("COUNTER_NAME");
+        nextTeTopologyId = storageService.getAtomicCounter(COUNTER_NAME);
         log.info("Started");
     }
 
@@ -410,6 +410,7 @@ public class DistributedTeTopologyStore
                     mapEventQueue.put(mapEvent);
                 } catch (InterruptedException e) {
                     log.warn("Unable to queue event {} ", mapEvent, e);
+                    Thread.currentThread().interrupt();
                 }
             }
         }
@@ -446,6 +447,7 @@ public class DistributedTeTopologyStore
                     mapEventQueue.put(mapEvent);
                 } catch (InterruptedException e) {
                     log.warn("Unable to queue event {} ", mapEvent, e);
+                    Thread.currentThread().interrupt();
                 }
             }
         }
@@ -487,6 +489,7 @@ public class DistributedTeTopologyStore
                     mapEventQueue.put(mapEvent);
                 } catch (InterruptedException e) {
                     log.warn("Unable to queue event {} ", mapEvent, e);
+                    Thread.currentThread().interrupt();
                 }
             }
         }
@@ -528,6 +531,7 @@ public class DistributedTeTopologyStore
                     mapEventQueue.put(mapEvent);
                 } catch (InterruptedException e) {
                     log.warn("Unable to queue event {} ", mapEvent, e);
+                    Thread.currentThread().interrupt();
                 }
             }
         }
@@ -568,6 +572,7 @@ public class DistributedTeTopologyStore
                     mapEventQueue.put(mapEvent);
                 } catch (InterruptedException e) {
                     log.warn("Unable to queue event {} ", mapEvent, e);
+                    Thread.currentThread().interrupt();
                 }
             }
         }
@@ -608,6 +613,7 @@ public class DistributedTeTopologyStore
                     mapEventQueue.put(mapEvent);
                 } catch (InterruptedException e) {
                     log.warn("Unable to queue event {} ", mapEvent, e);
+                    Thread.currentThread().interrupt();
                 }
             }
         }
@@ -753,20 +759,19 @@ public class DistributedTeTopologyStore
         }
         TeTopologyId topologyId = null;
         DeviceId ownerId = null;
+        OptimizationType opt = NOT_OPTIMIZED;
         if (curNetwork.teTopologyKey() != null &&
                 teTopologyMap.get(curNetwork.teTopologyKey()) != null) {
             topologyId = new TeTopologyId(curNetwork.teTopologyKey().providerId(),
                                           curNetwork.teTopologyKey().clientId(),
-                                          teTopologyMap
-                                                  .get(curNetwork
-                                                          .teTopologyKey())
+                                          teTopologyMap.get(curNetwork.teTopologyKey())
                                                   .teTopologyId());
             ownerId = teTopologyMap.get(curNetwork.teTopologyKey())
                     .topologyData().ownerId();
-
+            opt = teTopologyMap.get(curNetwork.teTopologyKey()).topologyData().optimization();
         }
         return new DefaultNetwork(networkId, supportingNetworkIds, nodes, links,
-                                  topologyId, curNetwork.serverProvided(), ownerId);
+                                  topologyId, curNetwork.serverProvided(), ownerId, opt);
     }
 
     @Override
@@ -852,7 +857,9 @@ public class DistributedTeTopologyStore
                 flags.set(TeTopology.BIT_CUSTOMIZED);
             }
             CommonTopologyData common = new CommonTopologyData(network.networkId(),
-                    OptimizationType.NOT_OPTIMIZED, flags, network.ownerId());
+                                                               network.optimization(),
+                                                               flags,
+                                                               network.ownerId());
             intTopo.setTopologydata(common);
             teTopologyMap.put(topoKey, intTopo);
         }
@@ -1004,6 +1011,12 @@ public class DistributedTeTopologyStore
         }
         // Then remove it from teNodeMap
         InternalTeNode node = teNodeMap.remove(nodeKey);
+
+        if (node == null) {
+            log.error("No node found for nodeKey {}", nodeKey);
+            return;
+        }
+
         removeTeNodeMapEntrys(node);
         // Remove it from networkNodeMap
         if (teNodeRemove && node != null) {
@@ -1093,7 +1106,7 @@ public class DistributedTeTopologyStore
         InternalNetwork intNework = networkMap.get(nodeKey.networkId());
         if (intNework != null && CollectionUtils.isNotEmpty(intNework.nodeIds())) {
             intNework.setChildUpdate(true);
-            intNework.nodeIds().remove(nodeKey.nodeId());
+            intNework.nodeIds().remove(nodeKey);
         }
         InternalNetworkNode intNode = networkNodeMap.remove(nodeKey);
         if (intNode != null && CollectionUtils.isNotEmpty(intNode.tpIds())) {
@@ -1280,7 +1293,7 @@ public class DistributedTeTopologyStore
         InternalNetwork intNework = networkMap.get(linkKey.networkId());
         if (intNework != null && CollectionUtils.isNotEmpty(intNework.linkIds())) {
             intNework.setChildUpdate(true);
-            intNework.linkIds().remove(linkKey.linkId());
+            intNework.linkIds().remove(linkKey);
         }
         // Remove it from networkLinkMap
         InternalNetworkLink intLink = networkLinkMap.remove(linkKey);
@@ -1309,7 +1322,7 @@ public class DistributedTeTopologyStore
         TeNodeKey myTeNodeKey;
         InternalNetworkNode intNode = null;
         if (!parentUpdate) {
-            intNode = networkNodeMap.get(tpKey.nodeId());
+            intNode = networkNodeMap.get(tpKey);
             if (intNode == null) {
                 log.error(" node is not in dataStore for tp update {}", tpKey);
                 return;
@@ -1344,7 +1357,7 @@ public class DistributedTeTopologyStore
     @Override
     public void removeTerminationPoint(TerminationPointKey tpKey) {
         // Update InternalNetworkNode
-        InternalNetworkNode intNode = networkNodeMap.get(tpKey.nodeId());
+        InternalNetworkNode intNode = networkNodeMap.get(tpKey);
         if (intNode != null && CollectionUtils.isNotEmpty(intNode.tpIds())) {
             intNode.setChildUpdate(true);
             intNode.tpIds().remove(tpKey.tpId());

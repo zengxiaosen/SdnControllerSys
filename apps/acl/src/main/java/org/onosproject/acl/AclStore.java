@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,7 +124,7 @@ public interface AclStore extends Store {
      * Checks if an existing ACL rule already works in a given device.
      *
      * @param ruleId   ACL rule id
-     * @param deviceId devide id
+     * @param deviceId device id
      * @return true if the given ACL rule works in the given device
      */
     boolean checkIfRuleWorksInDevice(RuleId ruleId, DeviceId deviceId);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,7 +121,7 @@ public class PathCompiler<T> {
 
         Map<LinkKey, Identifier<?>> vlanIds = labelAllocator.assignLabelToLinks(
                 linksSet,
-                intent.id(),
+                intent.key(),
                 EncapsulationType.VLAN
         );
 
@@ -238,7 +238,7 @@ public class PathCompiler<T> {
 
         Map<LinkKey, Identifier<?>> mplsLabels = labelAllocator.assignLabelToLinks(
                 linksSet,
-                intent.id(),
+                intent.key(),
                 EncapsulationType.MPLS
         );
         Iterator<Link> links = intent.path().links().iterator();

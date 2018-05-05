@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,7 +70,13 @@ public final class OmsPortHelper {
         builder.set(OpticalAnnotations.GRID_HZ, String.valueOf(grid.asHz()));
 
         long portSpeed = 0;
-        return new DefaultPortDescription(number, isEnabled, Port.Type.OMS, portSpeed, builder.build());
+        return DefaultPortDescription.builder()
+                .withPortNumber(number)
+                .isEnabled(isEnabled)
+                .type(Port.Type.OMS)
+                .portSpeed(portSpeed)
+                .annotations(builder.build())
+                .build();
     }
 
     /**

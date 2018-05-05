@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.onosproject.core.CoreService;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.intent.SinglePointToMultiPointIntent;
+import org.onosproject.net.intent.MultiPointToSinglePointIntent;
 import org.onosproject.net.intent.PointToPointIntent;
 import org.onosproject.net.intent.HostToHostIntent;
 import org.onosproject.net.intent.Intent;
@@ -31,6 +32,7 @@ import org.onosproject.net.intent.IntentListener;
 import org.onosproject.net.intent.IntentService;
 import org.onosproject.net.intent.Key;
 import org.onosproject.net.intent.util.IntentFilter;
+import org.onosproject.net.intent.util.IntentMiniSummary;
 import org.onosproject.rest.AbstractWebResource;
 import org.slf4j.Logger;
 
@@ -49,6 +51,7 @@ import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -72,6 +75,9 @@ public class IntentsWebResource extends AbstractWebResource {
     private static final String POINT_TO_POINT_INTENT = "PointToPointIntent";
     private static final String SINGLE_TO_MULTI_POINT_INTENT =
             "SinglePointToMultiPointIntent";
+    private static final String MULTI_TO_SINGLE_POINT_INTENT =
+            "MultiPointToSinglePointIntent";
+
     private static final String INTENT = "Intent";
     private static final String APP_ID = "appId";
     private static final String ID = "id";
@@ -94,6 +100,58 @@ public class IntentsWebResource extends AbstractWebResource {
     public Response getIntents() {
         final Iterable<Intent> intents = get(IntentService.class).getIntents();
         final ObjectNode root = encodeArray(Intent.class, "intents", intents);
+        return ok(root).build();
+    }
+
+
+    /**
+     * Gets Summary of all intents.
+     * Returns Summary of the intents in the system.
+     *
+     * @return 200 OK with Summary of all the intents in the system
+     * @onos.rsModel Minisummary
+     */
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("minisummary")
+    public Response getIntentSummary() {
+        final Iterable<Intent> intents = get(IntentService.class).getIntents();
+        ObjectNode root = mapper().createObjectNode();
+        IntentMiniSummary intentminisummary = new IntentMiniSummary();
+        Map<String, IntentMiniSummary> map = intentminisummary.summarize(intents, get(IntentService.class));
+        map.values().stream().forEach(intentsummary -> {
+            root.put(intentsummary.getIntentType(), codec(IntentMiniSummary.class).encode(intentsummary, this));
+        });
+        return ok(root).build();
+    }
+
+
+    /**
+     * Gets intent installables by application ID and key.
+     * @param appId application identifier
+     * @param key   intent key
+     *
+     * @return 200 OK with array of the intent installables
+     * @onos.rsModel Intents
+     */
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("installables/{appId}/{key}")
+    public Response getIntentWithInstallable(@PathParam("appId") String appId,
+                                             @PathParam("key") String key) {
+        final IntentService intentService = get(IntentService.class);
+        final ApplicationId app = get(CoreService.class).getAppId(appId);
+        nullIsNotFound(app, APP_ID_NOT_FOUND);
+
+        Intent intent = intentService.getIntent(Key.of(key, app));
+        if (intent == null) {
+            long numericalKey = Long.decode(key);
+            intent = intentService.getIntent(Key.of(numericalKey, app));
+        }
+        nullIsNotFound(intent, INTENT_NOT_FOUND);
+
+        final Iterable<Intent> installables = intentService.getInstallableIntents(intent.key());
+        final ObjectNode root = encodeArray(Intent.class, "installables", installables);
         return ok(root).build();
     }
 
@@ -127,6 +185,8 @@ public class IntentsWebResource extends AbstractWebResource {
             root = codec(PointToPointIntent.class).encode((PointToPointIntent) intent, this);
         } else if (intent instanceof SinglePointToMultiPointIntent) {
             root = codec(SinglePointToMultiPointIntent.class).encode((SinglePointToMultiPointIntent) intent, this);
+        } else if (intent instanceof MultiPointToSinglePointIntent) {
+            root = codec(MultiPointToSinglePointIntent.class).encode((MultiPointToSinglePointIntent) intent, this);
         } else {
             root = codec(Intent.class).encode(intent, this);
         }
@@ -175,6 +235,8 @@ public class IntentsWebResource extends AbstractWebResource {
             root.put(INTENT_TYPE, POINT_TO_POINT_INTENT);
         } else if (intent instanceof SinglePointToMultiPointIntent) {
             root.put(INTENT_TYPE, SINGLE_TO_MULTI_POINT_INTENT);
+        } else if (intent instanceof MultiPointToSinglePointIntent) {
+            root.put(INTENT_TYPE, MULTI_TO_SINGLE_POINT_INTENT);
         } else {
             root.put(INTENT_TYPE, INTENT);
         }
@@ -293,6 +355,7 @@ public class IntentsWebResource extends AbstractWebResource {
                 latch.await(WITHDRAW_EVENT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 log.info("REST Delete operation timed out waiting for intent {}", k);
+                Thread.currentThread().interrupt();
             }
             // double check the state
             IntentState state = service.getIntentState(k);

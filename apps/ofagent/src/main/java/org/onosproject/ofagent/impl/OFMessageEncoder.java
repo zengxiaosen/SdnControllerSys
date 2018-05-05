@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,13 @@ import org.projectfloodlight.openflow.protocol.OFMessage;
 public final class OFMessageEncoder extends MessageToByteEncoder<Iterable<OFMessage>> {
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Iterable<OFMessage> msgList, ByteBuf out)
-            throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Iterable<OFMessage> msgList, ByteBuf out) {
+        if (!ctx.channel().isActive()) {
+            return;
+        }
 
-        // TODO encode OFMessage to ByteBuf
+        for (OFMessage ofm :  msgList) {
+            ofm.writeTo(out);
+        }
     }
 }

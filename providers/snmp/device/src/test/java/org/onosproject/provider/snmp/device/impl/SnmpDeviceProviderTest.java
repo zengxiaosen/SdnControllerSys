@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,22 @@
 
 package org.onosproject.provider.snmp.device.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import org.junit.Before;
 import org.junit.Test;
-import org.onlab.packet.IpAddress;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.core.CoreServiceAdapter;
-import org.onosproject.incubator.net.config.basics.ConfigException;
 import org.onosproject.net.AbstractProjectableModel;
 import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.DefaultDevice;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.config.Config;
+import org.onosproject.net.config.ConfigApplyDelegate;
 import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
@@ -52,11 +53,16 @@ import org.onosproject.net.driver.DriverServiceAdapter;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.snmp.SnmpController;
 
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.onlab.junit.TestTools.assertAfter;
 
 /**
@@ -64,6 +70,8 @@ import static org.onlab.junit.TestTools.assertAfter;
  */
 public class SnmpDeviceProviderTest {
 
+    public static final int TEST_DURATION = 1500;
+    public static final int DELAY = 500;
     private final SnmpDeviceProvider provider = new SnmpDeviceProvider();
     private final SnmpController controller = new SnmpControllerAdapter();
     private final DeviceProviderRegistry providerRegistry = new MockDeviceProviderRegistry();
@@ -73,15 +81,22 @@ public class SnmpDeviceProviderTest {
     protected CoreService coreService = new MockCoreService();
     private final DeviceProviderService deviceProviderService = new MockDeviceProviderService();
     private final TestApplicationId applicationId = new TestApplicationId("TestAppId");
-    private final NetworkConfigEvent deviceAddedEvent =
-            new NetworkConfigEvent(NetworkConfigEvent.Type.CONFIG_ADDED,
-                                   null, SnmpProviderConfig.class);
-    private final SnmpProviderConfig snmpProviderConfig = new MockSnmpProviderConfig();
+    private final DeviceId deviceId = DeviceId.deviceId("snmp:1.1.1.1:1");
+    private final DeviceId wrongDeviceId = DeviceId.deviceId("snmp:2.2.2.2:2");
+    private final Set<ConfigFactory> cfgFactories = new HashSet<>();
+    private final Set<NetworkConfigListener> netCfgListeners = new HashSet<>();
     private final NetworkConfigEvent deviceAddedIrrelevantEvent =
             new NetworkConfigEvent(NetworkConfigEvent.Type.CONFIG_ADDED,
                                    null, BasicDeviceConfig.class);
-    private final DeviceId deviceId = DeviceId.deviceId("snmp:1.1.1.1:1");
-    private final DeviceId wrongDeviceId = DeviceId.deviceId("snmp:2.2.2.2:2");
+    private final NetworkConfigEvent deviceAddedNewEvent =
+            new NetworkConfigEvent(NetworkConfigEvent.Type.CONFIG_ADDED,
+                                   deviceId, SnmpDeviceConfig.class);
+    private final SnmpDeviceConfig config = new SnmpDeviceConfig();
+    //Testing Files
+    private final InputStream jsonStream = SnmpDeviceProviderTest.class
+            .getResourceAsStream("/device.json");
+    private final ObjectMapper mapper = new ObjectMapper();
+    private static final String KEY = "snmp";
 
 
     @Before
@@ -92,6 +107,9 @@ public class SnmpDeviceProviderTest {
         provider.netCfgService = netCfgService;
         provider.deviceStore = deviceStore;
         provider.coreService = coreService;
+        JsonNode jsonNode = mapper.readTree(jsonStream);
+        ConfigApplyDelegate delegate = new MockDelegate();
+        config.init(deviceId, KEY, jsonNode, mapper, delegate);
         provider.activate(null);
     }
 
@@ -99,7 +117,7 @@ public class SnmpDeviceProviderTest {
     public void testActivate() {
         assertEquals("Incorrect provider service", deviceProviderService, provider.providerService);
         assertEquals("Incorrect application id", applicationId, provider.appId);
-        assertEquals("Incorrect config factory", cfgFactory, provider.factory);
+        assertTrue("Incorrect config factories", cfgFactories.contains(provider.factory));
         assertTrue("Incorrect network config listener", netCfgListeners.contains(provider.cfgLister));
 
 
@@ -109,9 +127,9 @@ public class SnmpDeviceProviderTest {
     public void testDeactivate() {
         this.addDevice();
         provider.deactivate(null);
-        assertAfter(500, () ->
+        assertAfter(DELAY, TEST_DURATION, () ->
                 assertNull("Device should be removed", controller.getDevice(deviceId)));
-        assertNull("Network config factory not removed", cfgFactory);
+        assertTrue("Network config factory not removed", cfgFactories.isEmpty());
         assertFalse("Network config listener not removed", netCfgListeners.contains(provider.cfgLister));
         assertFalse("Provider not unregistered", providerRegistry.getProviders().contains(provider.id()));
         assertNull("Provider registry not removed", provider.providerService);
@@ -125,11 +143,20 @@ public class SnmpDeviceProviderTest {
 
     @Test
     public void addDevice() {
-        assertTrue("Event should be relevant", provider.cfgLister.isRelevant(deviceAddedEvent));
-        provider.cfgLister.event(deviceAddedEvent);
         AbstractProjectableModel.setDriverService(null, new MockDriverService());
         //FIXME this needs sleep
-        assertAfter(500, () ->
+        assertAfter(DELAY, TEST_DURATION, () ->
+                assertNotNull("Device should be added to controller", controller.getDevice(deviceId)));
+        assertTrue("Device should be reachable", provider.isReachable(deviceId));
+    }
+
+    @Test
+    public void addDeviceNew() {
+        assertTrue("Event should be relevant", provider.cfgLister.isRelevant(deviceAddedNewEvent));
+        provider.cfgLister.event(deviceAddedNewEvent);
+        AbstractProjectableModel.setDriverService(null, new MockDriverService());
+        //FIXME this needs sleep
+        assertAfter(DELAY, TEST_DURATION, () ->
                 assertNotNull("Device should be added to controller", controller.getDevice(deviceId)));
         assertTrue("Device should be reachable", provider.isReachable(deviceId));
     }
@@ -163,19 +190,16 @@ public class SnmpDeviceProviderTest {
         }
     }
 
-    private ConfigFactory cfgFactory;
-    private Set<NetworkConfigListener> netCfgListeners = new HashSet<>();
-
     private class MockNetworkConfigRegistry extends NetworkConfigRegistryAdapter {
 
         @Override
         public void registerConfigFactory(ConfigFactory configFactory) {
-            cfgFactory = configFactory;
+            cfgFactories.add(configFactory);
         }
 
         @Override
         public void unregisterConfigFactory(ConfigFactory configFactory) {
-            cfgFactory = null;
+            cfgFactories.remove(configFactory);
         }
 
         @Override
@@ -191,11 +215,16 @@ public class SnmpDeviceProviderTest {
 
         @Override
         public <S, C extends Config<S>> C getConfig(S subject, Class<C> configClass) {
-            if (configClass.equals(SnmpProviderConfig.class)) {
-                return (C) snmpProviderConfig;
+            if (configClass.equals(SnmpDeviceConfig.class)) {
+                return (C) config;
             } else {
                 return (C) new BasicDeviceConfig();
             }
+        }
+
+        @Override
+        public <S, C extends Config<S>> Set<S> getSubjects(Class<S> subjectClass, Class<C> configClass) {
+            return ImmutableSet.of((S) deviceId);
         }
     }
 
@@ -236,17 +265,14 @@ public class SnmpDeviceProviderTest {
         }
     }
 
-    private class MockSnmpProviderConfig extends SnmpProviderConfig {
-        protected SnmpDeviceInfo deviceInfo = new SnmpDeviceInfo(IpAddress.valueOf("1.1.1.1"), 1, "test", "test");
-
-        @Override
-        public Set<SnmpProviderConfig.SnmpDeviceInfo> getDevicesInfo() throws ConfigException {
-            return ImmutableSet.of(deviceInfo);
-        }
+    private class MockDriverService extends DriverServiceAdapter {
 
     }
 
-    private class MockDriverService extends DriverServiceAdapter {
+    private class MockDelegate implements ConfigApplyDelegate {
+        @Override
+        public void onApply(Config config) {
 
+        }
     }
 }

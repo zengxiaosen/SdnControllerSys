@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +60,25 @@ public interface Objective {
          * Remove from an existing Next Objective. Should not be used for any
          * other objective.
          */
-        REMOVE_FROM_EXISTING
+        REMOVE_FROM_EXISTING,
+
+        /**
+         * Modify an existing Next Objective. Can be used to modify group buckets.
+         */
+        MODIFY,
+
+        /**
+         * Verifies that an existing Next Objective's collection of treatments
+         * are correctly represented by the underlying implementation of the objective.
+         * Corrective action is taken if discrepancies are found during verification.
+         * For example, if the next objective defines 3 sets of treatments, which
+         * are meant to be implemented as 3 buckets in a group, but verification
+         * finds less or more buckets, then the appropriate buckets are added or
+         * removed to match the objective.
+         *
+         * Should not be used for any other objective.
+         */
+        VERIFY
     }
 
     /**

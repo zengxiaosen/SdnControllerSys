@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ public class YdtDecimal64Test {
 
     Positive scenario
 
-    input at boundry for decimal64 with fraction 2
+    input at boundary for decimal64 with fraction 2
         i. min value
         ii. max value
 

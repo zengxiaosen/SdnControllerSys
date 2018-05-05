@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import org.onlab.osgi.TestServiceDirectory;
 import org.onosproject.common.event.impl.TestEventDispatcher;
 import org.onosproject.core.CoreService;
 import org.onosproject.incubator.net.virtual.TenantId;
+import org.onosproject.incubator.net.virtual.VirtualDevice;
 import org.onosproject.incubator.net.virtual.VirtualHost;
 import org.onosproject.incubator.net.virtual.VirtualNetwork;
 import org.onosproject.incubator.store.virtual.impl.DistributedVirtualNetworkStore;
@@ -34,8 +35,6 @@ import org.onosproject.net.Host;
 import org.onosproject.net.NetTestTools;
 import org.onosproject.net.TestDeviceParams;
 import org.onosproject.net.host.HostService;
-import org.onosproject.net.intent.FakeIntentManager;
-import org.onosproject.net.intent.TestableIntentService;
 import org.onosproject.store.service.TestStorageService;
 
 import java.util.Collection;
@@ -51,7 +50,6 @@ public class VirtualNetworkHostManagerTest extends TestDeviceParams {
 
     private VirtualNetworkManager manager;
     private DistributedVirtualNetworkStore virtualNetworkManagerStore;
-    private TestableIntentService intentService = new FakeIntentManager();
     private TestServiceDirectory testDirectory;
 
     @Before
@@ -65,7 +63,6 @@ public class VirtualNetworkHostManagerTest extends TestDeviceParams {
 
         manager = new VirtualNetworkManager();
         manager.store = virtualNetworkManagerStore;
-        manager.intentService = intentService;
         manager.coreService = coreService;
         NetTestTools.injectEventDispatcher(manager, new TestEventDispatcher());
 
@@ -90,6 +87,19 @@ public class VirtualNetworkHostManagerTest extends TestDeviceParams {
     private VirtualNetwork setupVnet() {
         manager.registerTenantId(TenantId.tenantId(tenantIdValue1));
         VirtualNetwork virtualNetwork = manager.createVirtualNetwork(TenantId.tenantId(tenantIdValue1));
+
+        VirtualDevice virtualDevice1 =
+                manager.createVirtualDevice(virtualNetwork.id(), DID1);
+        VirtualDevice virtualDevice2 =
+                manager.createVirtualDevice(virtualNetwork.id(), DID2);
+
+        ConnectPoint hostCp1 = new ConnectPoint(DID1, P1);
+        ConnectPoint hostCp2 = new ConnectPoint(DID2, P2);
+        manager.createVirtualPort(virtualNetwork.id(), hostCp1.deviceId(), hostCp1.port(),
+                new ConnectPoint(virtualDevice1.id(), hostCp1.port()));
+        manager.createVirtualPort(virtualNetwork.id(), hostCp2.deviceId(), hostCp2.port(),
+                new ConnectPoint(virtualDevice2.id(), hostCp2.port()));
+
         manager.createVirtualHost(virtualNetwork.id(), HID1, MAC1, VLAN1, LOC1, IPSET1);
         manager.createVirtualHost(virtualNetwork.id(), HID2, MAC2, VLAN2, LOC2, IPSET2);
         return virtualNetwork;
@@ -102,7 +112,21 @@ public class VirtualNetworkHostManagerTest extends TestDeviceParams {
      */
     private VirtualNetwork setupEmptyVnet() {
         manager.registerTenantId(TenantId.tenantId(tenantIdValue1));
-        return manager.createVirtualNetwork(TenantId.tenantId(tenantIdValue1));
+        VirtualNetwork virtualNetwork = manager.createVirtualNetwork(TenantId.tenantId(tenantIdValue1));
+
+        VirtualDevice virtualDevice1 =
+                manager.createVirtualDevice(virtualNetwork.id(), DID1);
+        VirtualDevice virtualDevice2 =
+                manager.createVirtualDevice(virtualNetwork.id(), DID2);
+
+        ConnectPoint hostCp1 = new ConnectPoint(DID1, P1);
+        ConnectPoint hostCp2 = new ConnectPoint(DID2, P2);
+        manager.createVirtualPort(virtualNetwork.id(), hostCp1.deviceId(), hostCp1.port(),
+                new ConnectPoint(virtualDevice1.id(), hostCp1.port()));
+        manager.createVirtualPort(virtualNetwork.id(), hostCp2.deviceId(), hostCp2.port(),
+                new ConnectPoint(virtualDevice2.id(), hostCp2.port()));
+
+        return virtualNetwork;
     }
 
     /**

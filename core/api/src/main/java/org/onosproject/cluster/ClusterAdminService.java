@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 package org.onosproject.cluster;
 
-import org.onlab.packet.IpAddress;
-
 import java.util.Set;
+
+import org.onlab.packet.IpAddress;
 
 /**
  * Service for administering the cluster node membership.

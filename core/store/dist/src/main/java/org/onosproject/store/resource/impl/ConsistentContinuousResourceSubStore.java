@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package org.onosproject.store.resource.impl;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.onlab.util.GuavaCollectors;
 import org.onosproject.net.resource.ContinuousResource;
 import org.onosproject.net.resource.ContinuousResourceId;
 import org.onosproject.net.resource.DiscreteResourceId;
@@ -37,7 +36,12 @@ import java.util.stream.Stream;
 
 import static org.onosproject.store.resource.impl.ConsistentResourceStore.SERIALIZER;
 
-class ConsistentContinuousResourceSubStore {
+
+/**
+ * Consistent substore for continuous resources.
+ */
+class ConsistentContinuousResourceSubStore implements ConsistentResourceSubStore
+        <ContinuousResourceId, ContinuousResource, TransactionalContinuousResourceSubStore> {
     private ConsistentMap<ContinuousResourceId, ContinuousResourceAllocation> consumers;
     private ConsistentMap<DiscreteResourceId, Set<ContinuousResource>> childMap;
 
@@ -51,15 +55,17 @@ class ConsistentContinuousResourceSubStore {
                 .withSerializer(SERIALIZER)
                 .build();
 
-        childMap.put(Resource.ROOT.id(), new LinkedHashSet<>());
+        childMap.putIfAbsent(Resource.ROOT.id(), new LinkedHashSet<>());
     }
 
-    TransactionalContinuousResourceSubStore transactional(TransactionContext tx) {
+    @Override
+    public TransactionalContinuousResourceSubStore transactional(TransactionContext tx) {
         return new TransactionalContinuousResourceSubStore(tx);
     }
 
     // computational complexity: O(n) where n is the number of the existing allocations for the resource
-    List<ResourceAllocation> getResourceAllocations(ContinuousResourceId resource) {
+    @Override
+    public List<ResourceAllocation> getResourceAllocations(ContinuousResourceId resource) {
         Versioned<ContinuousResourceAllocation> allocations = consumers.get(resource);
         if (allocations == null) {
             return ImmutableList.of();
@@ -67,10 +73,11 @@ class ConsistentContinuousResourceSubStore {
 
         return allocations.value().allocations().stream()
                 .filter(x -> x.resource().id().equals(resource))
-                .collect(GuavaCollectors.toImmutableList());
+                .collect(ImmutableList.toImmutableList());
     }
 
-    Set<ContinuousResource> getChildResources(DiscreteResourceId parent) {
+    @Override
+    public Set<ContinuousResource> getChildResources(DiscreteResourceId parent) {
         Versioned<Set<ContinuousResource>> children = childMap.get(parent);
 
         if (children == null) {
@@ -80,13 +87,15 @@ class ConsistentContinuousResourceSubStore {
         return children.value();
     }
 
-    <T> Set<ContinuousResource> getChildResources(DiscreteResourceId parent, Class<T> cls) {
+    @Override
+    public Set<ContinuousResource> getChildResources(DiscreteResourceId parent, Class<?> cls) {
         // naive implementation
         return getChildResources(parent).stream()
                 .filter(x -> x.isTypeOf(cls))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
+    @Override
     public boolean isAvailable(ContinuousResource resource) {
         // check if it's registered or not.
         Versioned<Set<ContinuousResource>> children = childMap.get(resource.parent().get().id());
@@ -94,11 +103,12 @@ class ConsistentContinuousResourceSubStore {
             return false;
         }
 
-        ContinuousResource registered = children.value().stream()
+        boolean notEnoughRegistered = children.value().stream()
                 .filter(c -> c.id().equals(resource.id()))
                 .findFirst()
-                .get();
-        if (registered.value() < resource.value()) {
+                .map(registered -> registered.value() < resource.value())
+                .orElse(true);
+        if (notEnoughRegistered) {
             // Capacity < requested, can never satisfy
             return false;
         }
@@ -113,7 +123,8 @@ class ConsistentContinuousResourceSubStore {
         return allocation.value().hasEnoughResource(resource);
     }
 
-    <T> Stream<ContinuousResource> getAllocatedResources(DiscreteResourceId parent, Class<T> cls) {
+    @Override
+    public Stream<ContinuousResource> getAllocatedResources(DiscreteResourceId parent, Class<?> cls) {
         Set<ContinuousResource> children = getChildResources(parent);
         if (children.isEmpty()) {
             return Stream.of();
@@ -134,7 +145,8 @@ class ConsistentContinuousResourceSubStore {
                 });
     }
 
-    Stream<ContinuousResource> getResources(ResourceConsumerId consumerId) {
+    @Override
+    public Stream<ContinuousResource> getResources(ResourceConsumerId consumerId) {
         return consumers.values().stream()
                 .flatMap(x -> x.value().allocations().stream())
                 .filter(x -> x.consumerId().equals(consumerId))

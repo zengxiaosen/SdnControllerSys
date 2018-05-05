@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package org.onosproject.codec.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.Maps;
 import org.onlab.osgi.DefaultServiceDirectory;
 import org.onlab.osgi.ServiceDirectory;
 import org.onlab.packet.EthType;
@@ -27,8 +28,7 @@ import org.onlab.packet.TpPort;
 import org.onlab.packet.VlanId;
 import org.onlab.util.HexString;
 import org.onosproject.codec.CodecContext;
-import org.onosproject.codec.ExtensionTreatmentCodec;
-import org.onosproject.core.DefaultGroupId;
+import org.onosproject.net.flow.ExtensionTreatmentCodec;
 import org.onosproject.core.GroupId;
 import org.onosproject.net.ChannelSpacing;
 import org.onosproject.net.Device;
@@ -38,6 +38,8 @@ import org.onosproject.net.OchSignal;
 import org.onosproject.net.OduSignalId;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.flow.StatTriggerField;
+import org.onosproject.net.flow.StatTriggerFlag;
 import org.onosproject.net.flow.instructions.ExtensionTreatment;
 import org.onosproject.net.flow.instructions.Instruction;
 import org.onosproject.net.flow.instructions.Instructions;
@@ -49,17 +51,19 @@ import org.onosproject.net.flow.instructions.L4ModificationInstruction;
 import org.onosproject.net.meter.MeterId;
 import org.slf4j.Logger;
 
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.onlab.util.Tools.nullIsIllegal;
+import static org.onosproject.codec.impl.InstructionCodec.STAT_PACKET_COUNT;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Decoding portion of the instruction codec.
  */
 public final class DecodeInstructionCodecHelper {
-    protected static final Logger log = getLogger(DecodeInstructionCodecHelper.class);
+    private static final Logger log = getLogger(DecodeInstructionCodecHelper.class);
     private final ObjectNode json;
     private final CodecContext context;
     private static final Pattern ETHTYPE_PATTERN = Pattern.compile("0x([0-9a-fA-F]{4})");
@@ -108,6 +112,9 @@ public final class DecodeInstructionCodecHelper {
         } else if (subType.equals(L2ModificationInstruction.L2SubType.MPLS_PUSH.name())) {
             return Instructions.pushMpls();
         } else if (subType.equals(L2ModificationInstruction.L2SubType.MPLS_POP.name())) {
+            if (json.has(InstructionCodec.ETHERNET_TYPE)) {
+                return Instructions.popMpls(getEthType());
+            }
             return Instructions.popMpls();
         } else if (subType.equals(L2ModificationInstruction.L2SubType.DEC_MPLS_TTL.name())) {
             return Instructions.decMplsTtl();
@@ -157,6 +164,12 @@ public final class DecodeInstructionCodecHelper {
             int flowLabel = nullIsIllegal(json.get(InstructionCodec.FLOW_LABEL),
                     InstructionCodec.FLOW_LABEL + InstructionCodec.MISSING_MEMBER_MESSAGE).asInt();
             return Instructions.modL3IPv6FlowLabel(flowLabel);
+        } else  if (subType.equals(L3ModificationInstruction.L3SubType.TTL_IN.name())) {
+            return Instructions.copyTtlIn();
+        } else  if (subType.equals(L3ModificationInstruction.L3SubType.TTL_OUT.name())) {
+            return Instructions.copyTtlOut();
+        } else  if (subType.equals(L3ModificationInstruction.L3SubType.DEC_TTL.name())) {
+            return Instructions.decNwTtl();
         }
         throw new IllegalArgumentException("L3 Instruction subtype "
                 + subType + " is not supported");
@@ -252,6 +265,58 @@ public final class DecodeInstructionCodecHelper {
         }
         throw new IllegalArgumentException("L4 Instruction subtype "
                 + subType + " is not supported");
+    }
+
+    private Instruction decodeStatTrigger() {
+        String statTriggerFlag = nullIsIllegal(json.get(InstructionCodec.STAT_TRIGGER_FLAG),
+                InstructionCodec.STAT_TRIGGER_FLAG + InstructionCodec.ERROR_MESSAGE).asText();
+
+        StatTriggerFlag flag = null;
+
+        if (statTriggerFlag.equals(StatTriggerFlag.ONLY_FIRST.name())) {
+            flag = StatTriggerFlag.ONLY_FIRST;
+        } else if (statTriggerFlag.equals(StatTriggerFlag.PERIODIC.name())) {
+            flag = StatTriggerFlag.PERIODIC;
+        } else {
+            throw new IllegalArgumentException("statTriggerFlag "
+                    + statTriggerFlag + " is not supported");
+        }
+        if (!json.has(InstructionCodec.STAT_THRESHOLDS)) {
+            throw new IllegalArgumentException("statThreshold is not added");
+        }
+        JsonNode statThresholdsNode = nullIsIllegal(json.get(InstructionCodec.STAT_THRESHOLDS),
+                InstructionCodec.STAT_THRESHOLDS + InstructionCodec.ERROR_MESSAGE);
+        Map<StatTriggerField, Long> statThresholdMap = getStatThreshold(statThresholdsNode);
+        if (statThresholdMap.isEmpty()) {
+            throw new IllegalArgumentException("statThreshold must have at least one property");
+        }
+        return Instructions.statTrigger(statThresholdMap, flag);
+    }
+
+    private Map<StatTriggerField, Long> getStatThreshold(JsonNode statThresholdNode) {
+        Map<StatTriggerField, Long> statThresholdMap = Maps.newEnumMap(StatTriggerField.class);
+        for (JsonNode jsonNode : statThresholdNode) {
+            if (jsonNode.hasNonNull(InstructionCodec.STAT_BYTE_COUNT)) {
+                JsonNode byteCountNode = jsonNode.get(InstructionCodec.STAT_BYTE_COUNT);
+                if (!byteCountNode.isNull() && byteCountNode.isNumber()) {
+                    statThresholdMap.put(StatTriggerField.BYTE_COUNT, byteCountNode.asLong());
+                }
+            } else if (jsonNode.hasNonNull(STAT_PACKET_COUNT)) {
+                JsonNode packetCount = jsonNode.get(STAT_PACKET_COUNT);
+                if (!packetCount.isNull() && packetCount.isNumber()) {
+                    statThresholdMap.put(StatTriggerField.PACKET_COUNT, packetCount.asLong());
+                }
+            } else if (jsonNode.hasNonNull(InstructionCodec.STAT_DURATION)) {
+                JsonNode duration = jsonNode.get(InstructionCodec.STAT_DURATION);
+                if (!duration.isNull() && duration.isNumber()) {
+                    statThresholdMap.put(StatTriggerField.DURATION, duration.asLong());
+                }
+            } else {
+                log.error("Unsupported stat {}", jsonNode.toString());
+            }
+        }
+
+        return statThresholdMap;
     }
 
     /**
@@ -355,7 +420,7 @@ public final class DecodeInstructionCodecHelper {
             return Instructions.transition(nullIsIllegal(json.get(InstructionCodec.TABLE_ID),
                     InstructionCodec.TABLE_ID + InstructionCodec.MISSING_MEMBER_MESSAGE).asInt());
         } else if (type.equals(Instruction.Type.GROUP.name())) {
-            GroupId groupId = new DefaultGroupId(nullIsIllegal(json.get(InstructionCodec.GROUP_ID),
+            GroupId groupId = new GroupId(nullIsIllegal(json.get(InstructionCodec.GROUP_ID),
                     InstructionCodec.GROUP_ID + InstructionCodec.MISSING_MEMBER_MESSAGE).asInt());
             return Instructions.createGroup(groupId);
         } else if (type.equals(Instruction.Type.METER.name())) {
@@ -383,6 +448,8 @@ public final class DecodeInstructionCodecHelper {
             return decodeL4();
         } else if (type.equals(Instruction.Type.EXTENSION.name())) {
             return decodeExtension();
+        } else if (type.equals(Instruction.Type.STAT_TRIGGER.name())) {
+            return decodeStatTrigger();
         }
         throw new IllegalArgumentException("Instruction type "
                 + type + " is not supported");

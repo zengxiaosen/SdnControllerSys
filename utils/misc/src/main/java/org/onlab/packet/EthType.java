@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ public class EthType {
         QINQ(0x88a8, "qinq", null),
         BDDP(0x8942, "bddp", org.onlab.packet.LLDP.deserializer()),
         MPLS_UNICAST(0x8847, "mpls_unicast", org.onlab.packet.MPLS.deserializer()),
-        MPLS_MULTICAST(0x8848, "mpls_unicast", org.onlab.packet.MPLS.deserializer()),
+        MPLS_MULTICAST(0x8848, "mpls_multicast", org.onlab.packet.MPLS.deserializer()),
         EAPOL(0x888e, "eapol", org.onlab.packet.EAPOL.deserializer()),
         UNKNOWN(0, "unknown", null);
 

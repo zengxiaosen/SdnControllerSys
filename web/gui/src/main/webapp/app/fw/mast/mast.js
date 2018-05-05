@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,31 +24,39 @@
     var mastHeight = 48,
         padMobile = 16,
         dialogOpts = {
-            edge: 'left'
-        },
-        msg = {
-            add: { adj: 'New', op: 'added'},
-            rem: { adj: 'Some', op: 'removed'}
+            edge: 'left',
         };
+
+    var ls;
+
+    // In the case of Masthead, we cannot cache the lion bundle, because we
+    // call too early (before the lion data is uploaded from the server).
+    // So we'll dig into the lion service for each request...
+    function getLion(x) {
+        var lion = ls.bundle('core.fw.Mast');
+        return lion(x);
+    }
 
     angular.module('onosMast', ['onosNav'])
         .controller('MastCtrl',
-        ['$log', '$scope', '$location', '$window', 'WebSocketService', 'NavService',
-            'DialogService',
+        ['$log', '$scope', '$location', '$window', 'WebSocketService',
+            'NavService', 'DialogService', 'LionService',
 
-        function ($log, $scope, $location, $window, wss, ns, ds) {
+        function ($log, $scope, $location, $window, wss, ns, ds, _ls_) {
             var self = this;
 
+            ls = _ls_;
+
+            $scope.lion = getLion;
+
             function triggerRefresh(action) {
+                var uicomp = action === 'add' ? getLion('uicomp_added')
+                                              : getLion('uicomp_removed'),
+                    okupd = getLion('ui_ok_to_update');
 
                 function createConfirmationText() {
-                    var content = ds.createDiv(),
-                        txt = msg[action];
-
-                    content.append('p').text(
-                        txt.adj + ' GUI components were ' + txt.op +
-                        '. Press OK to update the GUI.'
-                    );
+                    var content = ds.createDiv();
+                    content.append('p').text(uicomp + ' ' + okupd);
                     return content;
                 }
 
@@ -67,7 +75,7 @@
                 //         apps could be injected externally (via the onos-app
                 //         command) and we might be looking at some other view.
                 ds.openDialog('app-dialog', dialogOpts)
-                    .setTitle('Confirm GUI Refresh')
+                    .setTitle(getLion('confirm_refresh_title'))
                     .addContent(createConfirmationText())
                     .addOk(dOk)
                     .addCancel(dCancel)
@@ -75,8 +83,8 @@
             }
 
             wss.bindHandlers({
-                'guiAdded': function () { triggerRefresh('add') },
-                'guiRemoved': function () { triggerRefresh('rem') }
+                'guiAdded': function () { triggerRefresh('add'); },
+                'guiRemoved': function () { triggerRefresh('rem'); },
             });
 
             // delegate to NavService
@@ -85,8 +93,17 @@
             };
 
             // onosUser is a global set via the index.html generated source
-            $scope.user = onosUser || '(no one)';
-            $scope.helpTip = 'Show help page for current view';
+            $scope.username = function () {
+                return onosUser || getLion('unknown_user');
+            };
+
+            // The problem with the following is that the localization bundle
+            //  hasn't been uploaded from the server at this point, so we get
+            //  a lookup miss => '%tt_help%'
+            // $scope.helpTip = getLion('tt_help');
+            // We would need to figure out how to inject the text later.
+            // For now, we'll just leave the tooltip blank.
+            $scope.helpTip = '';
 
             $scope.directTo = function () {
                 var curId = $location.path().replace('/', ''),
@@ -103,8 +120,8 @@
             return {
                 mastHeight: function () {
                     return fs.isMobile() ? mastHeight + padMobile : mastHeight;
-                }
-            }
+                },
+            };
         }]);
 
 }());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,8 +38,8 @@ public class DefaultMappingTest {
 
         Mapping.Builder builder1 = new DefaultMapping.Builder();
         DeviceId deviceId1 = DeviceId.deviceId("lisp:10.1.1.1");
-        MappingKey mappingKey1 = new DefaultMappingKey();
-        MappingValue mappingValue1 = new DefaultMappingValue();
+        MappingKey mappingKey1 = new MappingTestMocks.MockMappingKey();
+        MappingValue mappingValue1 = new MappingTestMocks.MockMappingValue();
 
         mapping1 = builder1
                         .withId(1)
@@ -62,8 +62,8 @@ public class DefaultMappingTest {
 
         mapping2 = builder3
                         .withId(2)
-                        .withKey(new DefaultMappingKey())
-                        .withValue(new DefaultMappingValue())
+                        .withKey(new MappingTestMocks.MockMappingKey())
+                        .withValue(new MappingTestMocks.MockMappingValue())
                         .forDevice(deviceId2)
                         .build();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -196,6 +196,18 @@ public interface YdtBuilder extends Ydt {
      *                                  or inappropriate argument.
      */
     void addLeaf(String name, String namespace, Set<String> valueSet)
+            throws IllegalArgumentException;
+
+    /**
+     * Adds a child node or leaf node based on schema.
+     *
+     * @param name      name of child/leaf to be added
+     * @param namespace namespace of child/leaf to be added, if it's null, parent's
+     *                  namespace will be applied to child
+     * @throws IllegalArgumentException when method has been passed an illegal
+     *                                  or inappropriate argument.
+     */
+    void addNode(String name, String namespace)
             throws IllegalArgumentException;
 
     /**

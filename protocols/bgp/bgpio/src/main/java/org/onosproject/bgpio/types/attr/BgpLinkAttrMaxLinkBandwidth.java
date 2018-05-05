@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,13 +32,13 @@ import com.google.common.base.MoreObjects;
  */
 public final class BgpLinkAttrMaxLinkBandwidth implements BgpValueType {
 
-    protected static final Logger log = LoggerFactory
+    private static final Logger log = LoggerFactory
             .getLogger(BgpLinkAttrMaxLinkBandwidth.class);
 
     public static final int MAX_BANDWIDTH_LEN = 4;
     public static final int NO_OF_BITS = 8;
 
-    public short type;
+    private short type;
 
     /* ISIS administrative group */
     private final float maxBandwidth;

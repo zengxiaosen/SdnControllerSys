@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,9 +71,9 @@ public class RouterTlv extends TlvHeader implements TopLevelTlv {
      * Reads bytes from channel buffer .
      *
      * @param channelBuffer channel buffer instance
-     * @throws Exception might throws exception while parsing buffer
+     * @throws OspfParseException might throws exception while parsing buffer
      */
-    public void readFrom(ChannelBuffer channelBuffer) throws Exception {
+    public void readFrom(ChannelBuffer channelBuffer) throws OspfParseException {
         try {
             byte[] tempByteArray = new byte[OspfUtil.FOUR_BYTES];
             channelBuffer.readBytes(tempByteArray, 0, OspfUtil.FOUR_BYTES);

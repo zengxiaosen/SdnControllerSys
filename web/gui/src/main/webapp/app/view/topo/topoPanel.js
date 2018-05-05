@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,23 +25,27 @@
     // injected refs
     var $log, $window, $rootScope, fs, ps, gs, flash, wss, bns, mast, ns;
 
+    // function to be replaced by the localization bundle function
+    var topoLion = function (x) {
+        return '#tps#' + x + '#';
+    };
+
     // constants
     var pCls = 'topo-p',
         idSum = 'topo-p-summary',
         idDet = 'topo-p-detail',
         panelOpts = {
-            width: 260          // summary and detail panel width
+            width: 260, // summary and detail panel width
         },
-        sumMax = 226,           // summary panel max height
-        padTop = 16,            // summary panel padding below masthead
-        padding = 16,           // panel internal padding
-        padFudge = padTop + 2 * padding,
-        devPath = 'device';
+        sumMax = 226, // summary panel max height
+        padTop = 16, // summary panel padding below masthead
+        padding = 16, // panel internal padding
+        padFudge = padTop + 2 * padding;
 
     // internal state
-    var useDetails = true,      // should we show details if we have 'em?
-        haveDetails = false,    // do we have details that we could show?
-        sumFromTop,             // summary panel distance from top of screen
+    var useDetails = true, // should we show details if we have 'em?
+        haveDetails = false, // do we have details that we could show?
+        sumFromTop, // summary panel distance from top of screen
         unbindWatch;
 
     // panels
@@ -141,7 +145,7 @@
             appendHeader: hAppend,
             appendBody: bAppend,
             appendFooter: fAppend,
-            adjustHeight: adjustHeight
+            adjustHeight: adjustHeight,
         };
     }
 
@@ -152,8 +156,10 @@
         tbody.append('tr').append('td').attr('colspan', 2).append('hr');
     }
 
-    function addBtnFooter() {
-        detail.appendFooter('hr');
+    function addBtnFooter(sepAlreadyThere) {
+        if (!sepAlreadyThere) {
+            detail.appendFooter('hr');
+        }
         detail.appendFooter('div').classed('actionBtns', true);
     }
 
@@ -169,18 +175,25 @@
         function addCell(cls, txt) {
             tr.append('td').attr('class', cls).text(txt);
         }
+
         addCell('label', lab + ' :');
         addCell('value', value);
     }
 
     function listProps(tbody, data) {
+        var sepLast = false;
+
+        // note: track whether we end with a separator or not...
         data.propOrder.forEach(function (p) {
             if (p === '-') {
                 addSep(tbody);
+                sepLast = true;
             } else {
-                addProp(tbody, p, data.props[p]);
+                addProp(tbody, data.propLabels[p], data.propValues[p]);
+                sepLast = false;
             }
         });
+        return sepLast;
     }
 
     function watchWindow() {
@@ -188,7 +201,7 @@
             function () {
                 return {
                     h: $window.innerHeight,
-                    w: $window.innerWidth
+                    w: $window.innerWidth,
                 };
             }, function () {
                 var h = summary.adjustHeight(sumFromTop, sumMax),
@@ -211,24 +224,28 @@
                 .append('svg'),
             title = summary.appendHeader('h2'),
             table = summary.appendBody('table'),
-            tbody = table.append('tbody');
+            tbody = table.append('tbody'),
+            glyphId = data.glyphId || 'bird';
 
-        gs.addGlyph(svg, 'bird', 24, 0, [1,1]);
+        gs.addGlyph(svg, glyphId, 24, 0, [1, 1]);
 
         title.text(data.title);
         listProps(tbody, data);
+
+        augmentDetailPanel();
     }
 
     // === -----------------------------------------------------
     //  Functions for populating the detail panel
 
-    var isDevice = {
-        switch: 1,
-        roadm: 1,
-        otn:1
+    var navPathIdKey = {
+        device: 'devId',
+        host: 'hostId',
     };
 
     function displaySingle(data) {
+        var sepLast;
+
         detail.setup();
 
         var svg = detail.appendHeader('div')
@@ -238,23 +255,27 @@
                 .classed('clickable', true),
             table = detail.appendBody('table'),
             tbody = table.append('tbody'),
-            navFn;
+            navFn,
+            navPath;
 
-        gs.addGlyph(svg, (data.type || 'unknown'), 26);
+        gs.addGlyph(svg, (data.glyphId || 'm_unknown'), 26);
         title.text(data.title);
 
-        // only add navigation when displaying a device
-        if (isDevice[data.type]) {
+        // add navigation hot-link if defined
+        navPath = data.navPath;
+        if (navPath) {
             navFn = function () {
-                ns.navTo(devPath, { devId: data.id });
+                var arg = {};
+                arg[navPathIdKey[navPath]] = data.id;
+                ns.navTo(navPath, arg);
             };
 
             svg.on('click', navFn);
             title.on('click', navFn);
         }
 
-        listProps(tbody, data);
-        addBtnFooter();
+        sepLast = listProps(tbody, data);
+        addBtnFooter(sepLast);
     }
 
     function displayMulti(ids) {
@@ -264,9 +285,9 @@
             table = detail.appendBody('table'),
             tbody = table.append('tbody');
 
-        title.text('Selected Items');
+        title.text(topoLion('title_selected_items'));
         ids.forEach(function (d, i) {
-            addProp(tbody, i+1, d);
+            addProp(tbody, i + 1, d);
         });
         addBtnFooter();
     }
@@ -277,86 +298,6 @@
             .append('div')
             .classed('actionBtn', true);
         bns.button(btnDiv, idDet + '-' + o.id, o.gid, o.cb, o.tt);
-    }
-
-    var friendlyIndex = {
-        device: 1,
-        host: 0
-    };
-
-    function friendly(d) {
-        var i = friendlyIndex[d.class] || 0;
-        return (d.labels && d.labels[i]) || '';
-    }
-
-    function linkSummary(d) {
-        var o = d && d.online ? 'online' : 'offline';
-        return d ? d.type + ' / ' + o : '-';
-    }
-
-    // provided to change presentation of internal type name
-    var linkTypePres = {
-        hostLink: 'edge link'
-    };
-
-    function linkType(d) {
-        return linkTypePres[d.type()] || d.type();
-    }
-
-    function linkExpected(d) {
-        return d.expected();
-    }
-
-    var coreOrder = [
-            'Type', 'Expected', '-',
-            'A_type', 'A_id', 'A_label', 'A_port', '-',
-            'B_type', 'B_id', 'B_label', 'B_port'
-        ],
-        edgeOrder = [
-            'Type', '-',
-            'A_type', 'A_id', 'A_label', '-',
-            'B_type', 'B_id', 'B_label', 'B_port'
-        ];
-
-    function displayLink(data, modifyCb) {
-        detail.setup();
-
-        var svg = detail.appendHeader('div')
-                .classed('icon', true)
-                .append('svg'),
-            title = detail.appendHeader('h2'),
-            table = detail.appendBody('table'),
-            tbody = table.append('tbody'),
-            edgeLink = data.type() === 'hostLink',
-            order = edgeLink ? edgeOrder : coreOrder;
-
-        gs.addGlyph(svg, 'ports', 26);
-        title.text('Link');
-
-        var linkData = {
-            propOrder: order.slice(0),      // makes a copy of the array
-            props: {
-                Type: linkType(data),
-                Expected: linkExpected(data),
-
-                A_type: data.source.class,
-                A_id: data.source.id,
-                A_label: friendly(data.source),
-                A_port: data.srcPort,
-
-                B_type: data.target.class,
-                B_id: data.target.id,
-                B_label: friendly(data.target),
-                B_port: data.tgtPort
-            }
-        };
-        listProps(tbody, modifyCb(linkData, data.extra));
-
-        if (!edgeLink) {
-            addSep(tbody);
-            addProp(tbody, 'A &rarr; B', linkSummary(data.fromSource));
-            addProp(tbody, 'B &rarr; A', linkSummary(data.fromTarget));
-        }
     }
 
     function displayNothing() {
@@ -382,7 +323,8 @@
     function toggleSummary(x) {
         var kev = (x === 'keyev'),
             on = kev ? !summary.panel().isVisible() : !!x,
-            verb = on ? 'Show' : 'Hide';
+            verb = on ? topoLion('show') : topoLion('hide'),
+            sumpan = topoLion('fl_panel_summary');
 
         if (on) {
             // ask server to start sending summary data.
@@ -391,7 +333,7 @@
         } else {
             hideSummaryPanel();
         }
-        flash.flash(verb + ' summary panel');
+        flash.flash(verb + ' ' + sumpan);
         return on;
     }
 
@@ -403,6 +345,7 @@
             summary.panel().show();
             summary.adjustHeight(sumFromTop, sumMax);
         }
+
         if (detail.panel().isVisible()) {
             detail.down(_show);
         } else {
@@ -412,7 +355,7 @@
 
     function hideSummaryPanel() {
         // instruct server to stop sending summary data
-        wss.sendEvent("cancelSummary");
+        wss.sendEvent('cancelSummary');
         summary.panel().hide(detail.up);
     }
 
@@ -424,6 +367,10 @@
         }
     }
 
+    function summaryBBox() {
+        return d3.select('#' + idSum).node().getBoundingClientRect();
+    }
+
     function hideDetailPanel() {
         detail.panel().hide();
     }
@@ -432,8 +379,9 @@
 
     function augmentDetailPanel() {
         var d = detail,
-            downPos = sumFromTop + sumMax + padFudge;
-        d.ypos = { up: sumFromTop, down: downPos, current: downPos};
+            downPos = summaryBBox().bottom + padTop;
+
+        d.ypos = { up: sumFromTop, down: downPos, current: downPos };
 
         d._move = function (y, cb) {
             var yp = d.ypos,
@@ -443,11 +391,11 @@
                 endCb = function () {
                     cb();
                     d.adjustHeight(d.ypos.current);
-                }
+                };
             } else {
                 endCb = function () {
                     d.adjustHeight(d.ypos.current);
-                }
+                };
             }
             if (yp.current !== y) {
                 yp.current = y;
@@ -468,7 +416,7 @@
             verb;
 
         useDetails = kev ? !useDetails : !!x;
-        verb = useDetails ? 'Enable' : 'Disable';
+        verb = topoLion(useDetails ? 'enable' : 'disable');
 
         if (useDetails) {
             if (haveDetails) {
@@ -477,7 +425,7 @@
         } else {
             hideDetailPanel();
         }
-        flash.flash(verb + ' details panel');
+        flash.flash(verb + ' ' + topoLion('fl_panel_details'));
         return useDetails;
     }
 
@@ -536,13 +484,14 @@
                 toggleUseDetailsFlag: toggleUseDetailsFlag,
                 displaySingle: displaySingle,
                 displayMulti: displayMulti,
-                displayLink: displayLink,
                 displayNothing: displayNothing,
                 displaySomething: displaySomething,
                 addAction: addAction,
 
                 detailVisible: function () { return detail.panel().isVisible(); },
-                summaryVisible: function () { return summary.panel().isVisible(); }
+                summaryVisible: function () { return summary.panel().isVisible(); },
+
+                setLionBundle: function (bundle) { topoLion = bundle; },
             };
         }]);
 }());

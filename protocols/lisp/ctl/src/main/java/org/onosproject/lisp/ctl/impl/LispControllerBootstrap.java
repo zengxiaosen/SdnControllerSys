@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import java.util.List;
  */
 public class LispControllerBootstrap {
 
-    protected static final Logger log = LoggerFactory.getLogger(LispControllerBootstrap.class);
+    private static final Logger log = LoggerFactory.getLogger(LispControllerBootstrap.class);
 
     private static final int LISP_DATA_PORT = 4341;
     private static final int LISP_CONTROL_PORT = 4342;
@@ -70,8 +70,8 @@ public class LispControllerBootstrap {
                 f.sync();
             }
 
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,11 +61,11 @@ import org.onosproject.store.cluster.messaging.ClusterCommunicationService;
 import org.onosproject.store.cluster.messaging.MessageSubject;
 import org.onosproject.store.impl.MastershipBasedTimestamp;
 import org.onosproject.store.serializers.KryoNamespaces;
-import org.onosproject.store.serializers.StoreSerializer;
 import org.onosproject.store.serializers.custom.DistributedStoreSerializers;
 import org.onosproject.store.service.EventuallyConsistentMap;
 import org.onosproject.store.service.EventuallyConsistentMapEvent;
 import org.onosproject.store.service.EventuallyConsistentMapListener;
+import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.StorageService;
 import org.slf4j.Logger;
 
@@ -74,7 +74,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 
-import static org.onosproject.net.DefaultAnnotations.merge;
 import static org.onosproject.net.DefaultAnnotations.union;
 import static org.onosproject.net.Link.State.ACTIVE;
 import static org.onosproject.net.Link.State.INACTIVE;
@@ -154,7 +153,7 @@ public class ECLinkStore
 
     protected LinkDiscoveryMode linkDiscoveryMode = LinkDiscoveryMode.STRICT;
 
-    protected static final StoreSerializer SERIALIZER = StoreSerializer.using(
+    protected static final Serializer SERIALIZER = Serializer.using(
             KryoNamespace.newBuilder()
                     .register(DistributedStoreSerializers.STORE_COMMON)
                     .nextId(DistributedStoreSerializers.STORE_CUSTOM_BEGIN)
@@ -263,7 +262,7 @@ public class ECLinkStore
         } else {
             // Only forward for ConfigProvider or NullProvider
             // Forwarding was added as a workaround for ONOS-490
-            if (!providerId.scheme().equals("cfg") && !providerId.scheme().equals("null")) {
+            if (!"cfg".equals(providerId.scheme()) && !"null".equals(providerId.scheme())) {
                 return null;
             }
             // Temporary hack for NPE (ONOS-1171).
@@ -293,11 +292,17 @@ public class ECLinkStore
 
     private LinkDescription createOrUpdateLinkInternal(LinkDescription current, LinkDescription updated) {
         if (current != null) {
-            // we only allow transition from INDIRECT -> DIRECT
+            Type type;
+            if (current.type() == DIRECT && updated.type() == Type.INDIRECT) {
+                // mask transition from DIRECT -> INDIRECT, likely to be triggered by BDDP
+                type = Type.DIRECT;
+            } else {
+                type = updated.type();
+            }
             return new DefaultLinkDescription(
                     current.src(),
                     current.dst(),
-                    current.type() == DIRECT ? DIRECT : updated.type(),
+                    type,
                     current.isExpected(),
                     union(current.annotations(), updated.annotations()));
         }
@@ -324,7 +329,7 @@ public class ECLinkStore
                 return newLink;
             } else if (existingLink.state() != newLink.state() ||
                     existingLink.isExpected() != newLink.isExpected() ||
-                    (existingLink.type() == INDIRECT && newLink.type() == DIRECT) ||
+                    (existingLink.type() !=  newLink.type()) ||
                     !AnnotationsUtil.isEqual(existingLink.annotations(), newLink.annotations())) {
                 eventType.set(LINK_UPDATED);
                 return newLink;
@@ -366,26 +371,26 @@ public class ECLinkStore
         ConnectPoint src = base.src();
         ConnectPoint dst = base.dst();
         Type type = base.type();
-        AtomicReference<DefaultAnnotations> annotations = new AtomicReference<>(DefaultAnnotations.builder().build());
-        annotations.set(merge(annotations.get(), base.annotations()));
+        DefaultAnnotations.Builder builder = DefaultAnnotations.builder();
+        builder.putAll(base.annotations());
 
         getAllProviders(linkKey).stream()
                 .map(p -> new Provided<>(linkKey, p))
                 .forEach(key -> {
                     LinkDescription linkDescription = linkDescriptions.get(key);
                     if (linkDescription != null) {
-                        annotations.set(merge(annotations.get(),
-                                              linkDescription.annotations()));
+                        builder.putAll(linkDescription.annotations());
                     }
                 });
 
+        DefaultAnnotations annotations = builder.build();
         Link.State initialLinkState;
 
         boolean isExpected;
         if (linkDiscoveryMode == LinkDiscoveryMode.PERMISSIVE) {
             initialLinkState = ACTIVE;
             isExpected =
-                    Objects.equals(annotations.get().value(AnnotationKeys.DURABLE), "true");
+                    Objects.equals(annotations.value(AnnotationKeys.DURABLE), "true");
         } else {
             initialLinkState = base.isExpected() ? ACTIVE : INACTIVE;
             isExpected = base.isExpected();
@@ -399,7 +404,7 @@ public class ECLinkStore
                 .type(type)
                 .state(initialLinkState)
                 .isExpected(isExpected)
-                .annotations(annotations.get())
+                .annotations(annotations)
                 .build();
     }
 

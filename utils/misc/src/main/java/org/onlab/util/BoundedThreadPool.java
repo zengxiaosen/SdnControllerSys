@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ public final class BoundedThreadPool extends ThreadPoolExecutor {
 
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(BoundedThreadPool.class);
 
-    protected static int maxQueueSize = 80_000; //TODO tune this value
+    static int maxQueueSize = 80_000; //TODO tune this value
     //private static final RejectedExecutionHandler DEFAULT_HANDLER = new CallerFeedbackPolicy();
     private static final long STATS_INTERVAL = 5_000; //ms
 

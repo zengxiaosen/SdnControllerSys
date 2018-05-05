@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ public final class OspfConfigUtil {
     public static final String ROUTERDEADINTERVAL = "routerDeadIntervalTime";
     public static final String INTERFACETYPE = "interfaceType";
     public static final String EXTERNALROUTINGCAPABILITY = "externalRoutingCapability";
-    protected static final Logger log = LoggerFactory.getLogger(OspfConfigUtil.class);
+    private static final Logger log = LoggerFactory.getLogger(OspfConfigUtil.class);
     private static final String ISOPAQUE = "isOpaqueEnable";
 
     /**

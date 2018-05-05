@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import org.onosproject.net.HostLocation;
 import org.onosproject.net.host.DefaultHostDescription;
 
 import java.util.Map;
+import java.util.Set;
 
 import static org.onlab.util.Tools.toHex;
 import static org.onosproject.provider.nil.NullProviders.SCHEME;
@@ -96,6 +97,19 @@ public class CustomTopologySimulator extends TopologySimulator {
         hostProviderService.hostDetected(hostId, description, false);
     }
 
+    /**
+     * Creates a simulated multi-homed host.
+     *
+     * @param hostId   host identifier
+     * @param locations host locations
+     * @param hostIps   host IP addresses
+     */
+    public void createHost(HostId hostId, Set<HostLocation> locations, Set<IpAddress> hostIps) {
+        DefaultHostDescription description =
+                new DefaultHostDescription(hostId.mac(), hostId.vlanId(), locations, hostIps, false);
+        hostProviderService.hostDetected(hostId, description, false);
+    }
+
     @Override
     protected void createDevices() {
     }
@@ -107,4 +121,13 @@ public class CustomTopologySimulator extends TopologySimulator {
     @Override
     protected void createHosts() {
     }
+
+    @Override
+    public void tearDownTopology() {
+        super.tearDownTopology();
+        nextDeviceId = 0;
+        nextHostId = 0;
+        nameToId.clear();
+    }
+
 }

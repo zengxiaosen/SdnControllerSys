@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.onosproject.incubator.net.virtual;
 import com.google.common.annotations.Beta;
 import org.onlab.osgi.ServiceDirectory;
 import org.onosproject.core.ApplicationId;
+import org.onosproject.event.ListenerService;
 import org.onosproject.net.DeviceId;
 
 import java.util.Set;
@@ -26,7 +27,8 @@ import java.util.Set;
  * Service for querying virtual network inventory.
  */
 @Beta
-public interface VirtualNetworkService {
+public interface VirtualNetworkService
+        extends ListenerService<VirtualNetworkEvent, VirtualNetworkListener> {
 
     /**
      * The topic used for obtaining globally unique ids.
@@ -42,6 +44,24 @@ public interface VirtualNetworkService {
      * @throws org.onlab.util.ItemNotFoundException if no such network found
      */
     Set<VirtualNetwork> getVirtualNetworks(TenantId tenantId);
+
+    /**
+     * Returns the virtual network matching the network identifier.
+     *
+     * @param networkId virtual network identifier
+     * @return virtual network instance
+     * @throws org.onlab.util.ItemNotFoundException if no such network found
+     */
+    VirtualNetwork getVirtualNetwork(NetworkId networkId);
+
+    /**
+     * Returns {@code tenantId} for specified virtual network id.
+     *
+     * @param networkId virtual network identifier
+     * @return tenantId tenant identifier
+     * @throws org.onlab.util.ItemNotFoundException if no such network found
+     */
+    TenantId getTenantId(NetworkId networkId);
 
     /**
      * Returns a collection of all virtual devices in the specified network.
@@ -83,6 +103,17 @@ public interface VirtualNetworkService {
     Set<VirtualPort> getVirtualPorts(NetworkId networkId, DeviceId deviceId);
 
     /**
+     * Returns list of physical device identifier mapping with the virtual
+     * device in the specified network. The physical devices are specified by
+     * port mapping mechanism.
+     *
+     * @param networkId network identifier
+     * @param deviceId the virtual device identifier
+     * @return collection of the specified device's identifier
+     */
+    Set<DeviceId> getPhysicalDevices(NetworkId networkId, DeviceId deviceId);
+
+    /**
      * Returns implementation of the specified service class for operating
      * in the context of the given network.
      * <p>
@@ -93,9 +124,13 @@ public interface VirtualNetworkService {
      * <li>{@link org.onosproject.net.host.HostService}</li>
      * <li>{@link org.onosproject.net.topology.TopologyService}</li>
      * <li>{@link org.onosproject.net.topology.PathService}</li>
+     * <li>{@link org.onosproject.net.packet.PacketService}</li>
      * <li>{@link org.onosproject.net.flow.FlowRuleService}</li>
      * <li>{@link org.onosproject.net.flowobjective.FlowObjectiveService}</li>
      * <li>{@link org.onosproject.net.intent.IntentService}</li>
+     * <li>{@link org.onosproject.mastership.MastershipService}</li>
+     * <li>{@link org.onosproject.mastership.MastershipAdminService}</li>
+     * <li>{@link org.onosproject.mastership.MastershipTermService}</li>
      * </ul>
      *
      * @param networkId    network identifier

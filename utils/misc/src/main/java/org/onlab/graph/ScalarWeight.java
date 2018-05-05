@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,16 @@ public class ScalarWeight implements Weight {
 
     private static double samenessThreshold = Double.MIN_VALUE;
 
-    private double value;
+    private final double value;
+
+    /**
+     * Creates a new scalar weight with the given double value.
+     * @param value double value
+     * @return scalar weight instance
+     */
+    public static ScalarWeight toWeight(double value) {
+        return new ScalarWeight(value);
+    }
 
     /**
      * Creates a new scalar weight with the given double value.

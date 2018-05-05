@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,9 @@ import java.util.Set;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.onlab.graph.ScalarWeight;
 import org.onlab.packet.IpAddress;
-import org.onosproject.core.DefaultGroupId;
+import org.onosproject.core.GroupId;
 import org.onosproject.incubator.net.tunnel.DefaultTunnelDescription;
 import org.onosproject.incubator.net.tunnel.IpTunnelEndPoint;
 import org.onosproject.incubator.net.tunnel.Tunnel;
@@ -91,10 +92,11 @@ public class OvsdbTunnelProviderTest {
                                                                 src,
                                                                 dst,
                                                                 Tunnel.Type.VXLAN,
-                                                                new DefaultGroupId(0),
+                                                                new GroupId(0),
                                                                 this.provider.id(),
                                                                 TunnelName.tunnelName("tunnel12"),
-                                                                new DefaultPath(this.provider.id(), links, 0.3),
+                                                                new DefaultPath(this.provider.id(), links,
+                                                                        ScalarWeight.toWeight(0.3)),
                                                                 annotations);
         provider.tunnelAdded(tunnel);
         assertEquals(1, providerService.tunnelSet.size());
@@ -116,10 +118,11 @@ public class OvsdbTunnelProviderTest {
                                                                 src,
                                                                 dst,
                                                                 Tunnel.Type.VXLAN,
-                                                                new DefaultGroupId(0),
+                                                                new GroupId(0),
                                                                 this.provider.id(),
                                                                 TunnelName.tunnelName("tunnel1"),
-                                                                new DefaultPath(this.provider.id(), links, 0.3),
+                                                                new DefaultPath(this.provider.id(), links,
+                                                                        ScalarWeight.toWeight(0.3)),
                                                                 annotations);
         provider.tunnelRemoved(tunnel);
         assertEquals(0, providerService.tunnelSet.size());

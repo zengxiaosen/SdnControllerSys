@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,7 +95,7 @@ public final class VtnData {
                 .filter(p -> !p.number().equals(PortNumber.LOCAL))
                 .forEach(p -> {
                     if (p.annotations().value(AnnotationKeys.PORT_NAME)
-                            .startsWith(PORT_HEAD)) {
+                            .startsWith(PORT_HEAD)) {//PORT_HEAD="vxlan"
                         localTunnelPorts.add(p.number());
                     }
                 });

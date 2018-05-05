@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,18 @@ package org.onosproject.incubator.net.virtual;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.FlowRuleBatchEvent;
-import org.onosproject.net.flow.FlowRuleBatchOperation;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchEvent;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
 import org.onosproject.net.flow.FlowRuleEvent;
 import org.onosproject.net.flow.FlowRuleStoreDelegate;
 import org.onosproject.net.flow.TableStatisticsEntry;
 
 import java.util.List;
 
+/**
+ * Manages inventory of flow rules for virtual networks;
+ * not intended for direct use.
+ */
 public interface VirtualNetworkFlowRuleStore
         extends VirtualStore<FlowRuleBatchEvent, FlowRuleStoreDelegate> {
     /**
@@ -54,17 +58,6 @@ public interface VirtualNetworkFlowRuleStore
      * @return the flow entries
      */
     Iterable<FlowEntry> getFlowEntries(NetworkId networkId, DeviceId deviceId);
-
-    /**
-     * // TODO: Better description of method behavior.
-     * Stores a new flow rule without generating events.
-     *
-     * @param networkId virtual network identifier
-     * @param rule the flow rule to add
-     * @deprecated in Cardinal Release
-     */
-    @Deprecated
-    void storeFlowRule(NetworkId networkId, FlowRule rule);
 
     /**
      * Stores a batch of flow rules.

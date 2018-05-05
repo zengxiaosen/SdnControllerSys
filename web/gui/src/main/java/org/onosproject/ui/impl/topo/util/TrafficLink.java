@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Laboratory
+ *  Copyright 2016-present Open Networking Foundation
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,16 +19,25 @@ package org.onosproject.ui.impl.topo.util;
 import org.onosproject.net.Link;
 import org.onosproject.net.LinkKey;
 import org.onosproject.net.statistic.Load;
+import org.onosproject.ui.model.topo.UiLinkId;
 import org.onosproject.ui.topo.BiLink;
 import org.onosproject.ui.topo.LinkHighlight;
 import org.onosproject.ui.topo.LinkHighlight.Flavor;
-import org.onosproject.ui.topo.TopoUtils;
-import org.slf4j.Logger;
+import org.onosproject.ui.topo.Mod;
+import org.onosproject.ui.topo.TopoUtils.Magnitude;
+import org.onosproject.ui.topo.TopoUtils.ValueLabel;
 
-import static org.slf4j.LoggerFactory.getLogger;
+import java.util.HashSet;
+import java.util.Set;
+
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static org.onosproject.ui.topo.LinkHighlight.Flavor.NO_HIGHLIGHT;
 import static org.onosproject.ui.topo.LinkHighlight.Flavor.PRIMARY_HIGHLIGHT;
 import static org.onosproject.ui.topo.LinkHighlight.Flavor.SECONDARY_HIGHLIGHT;
+import static org.onosproject.ui.topo.TopoUtils.formatBytes;
+import static org.onosproject.ui.topo.TopoUtils.formatClippedBitRate;
+import static org.onosproject.ui.topo.TopoUtils.formatFlows;
+import static org.onosproject.ui.topo.TopoUtils.formatPacketRate;
 
 /**
  * Representation of a link and its inverse, and associated traffic data.
@@ -36,11 +45,12 @@ import static org.onosproject.ui.topo.LinkHighlight.Flavor.SECONDARY_HIGHLIGHT;
  * {@link LinkHighlight}s for showing traffic data on the topology view.
  */
 public class TrafficLink extends BiLink {
-
-    private final Logger log = getLogger(getClass());
+    private static final Mod PORT_TRAFFIC_GREEN = new Mod("port-traffic-green");
+    private static final Mod PORT_TRAFFIC_YELLOW = new Mod("port-traffic-yellow");
+    private static final Mod PORT_TRAFFIC_ORANGE = new Mod("port-traffic-orange");
+    private static final Mod PORT_TRAFFIC_RED = new Mod("port-traffic-red");
 
     private static final String EMPTY = "";
-    private static final String QUE = "?";
 
     private long bytes = 0;
     private long rate = 0;
@@ -49,6 +59,7 @@ public class TrafficLink extends BiLink {
     private boolean hasTraffic = false;
     private boolean isOptical = false;
     private boolean antMarch = false;
+    private Set<Mod> mods = new HashSet<>();
 
     /**
      * Constructs a traffic link for the given key and initial link.
@@ -58,6 +69,86 @@ public class TrafficLink extends BiLink {
      */
     public TrafficLink(LinkKey key, Link link) {
         super(key, link);
+    }
+
+
+    /**
+     * Returns an "empty" traffic link (one with no underlying links or stats)
+     * with the given identifier. This is useful when we want to aggregate
+     * stats from other links into a single entity (such as a region-region
+     * link reporting the stats for the links that compose it).
+     *
+     * @param id the link identifier
+     */
+    public TrafficLink(UiLinkId id) {
+        super(id);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        TrafficLink that = (TrafficLink) o;
+
+        return bytes == that.bytes && rate == that.rate &&
+                flows == that.flows && hasTraffic == that.hasTraffic &&
+                isOptical == that.isOptical && antMarch == that.antMarch &&
+                taggedFlavor == that.taggedFlavor && mods.equals(that.mods);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (bytes ^ (bytes >>> 32));
+        result = 31 * result + (int) (rate ^ (rate >>> 32));
+        result = 31 * result + (int) (flows ^ (flows >>> 32));
+        result = 31 * result + taggedFlavor.hashCode();
+        result = 31 * result + (hasTraffic ? 1 : 0);
+        result = 31 * result + (isOptical ? 1 : 0);
+        result = 31 * result + (antMarch ? 1 : 0);
+        result = 31 * result + mods.hashCode();
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper(this)
+                .add("linkId", linkId())
+                .add("bytes", bytes)
+                .add("rate", rate)
+                .add("flows", flows)
+                .toString();
+    }
+
+    /**
+     * Returns the count of bytes.
+     *
+     * @return the byte count
+     */
+    public long bytes() {
+        return bytes;
+    }
+
+    /**
+     * Returns the rate.
+     *
+     * @return the rate
+     */
+    public long rate() {
+        return rate;
+    }
+
+    /**
+     * Returns the flows.
+     *
+     * @return flow count
+     */
+    public long flows() {
+        return flows;
     }
 
     /**
@@ -89,7 +180,20 @@ public class TrafficLink extends BiLink {
      * @return self, for chaining
      */
     public TrafficLink tagFlavor(Flavor flavor) {
-        this.taggedFlavor = flavor;
+        taggedFlavor = flavor;
+        return this;
+    }
+
+    /**
+     * Tags this traffic link with the mods to be used in visual rendering.
+     *
+     * @param mods the mods to tag on this link
+     * @return self, for chaining
+     */
+    public TrafficLink tagMods(Set<Mod> mods) {
+        if (mods != null) {
+            this.mods.addAll(mods);
+        }
         return this;
     }
 
@@ -107,7 +211,7 @@ public class TrafficLink extends BiLink {
      * load {@link Load#rate rate} is greater than the given threshold
      * (expressed in bytes per second).
      *
-     * @param load load to add
+     * @param load      load to add
      * @param threshold threshold to register traffic
      */
     public void addLoad(Load load, double threshold) {
@@ -127,86 +231,124 @@ public class TrafficLink extends BiLink {
         this.flows += count;
     }
 
+    /**
+     * Merges the load recorded on the given traffic link into this one.
+     *
+     * @param other the other traffic link
+     */
+    public void mergeStats(TrafficLink other) {
+        this.bytes += other.bytes;
+        this.rate += other.rate;
+        this.flows += other.flows;
+    }
+
+
     @Override
     public LinkHighlight highlight(Enum<?> type) {
         StatsType statsType = (StatsType) type;
         switch (statsType) {
             case FLOW_COUNT:
-                return highlightForFlowCount(statsType);
+                return highlightForFlowCount();
 
             case FLOW_STATS:
             case PORT_STATS:
-                ////////////////////////////////////////////////
-                String LinkPortResult = generateLabel(statsType);
-                //log.info("link的带宽"+LinkPortResult+"...");
+            case PORT_PACKET_STATS:
                 return highlightForStats(statsType);
 
             case TAGGED:
-                return highlightForTagging(statsType);
+                return highlightForTagging();
 
             default:
                 throw new IllegalStateException("unexpected case: " + statsType);
         }
     }
 
-    /**
-     * 这里是对web页面的port信息做高亮统计
-     * @param type
-     * @return
-     */
     private LinkHighlight highlightForStats(StatsType type) {
+        ValueLabel vl = null;
+        Mod m = null;
 
-        //generateLabel(type)就是带宽信息
+        // based on the type of stats, need to determine the label and "color"...
+        switch (type) {
+            case FLOW_STATS:
+                vl = formatBytes(bytes);
+                // default to "secondary highlighting" of link
+                break;
 
-        return new LinkHighlight(linkId(), SECONDARY_HIGHLIGHT)
-                .setLabel(generateLabel(type));
+            case PORT_STATS:
+                vl = formatClippedBitRate(rate);
+
+                // set color based on bits per second...
+                if (vl.magnitude() == Magnitude.ONE ||
+                        vl.magnitude() == Magnitude.KILO) {
+                    m = PORT_TRAFFIC_GREEN;
+
+                } else if (vl.magnitude() == Magnitude.MEGA) {
+                    m = PORT_TRAFFIC_YELLOW;
+
+                } else if (vl.magnitude() == Magnitude.GIGA) {
+                    m = vl.clipped() ? PORT_TRAFFIC_RED : PORT_TRAFFIC_ORANGE;
+                }
+                break;
+
+            case PORT_PACKET_STATS:
+                vl = formatPacketRate(rate);
+
+                // FIXME: Provisional color threshold parameters for packets
+                // set color based on bits per second...
+                if (rate < 10) {
+                    m = PORT_TRAFFIC_GREEN;
+
+                } else if (rate < 1000) {
+                    m = PORT_TRAFFIC_YELLOW;
+
+                } else if (rate < 100000) {
+                    m = PORT_TRAFFIC_ORANGE;
+                } else {
+                    m = PORT_TRAFFIC_RED;
+                }
+                break;
+
+            default:
+                break;
+        }
+
+        LinkHighlight hlite = new LinkHighlight(linkId(), SECONDARY_HIGHLIGHT);
+        if (vl != null) {
+            hlite.setLabel(vl.toString());
+        }
+        if (m != null) {
+            hlite.addMod(m);
+        }
+
+        return addCustomMods(hlite);
     }
 
-    private LinkHighlight highlightForFlowCount(StatsType type) {
-
+    private LinkHighlight highlightForFlowCount() {
         Flavor flavor = flows > 0 ? PRIMARY_HIGHLIGHT : SECONDARY_HIGHLIGHT;
-        return new LinkHighlight(linkId(), flavor)
-                .setLabel(generateLabel(type));
+        LinkHighlight hlite = new LinkHighlight(linkId(), flavor)
+                .setLabel(formatFlows(flows));
+
+        return addCustomMods(hlite);
     }
 
-    private LinkHighlight highlightForTagging(StatsType type) {
-
+    private LinkHighlight highlightForTagging() {
         LinkHighlight hlite = new LinkHighlight(linkId(), taggedFlavor)
-                .setLabel(generateLabel(type));
+                .setLabel(hasTraffic ? formatBytes(bytes).toString() : EMPTY);
+
         if (isOptical) {
             hlite.addMod(LinkHighlight.MOD_OPTICAL);
         }
         if (antMarch) {
             hlite.addMod(LinkHighlight.MOD_ANIMATED);
         }
-        return hlite;
+        return addCustomMods(hlite);
     }
 
-    /**
-     * 这里是页面左下角点击哪种类型的统计，然后实时统计
-     * @param type
-     * @return
-     */
-    // Generates a string representation of the load, to be used as a label
-    private String generateLabel(StatsType type) {
-        switch (type) {
-            case FLOW_COUNT:
-                return TopoUtils.formatFlows(flows);
-
-            case FLOW_STATS:
-                return TopoUtils.formatBytes(bytes);
-
-            case PORT_STATS:
-                /////////////////////////////////////////////////////////////////
-
-                return TopoUtils.formatBitRate(rate);
-
-            case TAGGED:
-                return hasTraffic ? TopoUtils.formatBytes(bytes) : EMPTY;
-
-            default:
-                return QUE;
+    private LinkHighlight addCustomMods(LinkHighlight hlite) {
+        if (!mods.isEmpty()) {
+            mods.forEach(hlite::addMod);
         }
+        return hlite;
     }
 
     /**
@@ -237,6 +379,11 @@ public class TrafficLink extends BiLink {
          * Number of bits per second.
          */
         PORT_STATS,
+
+        /**
+         * Number of packets per second.
+         */
+        PORT_PACKET_STATS,
 
         /**
          * Custom tagged information.

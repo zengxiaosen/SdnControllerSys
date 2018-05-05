@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ public class NiciraEncapEthDst extends AbstractExtension implements ExtensionTre
     private MacAddress encapEthDst;
 
     private final KryoNamespace appKryo = new KryoNamespace.Builder()
-    .register(new MacAddressSerializer(), MacAddress.class).register(byte[].class).build();;
+    .register(new MacAddressSerializer(), MacAddress.class).register(byte[].class).build();
 
     /**
      * Creates a new nshEncapEthDst instruction.

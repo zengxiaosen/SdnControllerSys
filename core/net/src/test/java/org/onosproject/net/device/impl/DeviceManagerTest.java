@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.device.PortDescription;
 import org.onosproject.net.provider.AbstractProvider;
 import org.onosproject.net.provider.ProviderId;
+import org.onosproject.store.cluster.messaging.ClusterCommunicationServiceAdapter;
 import org.onosproject.store.trivial.SimpleDeviceStore;
 
 import java.util.ArrayList;
@@ -106,6 +107,7 @@ public class DeviceManagerTest {
         mgr.termService = mastershipManager;
         mgr.clusterService = new TestClusterService();
         mgr.networkConfigService = new TestNetworkConfigService();
+        mgr.communicationService = new TestClusterCommunicationService();
         mgr.activate();
 
 
@@ -144,6 +146,7 @@ public class DeviceManagerTest {
         assertNotNull("one device expected", it.next());
         assertFalse("only one device expected", it.hasNext());
         assertEquals("incorrect device count", 1, service.getDeviceCount());
+        assertEquals("incorrect available device count", 1, service.getAvailableDeviceCount());
         assertTrue("device should be available", service.isAvailable(DID1));
     }
 
@@ -165,6 +168,7 @@ public class DeviceManagerTest {
         validateEvents(DEVICE_AVAILABILITY_CHANGED);
 
         assertEquals("incorrect device count", 2, service.getDeviceCount());
+        assertEquals("incorrect available device count", 2, service.getAvailableDeviceCount());
     }
 
     @Test
@@ -186,15 +190,15 @@ public class DeviceManagerTest {
     public void updatePorts() {
         connectDevice(DID1, SW1);
         List<PortDescription> pds = new ArrayList<>();
-        pds.add(new DefaultPortDescription(P1, true));
-        pds.add(new DefaultPortDescription(P2, true));
-        pds.add(new DefaultPortDescription(P3, true));
+        pds.add(DefaultPortDescription.builder().withPortNumber(P1).isEnabled(true).build());
+        pds.add(DefaultPortDescription.builder().withPortNumber(P2).isEnabled(true).build());
+        pds.add(DefaultPortDescription.builder().withPortNumber(P3).isEnabled(true).build());
         providerService.updatePorts(DID1, pds);
         validateEvents(DEVICE_ADDED, PORT_ADDED, PORT_ADDED, PORT_ADDED);
         pds.clear();
 
-        pds.add(new DefaultPortDescription(P1, false));
-        pds.add(new DefaultPortDescription(P3, true));
+        pds.add(DefaultPortDescription.builder().withPortNumber(P1).isEnabled(false).build());
+        pds.add(DefaultPortDescription.builder().withPortNumber(P3).isEnabled(true).build());
         providerService.updatePorts(DID1, pds);
         validateEvents(PORT_UPDATED, PORT_REMOVED);
     }
@@ -203,14 +207,16 @@ public class DeviceManagerTest {
     public void updatePortStatus() {
         connectDevice(DID1, SW1);
         List<PortDescription> pds = new ArrayList<>();
-        pds.add(new DefaultPortDescription(P1, true));
-        pds.add(new DefaultPortDescription(P2, true));
+        pds.add(DefaultPortDescription.builder().withPortNumber(P1).isEnabled(true).build());
+        pds.add(DefaultPortDescription.builder().withPortNumber(P2).isEnabled(true).build());
         providerService.updatePorts(DID1, pds);
         validateEvents(DEVICE_ADDED, PORT_ADDED, PORT_ADDED);
 
-        providerService.portStatusChanged(DID1, new DefaultPortDescription(P1, false));
+        providerService.portStatusChanged(DID1, DefaultPortDescription.builder()
+                .withPortNumber(P1).isEnabled(false).build());
         validateEvents(PORT_UPDATED);
-        providerService.portStatusChanged(DID1, new DefaultPortDescription(P1, false));
+        providerService.portStatusChanged(DID1, DefaultPortDescription.builder()
+                .withPortNumber(P1).isEnabled(false).build());
         assertTrue("no events expected", listener.events.isEmpty());
     }
 
@@ -218,15 +224,15 @@ public class DeviceManagerTest {
     public void getPorts() {
         connectDevice(DID1, SW1);
         List<PortDescription> pds = new ArrayList<>();
-        pds.add(new DefaultPortDescription(P1, true));
-        pds.add(new DefaultPortDescription(P2, true));
+        pds.add(DefaultPortDescription.builder().withPortNumber(P1).isEnabled(true).build());
+        pds.add(DefaultPortDescription.builder().withPortNumber(P2).isEnabled(true).build());
         providerService.updatePorts(DID1, pds);
         validateEvents(DEVICE_ADDED, PORT_ADDED, PORT_ADDED);
         assertEquals("wrong port count", 2, service.getPorts(DID1).size());
 
         Port port = service.getPort(DID1, P1);
-        assertEquals("incorrect port", P1, service.getPort(DID1, P1).number());
-        assertEquals("incorrect state", true, service.getPort(DID1, P1).isEnabled());
+        assertEquals("incorrect port", P1, port.number());
+        assertEquals("incorrect state", true, port.isEnabled());
     }
 
     @Test
@@ -234,10 +240,12 @@ public class DeviceManagerTest {
         connectDevice(DID1, SW1);
         connectDevice(DID2, SW2);
         assertEquals("incorrect device count", 2, service.getDeviceCount());
+        assertEquals("incorrect available device count", 2, service.getAvailableDeviceCount());
         admin.removeDevice(DID1);
         assertNull("device should not be found", service.getDevice(DID1));
         assertNotNull("device should be found", service.getDevice(DID2));
         assertEquals("incorrect device count", 1, service.getDeviceCount());
+        assertEquals("incorrect available device count", 1, service.getAvailableDeviceCount());
 
     }
 
@@ -332,5 +340,8 @@ public class DeviceManagerTest {
     }
 
     private class TestNetworkConfigService extends NetworkConfigServiceAdapter {
+    }
+
+    private class TestClusterCommunicationService extends ClusterCommunicationServiceAdapter {
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,9 @@ import org.onosproject.net.Annotations;
 import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.DefaultAnnotations.Builder;
 
+import java.util.Set;
+import java.util.TreeSet;
+
 /**
  * Annotations JSON codec.
  */
@@ -31,7 +34,8 @@ public final class AnnotationsCodec extends JsonCodec<Annotations> {
     @Override
     public ObjectNode encode(Annotations annotations, CodecContext context) {
         ObjectNode result = context.mapper().createObjectNode();
-        for (String key : annotations.keys()) {
+        Set<String> keys = new TreeSet<>(annotations.keys());
+        for (String key : keys) {
             result.put(key, annotations.value(key));
         }
         return result;

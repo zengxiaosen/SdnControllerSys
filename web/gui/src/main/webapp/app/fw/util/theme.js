@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
     'use strict';
 
     // injected refs
-    var $log, fs, ps;
+    var $log, ps;
 
     // configuration
     var themes = ['light', 'dark'],
@@ -29,9 +29,41 @@
 
     // internal state
     var listeners = [],
-        currentTheme,
         thidx;
 
+    // TODO: fine tune these colors
+    var spriteColors = {
+        gray1: {
+            fill: {
+                light: '#eeeeee',
+                dark: '#222222',
+            },
+            stroke: {
+                light: '#cccccc',
+                dark: '#333333',
+            },
+        },
+        gold1: {
+            fill: {
+                light: '#eeddaa',
+                dark: '#544714',
+            },
+            stroke: {
+                light: '#ffddaa',
+                dark: '#645724',
+            },
+        },
+        blue1: {
+            fill: {
+                light: '#a2b9ee',
+                dark: '#273059',
+            },
+            stroke: {
+                light: '#92a9de',
+                dark: '#273a63',
+            },
+        },
+    };
 
     function init() {
         thidx = ps.getPrefs('theme', { idx: 0 }).idx;
@@ -42,9 +74,9 @@
         return themes[thidx];
     }
 
-    function setTheme(t, force) {
+    function setTheme(t) {
         var idx = themes.indexOf(t);
-        if (force || idx > -1 && idx !== thidx) {
+        if (idx > -1 && idx !== thidx) {
             thidx = idx;
             ps.setPrefs('theme', { idx: thidx });
             applyTheme();
@@ -61,18 +93,15 @@
 
     function applyTheme(evt) {
         thidx = ps.getPrefs('theme', { idx: thidx }).idx;
-        if (currentTheme != thidx) {
-            $log.info('Applying theme:', thidx);
-            updateBodyClass();
-            themeEvent(evt || 'set');
-        }
+        $log.info('Applying theme:', thidx);
+        updateBodyClass();
+        themeEvent(evt || 'set');
     }
 
     function updateBodyClass() {
         var body = d3.select('body');
         body.classed(themeStr, false);
         body.classed(getTheme(), true);
-        currentTheme = thidx;
     }
 
     function themeEvent(w) {
@@ -80,8 +109,8 @@
             m = 'Theme-Change-(' + w + '): ' + t;
         $log.debug(m);
 
-        listeners.forEach(function (lsnr) { 
-            lsnr({event: 'themeChange', value: t}); 
+        listeners.forEach(function (lsnr) {
+            lsnr({ event: 'themeChange', value: t });
         });
     }
 
@@ -90,14 +119,23 @@
     }
 
     function removeListener(lsnr) {
-        listeners = listeners.filter(function(obj) { return obj === lsnr; });
+        listeners = listeners.filter(function (obj) { return obj !== lsnr; });
+    }
+
+    // color = logical color name
+    // what  = fill or stroke
+    function spriteColor(color, what) {
+        var c = color || 'none',
+            w = what || 'stroke',
+            t = getTheme();
+
+        return c === 'none' ? c : spriteColors[c][w][t];
     }
 
     angular.module('onosUtil')
-        .factory('ThemeService', ['$log', 'FnService', 'PrefsService',
-        function (_$log_, _fs_, _ps_) {
+        .factory('ThemeService', ['$log', 'PrefsService',
+        function (_$log_, _ps_) {
             $log = _$log_;
-            fs = _fs_;
             ps = _ps_;
 
             ps.addListener(applyTheme);
@@ -113,7 +151,8 @@
                 },
                 toggleTheme: toggleTheme,
                 addListener: addListener,
-                removeListener: removeListener
+                removeListener: removeListener,
+                spriteColor: spriteColor,
             };
     }]);
 

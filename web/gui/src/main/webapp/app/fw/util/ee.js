@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Laboratory
+ *  Copyright 2016-present Open Networking Foundation
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,7 +37,10 @@
         'ias',
         'jweeidkpizn',
         'fmfv',
-        'hwdoc'
+        'hwdoc',
+        'acxefcsdgt',
+        'pmmn',
+        'ugaryc'
         // Add more beans...
     ];
 
@@ -54,7 +57,7 @@
             i;
 
         for (i = 0; i<n; i+=2)
-            w.push(fcc(Number(d.slice(i, i+2))));
+            { w.push(fcc(Number(d.slice(i, i+2)))); }
 
         return fs.eecode(h, w.join(''));
     }
@@ -96,7 +99,7 @@
 
             return {
                 genMap: genMap,
-                cluck: cluck
-            }
+                cluck: cluck,
+            };
         }]);
 }());

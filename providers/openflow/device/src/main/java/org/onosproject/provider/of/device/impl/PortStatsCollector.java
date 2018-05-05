@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ public class PortStatsCollector {
 
     private final Logger log = getLogger(getClass());
 
-    private static final int SECONDS = 1000;
+    private static final long SECONDS = 1000L;
 
     private OpenFlowSwitch sw;
     private Timer timer;
@@ -62,7 +62,7 @@ public class PortStatsCollector {
 
         @Override
         public void run() {
-            sendPortStatistic();
+            sendPortStatisticRequest();
         }
     }
 
@@ -101,7 +101,7 @@ public class PortStatsCollector {
     /**
      * Sends port statistic request to switch.
      */
-    private void sendPortStatistic() {
+    private void sendPortStatisticRequest() {
         if (sw.getRole() != RoleState.MASTER) {
             return;
         }

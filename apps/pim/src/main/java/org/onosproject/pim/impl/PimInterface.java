@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,20 +28,20 @@ import org.onlab.packet.pim.PIMHello;
 import org.onlab.packet.pim.PIMHelloOption;
 import org.onlab.packet.pim.PIMJoinPrune;
 import org.onlab.packet.pim.PIMJoinPruneGroup;
-import org.onosproject.incubator.net.intf.Interface;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.host.InterfaceIpAddress;
+import org.onosproject.net.intf.Interface;
 import org.onosproject.net.mcast.McastRoute;
 import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.PacketService;
 import org.slf4j.Logger;
 
 import java.nio.ByteBuffer;
+import java.security.SecureRandom;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -119,7 +119,7 @@ public final class PimInterface {
 
         lastHello = 0;
 
-        generationId = new Random().nextInt();
+        generationId = new SecureRandom().nextInt();
 
         // Create a PIM Neighbor to represent ourselves for DR election.
         PimNeighbor us = new PimNeighbor(ourIp, mac, holdTime, 0, priority, generationId);
@@ -167,7 +167,7 @@ public final class PimInterface {
     /**
      * Return a single "best" IP address.
      *
-     * @return the choosen IP address or null if none
+     * @return the chosen IP address or null if none
      */
     public IpAddress getIpAddress() {
         if (onosInterface.ipAddressesList().isEmpty()) {
@@ -593,9 +593,9 @@ public final class PimInterface {
     }
 
     private static class RouteData {
-        public final IpAddress ipAddress;
-        public final MacAddress macAddress;
-        public long timestamp;
+        final IpAddress ipAddress;
+        final MacAddress macAddress;
+        long timestamp;
 
         public RouteData(IpAddress ip, MacAddress mac) {
             this.ipAddress = ip;

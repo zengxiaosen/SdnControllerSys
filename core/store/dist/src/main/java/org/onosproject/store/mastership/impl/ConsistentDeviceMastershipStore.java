@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ import org.onosproject.store.AbstractStore;
 import org.onosproject.store.cluster.messaging.ClusterCommunicationService;
 import org.onosproject.store.cluster.messaging.MessageSubject;
 import org.onosproject.store.serializers.KryoNamespaces;
-import org.onosproject.store.serializers.StoreSerializer;
+import org.onosproject.store.service.Serializer;
 import org.slf4j.Logger;
 
 import com.google.common.base.Objects;
@@ -108,7 +108,7 @@ public class ConsistentDeviceMastershipStore
     private static final String DEVICE_ID_NULL = "Device ID cannot be null";
     private static final int WAIT_BEFORE_MASTERSHIP_HANDOFF_MILLIS = 3000;
 
-    public static final StoreSerializer SERIALIZER = StoreSerializer.using(
+    public static final Serializer SERIALIZER = Serializer.using(
             KryoNamespace.newBuilder()
                     .register(KryoNamespaces.API)
                     .register(MastershipRole.class)
@@ -155,8 +155,12 @@ public class ConsistentDeviceMastershipStore
 
         String leadershipTopic = createDeviceMastershipTopic(deviceId);
         Leadership leadership = leadershipService.runForLeadership(leadershipTopic);
-        return CompletableFuture.completedFuture(localNodeId.equals(leadership.leaderNodeId())
-                ? MastershipRole.MASTER : MastershipRole.STANDBY);
+        NodeId leader = leadership == null ? null : leadership.leaderNodeId();
+        List<NodeId> candidates = leadership == null ?
+                ImmutableList.of() : ImmutableList.copyOf(leadership.candidates());
+        MastershipRole role = Objects.equal(localNodeId, leader) ?
+                MastershipRole.MASTER : candidates.contains(localNodeId) ? MastershipRole.STANDBY : MastershipRole.NONE;
+        return CompletableFuture.completedFuture(role);
     }
 
     @Override
@@ -324,27 +328,33 @@ public class ConsistentDeviceMastershipStore
         private void handleEvent(LeadershipEvent event) {
             Leadership leadership = event.subject();
             DeviceId deviceId = extractDeviceIdFromTopic(leadership.topic());
-            RoleInfo roleInfo = event.type() != LeadershipEvent.Type.SERVICE_DISRUPTED ?
-                    getNodes(deviceId) : new RoleInfo();
+            NodeId master = event.subject().leaderNodeId();
+            List<NodeId> backups = event.subject().candidates()
+                    .stream()
+                    .filter(n -> !n.equals(master))
+                    .collect(Collectors.toList());
+            RoleInfo roleInfo = event.type() != LeadershipEvent.Type.SERVICE_DISRUPTED
+                    ? new RoleInfo(master, backups)
+                    : new RoleInfo();
             switch (event.type()) {
-            case LEADER_AND_CANDIDATES_CHANGED:
-                notifyDelegate(new MastershipEvent(BACKUPS_CHANGED, deviceId, roleInfo));
-                notifyDelegate(new MastershipEvent(MASTER_CHANGED, deviceId, roleInfo));
-                break;
-            case LEADER_CHANGED:
-                notifyDelegate(new MastershipEvent(MASTER_CHANGED, deviceId, roleInfo));
-                break;
-            case CANDIDATES_CHANGED:
-                notifyDelegate(new MastershipEvent(BACKUPS_CHANGED, deviceId, roleInfo));
-                break;
-            case SERVICE_DISRUPTED:
-                notifyDelegate(new MastershipEvent(SUSPENDED, deviceId, roleInfo));
-                break;
-            case SERVICE_RESTORED:
-                // Do nothing, wait for updates from peers
-                break;
-            default:
-                return;
+                case LEADER_AND_CANDIDATES_CHANGED:
+                    notifyDelegate(new MastershipEvent(BACKUPS_CHANGED, deviceId, roleInfo));
+                    notifyDelegate(new MastershipEvent(MASTER_CHANGED, deviceId, roleInfo));
+                    break;
+                case LEADER_CHANGED:
+                    notifyDelegate(new MastershipEvent(MASTER_CHANGED, deviceId, roleInfo));
+                    break;
+                case CANDIDATES_CHANGED:
+                    notifyDelegate(new MastershipEvent(BACKUPS_CHANGED, deviceId, roleInfo));
+                    break;
+                case SERVICE_DISRUPTED:
+                    notifyDelegate(new MastershipEvent(SUSPENDED, deviceId, roleInfo));
+                    break;
+                case SERVICE_RESTORED:
+                    // Do nothing, wait for updates from peers
+                    break;
+                default:
+                    return;
             }
         }
     }

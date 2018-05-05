@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.onlab.packet.ChassisId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.incubator.net.config.basics.ConfigException;
 import org.onosproject.net.AnnotationKeys;
 import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.Device;
@@ -35,6 +34,7 @@ import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigRegistry;
+import org.onosproject.net.config.basics.SubjectFactories;
 import org.onosproject.net.device.DefaultDeviceDescription;
 import org.onosproject.net.device.DeviceAdminService;
 import org.onosproject.net.device.DeviceDescription;
@@ -45,9 +45,11 @@ import org.onosproject.net.device.DeviceProviderService;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.provider.AbstractProvider;
 import org.onosproject.net.provider.ProviderId;
+import org.onosproject.tl1.DefaultTl1Device;
 import org.onosproject.tl1.Tl1Controller;
 import org.onosproject.tl1.Tl1Device;
 import org.onosproject.tl1.Tl1Listener;
+import org.onosproject.tl1.device.Tl1DeviceConfig;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -56,20 +58,24 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
-import static org.onosproject.net.config.basics.SubjectFactories.APP_SUBJECT_FACTORY;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Device provider for TL1 devices.
- *
+ * <p>
  * Sits between ONOS provider service and the TL1 controller.
  * Relies on network config subsystem to know about devices.
  */
 @Component(immediate = true)
 public class Tl1DeviceProvider extends AbstractProvider implements DeviceProvider {
     private static final String APP_NAME = "org.onosproject.tl1";
-    private static final String TL1 = "tl1";
+    /**
+     * @deprecated in 1.11.0. Use {@link Tl1DeviceConfig#TL1} instead
+     */
+    @Deprecated
+    protected static final String TL1 = Tl1DeviceConfig.TL1;
     private static final String PROVIDER = "org.onosproject.provider.tl1.device";
     private static final String UNKNOWN = "unknown";
     private static final int REACHABILITY_TIMEOUT = 2000;      // in milliseconds
@@ -99,14 +105,13 @@ public class Tl1DeviceProvider extends AbstractProvider implements DeviceProvide
     private Tl1Listener tl1Listener = new InnerTl1Listener();
     private DeviceProviderService providerService;
 
-    private final ConfigFactory cfgFactory =
-            new ConfigFactory<ApplicationId, Tl1ProviderConfig>(APP_SUBJECT_FACTORY,
-                    Tl1ProviderConfig.class,
-                    "devices",
-                    true) {
+    private final ConfigFactory factory =
+            new ConfigFactory<DeviceId, Tl1DeviceConfig>(SubjectFactories.DEVICE_SUBJECT_FACTORY,
+                                                         Tl1DeviceConfig.class,
+                                                         Tl1DeviceConfig.TL1) {
                 @Override
-                public Tl1ProviderConfig createConfig() {
-                    return new Tl1ProviderConfig();
+                public Tl1DeviceConfig createConfig() {
+                    return new Tl1DeviceConfig();
                 }
             };
 
@@ -116,8 +121,8 @@ public class Tl1DeviceProvider extends AbstractProvider implements DeviceProvide
         providerService = providerRegistry.register(this);
         cfgRegistry.addListener(cfgListener);
         controller.addListener(tl1Listener);
-        cfgRegistry.registerConfigFactory(cfgFactory);
-        registerDevices();
+        cfgRegistry.registerConfigFactory(factory);
+        connectDevices();
         log.info("Started");
     }
 
@@ -130,19 +135,21 @@ public class Tl1DeviceProvider extends AbstractProvider implements DeviceProvide
             deviceAdminService.removeDevice(deviceId);
         });
         providerRegistry.unregister(this);
-        cfgRegistry.unregisterConfigFactory(cfgFactory);
+        cfgRegistry.unregisterConfigFactory(factory);
         providerService = null;
         log.info("Stopped");
     }
 
     public Tl1DeviceProvider() {
-        super(new ProviderId(TL1, PROVIDER));
+        super(new ProviderId(Tl1DeviceConfig.TL1, PROVIDER));
     }
 
+    @Override
     public void triggerProbe(DeviceId deviceId) {
         // TODO
     }
 
+    @Override
     public void roleChanged(DeviceId deviceId, MastershipRole newRole) {
         switch (newRole) {
             case MASTER:
@@ -164,6 +171,7 @@ public class Tl1DeviceProvider extends AbstractProvider implements DeviceProvide
     }
 
     // Assumes device is registered in TL1 controller.
+    @Override
     public boolean isReachable(DeviceId deviceId) {
         try {
             // First check if device is already connected.
@@ -183,40 +191,45 @@ public class Tl1DeviceProvider extends AbstractProvider implements DeviceProvide
         }
     }
 
+    @Override
     public void changePortState(DeviceId deviceId, PortNumber portNumber, boolean enable) {
         // TODO
     }
 
-    // Register all devices in the core and in the TL1 controller
-    void registerDevices() {
-        Tl1ProviderConfig cfg = cfgRegistry.getConfig(appId, Tl1ProviderConfig.class);
+    //Method to register devices provided via net-cfg under devices/ tree
+    private void connectDevices() {
+        Set<DeviceId> deviceSubjects =
+                cfgRegistry.getSubjects(DeviceId.class, Tl1DeviceConfig.class);
+        deviceSubjects.forEach(deviceId -> {
+            Tl1DeviceConfig config =
+                    cfgRegistry.getConfig(deviceId, Tl1DeviceConfig.class);
+            connectDevice(new DefaultTl1Device(config.ip(), config.port(), config.username(),
+                                               config.password()));
+        });
+    }
 
-        if (cfg == null) {
-            return;
-        }
-
+    // Register a device in the core and in the TL1 controller.
+    private void connectDevice(Tl1Device device) {
         try {
-            cfg.readDevices().forEach(device -> {
-                try {
-                    // Add device to TL1 controller
-                    DeviceId deviceId = DeviceId.deviceId(
-                            new URI(TL1, device.ip() + ":" + device.port(), null));
+            // Add device to TL1 controller
+            DeviceId deviceId = DeviceId.deviceId(
+                    new URI(Tl1DeviceConfig.TL1, device.ip() + ":" + device.port(), null));
 
-                    if (controller.addDevice(deviceId, device)) {
-                        SparseAnnotations ann = DefaultAnnotations.builder()
-                                .set(AnnotationKeys.PROTOCOL, TL1.toUpperCase())
-                                .build();
-                        // Register device in the core with default parameters and mark it as unavailable
-                        DeviceDescription dd = new DefaultDeviceDescription(deviceId.uri(), Device.Type.SWITCH, UNKNOWN,
-                                UNKNOWN, UNKNOWN, UNKNOWN, new ChassisId(), false, ann);
-                        providerService.deviceConnected(deviceId, dd);
-                    }
-                } catch (URISyntaxException e) {
-                    log.error("Skipping device {}", device, e);
-                }
-            });
-        } catch (ConfigException e) {
-            log.error("Cannot parse network configuration", e);
+            if (controller.addDevice(deviceId, device)) {
+                SparseAnnotations ann = DefaultAnnotations.builder()
+                        .set(AnnotationKeys.PROTOCOL, Tl1DeviceConfig.TL1.toUpperCase())
+                        .build();
+                // Register device in the core with default parameters and mark it as unavailable
+                DeviceDescription dd = new DefaultDeviceDescription(deviceId.uri(),
+                                                                    Device.Type.SWITCH,
+                                                                    UNKNOWN, UNKNOWN,
+                                                                    UNKNOWN, UNKNOWN,
+                                                                    new ChassisId(),
+                                                                    false, ann);
+                providerService.deviceConnected(deviceId, dd);
+            }
+        } catch (URISyntaxException e) {
+            log.error("Skipping device {}", device, e);
         }
     }
 
@@ -240,7 +253,7 @@ public class Tl1DeviceProvider extends AbstractProvider implements DeviceProvide
                 return;
             }
             providerService.deviceConnected(deviceId,
-                    new DefaultDeviceDescription(dd, true, dd.annotations()));
+                                            new DefaultDeviceDescription(dd, true, dd.annotations()));
             // Update ports
             providerService.updatePorts(deviceId, discovery.discoverPortDetails());
         } catch (IllegalStateException | IllegalArgumentException e) {
@@ -252,12 +265,23 @@ public class Tl1DeviceProvider extends AbstractProvider implements DeviceProvide
      * Listener for network configuration events.
      */
     private class InnerConfigListener implements NetworkConfigListener {
+        @Override
         public void event(NetworkConfigEvent event) {
             if (event.type() == NetworkConfigEvent.Type.CONFIG_ADDED) {
-                registerDevices();
+                if (event.configClass().equals(Tl1DeviceConfig.class)) {
+                    connectDevices();
+                } else {
+                    log.warn("Injecting device via this Json is deprecated, " +
+                                     "please put configuration under devices/");
+                }
             } else if (event.type() == NetworkConfigEvent.Type.CONFIG_UPDATED) {
                 // TODO: calculate delta
-                registerDevices();
+                if (event.configClass().equals(Tl1DeviceConfig.class)) {
+                    connectDevices();
+                } else {
+                    log.warn("Injecting device via this Json is deprecated, " +
+                                     "please put configuration under devices/");
+                }
             } else if (event.type() == NetworkConfigEvent.Type.CONFIG_REMOVED) {
                 controller.getDeviceIds().forEach(deviceId -> {
                     controller.removeDevice(deviceId);
@@ -266,8 +290,9 @@ public class Tl1DeviceProvider extends AbstractProvider implements DeviceProvide
             }
         }
 
+        @Override
         public boolean isRelevant(NetworkConfigEvent event) {
-            return event.configClass().equals(Tl1ProviderConfig.class) &&
+            return (event.configClass().equals(Tl1DeviceConfig.class)) &&
                     (event.type() == NetworkConfigEvent.Type.CONFIG_ADDED ||
                             event.type() == NetworkConfigEvent.Type.CONFIG_UPDATED ||
                             event.type() == NetworkConfigEvent.Type.CONFIG_REMOVED);

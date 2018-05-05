@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,17 +25,10 @@ import org.glassfish.jersey.test.TestProperties;
 public class PceResourceTest extends JerseyTest {
 
     /**
-     * Use first available port.
-     *
-     * @see TestProperties#CONTAINER_PORT
-     */
-    protected static final int EPHEMERAL_PORT = 0;
-
-    /**
      * Creates a new web-resource test.
      */
     public PceResourceTest() {
         super(ResourceConfig.forApplicationClass(PceWebApplication.class));
-        set(TestProperties.CONTAINER_PORT, EPHEMERAL_PORT);
+        set(TestProperties.CONTAINER_PORT, 0);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,10 +40,10 @@ import org.onosproject.net.flow.DefaultFlowEntry;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowId;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.FlowRuleBatchEntry;
-import org.onosproject.net.flow.FlowRuleBatchEvent;
-import org.onosproject.net.flow.FlowRuleBatchOperation;
-import org.onosproject.net.flow.FlowRuleBatchRequest;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchEntry;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchEvent;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchRequest;
 import org.onosproject.net.flow.FlowRuleEvent;
 import org.onosproject.net.flow.FlowRuleStoreDelegate;
 import org.onosproject.net.flow.StoredFlowEntry;
@@ -67,6 +67,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.onosproject.net.flow.FlowRuleEvent.Type.RULE_REMOVED;
 import static org.slf4j.LoggerFactory.getLogger;
 
+/**
+ * Implementation of the virtual network flow rule store to manage inventory of
+ * virtual flow rules using trivial in-memory implementation.
+ */
 //TODO: support distributed flowrule store for virtual networks
 
 @Component(immediate = true)
@@ -147,8 +151,12 @@ public class SimpleVirtualFlowRuleStore
 
     @Override
     public int getFlowRuleCount(NetworkId networkId) {
-
         int sum = 0;
+
+        if (flowEntries.get(networkId) == null) {
+            return 0;
+        }
+
         for (ConcurrentMap<FlowId, List<StoredFlowEntry>> ft :
                 flowEntries.get(networkId).values()) {
             for (List<StoredFlowEntry> fes : ft.values()) {
@@ -169,8 +177,7 @@ public class SimpleVirtualFlowRuleStore
                 .transformAndConcat(Collections::unmodifiableList);
     }
 
-    @Override
-    public void storeFlowRule(NetworkId networkId, FlowRule rule) {
+    private void storeFlowRule(NetworkId networkId, FlowRule rule) {
         storeFlowRuleInternal(networkId, rule);
     }
 
@@ -206,13 +213,14 @@ public class SimpleVirtualFlowRuleStore
         }
 
         SettableFuture<CompletedBatchOperation> r = SettableFuture.create();
-        final int batchId = localBatchIdGen.incrementAndGet();
+        final int futureId = localBatchIdGen.incrementAndGet();
 
-        pendingFutures.put(batchId, r);
+        pendingFutures.put(futureId, r);
 
         toAdd.addAll(toRemove);
         notifyDelegate(networkId, FlowRuleBatchEvent.requested(
-                new FlowRuleBatchRequest(batchId, Sets.newHashSet(toAdd)), batchOperation.deviceId()));
+                new FlowRuleBatchRequest(batchOperation.id(),
+                                         Sets.newHashSet(toAdd)), batchOperation.deviceId()));
 
     }
 

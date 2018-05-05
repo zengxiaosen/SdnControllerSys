@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.SortedSet;
 
 import static org.onosproject.cli.cfg.ComponentConfigCommand.GET;
+import static org.onosproject.cli.cfg.ComponentConfigCommand.PRESET;
 import static org.onosproject.cli.cfg.ComponentConfigCommand.SET;
 
 /**
@@ -35,6 +36,7 @@ public class ComponentConfigCommandCompleter implements Completer {
         SortedSet<String> strings = delegate.getStrings();
         strings.add(GET);
         strings.add(SET);
+        strings.add(PRESET);
 
         // Now let the completer do the work for figuring out what to offer.
         return delegate.complete(buffer, cursor, candidates);

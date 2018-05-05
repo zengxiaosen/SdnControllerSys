@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -122,13 +122,25 @@ public class DefaultMapping implements Mapping {
                 .toString();
     }
 
+    /**
+     * Returns a default mapping builder.
+     *
+     * @return builder
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Default mapping builder.
+     */
     public static final class Builder implements Mapping.Builder {
 
         private MappingId id;
         private ApplicationId appId;
         private DeviceId deviceId;
-        private MappingKey key = new DefaultMappingKey();
-        private MappingValue value = new DefaultMappingValue();
+        private MappingKey key = DefaultMappingKey.builder().build();
+        private MappingValue value = DefaultMappingValue.builder().build();
 
         @Override
         public Mapping.Builder withId(long id) {
@@ -163,7 +175,7 @@ public class DefaultMapping implements Mapping {
         @Override
         public Mapping build() {
 
-            checkArgument((id != null) ^ (appId != null), "Either an application" +
+            checkArgument((id != null) || (appId != null), "Either an application" +
                     " id or a mapping id must be supplied");
             checkNotNull(key, "Mapping key cannot be null");
             checkNotNull(deviceId, "Must refer to a device");

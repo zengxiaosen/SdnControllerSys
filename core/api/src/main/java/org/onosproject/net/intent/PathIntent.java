@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,32 +38,6 @@ public class PathIntent extends ConnectivityIntent {
 
     private final Path path;
     private ProtectionType type;
-
-    /**
-     * Creates a new point-to-point intent with the supplied ingress/egress
-     * ports and using the specified explicit path. Path is primary by default.
-     *
-     * @param appId     application identifier
-     * @param key       intent key
-     * @param selector  traffic selector
-     * @param treatment treatment
-     * @param path      traversed links
-     * @param constraints  optional list of constraints
-     * @param priority  priority to use for the generated flows
-     * @throws NullPointerException {@code path} is null
-     * @deprecated 1.9.1
-     */
-    @Deprecated
-    protected PathIntent(ApplicationId appId,
-                         Key key,
-                         TrafficSelector selector,
-                         TrafficTreatment treatment,
-                         Path path,
-                         List<Constraint> constraints,
-                         int priority) {
-        this(appId, key, selector, treatment, path, constraints, priority,
-             ProtectionType.PRIMARY, null);
-    }
 
     /**
      * Creates a new point-to-point intent with the supplied ingress/egress

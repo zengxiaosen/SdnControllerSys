@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.onosproject.ui.impl;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableSet;
-import org.joda.time.DateTime;
 import org.onosproject.cluster.ClusterService;
 import org.onosproject.cluster.ControllerNode;
 import org.onosproject.cluster.NodeId;
@@ -32,6 +31,7 @@ import org.onosproject.ui.table.TableModel;
 import org.onosproject.ui.table.TableRequestHandler;
 import org.onosproject.ui.table.cell.TimeFormatter;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -120,7 +120,7 @@ public class ClusterViewMessageHandler extends UiMessageHandler {
         private void populateRow(TableModel.Row row, ControllerNode node,
                                  ClusterService cs) {
             NodeId id = node.id();
-            DateTime lastUpdated = cs.getLastUpdated(id);
+            Instant lastUpdated = cs.getLastUpdatedInstant(id);
             ControllerNode.State state = cs.getState(id);
             String iconId = state.isActive() ? ICON_ID_ONLINE : ICON_ID_OFFLINE;
             String startedId = state.isReady() ? ICON_ID_ONLINE : ICON_ID_OFFLINE;

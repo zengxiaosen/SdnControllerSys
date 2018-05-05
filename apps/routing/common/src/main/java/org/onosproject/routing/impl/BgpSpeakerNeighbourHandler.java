@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,13 @@ import org.onlab.packet.Ethernet;
 import org.onlab.packet.VlanId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.incubator.net.intf.Interface;
-import org.onosproject.incubator.net.intf.InterfaceEvent;
-import org.onosproject.incubator.net.intf.InterfaceListener;
-import org.onosproject.incubator.net.intf.InterfaceService;
-import org.onosproject.incubator.net.neighbour.NeighbourMessageContext;
-import org.onosproject.incubator.net.neighbour.NeighbourMessageHandler;
-import org.onosproject.incubator.net.neighbour.NeighbourResolutionService;
+import org.onosproject.net.intf.Interface;
+import org.onosproject.net.intf.InterfaceEvent;
+import org.onosproject.net.intf.InterfaceListener;
+import org.onosproject.net.intf.InterfaceService;
+import org.onosproject.net.neighbour.NeighbourMessageContext;
+import org.onosproject.net.neighbour.NeighbourMessageHandler;
+import org.onosproject.net.neighbour.NeighbourResolutionService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Host;
 import org.onosproject.net.config.NetworkConfigEvent;
@@ -120,7 +120,7 @@ public class BgpSpeakerNeighbourHandler {
 
     private void updateInterface(Interface intf) {
         // Only use interfaces that have an IP address
-        if (!intf.ipAddresses().isEmpty()) {
+        if (!intf.ipAddressesList().isEmpty()) {
             neighbourService.registerNeighbourHandler(intf, externalHandler, appId);
         }
     }
@@ -144,7 +144,7 @@ public class BgpSpeakerNeighbourHandler {
                 // address on this port. Drop all other requests.
                 interfaceService.getInterfacesByPort(context.inPort())
                         .stream()
-                        .filter(intf -> intf.ipAddresses()
+                        .filter(intf -> intf.ipAddressesList()
                                 .stream()
                                 .anyMatch(ia -> ia.ipAddress().equals(context.target()) &&
                                         ia.subnetAddress().contains(context.sender())))

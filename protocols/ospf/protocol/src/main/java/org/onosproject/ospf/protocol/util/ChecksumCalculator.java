@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package org.onosproject.ospf.protocol.util;
 
 import org.onosproject.ospf.controller.OspfLsa;
 import org.onosproject.ospf.controller.OspfLsaType;
+import org.onosproject.ospf.exceptions.OspfParseException;
 import org.onosproject.ospf.protocol.lsa.types.AsbrSummaryLsa;
 import org.onosproject.ospf.protocol.lsa.types.ExternalLsa;
 import org.onosproject.ospf.protocol.lsa.types.NetworkLsa;
@@ -31,13 +32,18 @@ import org.onosproject.ospf.protocol.ospfpacket.types.HelloPacket;
 import org.onosproject.ospf.protocol.ospfpacket.types.LsAcknowledge;
 import org.onosproject.ospf.protocol.ospfpacket.types.LsRequest;
 import org.onosproject.ospf.protocol.ospfpacket.types.LsUpdate;
+import org.slf4j.Logger;
 
 import java.util.Arrays;
+
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Calculates checksum for different types of OSPF packets.
  */
 public class ChecksumCalculator {
+
+    private static final Logger log = getLogger(ChecksumCalculator.class);
 
     /**
      * Converts given string to sixteen bits integer.
@@ -98,11 +104,12 @@ public class ChecksumCalculator {
      * @param lsType          lsa type
      * @param lsaChecksumPos1 lsa checksum position in packet
      * @param lsaChecksumPos2 lsa checksum position in packet
+     * @throws OspfParseException if packet can't be parsed
      * @return true if valid else false
-     * @throws Exception might throw exception while processing
      */
     public boolean isValidLsaCheckSum(OspfLsa ospfLsa, int lsType, int lsaChecksumPos1,
-                                      int lsaChecksumPos2) throws Exception {
+                                      int lsaChecksumPos2) throws OspfParseException {
+
         if (lsType == OspfLsaType.ROUTER.value()) {
             RouterLsa lsa = (RouterLsa) ospfLsa;
             return validateLsaCheckSum(lsa.asBytes(), lsaChecksumPos1, lsaChecksumPos2);
@@ -128,6 +135,7 @@ public class ChecksumCalculator {
             OpaqueLsa11 lsa = (OpaqueLsa11) ospfLsa;
             return validateLsaCheckSum(lsa.asBytes(), lsaChecksumPos1, lsaChecksumPos2);
         }
+
 
         return false;
     }
@@ -186,14 +194,12 @@ public class ChecksumCalculator {
         tempLsaByte[lsaChecksumPos1] = 0;
         tempLsaByte[lsaChecksumPos2] = 0;
         byte[] byteCheckSum = {0, 0};
-        if (lsaBytes != null) {
-            for (int i = 2; i < tempLsaByte.length; i++) {
-                checksumOut[0] = checksumOut[0] + ((int) tempLsaByte[i] & 0xFF);
-                checksumOut[1] = checksumOut[1] + checksumOut[0];
-            }
-            checksumOut[0] = checksumOut[0] % 255;
-            checksumOut[1] = checksumOut[1] % 255;
+        for (int i = 2; i < tempLsaByte.length; i++) {
+            checksumOut[0] = checksumOut[0] + ((int) tempLsaByte[i] & 0xFF);
+            checksumOut[1] = checksumOut[1] + checksumOut[0];
         }
+        checksumOut[0] = checksumOut[0] % 255;
+        checksumOut[1] = checksumOut[1] % 255;
         int byte1 = (int) ((tempLsaByte.length - lsaChecksumPos1 - 1) * checksumOut[0] - checksumOut[1]) % 255;
         if (byte1 <= 0) {
             byte1 += 255;

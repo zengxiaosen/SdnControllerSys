@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,15 +32,17 @@ import org.onlab.packet.VlanId;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreServiceAdapter;
-import org.onosproject.incubator.net.intf.Interface;
-import org.onosproject.incubator.net.intf.InterfaceEvent;
-import org.onosproject.incubator.net.intf.InterfaceListener;
-import org.onosproject.incubator.net.intf.InterfaceService;
-import org.onosproject.incubator.net.intf.InterfaceServiceAdapter;
-import org.onosproject.incubator.net.routing.ResolvedRoute;
-import org.onosproject.incubator.net.routing.RouteEvent;
-import org.onosproject.incubator.net.routing.RouteListener;
-import org.onosproject.incubator.net.routing.RouteServiceAdapter;
+import org.onosproject.net.intf.Interface;
+import org.onosproject.net.intf.InterfaceEvent;
+import org.onosproject.net.intf.InterfaceListener;
+import org.onosproject.net.intf.InterfaceService;
+import org.onosproject.net.intf.InterfaceServiceAdapter;
+import org.onosproject.routeservice.ResolvedRoute;
+import org.onosproject.routeservice.Route;
+import org.onosproject.routeservice.RouteEvent;
+import org.onosproject.routeservice.RouteListener;
+import org.onosproject.routeservice.RouteServiceAdapter;
+import org.onosproject.intentsync.IntentSynchronizationService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.FilteredConnectPoint;
@@ -56,7 +58,6 @@ import org.onosproject.net.host.InterfaceIpAddress;
 import org.onosproject.net.intent.AbstractIntentTest;
 import org.onosproject.net.intent.Key;
 import org.onosproject.net.intent.MultiPointToSinglePointIntent;
-import org.onosproject.intentsync.IntentSynchronizationService;
 import org.onosproject.sdnip.config.SdnIpConfig;
 
 import java.util.Collections;
@@ -124,7 +125,7 @@ public class SdnIpFibTest extends AbstractIntentTest {
     private InterfaceListener interfaceListener;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         interfaceService = createMock(InterfaceService.class);
@@ -192,7 +193,7 @@ public class SdnIpFibTest extends AbstractIntentTest {
     @Test
     public void testRouteAddToNoVlan() {
         // Build the expected route
-        ResolvedRoute route = new ResolvedRoute(PREFIX1, IP3, MAC3, SW3_ETH1);
+        ResolvedRoute route = createRoute(PREFIX1, IP3, MAC3, SW3_ETH1);
 
         MultiPointToSinglePointIntent intent =
                 createIntentToThreeSrcOneTwo(PREFIX1);
@@ -216,7 +217,7 @@ public class SdnIpFibTest extends AbstractIntentTest {
     @Test
     public void testRouteAddToVlan() {
         // Build the expected route
-        ResolvedRoute route = new ResolvedRoute(PREFIX2, IP1, MAC1, SW1_ETH1);
+        ResolvedRoute route = createRoute(PREFIX2, IP1, MAC1, SW1_ETH1);
 
         MultiPointToSinglePointIntent intent = createIntentToOne(PREFIX2);
 
@@ -245,8 +246,8 @@ public class SdnIpFibTest extends AbstractIntentTest {
         testRouteAddToNoVlan();
 
         // Build the new route entries for prefix1 and prefix2
-        ResolvedRoute oldRoutePrefixOne = new ResolvedRoute(PREFIX1, IP3, MAC3, SW3_ETH1);
-        ResolvedRoute routePrefixOne = new ResolvedRoute(PREFIX1, IP1, MAC1, SW1_ETH1);
+        ResolvedRoute oldRoutePrefixOne = createRoute(PREFIX1, IP3, MAC3, SW3_ETH1);
+        ResolvedRoute routePrefixOne = createRoute(PREFIX1, IP1, MAC1, SW1_ETH1);
 
         // Create the new expected intents
         MultiPointToSinglePointIntent newPrefixOneIntent = createIntentToOne(PREFIX1);
@@ -280,8 +281,8 @@ public class SdnIpFibTest extends AbstractIntentTest {
         testRouteAddToVlan();
 
         // Build the new route entries for prefix1 and prefix2
-        ResolvedRoute oldRoutePrefix = new ResolvedRoute(PREFIX2, IP1, MAC1, SW1_ETH1);
-        ResolvedRoute routePrefix = new ResolvedRoute(PREFIX2, IP3, MAC3, SW3_ETH1);
+        ResolvedRoute oldRoutePrefix = createRoute(PREFIX2, IP1, MAC1, SW1_ETH1);
+        ResolvedRoute routePrefix = createRoute(PREFIX2, IP3, MAC3, SW3_ETH1);
 
         // Create the new expected intents
         MultiPointToSinglePointIntent newPrefixIntent =
@@ -313,7 +314,7 @@ public class SdnIpFibTest extends AbstractIntentTest {
         testRouteAddToNoVlan();
 
         // Construct the existing route entry
-        ResolvedRoute route = new ResolvedRoute(PREFIX1, IP3, MAC3, SW3_ETH1);
+        ResolvedRoute route = createRoute(PREFIX1, IP3, MAC3, SW3_ETH1);
 
         // Create existing intent
         MultiPointToSinglePointIntent removedIntent =
@@ -621,6 +622,12 @@ public class SdnIpFibTest extends AbstractIntentTest {
                         .build();
 
         return intent;
+    }
+
+    private static ResolvedRoute createRoute(IpPrefix prefix, IpAddress nextHop,
+                                             MacAddress nextHopMac, ConnectPoint location) {
+        return new ResolvedRoute(
+                new Route(Route.Source.UNDEFINED, prefix, nextHop), nextHopMac, location);
     }
 
     private class TestCoreService extends CoreServiceAdapter {

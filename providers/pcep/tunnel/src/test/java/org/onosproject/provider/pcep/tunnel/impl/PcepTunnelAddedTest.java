@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,14 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.onosproject.incubator.net.tunnel.Tunnel.Type.MPLS;
 import static org.onosproject.incubator.net.tunnel.Tunnel.State.INIT;
-import static org.onosproject.pcep.controller.PcepAnnotationKeys.BANDWIDTH;
-import static org.onosproject.pcep.controller.PcepAnnotationKeys.LOCAL_LSP_ID;
-import static org.onosproject.pcep.controller.PcepAnnotationKeys.LSP_SIG_TYPE;
-import static org.onosproject.pcep.controller.PcepAnnotationKeys.PCC_TUNNEL_ID;
-import static org.onosproject.pcep.controller.PcepAnnotationKeys.PLSP_ID;
-import static org.onosproject.pcep.controller.PcepAnnotationKeys.DELEGATE;
-import static org.onosproject.pcep.controller.LspType.WITHOUT_SIGNALLING_AND_WITHOUT_SR;
-import static org.onosproject.pcep.controller.PcepSyncStatus.SYNCED;
+import static org.onosproject.pcep.server.PcepAnnotationKeys.BANDWIDTH;
+import static org.onosproject.pcep.server.PcepAnnotationKeys.LOCAL_LSP_ID;
+import static org.onosproject.pcep.server.PcepAnnotationKeys.LSP_SIG_TYPE;
+import static org.onosproject.pcep.server.PcepAnnotationKeys.PCC_TUNNEL_ID;
+import static org.onosproject.pcep.server.PcepAnnotationKeys.PLSP_ID;
+import static org.onosproject.pcep.server.PcepAnnotationKeys.DELEGATE;
+import static org.onosproject.pcep.server.LspType.WITHOUT_SIGNALLING_AND_WITHOUT_SR;
+import static org.onosproject.pcep.server.PcepSyncStatus.SYNCED;
 import static org.onosproject.net.Device.Type.ROUTER;
 import static org.onosproject.net.Link.State.ACTIVE;
 import static org.onosproject.net.MastershipRole.MASTER;
@@ -85,9 +85,9 @@ import org.onosproject.pcepio.protocol.PcepFactories;
 import org.onosproject.pcepio.protocol.PcepMessage;
 import org.onosproject.pcepio.protocol.PcepMessageReader;
 import org.onosproject.pcepio.protocol.PcepVersion;
-import org.onosproject.pcep.controller.ClientCapability;
-import org.onosproject.pcep.controller.LspKey;
-import org.onosproject.pcep.controller.PccId;
+import org.onosproject.pcep.server.ClientCapability;
+import org.onosproject.pcep.server.LspKey;
+import org.onosproject.pcep.server.PccId;
 
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;

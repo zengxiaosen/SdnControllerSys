@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 package org.onosproject.openflow.controller.driver;
 
-import org.jboss.netty.channel.Channel;
 import org.onosproject.net.driver.HandlerBehaviour;
 import org.onosproject.openflow.controller.Dpid;
+import org.onosproject.openflow.controller.OpenFlowSession;
 import org.onosproject.openflow.controller.OpenFlowSwitch;
 import org.projectfloodlight.openflow.protocol.OFDescStatsReply;
 import org.projectfloodlight.openflow.protocol.OFErrorMsg;
@@ -166,10 +166,11 @@ public interface OpenFlowSwitchDriver extends OpenFlowSwitch, HandlerBehaviour {
     void setTableFull(boolean full);
 
     /**
-     * Sets the associated Netty channel for this switch.
-     * @param channel the Netty channel
+     * Sets the associated OpenFlow session for this switch.
+     *
+     * @param session the OpenFlow session
      */
-    void setChannel(Channel channel);
+    void setChannel(OpenFlowSession session);
 
     /**
      * Sets whether the switch is connected.
@@ -188,6 +189,9 @@ public interface OpenFlowSwitchDriver extends OpenFlowSwitch, HandlerBehaviour {
 
     /**
      * Does this switch support Nicira Role messages.
+     * <p>
+     * Only relevant if this Device is OpenFlow 1.0.
+     *
      * @return true if supports, false otherwise.
      */
     Boolean supportNxRole();
@@ -224,4 +228,5 @@ public interface OpenFlowSwitchDriver extends OpenFlowSwitch, HandlerBehaviour {
      * @param message an OpenFlow message
      */
     void sendHandshakeMessage(OFMessage message);
+
 }

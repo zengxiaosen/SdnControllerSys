@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,30 +16,36 @@
 
 package org.onosproject.provider.netconf.device.impl;
 
-import com.google.common.collect.ImmutableSet;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.commons.lang.StringUtils;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.onlab.packet.ChassisId;
 import org.onlab.packet.IpAddress;
+import org.onosproject.cfg.ComponentConfigAdapter;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.core.DefaultApplicationId;
-import org.onosproject.incubator.net.config.basics.ConfigException;
 import org.onosproject.mastership.MastershipService;
 import org.onosproject.mastership.MastershipServiceAdapter;
 import org.onosproject.net.AbstractProjectableModel;
-import org.onosproject.net.Annotations;
+import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.DefaultDevice;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.PortNumber;
 import org.onosproject.net.config.Config;
+import org.onosproject.net.config.ConfigApplyDelegate;
 import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigRegistry;
 import org.onosproject.net.config.NetworkConfigRegistryAdapter;
 import org.onosproject.net.config.basics.BasicDeviceConfig;
+import org.onosproject.net.device.DefaultPortDescription;
 import org.onosproject.net.device.DeviceDescription;
 import org.onosproject.net.device.DeviceDescriptionDiscovery;
 import org.onosproject.net.device.DeviceEvent;
@@ -49,7 +55,6 @@ import org.onosproject.net.device.DeviceProviderRegistry;
 import org.onosproject.net.device.DeviceProviderRegistryAdapter;
 import org.onosproject.net.device.DeviceProviderService;
 import org.onosproject.net.device.DeviceProviderServiceAdapter;
-import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.device.DeviceServiceAdapter;
 import org.onosproject.net.device.DeviceStore;
 import org.onosproject.net.device.DeviceStoreAdapter;
@@ -65,18 +70,30 @@ import org.onosproject.net.key.DeviceKeyAdminServiceAdapter;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.netconf.NetconfController;
 import org.onosproject.netconf.NetconfDeviceListener;
+import org.onosproject.netconf.config.NetconfDeviceConfig;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.CountDownLatch;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
-import static org.onlab.junit.TestTools.assertAfter;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.onosproject.provider.netconf.device.impl.NetconfDeviceProvider.APP_NAME;
+import static org.onosproject.provider.netconf.device.impl.NetconfDeviceProvider.SCHEME_NAME;
 
 /**
  * Netconf device provider basic test.
@@ -88,38 +105,70 @@ public class NetconfDeviceProviderTest {
 
     //Provider Mock
     private final DeviceProviderRegistry deviceRegistry = new MockDeviceProviderRegistry();
-    private final DeviceProviderService providerService = new MockDeviceProviderService();
-    private final DeviceService deviceService = new MockDeviceService();
+    private final MockDeviceProviderService providerService = new MockDeviceProviderService();
+    private final MockDeviceService deviceService = new MockDeviceService();
     private final MastershipService mastershipService = new MockMastershipService();
     private final Driver driver = new MockDriver();
     private final NetworkConfigRegistry cfgService = new MockNetworkConfigRegistry();
+    private final Set<ConfigFactory> cfgFactories = new HashSet<>();
     private final DeviceKeyAdminService deviceKeyAdminService = new DeviceKeyAdminServiceAdapter();
     private final DeviceStore deviceStore = new MockDeviceStore();
 
     //Class for testing
+    private final NetconfDeviceConfig netconfDeviceConfig = new NetconfDeviceConfig();
+    private final NetconfDeviceConfig netconfDeviceConfigSshKey = new NetconfDeviceConfig();
+    private final NetconfDeviceConfig netconfDeviceConfigEmptyIpv4 = new NetconfDeviceConfig();
+    private final NetconfDeviceConfig netconfDeviceConfigEmptyIpv6 = new NetconfDeviceConfig();
     private final NetworkConfigEvent deviceAddedEvent =
             new NetworkConfigEvent(NetworkConfigEvent.Type.CONFIG_ADDED,
-                                   null, NetconfProviderConfig.class);
-    private final NetconfProviderConfig netconfProviderConfig = new MockNetconfProviderConfig();
-    private static final String IP = "1.1.1.1";
+                                   DeviceId.deviceId(NETCONF_DEVICE_ID_STRING),
+                                   netconfDeviceConfig, null,
+                                   NetconfDeviceConfig.class);
+    private final NetworkConfigEvent deviceAddedEventTranslated =
+            new NetworkConfigEvent(NetworkConfigEvent.Type.CONFIG_ADDED,
+                                   DeviceId.deviceId(NETCONF_DEVICE_ID_STRING_OLD),
+                                   NetconfDeviceConfig.class);
+    private static final String NETCONF_DEVICE_ID_STRING = "netconf:1.1.1.1:830";
+    private static final String NETCONF_DEVICE_ID_STRING_OLD = "netconf:1.1.1.2:1";
+    private static final String NETCONF_DEVICE_ID_STRING_IPV6 = "netconf:2001:0db8:0000:0000:0000:ff00:0042:8329:830";
+    private static final String IP_STRING = "1.1.1.1";
+    private static final String IP_STRING_OLD = "1.1.1.2";
+    private static final String IP_STRING_IPV6 = "2001:0db8:0000:0000:0000:ff00:0042:8329";
+    private static final IpAddress IP = IpAddress.valueOf(IP_STRING);
+    private static final IpAddress IP_OLD = IpAddress.valueOf(IP_STRING_OLD);
+    private static final IpAddress IP_V6 = IpAddress.valueOf(IP_STRING_IPV6);
+    private static final int PORT = 830;
     private static final String TEST = "test";
     private static final int DELAY_DISCOVERY = 500;
+    private static final int DELAY_DURATION_DISCOVERY = 3000;
+    private static final int PORT_COUNT = 5;
+    private final TestDescription deviceDescription = new TestDescription();
+    private final Device netconfDevice = new MockDevice(DeviceId.deviceId("netconf:127.0.0.1"));
+    private final Device notNetconfDevice = new MockDevice(DeviceId.deviceId("other:127.0.0.1"));
+
+    //Testing Files
+    private final InputStream jsonStream = NetconfDeviceProviderTest.class
+            .getResourceAsStream("/device.json");
+    private final InputStream jsonStreamSshKey = NetconfDeviceProviderTest.class
+            .getResourceAsStream("/deviceSshKey.json");
 
     //Provider related classes
     private CoreService coreService;
-    private ApplicationId appId =
+    private final ApplicationId appId =
             new DefaultApplicationId(100, APP_NAME);
-    private DeviceDescriptionDiscovery descriptionDiscovery = new TestDescription();
-    private Set<DeviceListener> deviceListeners = new HashSet<>();
-    private ConfigFactory cfgFactory;
-    private Set<NetworkConfigListener> netCfgListeners = new HashSet<>();
-    private HashMap<DeviceId, Device> devices = new HashMap<>();
+    private final DeviceDescriptionDiscovery descriptionDiscovery = new TestDescription();
+    private final Set<NetworkConfigListener> netCfgListeners = new HashSet<>();
+    private final HashMap<DeviceId, Device> devices = new HashMap<>();
 
     //Controller related classes
-    private Set<NetconfDeviceListener> netconfDeviceListeners = new CopyOnWriteArraySet<>();
+    private final Set<NetconfDeviceListener> netconfDeviceListeners = new CopyOnWriteArraySet<>();
+    private boolean available = false;
+    private boolean firstRequest = true;
+
+    private CountDownLatch deviceAdded;
 
     @Before
-    public void setUp() {
+    public void setUp() throws IOException {
         coreService = createMock(CoreService.class);
         expect(coreService.registerApplication(APP_NAME))
                 .andReturn(appId).anyTimes();
@@ -128,20 +177,38 @@ public class NetconfDeviceProviderTest {
         provider.providerRegistry = deviceRegistry;
         provider.mastershipService = mastershipService;
         provider.deviceService = deviceService;
+        provider.providerService = providerService;
         provider.cfgService = cfgService;
         provider.controller = controller;
         provider.deviceKeyAdminService = deviceKeyAdminService;
+        provider.componentConfigService = new ComponentConfigAdapter();
         AbstractProjectableModel.setDriverService(null, new DriverServiceAdapter());
-        provider.activate();
+        provider.activate(null);
+        devices.clear();
+        available = false;
+        firstRequest = true;
+        DeviceId subject = DeviceId.deviceId(NETCONF_DEVICE_ID_STRING);
+        DeviceId subjectIpv6 = DeviceId.deviceId(NETCONF_DEVICE_ID_STRING_IPV6);
+        String key = "netconf";
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode jsonNode = mapper.readTree(jsonStream);
+        ConfigApplyDelegate delegate = new MockDelegate();
+        netconfDeviceConfig.init(subject, key, jsonNode, mapper, delegate);
+        JsonNode jsonNodesshKey = mapper.readTree(jsonStreamSshKey);
+        netconfDeviceConfigSshKey.init(subject, key, jsonNodesshKey, mapper, delegate);
+        JsonNode jsonNodeEmpty = mapper.createObjectNode();
+        netconfDeviceConfigEmptyIpv4.init(subject, key, jsonNodeEmpty, mapper, delegate);
+        netconfDeviceConfigEmptyIpv6.init(subjectIpv6, key, jsonNodeEmpty, mapper, delegate);
+        deviceAdded = new CountDownLatch(0);
     }
 
     @Test
     public void activate() throws Exception {
-
         assertTrue("Provider should be registered", deviceRegistry.getProviders().contains(provider.id()));
         assertEquals("Incorrect device service", deviceService, provider.deviceService);
         assertEquals("Incorrect provider service", providerService, provider.providerService);
-        assertEquals("Device listener should be added", 1, deviceListeners.size());
+        assertTrue("Incorrect config factories", cfgFactories.contains(provider.factory));
+        assertNotNull("Device listener should be added", deviceService.listener);
         assertFalse("Thread to connect device should be running",
                     provider.executor.isShutdown() || provider.executor.isTerminated());
         assertFalse("Scheduled task to update device should be running", provider.scheduledTask.isCancelled());
@@ -150,27 +217,81 @@ public class NetconfDeviceProviderTest {
     @Test
     public void deactivate() throws Exception {
         provider.deactivate();
-        assertEquals("Device listener should be removed", 0, deviceListeners.size());
-        assertFalse("Provider should not be registered", deviceRegistry.getProviders().contains(provider));
+        assertNull("Device listener should be removed", deviceService.listener);
+        assertFalse("Provider should not be registered", deviceRegistry.getProviders().contains(provider.id()));
         assertTrue("Thread to connect device should be shutdown", provider.executor.isShutdown());
         assertTrue("Scheduled task to update device should be shutdown", provider.scheduledTask.isCancelled());
         assertNull("Provider service should be null", provider.providerService);
+        assertTrue("Network config factories not removed", cfgFactories.isEmpty());
         assertEquals("Controller listener should be removed", 0, netconfDeviceListeners.size());
     }
 
     @Test
-    @Ignore("Test is brittle")
-    public void addDevice() {
+    public void configuration() {
+        assertTrue("Configuration should be valid", netconfDeviceConfig.isValid());
+        assertThat(netconfDeviceConfig.ip(), is(IP));
+        assertThat(netconfDeviceConfig.port(), is(PORT));
+        assertThat(netconfDeviceConfig.username(), is(TEST));
+        assertThat(netconfDeviceConfig.password(), is(TEST));
+        assertThat(netconfDeviceConfigSshKey.sshKey(), is(TEST));
+    }
+
+    @Test
+    public void configurationDeviceIdIpv4() {
+        assertTrue("Configuration should be valid", netconfDeviceConfigEmptyIpv4.isValid());
+        assertThat(netconfDeviceConfigEmptyIpv4.ip(), is(IP));
+        assertThat(netconfDeviceConfigEmptyIpv4.port(), is(PORT));
+        assertThat(netconfDeviceConfigEmptyIpv4.username(), is(StringUtils.EMPTY));
+        assertThat(netconfDeviceConfigEmptyIpv4.password(), is(StringUtils.EMPTY));
+        assertThat(netconfDeviceConfigEmptyIpv4.sshKey(), is(StringUtils.EMPTY));
+    }
+
+    @Test
+    public void configurationDeviceIdIpv6() {
+        assertTrue("Configuration should be valid", netconfDeviceConfigEmptyIpv6.isValid());
+        assertThat(netconfDeviceConfigEmptyIpv6.ip(), is(IP_V6));
+        assertThat(netconfDeviceConfigEmptyIpv6.port(), is(PORT));
+        assertThat(netconfDeviceConfigEmptyIpv6.username(), is(StringUtils.EMPTY));
+        assertThat(netconfDeviceConfigEmptyIpv6.password(), is(StringUtils.EMPTY));
+        assertThat(netconfDeviceConfigEmptyIpv6.sshKey(), is(StringUtils.EMPTY));
+    }
+
+    @Test
+    public void addDeviceNew() throws InterruptedException {
+        // expecting 1 device add
+        deviceAdded = new CountDownLatch(1);
         assertNotNull(providerService);
         assertTrue("Event should be relevant", provider.cfgListener.isRelevant(deviceAddedEvent));
+        available = true;
         provider.cfgListener.event(deviceAddedEvent);
 
-        assertAfter(DELAY_DISCOVERY, () ->
-                assertEquals("Device should be added", 1, deviceStore.getDeviceCount()));
+        deviceAdded.await();
+        assertEquals("Device should be added", 1, deviceStore.getDeviceCount());
+        assertTrue("Device incorrectly added" + NETCONF_DEVICE_ID_STRING,
+                   devices.containsKey(DeviceId.deviceId(NETCONF_DEVICE_ID_STRING)));
         devices.clear();
     }
 
-    //TODO: implement ports discovery and check updates of the device description
+    @Test
+    public void testDiscoverPortsAfterDeviceAdded() {
+        provider.executor = MoreExecutors.newDirectExecutorService();
+        prepareMocks(PORT_COUNT);
+
+        deviceService.listener.event(new DeviceEvent(DeviceEvent.Type.DEVICE_ADDED, netconfDevice));
+        assertEquals("Ports should be added", PORT_COUNT, providerService.ports.get(netconfDevice.id()).size());
+
+        deviceService.listener.event(new DeviceEvent(DeviceEvent.Type.DEVICE_REMOVED, netconfDevice));
+        assertEquals("Ports should be removed", 0, providerService.ports.get(netconfDevice.id()).size());
+    }
+
+    private void prepareMocks(int count) {
+        for (int i = 1; i <= count; i++) {
+            deviceDescription.portDescriptions.add(DefaultPortDescription.builder()
+                    .withPortNumber(PortNumber.portNumber(i)).isEnabled(true).build());
+        }
+    }
+
+    //TODO: check updates of the device description
 
 
     //Mock classes
@@ -187,11 +308,16 @@ public class NetconfDeviceProviderTest {
         public void removeDeviceListener(NetconfDeviceListener listener) {
             netconfDeviceListeners.remove(listener);
         }
+
+        @Override
+        public void disconnectDevice(DeviceId deviceId, boolean remove) {
+            netconfDeviceListeners.forEach(l -> l.deviceRemoved(deviceId));
+        }
     }
 
     private class MockDeviceProviderRegistry extends DeviceProviderRegistryAdapter {
 
-        Set<ProviderId> providers = new HashSet<>();
+        final Set<ProviderId> providers = new HashSet<>();
 
         @Override
         public DeviceProviderService register(DeviceProvider provider) {
@@ -212,18 +338,34 @@ public class NetconfDeviceProviderTest {
     }
 
     private class MockDeviceService extends DeviceServiceAdapter {
+        DeviceListener listener = null;
+
+        @Override
+        public Device getDevice(DeviceId deviceId) {
+            if (deviceId.toString().equals(NETCONF_DEVICE_ID_STRING)) {
+                return null;
+            } else if (deviceId.uri().getScheme().equals(SCHEME_NAME)) {
+                return netconfDevice;
+            } else {
+                return notNetconfDevice;
+            }
+
+        }
+
         @Override
         public void addListener(DeviceListener listener) {
-            deviceListeners.add(listener);
+            this.listener = listener;
         }
 
         @Override
         public void removeListener(DeviceListener listener) {
-            deviceListeners.remove(listener);
+            this.listener = null;
         }
     }
 
     private class MockDeviceProviderService extends DeviceProviderServiceAdapter {
+
+        final Multimap<DeviceId, PortDescription> ports = HashMultimap.create();
 
         @Override
         public void deviceConnected(DeviceId deviceId, DeviceDescription desc) {
@@ -231,6 +373,20 @@ public class NetconfDeviceProviderTest {
             assertNotNull("DeviceDescription should be not null", desc);
             deviceStore.createOrUpdateDevice(ProviderId.NONE, deviceId, desc);
         }
+
+        @Override
+        public void updatePorts(DeviceId deviceId,
+                                List<PortDescription> portDescriptions) {
+            for (PortDescription p : portDescriptions) {
+                ports.put(deviceId, p);
+            }
+        }
+
+        @Override
+        public void deviceDisconnected(DeviceId deviceId) {
+            ports.removeAll(deviceId);
+        }
+
     }
 
     private class MockDeviceStore extends DeviceStoreAdapter {
@@ -243,7 +399,7 @@ public class NetconfDeviceProviderTest {
                                                     desc.manufacturer(), desc.hwVersion(),
                                                     desc.swVersion(), desc.serialNumber(),
                                                     desc.chassisId(), desc.annotations()));
-
+            deviceAdded.countDown();
             return null;
         }
 
@@ -268,15 +424,16 @@ public class NetconfDeviceProviderTest {
     }
 
     private class MockNetworkConfigRegistry extends NetworkConfigRegistryAdapter {
+        NetconfDeviceConfig cfg = null;
 
         @Override
         public void registerConfigFactory(ConfigFactory configFactory) {
-            cfgFactory = configFactory;
+            cfgFactories.add(configFactory);
         }
 
         @Override
         public void unregisterConfigFactory(ConfigFactory configFactory) {
-            cfgFactory = null;
+            cfgFactories.remove(configFactory);
         }
 
         @Override
@@ -292,32 +449,60 @@ public class NetconfDeviceProviderTest {
 
         @Override
         public <S, C extends Config<S>> C getConfig(S subject, Class<C> configClass) {
-            if (configClass.equals(NetconfProviderConfig.class)) {
-                return (C) netconfProviderConfig;
-            } else {
-                return (C) new BasicDeviceConfig();
+            if (available) {
+                DeviceId did = (DeviceId) subject;
+                if (configClass.equals(NetconfDeviceConfig.class)
+                        && did.equals(DeviceId.deviceId(NETCONF_DEVICE_ID_STRING))) {
+                    return (C) netconfDeviceConfig;
+                } else if (configClass.equals(NetconfDeviceConfig.class)
+                        && did.equals(DeviceId.deviceId(NETCONF_DEVICE_ID_STRING_OLD))) {
+                    if (firstRequest) {
+                        firstRequest = false;
+                        return null;
+                    }
+                    return (C) cfg;
+                } else {
+                    return (C) new BasicDeviceConfig();
+                }
             }
+            return null;
         }
-    }
-
-    private class MockNetconfProviderConfig extends NetconfProviderConfig {
-        protected NetconfDeviceAddress deviceInfo =
-                new NetconfDeviceAddress(IpAddress.valueOf(IP), 1, TEST, TEST);
 
         @Override
-        public Set<NetconfProviderConfig.NetconfDeviceAddress> getDevicesAddresses() throws ConfigException {
-            return ImmutableSet.of(deviceInfo);
+        public <S, C extends Config<S>> C applyConfig(S subject, Class<C> configClass,
+                                                      JsonNode json) {
+            cfg = new NetconfDeviceConfig();
+            ObjectMapper mapper = new ObjectMapper();
+            cfg.init((DeviceId) subject, "netconf", mapper.createObjectNode(), mapper, null);
+            cfg.setIp(json.get("ip").asText())
+                    .setPort(json.get("port").asInt())
+                    .setUsername(json.get("username").asText())
+                    .setPassword(json.get("password").asText())
+                    .setSshKey(json.get("sshkey").asText());
+            provider.cfgListener.event(deviceAddedEventTranslated);
+            return (C) cfg;
+        }
+
+        @Override
+        public <S, C extends Config<S>> Set<S> getSubjects(Class<S> subjectClass, Class<C> configClass) {
+            Set<S> subjects = new HashSet<>();
+            if (available) {
+                if (cfg != null) {
+                    subjects.add((S) DeviceId.deviceId(NETCONF_DEVICE_ID_STRING_OLD));
+                } else {
+                    subjects.add((S) DeviceId.deviceId(NETCONF_DEVICE_ID_STRING));
+                }
+            }
+            return subjects;
         }
 
     }
 
     private class MockDevice extends DefaultDevice {
 
-        public MockDevice(ProviderId providerId, DeviceId id, Type type,
-                          String manufacturer, String hwVersion, String swVersion,
-                          String serialNumber, ChassisId chassisId, Annotations... annotations) {
-            super(providerId, id, type, manufacturer, hwVersion, swVersion, serialNumber,
-                  chassisId, annotations);
+        MockDevice(DeviceId id) {
+            super(null, id, null, null, null, null, null,
+                  null, DefaultAnnotations.EMPTY);
         }
 
         @Override
@@ -328,6 +513,16 @@ public class NetconfDeviceProviderTest {
         @Override
         public Driver driver() {
             return driver;
+        }
+
+        @Override
+        public <B extends Behaviour> B as(Class<B> projectionClass) {
+            return (B) deviceDescription;
+        }
+
+        @Override
+        public <B extends Behaviour> boolean is(Class<B> projectionClass) {
+            return projectionClass.isAssignableFrom(DeviceDescriptionDiscovery.class);
         }
     }
 
@@ -341,7 +536,7 @@ public class NetconfDeviceProviderTest {
 
     private class TestDescription extends AbstractHandlerBehaviour implements DeviceDescriptionDiscovery {
 
-        List<PortDescription> portDescriptions = new ArrayList<>();
+        final List<PortDescription> portDescriptions = new ArrayList<>();
 
         @Override
         public DeviceDescription discoverDeviceDetails() {
@@ -353,12 +548,15 @@ public class NetconfDeviceProviderTest {
             return portDescriptions;
         }
 
-        private void addDeviceDetails() {
-
-        }
-
         private void addPortDesc(PortDescription portDescription) {
             portDescriptions.add(portDescription);
         }
     }
+
+    private class MockDelegate implements ConfigApplyDelegate {
+        @Override
+        public void onApply(Config configFile) {
+        }
+    }
+
 }

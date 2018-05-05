@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,11 @@
     //  getActionEntry
     //  setUpKeys
 
+    // function to be replaced by the localization bundle function
+    var topoLion = function (x) {
+        return '#ttbar#' + x + '#';
+    };
+
     // internal state
     var toolbar, keyData, cachedState, thirdRow, ovRset, ovIndex;
 
@@ -36,13 +41,13 @@
     var name = 'topo-tbar',
         cooktag = 'topo_prefs',
         soa = 'switchOverlayActions: ',
-        selOver = 'Select overlay here &#x21e7;',
+        selOver = '************',
         defaultOverlay = 'traffic';
 
 
     // key to button mapping data
     var k2b = {
-        O: { id: 'summary-tog', gid: 'm_summary', isel: true},
+        O: { id: 'summary-tog', gid: 'm_summary', isel: true },
         I: { id: 'instance-tog', gid: 'm_uiAttached', isel: true },
         D: { id: 'details-tog', gid: 'm_details', isel: true },
         H: { id: 'hosts-tog', gid: 'm_endstation', isel: false },
@@ -57,12 +62,12 @@
         L: { id: 'cycleLabels-btn', gid: 'm_cycleLabels' },
         R: { id: 'resetZoom-btn', gid: 'm_resetZoom' },
 
-        E: { id: 'eqMaster-btn', gid: 'm_eqMaster' }
+        E: { id: 'eqMaster-btn', gid: 'm_eqMaster' },
     };
 
     var prohibited = [
         'T', 'backSlash', 'slash',
-        'X' // needed until we re-instate X above.
+        'X', // needed until we re-instate X above.
     ];
     prohibited = prohibited.concat(d3.map(k2b).keys());
 
@@ -75,11 +80,12 @@
             hosts: 0,
             offdev: 1,
             dlbls: 0,
+            hlbls: 0,
             porthl: 1,
             bg: 0,
             spr: 0,
-            ovid: 'traffic',   // default to traffic overlay
-            toolbar: 0
+            ovid: 'traffic', // default to traffic overlay
+            toolbar: 0,
         },
         prefsMap = {
             summary: 'O',
@@ -89,7 +95,7 @@
             offdev: 'M',
             porthl: 'P',
             bg: 'B',
-            spr: 'S'
+            spr: 'S',
             // NOTE: toolbar state is handled separately
         };
 
@@ -124,22 +130,37 @@
     function initKeyData() {
         // TODO: use angular forEach instead of d3.map
         keyData = d3.map(k2b);
-        keyData.forEach(function(key, value) {
-            var data = api.getActionEntry(key);
-            value.cb = data[0];                     // on-click callback
-            value.tt = data[1] + ' (' + key + ')';  // tooltip
+        keyData.forEach(function (key, value) {
+            var data = api.getActionEntry(key),
+                ttfn = data[1]; // tooltip-possibly-a-function
+
+            value.key = key;
+            value.cb = data[0]; // on-click callback
+
+            // tooltip function invoked at the time the tooltip is displayed
+            value.tt = function () {
+                return fs.isF(ttfn) ? ttfn() : '' + ttfn;
+            };
         });
+    }
+
+    // returns a no-args function that returns the tooltip text
+    function deferredText(v) {
+        // this function will get invoked at the time the tooltip is displayed:
+        return function () {
+            return (fs.isF(v.tt) ? v.tt() : v.tt) + ' (' + v.key + ')';
+        };
     }
 
     function addButton(key) {
         var v = keyData.get(key);
-        v.btn = toolbar.addButton(v.id, v.gid, v.cb, v.tt);
+        v.btn = toolbar.addButton(v.id, v.gid, v.cb, deferredText(v));
     }
 
     function addToggle(key, suppressIfMobile) {
         var v = keyData.get(key);
         if (suppressIfMobile && fs.isMobile()) { return; }
-        v.tog = toolbar.addToggle(v.id, v.gid, v.isel, v.cb, v.tt);
+        v.tog = toolbar.addToggle(v.id, v.gid, v.isel, v.cb, deferredText(v));
     }
 
     function addFirstRow() {
@@ -157,7 +178,7 @@
     }
 
     function addSecondRow() {
-        //addToggle('X');
+        // addToggle('X');
         addToggle('Z');
         addButton('N');
         addButton('L');
@@ -172,10 +193,10 @@
         // generate radio button set for overlays; start with 'none'
         var rset = [{
                 gid: 'm_unknown',
-                tooltip: 'No Overlay',
+                tooltip: topoLion('ov_tt_none'),
                 cb: function () {
                     tov.tbSelection(null, switchOverlayActions);
-                }
+                },
             }];
         ovIndex = tov.augmentRbset(rset, switchOverlayActions);
         ovRset = toolbar.addRadioSet('topo-overlays', rset);
@@ -220,7 +241,11 @@
                     value = keyBindings[key];
                     bid = oid + '-' + key;
                     gid = tov.mkGlyphId(oid, value.gid);
-                    tt = value.tt + ' (' + key + ')';
+                    tt = function () {
+                        var ttfn = value.tt,
+                            txt = fs.isF(ttfn) ? ttfn() : ttfn;
+                        return txt + ' (' + key + ')';
+                    };
                     thirdRow.addButton(bid, gid, value.cb, tt);
                 }
             });
@@ -278,7 +303,7 @@
         toolbar.toggle();
         persistTopoPrefs('toolbar');
     }
-    
+
     function selectOverlay(ovid) {
         var idx = ovIndex[defaultOverlay] || 0,
             pidx = (ovid === null) ? 0 : ovIndex[ovid] || -1;
@@ -316,7 +341,8 @@
                 toggleToolbar: toggleToolbar,
                 selectOverlay: selectOverlay,
                 defaultPrefs: defaultPrefsState,
-                fnkey: fnkey
+                fnkey: fnkey,
+                setLionBundle: function (bundle) { topoLion = bundle; },
             };
         }]);
 }());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,20 +43,26 @@
     }
 
     function listProps(el, data) {
+        var sepLast = false;
+
+        // note: track whether we end with a separator or not...
         data.propOrder.forEach(function (p) {
             if (p === '-') {
                 addSep(el);
+                sepLast = true;
             } else {
-                addProp(el, p, data.props[p]);
+                addProp(el, data.propLabels[p], data.propValues[p]);
+                sepLast = false;
             }
         });
+        return sepLast;
     }
 
     angular.module('onosWidget')
     .factory('ListService', [
         function () {
             return {
-                listProps: listProps
+                listProps: listProps,
             };
         }]);
 }());

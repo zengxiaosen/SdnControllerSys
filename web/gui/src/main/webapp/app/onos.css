@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,20 +46,6 @@ body {
     -webkit-margin-after: 0;
     margin: 32px 0 4px 16px;
     padding: 0;
-    font-size: 21pt;
+    font-size: 18pt;
     font-weight: lighter;
-}
-
-
-/* TODO: dark versions for links */
-a {
-    color: #009fdb;
-    text-decoration: none;
-}
-a:hover {
-    text-decoration: underline;
-}
-a:visited {
-    color: #7fabdb;
-    text-decoration: none;
 }

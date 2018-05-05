@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -201,7 +201,7 @@ public final class TestUtils {
      * through reflection. The original exception can be found by examining the
      * cause.
      */
-    public static class TestUtilsException extends Exception {
+    public static class TestUtilsException extends RuntimeException {
 
         private static final long serialVersionUID = 1L;
 

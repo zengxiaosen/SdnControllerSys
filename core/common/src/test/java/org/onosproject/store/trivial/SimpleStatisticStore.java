@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 /**
  * Maintains statistics using RPC calls to collect stats from remote instances
  * on demand.
+ * 使用RPC调用维护统计信息以根据需要从远程实例收集统计信息。
  */
 @Component(immediate = true)
 @Service

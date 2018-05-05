@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,14 +25,14 @@
     var Collection, Model;
 
     var remappedDeviceTypes = {
-        virtual: 'cord'
+        virtual: 'cord',
     };
 
     function createSubRegionCollection(data, region) {
 
         var SubRegionCollection = Collection.extend({
             model: Model,
-            region: region
+            region: region,
         });
 
         return new SubRegionCollection(data);
@@ -40,21 +40,24 @@
 
     angular.module('ovTopo2')
     .factory('Topo2SubRegionService', [
-        'WebSocketService', 'Topo2Collection', 'Topo2NodeModel',
-        'Topo2SubRegionPanelService',
+        '$location', 'WebSocketService', 'Topo2Collection', 'Topo2NodeModel',
+        'Topo2SubRegionPanelService', 'Topo2RegionNavigationService',
 
-        function (wss, _c_, NodeModel, t2srp) {
+        function ($loc, wss, _c_, NodeModel, t2srp, t2rns) {
 
             Collection = _c_;
 
             Model = NodeModel.extend({
+
+                nodeType: 'sub-region',
+                events: {
+                    'dblclick': 'navigateToRegion',
+                    'click': 'onClick',
+                },
+
                 initialize: function () {
                     this.super = this.constructor.__super__;
                     this.super.initialize.apply(this, arguments);
-                },
-                events: {
-                    'dblclick': 'navigateToRegion',
-                    'click': 'onClick'
                 },
                 onChange: function () {
                     // Update class names when the model changes
@@ -62,41 +65,24 @@
                         this.el.attr('class', this.svgClassName());
                     }
                 },
-                nodeType: 'sub-region',
+                showDetails: function () {
+                    t2srp.displayPanel(this);
+                },
                 icon: function () {
                     var type = this.get('type');
                     return remappedDeviceTypes[type] || type || 'm_cloud';
                 },
-                onClick: function () {
-                    var selected = this.select(d3.event);
-
-                    if (selected.length > 0) {
-                        t2srp.displayPanel(this);
-                    } else {
-                        t2srp.hide();
-                    }
-                },
                 navigateToRegion: function () {
-
                     if (d3.event.defaultPrevented) return;
-
-                    wss.sendEvent('topo2navRegion', {
-                        dir: 'down',
-                        rid: this.get('id')
-                    });
-
-                    var layout = this.collection.region.layout;
-                    layout.createForceElements();
-                    layout.transitionDownRegion();
-
+                    t2rns.navigateToRegion(this.get('id'));
                     t2srp.hide();
-                }
+                },
             });
 
             return {
-                createSubRegionCollection: createSubRegionCollection
+                createSubRegionCollection: createSubRegionCollection,
             };
-        }
+        },
     ]);
 
 })();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,37 @@
 
 package org.onosproject.store.service;
 
+import com.google.common.collect.Comparators;
+import com.google.common.collect.ImmutableList;
+import org.apache.commons.collections.CollectionUtils;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Unique key for nodes in the {@link DocumentTree}.
  */
 public class DocumentPath implements Comparable<DocumentPath> {
 
-    private final List<String> pathElements = Lists.newArrayList();
+    /** Default path separator. */
+    public static final String DEFAULT_SEPARATOR = "|";
+
+    /** Default path separator regex. */
+    public static final String DEFAULT_SEPARATOR_RE = "\\|";
+
+    // TODO: Add means to set the path separator and separator ERE.
+    private static String pathSeparator = DEFAULT_SEPARATOR;
+    private static String pathSeparatorRE = DEFAULT_SEPARATOR_RE;
+
+    /** Root document tree path. */
+    public static final DocumentPath ROOT = DocumentPath.from("root");
+
+    private final List<String> pathElements;
 
     /**
      * Private utility constructor for internal generation of partial paths only.
@@ -42,14 +54,15 @@ public class DocumentPath implements Comparable<DocumentPath> {
      * @param pathElements list of path elements
      */
     private DocumentPath(List<String> pathElements) {
-        Preconditions.checkNotNull(pathElements);
-        this.pathElements.addAll(pathElements);
+        checkNotNull(pathElements);
+        this.pathElements = ImmutableList.copyOf(pathElements);
     }
 
     /**
      * Constructs a new document path.
      * <p>
-     * New paths must contain at least one name and string names may NOT contain any period characters.
+     * New paths must contain at least one name and string names MUST NOT contain
+     * any path separator characters.
      * If one field is {@code null} that field will be ignored.
      *
      * @param nodeName the name of the last level of this path
@@ -58,20 +71,19 @@ public class DocumentPath implements Comparable<DocumentPath> {
      * @throws IllegalDocumentNameException if both parameters are null or name contains an illegal character ('.')
      */
     public DocumentPath(String nodeName, DocumentPath parentPath) {
-        if (nodeName.contains(".")) {
-            throw new IllegalDocumentNameException(
-                    "Periods are not allowed in names.");
+        checkNotNull(nodeName, "Node name cannot be null");
+        if (nodeName.contains(pathSeparator)) {
+            throw new IllegalDocumentNameException("'" + pathSeparator + "'" +
+                    " are not allowed in names.");
         }
+
         if (parentPath != null) {
-            pathElements.addAll(parentPath.pathElements());
-        }
-        if (nodeName != null) {
-            pathElements.add(nodeName);
-        }
-        if (pathElements.isEmpty()) {
-            throw new IllegalDocumentNameException("A document path must contain at" +
-                                                   "least one non-null" +
-                                                   "element.");
+            pathElements = ImmutableList.<String>builder()
+                            .addAll(parentPath.pathElements())
+                            .add(nodeName)
+                            .build();
+        } else {
+            pathElements = ImmutableList.of(nodeName);
         }
     }
 
@@ -82,7 +94,69 @@ public class DocumentPath implements Comparable<DocumentPath> {
      * @return {@code DocumentPath} instance
      */
     public static DocumentPath from(String path) {
-        return new DocumentPath(Arrays.asList(path.split("\\.")));
+        return new DocumentPath(Arrays.asList(path.split(pathSeparatorRE)));
+    }
+
+    /**
+     * Creates a new {@code DocumentPath} from a list of path elements.
+     *
+     * @param elements path elements
+     * @return {@code DocumentPath} instance
+     */
+    public static DocumentPath from(String... elements) {
+        return from(Arrays.asList(elements));
+    }
+
+    /**
+     * Creates a new {@code DocumentPath} from a list of path elements.
+     *
+     * @param elements path elements
+     * @return {@code DocumentPath} instance
+     */
+    public static DocumentPath from(List<String> elements) {
+        return new DocumentPath(elements);
+    }
+
+    /**
+     * Creates a new {@code DocumentPath} from a list of path elements.
+     *
+     * @param elements path elements
+     * @param child child element
+     * @return {@code DocumentPath} instance
+     */
+    public static DocumentPath from(List<String> elements, String child) {
+        List<String> concat = new ArrayList<>(elements.size() + 1);
+        concat.addAll(elements);
+        concat.add(child);
+        return from(concat);
+    }
+
+    /**
+     * Creates a new {@code DocumentPath} from a list of path elements.
+     *
+     * @param elements path elements
+     * @param childElms child element
+     * @return {@code DocumentPath} instance
+     */
+    public static DocumentPath from(List<String> elements, String... childElms) {
+        List<String> concat = new ArrayList<>(elements.size() + childElms.length);
+        concat.addAll(elements);
+        concat.addAll(Arrays.asList(childElms));
+        return from(concat);
+    }
+
+    /**
+     * Creates a new DocumentPath element appending {@code childElm} to
+     * this path.
+     *
+     * @param childElms to append
+     * @return this + childElm
+     */
+    public DocumentPath append(List<String> childElms) {
+        List<String> concat = new ArrayList<>(pathElements.size() + childElms.size());
+        concat.addAll(pathElements);
+        concat.addAll(childElms);
+        return from(concat);
     }
 
     /**
@@ -115,7 +189,7 @@ public class DocumentPath implements Comparable<DocumentPath> {
      * @return a list of elements that make up this path
      */
     public List<String> pathElements() {
-        return ImmutableList.copyOf(pathElements);
+        return pathElements;
     }
 
     /**
@@ -127,7 +201,9 @@ public class DocumentPath implements Comparable<DocumentPath> {
      * @return {@code true} is yes; {@code false} otherwise.
      */
     public boolean isAncestorOf(DocumentPath other) {
-        return !other.equals(this) && other.toString().startsWith(toString());
+        return other != null &&
+               this.pathElements.size() < other.pathElements.size() &&
+               this.pathElements.equals(other.pathElements.subList(0, this.pathElements.size()));
     }
 
     /**
@@ -140,22 +216,42 @@ public class DocumentPath implements Comparable<DocumentPath> {
      * @return {@code true} is yes; {@code false} otherwise.
      */
     public boolean isDescendentOf(DocumentPath other) {
-        return other.equals(this) || other.isAncestorOf(this);
+        return other != null &&
+               (other.equals(this) || other.isAncestorOf(this));
     }
 
     /**
      * Returns the path that points to the least common ancestor of the specified
      * collection of paths.
+     *
      * @param paths collection of path
-     * @return path to least common ancestor
+     * @return path to least common ancestor or null if there is nothing in common
      */
     public static DocumentPath leastCommonAncestor(Collection<DocumentPath> paths) {
         if (CollectionUtils.isEmpty(paths)) {
             return null;
         }
-        return DocumentPath.from(StringUtils.getCommonPrefix(paths.stream()
-                    .map(DocumentPath::toString)
-                    .toArray(String[]::new)));
+        DocumentPath first = paths.iterator().next();
+
+        int maxComps = paths.stream()
+            .map(DocumentPath::pathElements)
+            .mapToInt(List::size)
+            .min()
+            .orElse(-1); // paths.size() will never be 0 here
+
+        for (int i = 0; i < maxComps; ++i) {
+            final int fi = i;
+            String comp = first.pathElements().get(i);
+            boolean isAllCommon = paths.stream()
+                .map(DocumentPath::pathElements)
+                .map(l -> l.get(fi))
+                .allMatch(c -> comp.equals(c));
+            if (!isAllCommon) {
+                return (i == 0) ? null :
+                       DocumentPath.from(first.pathElements.subList(0, i));
+            }
+        }
+        return DocumentPath.from(first.pathElements.subList(0, maxComps));
     }
 
     @Override
@@ -179,7 +275,7 @@ public class DocumentPath implements Comparable<DocumentPath> {
         while (iter.hasNext()) {
             stringBuilder.append(iter.next());
             if (iter.hasNext()) {
-                stringBuilder.append(".");
+                stringBuilder.append(pathSeparator);
             }
         }
         return stringBuilder.toString();
@@ -187,19 +283,7 @@ public class DocumentPath implements Comparable<DocumentPath> {
 
     @Override
     public int compareTo(DocumentPath that) {
-        int shorterLength = this.pathElements.size() > that.pathElements.size()
-                ? that.pathElements.size() : this.pathElements.size();
-        for (int i = 0; i < shorterLength; i++) {
-            if (this.pathElements.get(i).compareTo(that.pathElements.get(i)) != 0) {
-                return this.pathElements.get(i).compareTo(that.pathElements.get(i));
-            }
-        }
-        if (this.pathElements.size() > that.pathElements.size()) {
-            return 1;
-        } else if (that.pathElements.size() > this.pathElements.size()) {
-            return -1;
-        } else {
-            return 0;
-        }
+        return Comparators.lexicographical(Comparator.<String>naturalOrder())
+                .compare(this.pathElements, that.pathElements);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,9 +89,19 @@ public interface Instruction {
         L4MODIFICATION,
 
         /**
+         * Signifies that a protocol-independent instruction will be used.
+         */
+        PROTOCOL_INDEPENDENT,
+
+        /**
          * Signifies that an extension instruction will be used.
          */
-        EXTENSION
+        EXTENSION,
+
+        /**
+         * Signifies that statistics will be triggered.
+         */
+        STAT_TRIGGER
     }
 
     /**

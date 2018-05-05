@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.Objects;
  * Representation of a message subject.
  * Cluster messages have associated subjects that dictate how they get handled
  * on the receiving side.
+ * 表示消息主题。 集群消息具有相关的主题，指示如何在接收方处理它们。
  */
 public final class MessageSubject {
 

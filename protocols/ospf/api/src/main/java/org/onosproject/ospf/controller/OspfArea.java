@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -145,9 +145,8 @@ public interface OspfArea {
      * with a new sequence number.
      *
      * @param ospfInterface interface instance
-     * @throws Exception might throw exception
      */
-    void refreshArea(OspfInterface ospfInterface) throws Exception;
+    void refreshArea(OspfInterface ospfInterface);
 
     /**
      * Verifies no neighbor is in exchange process.
@@ -191,10 +190,8 @@ public interface OspfArea {
      * @param ospfLsa          LSA instance
      * @param isSelfOriginated true if the LSA is self originated else false
      * @param ospfInterface    interface instance
-     * @throws Exception might throws exception
      */
-    void addLsa(OspfLsa ospfLsa, boolean isSelfOriginated, OspfInterface ospfInterface)
-            throws Exception;
+    void addLsa(OspfLsa ospfLsa, boolean isSelfOriginated, OspfInterface ospfInterface);
 
     /**
      * Adds the received LSA to LSDB,this method creates an LSA wrapper for the LSA.
@@ -202,9 +199,8 @@ public interface OspfArea {
      *
      * @param ospfLsa       LSA instance
      * @param ospfInterface interface instance
-     * @throws Exception might throws exception
      */
-    void addLsa(OspfLsa ospfLsa, OspfInterface ospfInterface) throws Exception;
+    void addLsa(OspfLsa ospfLsa, OspfInterface ospfInterface);
 
     /**
      * Sets router sequence number for router LSA.
@@ -229,8 +225,7 @@ public interface OspfArea {
      * @param linkStateID       link state id to form the key
      * @param advertisingRouter advertising router to form the key
      * @return LSA wrapper instance which contains the LSA
-     * @throws Exception might throws exception
      */
-    LsaWrapper getLsa(int lsType, String linkStateID, String advertisingRouter) throws Exception;
+    LsaWrapper getLsa(int lsType, String linkStateID, String advertisingRouter);
 
 }

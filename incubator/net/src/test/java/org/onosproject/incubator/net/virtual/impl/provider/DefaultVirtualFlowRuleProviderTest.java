@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,24 +21,20 @@ import com.google.common.collect.ImmutableSet;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.onlab.osgi.ServiceDirectory;
-import org.onlab.packet.IpAddress;
-import org.onlab.packet.MacAddress;
-import org.onlab.packet.VlanId;
+import org.onlab.graph.ScalarWeight;
+import org.onlab.graph.Weight;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreServiceAdapter;
 import org.onosproject.core.DefaultApplicationId;
-import org.onosproject.core.IdGenerator;
 import org.onosproject.incubator.net.virtual.DefaultVirtualDevice;
 import org.onosproject.incubator.net.virtual.DefaultVirtualNetwork;
 import org.onosproject.incubator.net.virtual.DefaultVirtualPort;
 import org.onosproject.incubator.net.virtual.NetworkId;
 import org.onosproject.incubator.net.virtual.TenantId;
 import org.onosproject.incubator.net.virtual.VirtualDevice;
-import org.onosproject.incubator.net.virtual.VirtualHost;
 import org.onosproject.incubator.net.virtual.VirtualLink;
 import org.onosproject.incubator.net.virtual.VirtualNetwork;
-import org.onosproject.incubator.net.virtual.VirtualNetworkAdminService;
+import org.onosproject.incubator.net.virtual.VirtualNetworkAdminServiceAdapter;
 import org.onosproject.incubator.net.virtual.VirtualPort;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DefaultAnnotations;
@@ -48,8 +44,6 @@ import org.onosproject.net.DefaultPath;
 import org.onosproject.net.DefaultPort;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.HostId;
-import org.onosproject.net.HostLocation;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
 import org.onosproject.net.Port;
@@ -68,13 +62,12 @@ import org.onosproject.net.flow.instructions.Instruction;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.net.topology.LinkWeigher;
-import org.onosproject.net.topology.LinkWeight;
 import org.onosproject.net.topology.Topology;
 import org.onosproject.net.topology.TopologyServiceAdapter;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
@@ -124,7 +117,6 @@ public class DefaultVirtualFlowRuleProviderTest {
 
     private static final int TIMEOUT = 10;
 
-
     protected DefaultVirtualFlowRuleProvider virtualProvider;
 
     private ApplicationId vAppId;
@@ -135,7 +127,7 @@ public class DefaultVirtualFlowRuleProviderTest {
 
         virtualProvider.deviceService = new TestDeviceService();
         virtualProvider.coreService = new TestCoreService();
-        virtualProvider.virtualNetworkAdminService =
+        virtualProvider.vnService =
                 new TestVirtualNetworkAdminService();
         virtualProvider.topologyService = new TestTopologyService();
         virtualProvider.flowRuleService = new TestFlowRuleService();
@@ -153,7 +145,7 @@ public class DefaultVirtualFlowRuleProviderTest {
     }
 
     @Test
-    public void virtualizeFlowRuleWithInPort() {
+    public void devirtualizeFlowRuleWithInPort() {
         TrafficSelector ts = DefaultTrafficSelector.builder()
                 .matchInPort(PORT_NUM1).build();
         TrafficTreatment tr = DefaultTrafficTreatment.builder()
@@ -202,7 +194,7 @@ public class DefaultVirtualFlowRuleProviderTest {
     }
 
     @Test
-    public void virtualizeFlowRuleWithoutInPort() {
+    public void devirtualizeFlowRuleWithoutInPort() {
         TrafficSelector ts = DefaultTrafficSelector.builder().build();
         TrafficTreatment tr = DefaultTrafficTreatment.builder()
                 .setOutput(PORT_NUM2).build();
@@ -306,18 +298,6 @@ public class DefaultVirtualFlowRuleProviderTest {
         public ApplicationId registerApplication(String name) {
             return new TestApplicationId(1, name);
         }
-
-        @Override
-        public IdGenerator getIdGenerator(String topic) {
-            return new IdGenerator() {
-                private AtomicLong counter = new AtomicLong(0);
-
-                @Override
-                public long getNewId() {
-                    return counter.getAndIncrement();
-                }
-            };
-        }
     }
 
     private static class TestApplicationId extends DefaultApplicationId {
@@ -326,13 +306,8 @@ public class DefaultVirtualFlowRuleProviderTest {
         }
     }
 
-    private static class TestVirtualNetworkAdminService
-            implements VirtualNetworkAdminService {
-
-        @Override
-        public Set<VirtualNetwork> getVirtualNetworks(TenantId tenantId) {
-            return null;
-        }
+    private class TestVirtualNetworkAdminService
+            extends VirtualNetworkAdminServiceAdapter {
 
         @Override
         public Set<VirtualDevice> getVirtualDevices(NetworkId networkId) {
@@ -340,13 +315,8 @@ public class DefaultVirtualFlowRuleProviderTest {
         }
 
         @Override
-        public Set<VirtualHost> getVirtualHosts(NetworkId networkId) {
-            return null;
-        }
-
-        @Override
         public Set<VirtualLink> getVirtualLinks(NetworkId networkId) {
-            return null;
+            return new HashSet<>();
         }
 
         @Override
@@ -356,118 +326,18 @@ public class DefaultVirtualFlowRuleProviderTest {
         }
 
         @Override
-        public <T> T get(NetworkId networkId, Class<T> serviceClass) {
-            return null;
-        }
-
-        @Override
-        public ServiceDirectory getServiceDirectory() {
-            return null;
-        }
-
-        @Override
         public ApplicationId getVirtualNetworkApplicationId(NetworkId networkId) {
-            return null;
-        }
-
-        @Override
-        public void registerTenantId(TenantId tenantId) {
-
-        }
-
-        @Override
-        public void unregisterTenantId(TenantId tenantId) {
-
-        }
-
-        @Override
-        public Set<TenantId> getTenantIds() {
-            return null;
-        }
-
-        @Override
-        public VirtualNetwork createVirtualNetwork(TenantId tenantId) {
-            return null;
-        }
-
-        @Override
-        public void removeVirtualNetwork(NetworkId networkId) {
-
-        }
-
-        @Override
-        public VirtualDevice createVirtualDevice(NetworkId networkId,
-                                                 DeviceId deviceId) {
-            return null;
-        }
-
-        @Override
-        public void removeVirtualDevice(NetworkId networkId, DeviceId deviceId) {
-
-        }
-
-        @Override
-        public VirtualHost createVirtualHost(NetworkId networkId, HostId hostId,
-                                             MacAddress mac, VlanId vlan,
-                                             HostLocation location,
-                                             Set<IpAddress> ips) {
-            return null;
-        }
-
-        @Override
-        public void removeVirtualHost(NetworkId networkId, HostId hostId) {
-
-        }
-
-        @Override
-        public VirtualLink createVirtualLink(NetworkId networkId,
-                                             ConnectPoint src, ConnectPoint dst) {
-            return null;
-        }
-
-        @Override
-        public void removeVirtualLink(NetworkId networkId,
-                                      ConnectPoint src, ConnectPoint dst) {
-
-        }
-
-        @Override
-        public VirtualPort createVirtualPort(NetworkId networkId,
-                                             DeviceId deviceId,
-                                             PortNumber portNumber,
-                                             ConnectPoint realizedBy) {
-            return null;
-        }
-
-        @Override
-        public void bindVirtualPort(NetworkId networkId,
-                                    DeviceId deviceId,
-                                    PortNumber portNumber,
-                                    ConnectPoint realizedBy) {
-
-        }
-
-        @Override
-        public void removeVirtualPort(NetworkId networkId, DeviceId deviceId,
-                                      PortNumber portNumber) {
-
+            return vAppId;
         }
     }
 
     private static class TestTopologyService extends TopologyServiceAdapter {
 
+        Weight oneHundred = ScalarWeight.toWeight(100);
         @Override
         public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst) {
             DefaultPath path = new DefaultPath(PID, ImmutableList.of(LINK1),
-                                               100, ANNOTATIONS);
-            return ImmutableSet.of(path);
-        }
-
-        @Override
-        public Set<Path> getPaths(Topology topology, DeviceId src,
-                                  DeviceId dst, LinkWeight weight) {
-            DefaultPath path = new DefaultPath(PID, ImmutableList.of(LINK1),
-                                               100, ANNOTATIONS);
+                                               oneHundred, ANNOTATIONS);
             return ImmutableSet.of(path);
         }
 
@@ -475,7 +345,7 @@ public class DefaultVirtualFlowRuleProviderTest {
         public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst,
                                   LinkWeigher weigher) {
             DefaultPath path = new DefaultPath(PID, ImmutableList.of(LINK1),
-                                               100, ANNOTATIONS);
+                                               oneHundred, ANNOTATIONS);
             return ImmutableSet.of(path);
         }
 
@@ -493,15 +363,13 @@ public class DefaultVirtualFlowRuleProviderTest {
         public Iterable<FlowEntry> getFlowEntries(DeviceId deviceId) {
             return ruleCollection.stream()
                     .filter(r -> r.deviceId().equals(deviceId))
-                    .map(r -> new DefaultFlowEntry(r))
+                    .map(DefaultFlowEntry::new)
                     .collect(Collectors.toSet());
         }
 
         @Override
         public void applyFlowRules(FlowRule... flowRules) {
-            for (FlowRule rule : flowRules) {
-                ruleCollection.add(rule);
-            }
+            ruleCollection.addAll(Arrays.asList(flowRules));
         }
 
         @Override

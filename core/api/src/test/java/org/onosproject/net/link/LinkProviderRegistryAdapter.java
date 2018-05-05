@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,11 +36,18 @@ public class LinkProviderRegistryAdapter implements LinkProviderRegistry {
 
     @Override
     public void unregister(LinkProvider provider) {
+        if (providerService != null && provider.id().equals(providerService.provider().id())) {
+            providerService = null;
+        }
     }
 
     @Override
     public Set<ProviderId> getProviders() {
-        return ImmutableSet.of(providerService.provider().id());
+        if (providerService != null) {
+            return ImmutableSet.of(providerService.provider().id());
+        } else {
+            return ImmutableSet.of();
+        }
     }
 
     public LinkProviderServiceAdapter registeredProvider() {

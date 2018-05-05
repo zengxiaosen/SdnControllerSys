@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ public class YangXmlUtils {
     private void addProperties(HierarchicalConfiguration cfg, HierarchicalConfiguration complete) {
         cfg.getKeys().forEachRemaining(key -> {
             String property = (String) cfg.getProperty(key);
-            if (!property.equals("")) {
+            if (!"".equals(property)) {
                 complete.setProperty(key, property);
             }
         });
@@ -195,7 +195,7 @@ public class YangXmlUtils {
      *
      * @return instance of YangXmlUtils
      */
-    public static YangXmlUtils getInstance() {
+    public static synchronized YangXmlUtils getInstance() {
         if (instance == null) {
             instance = new YangXmlUtils();
         }

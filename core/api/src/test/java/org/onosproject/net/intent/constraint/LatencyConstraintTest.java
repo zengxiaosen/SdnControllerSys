@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.onosproject.net.intent.constraint;
 import com.google.common.testing.EqualsTester;
 import org.junit.Before;
 import org.junit.Test;
+import org.onlab.graph.ScalarWeight;
 import org.onosproject.net.Annotations;
 import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.DefaultLink;
@@ -83,7 +84,7 @@ public class LatencyConstraintTest {
                 .type(DIRECT)
                 .annotations(annotations2)
                 .build();
-        path = new DefaultPath(PROVIDER_ID, Arrays.asList(link1, link2), 10);
+        path = new DefaultPath(PROVIDER_ID, Arrays.asList(link1, link2), ScalarWeight.toWeight(10));
     }
 
     /**
@@ -91,7 +92,7 @@ public class LatencyConstraintTest {
      */
     @Test
     public void testLessThanLatency() {
-        sut = new LatencyConstraint(Duration.of(10, ChronoUnit.MICROS));
+        sut = new LatencyConstraint(Duration.of(10, ChronoUnit.NANOS));
 
         assertThat(sut.validate(path, resourceContext), is(true));
     }
@@ -101,7 +102,7 @@ public class LatencyConstraintTest {
      */
     @Test
     public void testMoreThanLatency() {
-        sut = new LatencyConstraint(Duration.of(3, ChronoUnit.MICROS));
+        sut = new LatencyConstraint(Duration.of(3, ChronoUnit.NANOS));
 
         assertThat(sut.validate(path, resourceContext), is(false));
     }
@@ -111,7 +112,7 @@ public class LatencyConstraintTest {
      */
     @Test
     public void testCost() {
-        sut = new LatencyConstraint(Duration.of(10, ChronoUnit.MICROS));
+        sut = new LatencyConstraint(Duration.of(10, ChronoUnit.NANOS));
 
         assertThat(sut.cost(link1, resourceContext), is(closeTo(Double.parseDouble(LATENCY1), 1.0e-6)));
         assertThat(sut.cost(link2, resourceContext), is(closeTo(Double.parseDouble(LATENCY2), 1.0e-6)));

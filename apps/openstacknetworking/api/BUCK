@@ -1,10 +1,12 @@
+include_defs('//apps/openstacknetworking/openstack4j.bucklet')
+
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
-    '//lib:jersey-client',
-    '//lib:javax.ws.rs-api',
-    '//apps/openstackinterface/api:onos-apps-openstackinterface-api',
+    '//lib:openstack4j-core',
 ]
 
 osgi_jar_with_tests (
     deps = COMPILE_DEPS,
+
+    import_packages = INCLUDE_PACKAGES + ',' + EXCLUDE_PACKAGES  + ',' + ALL_PACKAGES,
 )

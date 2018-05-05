@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,11 @@ public class ImmutableByteSequenceSerializer extends Serializer<ImmutableByteSeq
     public ImmutableByteSequence read(Kryo kryo, Input input, Class<ImmutableByteSequence> type) {
         int length = input.readInt();
         byte[] data = new byte[length];
-        input.read(data);
+        int bytesRead = input.read(data);
+        if (bytesRead != length) {
+            throw new IllegalStateException("Byte sequence serializer read expected " + length +
+                    " but got " + bytesRead);
+        }
         return ImmutableByteSequence.copyFrom(data);
     }
 }

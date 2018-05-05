@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import org.onosproject.net.driver.DriverHandler;
 
 /**
  * Applies configuration to the device.
+ * 设置设备的配置
  */
 public final class VtnConfig {
 

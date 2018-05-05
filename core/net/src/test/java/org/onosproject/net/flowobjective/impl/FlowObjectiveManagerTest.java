@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,12 @@
  */
 package org.onosproject.net.flowobjective.impl;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.junit.TestUtils;
 import org.onlab.packet.ChassisId;
+import org.onosproject.cfg.ComponentConfigAdapter;
 import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.DefaultDevice;
 import org.onosproject.net.Device;
@@ -35,11 +33,9 @@ import org.onosproject.net.behaviour.PipelinerContext;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceListener;
 import org.onosproject.net.device.DeviceServiceAdapter;
-import org.onosproject.net.driver.AbstractDriverLoader;
 import org.onosproject.net.driver.Behaviour;
 import org.onosproject.net.driver.DefaultDriverData;
 import org.onosproject.net.driver.DefaultDriverHandler;
-import org.onosproject.net.driver.DefaultDriverProviderService;
 import org.onosproject.net.driver.Driver;
 import org.onosproject.net.driver.DriverAdapter;
 import org.onosproject.net.driver.DriverData;
@@ -59,6 +55,9 @@ import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.flowobjective.NextObjective;
 import org.onosproject.net.flowobjective.ObjectiveEvent;
 import org.onosproject.net.intent.TestTools;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -124,12 +123,6 @@ public class FlowObjectiveManagerTest {
 
     }
 
-    private class TestDriversLoader extends AbstractDriverLoader implements DefaultDriverProviderService {
-        public TestDriversLoader() {
-            super("/onos-drivers.xml");
-        }
-    }
-
     private class TestDriver extends DriverAdapter {
 
         @Override
@@ -183,13 +176,16 @@ public class FlowObjectiveManagerTest {
         }
     }
 
+    private class TestComponentConfigService extends ComponentConfigAdapter {
+    }
+
     @Before
     public void initializeTest() {
         manager = new FlowObjectiveManager();
         manager.flowObjectiveStore = new TestFlowObjectiveStore();
         manager.deviceService = new TestDeviceService();
-        manager.defaultDriverService = new TestDriversLoader();
         manager.driverService = new TestDriverService();
+        manager.cfgService = new TestComponentConfigService();
 
         filteringObjectives = new ArrayList<>();
         forwardingObjectives = new ArrayList<>();

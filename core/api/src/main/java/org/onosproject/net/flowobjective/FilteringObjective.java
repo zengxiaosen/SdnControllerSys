@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,6 +93,14 @@ public interface FilteringObjective extends Objective {
     TrafficTreatment meta();
 
     /**
+     * Returns a new builder set to create a copy of this objective.
+     *
+     * @return new builder
+     */
+    @Override
+    Builder copy();
+
+    /**
      * Builder of Filtering objective entities.
      */
     interface Builder extends Objective.Builder {
@@ -143,6 +151,23 @@ public interface FilteringObjective extends Objective {
          */
         @Override
         Builder fromApp(ApplicationId appId);
+
+        /**
+         * Sets the priority for this objective.
+         *
+         * @param priority an integer
+         * @return an objective builder
+         */
+        @Override
+        Builder withPriority(int priority);
+
+        /**
+         * Makes the filtering objective permanent.
+         *
+         * @return an objective builder
+         */
+        @Override
+        public Builder makePermanent();
 
         /**
          * Builds the filtering objective that will be added.

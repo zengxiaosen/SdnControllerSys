@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ public class DevicePortStateCommand extends AbstractShellCommand {
 
     @Argument(index = 1, name = "portNumber", description = "Port Number",
             required = true, multiValued = false)
-    Integer portNumber = null;
+    String portNumber = null;
 
     @Argument(index = 2, name = "portState",
             description = "Desired State. Either \"enable\" or \"disable\".",
@@ -53,15 +53,15 @@ public class DevicePortStateCommand extends AbstractShellCommand {
             print(" %s", "Device does not exist");
             return;
         }
-        PortNumber pnum = PortNumber.portNumber(portNumber);
+        PortNumber pnum = PortNumber.fromString(portNumber);
         Port p = deviceService.getPort(dev.id(), pnum);
         if (p == null) {
             print(" %s", "Port does not exist");
             return;
         }
-        if (portState.equals("enable")) {
+        if ("enable".equals(portState)) {
             deviceAdminService.changePortState(dev.id(), pnum, true);
-        } else if (portState.equals("disable")) {
+        } else if ("disable".equals(portState)) {
             deviceAdminService.changePortState(dev.id(), pnum, false);
         } else {
             print(" %s", "State must be enable or disable");

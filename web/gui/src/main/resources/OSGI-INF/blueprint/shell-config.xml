@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright 2016-present Open Networking Laboratory
+  ~ Copyright 2016-present Open Networking Foundation
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -18,19 +18,30 @@
 
     <command-bundle xmlns="http://karaf.apache.org/xmlns/shell/v1.1.0">
         <command>
-            <action class="org.onosproject.ui.impl.topo.cli.ListMembers"/>
+            <action class="org.onosproject.ui.impl.cli.UiViewListCommand"/>
+        </command>
+
+        <command>
+            <action class="org.onosproject.ui.impl.cli.UiPreferencesListCommand"/>
+        </command>
+
+        <command>
+            <action class="org.onosproject.ui.impl.topo.cli.UiCacheMembersCommand"/>
         </command>
         <command>
-            <action class="org.onosproject.ui.impl.topo.cli.ListRegions"/>
+            <action class="org.onosproject.ui.impl.topo.cli.UiCacheRegionsCommand"/>
         </command>
         <command>
-            <action class="org.onosproject.ui.impl.topo.cli.ListDevices"/>
+            <action class="org.onosproject.ui.impl.topo.cli.UiCacheDevicesCommand"/>
         </command>
         <command>
-            <action class="org.onosproject.ui.impl.topo.cli.ListHosts"/>
+            <action class="org.onosproject.ui.impl.topo.cli.UiCacheHostsCommand"/>
         </command>
         <command>
-            <action class="org.onosproject.ui.impl.topo.cli.ListLinks"/>
+            <action class="org.onosproject.ui.impl.topo.cli.UiCacheLinksCommand"/>
+        </command>
+        <command>
+            <action class="org.onosproject.ui.impl.topo.cli.UiGeoMapListCommand"/>
         </command>
     </command-bundle>
 

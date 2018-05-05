@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,10 +31,10 @@ import org.onlab.packet.IpPrefix;
 import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.incubator.net.intf.Interface;
-import org.onosproject.incubator.net.intf.InterfaceService;
-import org.onosproject.incubator.net.routing.Route;
-import org.onosproject.incubator.net.routing.RouteService;
+import org.onosproject.net.intf.Interface;
+import org.onosproject.net.intf.InterfaceService;
+import org.onosproject.routeservice.Route;
+import org.onosproject.routeservice.RouteService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Host;
 import org.onosproject.net.flow.DefaultTrafficSelector;
@@ -48,9 +48,7 @@ import org.onosproject.net.packet.OutboundPacket;
 import org.onosproject.net.packet.PacketContext;
 import org.onosproject.net.packet.PacketProcessor;
 import org.onosproject.net.packet.PacketService;
-import org.onosproject.routing.IntentRequestListener;
 import org.onosproject.intentsync.IntentSynchronizationService;
-import org.onosproject.routing.config.RoutingConfigurationService;
 import org.slf4j.Logger;
 
 import java.nio.ByteBuffer;
@@ -89,7 +87,7 @@ public class SdnIpReactiveRouting {
     protected IntentSynchronizationService intentSynchronizer;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected RoutingConfigurationService config;
+    protected ReactiveRoutingConfigurationService config;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected InterfaceService interfaceService;
@@ -265,8 +263,10 @@ public class SdnIpReactiveRouting {
         case HOST_TO_INTERNET:
             // If the destination IP address is outside the local SDN network.
             // The Step 1 has already handled it. We do not need to do anything here.
-            intentRequestListener.setUpConnectivityHostToInternet(srcIpAddress,
-                    ipPrefix, route.nextHop());
+            if (route != null) {
+                intentRequestListener.setUpConnectivityHostToInternet(srcIpAddress,
+                        ipPrefix, route.nextHop());
+            }
             break;
         case INTERNET_TO_HOST:
             intentRequestListener.setUpConnectivityInternetToHost(dstIpAddress);

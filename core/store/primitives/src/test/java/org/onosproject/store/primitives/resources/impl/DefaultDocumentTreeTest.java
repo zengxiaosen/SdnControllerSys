@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -148,6 +148,7 @@ public class DefaultDocumentTreeTest {
         tree.set(path("root.a.b"), "alpha");
     }
 
+    @Test
     public void testReplaceWithVersion() {
         DocumentTree<String> tree = new DefaultDocumentTree<>();
         tree.create(path("root.a"), "bar");
@@ -158,6 +159,7 @@ public class DefaultDocumentTreeTest {
         Assert.assertFalse(tree.replace(path("root.x"), "beta", 1));
     }
 
+    @Test
     public void testReplaceWithValue() {
         DocumentTree<String> tree = new DefaultDocumentTree<>();
         tree.create(path("root.a"), "bar");
@@ -190,6 +192,6 @@ public class DefaultDocumentTreeTest {
     }
 
     private static DocumentPath path(String path) {
-        return DocumentPath.from(path);
+        return DocumentPath.from(path.replace(".", DocumentPath.DEFAULT_SEPARATOR));
     }
 }

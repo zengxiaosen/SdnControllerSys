@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import org.onosproject.vtnrsc.SegmentationId;
  * DnatService interface provides the rules in DNAT table which is Table(20) for ovs pipeline.
  * DNAT means Destination Network Address Translation, it is acronym for network terminology.
  * Handle the downward flows.
+ * DnatService接口提供了DNAT表中的规则，该规则是ovs管道的表（20）.DNAT表示目标网络地址转换，
+ * 它是网络术语的首字母缩写。处理下行流。
  */
 public interface DnatService {
 

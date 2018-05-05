@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 import org.onosproject.bgpio.protocol.BgpMessage;
-import org.onlab.util.HexDump;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * netty pipeline.
  */
 public class BgpMessageEncoder extends OneToOneEncoder {
-    protected static final Logger log = LoggerFactory.getLogger(BgpMessageEncoder.class);
+    private static final Logger log = LoggerFactory.getLogger(BgpMessageEncoder.class);
 
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ package org.onosproject.protocol.restconf.ctl;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
-import org.apache.felix.scr.annotations.Reference;
-import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
 import org.glassfish.jersey.client.ChunkedInput;
 import org.onlab.packet.IpAddress;
@@ -28,15 +26,12 @@ import org.onosproject.protocol.http.ctl.HttpSBControllerImpl;
 import org.onosproject.protocol.rest.RestSBDevice;
 import org.onosproject.protocol.restconf.RestConfSBController;
 import org.onosproject.protocol.restconf.RestconfNotificationEventListener;
-import org.onosproject.yms.ych.YangProtocolEncodingFormat;
-import org.onosproject.yms.ymsm.YmsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.Response;
-import java.io.InputStream;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -67,19 +62,11 @@ public class RestConfSBControllerImpl extends HttpSBControllerImpl
             restconfNotificationListenerMap = new ConcurrentHashMap<>();
     private Map<DeviceId, GetChunksRunnable> runnableTable = new ConcurrentHashMap<>();
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected YmsService ymsService;
-
     ExecutorService executor = Executors.newCachedThreadPool();
 
     @Activate
     public void activate() {
         log.info("RESTCONF SBI Started");
-        if (ymsService != null) {
-            ymsService
-                    .registerDefaultCodec(new JsonYdtCodec(ymsService),
-                                          YangProtocolEncodingFormat.JSON);
-        }
     }
 
     @Deactivate
@@ -118,53 +105,6 @@ public class RestConfSBControllerImpl extends HttpSBControllerImpl
     public void removeDevice(DeviceId deviceId) {
         log.trace("RESTCONF SBI::removeDevice");
         super.removeDevice(deviceId);
-    }
-
-    @Override
-    public boolean post(DeviceId device, String request, InputStream payload,
-                        String mediaType) {
-        request = discoverRootResource(device) + RESOURCE_PATH_PREFIX
-                + request;
-        return super.post(device, request, payload, mediaType);
-    }
-
-    @Override
-    public <T> T post(DeviceId device, String request, InputStream payload,
-                      String mediaType, Class<T> responseClass) {
-        request = discoverRootResource(device) + RESOURCE_PATH_PREFIX
-                + request;
-        return super.post(device, request, payload, mediaType, responseClass);
-    }
-
-    @Override
-    public boolean put(DeviceId device, String request, InputStream payload,
-                       String mediaType) {
-        request = discoverRootResource(device) + RESOURCE_PATH_PREFIX
-                + request;
-        return super.put(device, request, payload, mediaType);
-    }
-
-    @Override
-    public InputStream get(DeviceId device, String request, String mediaType) {
-        request = discoverRootResource(device) + RESOURCE_PATH_PREFIX
-                + request;
-        return super.get(device, request, mediaType);
-    }
-
-    @Override
-    public boolean patch(DeviceId device, String request, InputStream payload,
-                         String mediaType) {
-        request = discoverRootResource(device) + RESOURCE_PATH_PREFIX
-                + request;
-        return super.patch(device, request, payload, mediaType);
-    }
-
-    @Override
-    public boolean delete(DeviceId device, String request, InputStream payload,
-                          String mediaType) {
-        request = discoverRootResource(device) + RESOURCE_PATH_PREFIX
-                + request;
-        return super.delete(device, request, payload, mediaType);
     }
 
     @Override

@@ -6,6 +6,7 @@ osgi_feature (
     '//lib:atomix',
     '//lib:commons-lang',
     '//lib:commons-lang3',
+    '//lib:commons-text',
     '//lib:commons-configuration',
     '//lib:guava',
     '//lib:netty',
@@ -36,6 +37,8 @@ osgi_feature (
     '//lib:commons-io',
     '//lib:jersey-client',
     '//lib:mapdb',
+    '//lib:bcpkix-jdk15on',
+    '//lib:bcprov-jdk15on',
   ]
 )
 
@@ -51,8 +54,8 @@ osgi_feature (
     '//lib:hk2-locator',
     '//lib:hk2-osgi-resource-locator',
     '//lib:javax.inject',
-    '//lib:jersey-guava',
     '//lib:jersey-server',
+    '//lib:jersey-hk2',
     '//lib:aopalliance-repackaged',
     '//lib:hk2-utils',
     '//lib:validation-api',
@@ -96,7 +99,6 @@ osgi_feature (
   required_features = ['onos-core'],
   included_bundles = [
     '//incubator/net:onos-incubator-net',
-    '//incubator/core:onos-incubator-core',
     '//incubator/store:onos-incubator-store',
     '//incubator/rpc:onos-incubator-rpc',
   ]
@@ -132,14 +134,12 @@ osgi_feature (
   ]
 )
 
-#FIXME
-# osgi_feature (
-#   name = 'onos-security',
-#   title="Security-Mode ONOS",
-#   required_features = ['onos-api'],
-#   included_bundles = [
-#     'org.onosproject/org.apache.felix.framework.security/2.2.0.onos',
-#     'org.onosproject/onos-security/@ONOS-VERSION',
-#   ]
-# )
-
+osgi_feature (
+  name = 'onos-security',
+  title="Security-Mode ONOS",
+  required_features = ['onos-api'],
+  included_bundles = [
+    '//lib:org.apache.felix.framework.security',
+    '//core/security:onos-security',
+  ]
+)

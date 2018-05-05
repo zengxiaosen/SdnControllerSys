@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,18 @@
 package org.onosproject.provider.rest.device.impl;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.onlab.packet.ChassisId;
+import org.onlab.util.SharedExecutors;
+import org.onlab.util.SharedScheduledExecutorService;
+import org.onlab.util.SharedScheduledExecutors;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.incubator.net.config.basics.ConfigException;
 import org.onosproject.net.AnnotationKeys;
 import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.Device;
@@ -34,11 +37,12 @@ import org.onosproject.net.MastershipRole;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.SparseAnnotations;
 import org.onosproject.net.behaviour.DevicesDiscovery;
-import org.onosproject.net.behaviour.PortDiscovery;
+import org.onosproject.net.behaviour.PortAdmin;
 import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigRegistry;
+import org.onosproject.net.config.basics.SubjectFactories;
 import org.onosproject.net.device.DefaultDeviceDescription;
 import org.onosproject.net.device.DeviceDescription;
 import org.onosproject.net.device.DeviceDescriptionDiscovery;
@@ -46,6 +50,8 @@ import org.onosproject.net.device.DeviceProvider;
 import org.onosproject.net.device.DeviceProviderRegistry;
 import org.onosproject.net.device.DeviceProviderService;
 import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.device.PortStatistics;
+import org.onosproject.net.device.PortStatisticsDiscovery;
 import org.onosproject.net.driver.DefaultDriverData;
 import org.onosproject.net.driver.DefaultDriverHandler;
 import org.onosproject.net.driver.Driver;
@@ -54,21 +60,33 @@ import org.onosproject.net.driver.DriverHandler;
 import org.onosproject.net.driver.DriverService;
 import org.onosproject.net.provider.AbstractProvider;
 import org.onosproject.net.provider.ProviderId;
+import org.onosproject.protocol.rest.DefaultRestSBDevice;
 import org.onosproject.protocol.rest.RestSBController;
 import org.onosproject.protocol.rest.RestSBDevice;
 import org.slf4j.Logger;
 
 import javax.ws.rs.ProcessingException;
+import javax.ws.rs.core.MediaType;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.onosproject.net.config.NetworkConfigEvent.Type.CONFIG_ADDED;
+import static org.onosproject.net.config.NetworkConfigEvent.Type.CONFIG_REMOVED;
 import static org.onosproject.net.config.NetworkConfigEvent.Type.CONFIG_UPDATED;
-import static org.onosproject.net.config.basics.SubjectFactories.APP_SUBJECT_FACTORY;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
@@ -78,16 +96,14 @@ import static org.slf4j.LoggerFactory.getLogger;
 public class RestDeviceProvider extends AbstractProvider
         implements DeviceProvider {
     private static final String APP_NAME = "org.onosproject.restsb";
-    private static final String REST = "rest";
-    private static final String JSON = "json";
+    protected static final String REST = "rest";
     private static final String PROVIDER = "org.onosproject.provider.rest.device";
     private static final String IPADDRESS = "ipaddress";
-    private static final String HTTPS = "https";
-    private static final String AUTHORIZATION_PROPERTY = "authorization";
-    private static final String BASIC_AUTH_PREFIX = "Basic ";
-    private static final String URL_SEPARATOR = "://";
-    protected static final String ISNOTNULL = "Rest device is not null";
+    private static final String ISNOTNULL = "Rest device is not null";
     private static final String UNKNOWN = "unknown";
+    private static final int REST_TIMEOUT_SEC = 5;
+    private static final int DEFAULT_POLL_FREQUENCY_SECONDS = 30;
+    private static final int EXECUTOR_THREAD_POOL_SIZE = 8;
     private final Logger log = getLogger(getClass());
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -108,45 +124,50 @@ public class RestDeviceProvider extends AbstractProvider
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected DriverService driverService;
 
-
     private DeviceProviderService providerService;
     private ApplicationId appId;
 
-    private final ExecutorService executor =
-            Executors.newFixedThreadPool(5, groupedThreads("onos/restsbprovider", "device-installer-%d", log));
+    private ExecutorService executor;
+    private final SharedScheduledExecutorService portStatisticsExecutor =
+            SharedScheduledExecutors.getPoolThreadExecutor();
 
-    private final ConfigFactory factory =
-            new ConfigFactory<ApplicationId, RestProviderConfig>(APP_SUBJECT_FACTORY,
-                                                                 RestProviderConfig.class,
-                                                                 "devices",
-                                                                 true) {
+    private final List<ConfigFactory> factories = ImmutableList.of(
+            new ConfigFactory<DeviceId, RestDeviceConfig>(SubjectFactories.DEVICE_SUBJECT_FACTORY,
+                                                          RestDeviceConfig.class,
+                                                          REST) {
                 @Override
-                public RestProviderConfig createConfig() {
-                    return new RestProviderConfig();
+                public RestDeviceConfig createConfig() {
+                    return new RestDeviceConfig();
                 }
-            };
-    private final NetworkConfigListener cfgLister = new InternalNetworkConfigListener();
+            });
 
-    private Set<DeviceId> addedDevices = new HashSet<>();
+    private final NetworkConfigListener configListener = new InternalNetworkConfigListener();
+
+    private ScheduledFuture<?> scheduledTask;
 
 
     @Activate
     public void activate() {
         appId = coreService.registerApplication(APP_NAME);
         providerService = providerRegistry.register(this);
-        cfgService.registerConfigFactory(factory);
-        cfgService.addListener(cfgLister);
-        executor.execute(RestDeviceProvider.this::connectDevices);
+        factories.forEach(cfgService::registerConfigFactory);
+        executor = Executors.newFixedThreadPool(
+            EXECUTOR_THREAD_POOL_SIZE, groupedThreads("onos/restsbprovider", "device-installer-%d", log)
+        );
+        cfgService.addListener(configListener);
+        executor.execute(RestDeviceProvider.this::createAndConnectDevices);
+        scheduledTask = schedulePolling();
         log.info("Started");
     }
 
     @Deactivate
     public void deactivate() {
-        cfgService.removeListener(cfgLister);
-        controller.getDevices().keySet().forEach(this::deviceRemoved);
+        cfgService.removeListener(configListener);
         providerRegistry.unregister(this);
         providerService = null;
-        cfgService.unregisterConfigFactory(factory);
+        factories.forEach(cfgService::unregisterConfigFactory);
+        scheduledTask.cancel(true);
+        executor.shutdown();
         log.info("Stopped");
     }
 
@@ -164,7 +185,6 @@ public class RestDeviceProvider extends AbstractProvider
     public void roleChanged(DeviceId deviceId, MastershipRole newRole) {
         // TODO: This will be implemented later.
     }
-
 
     @Override
     public boolean isReachable(DeviceId deviceId) {
@@ -199,7 +219,7 @@ public class RestDeviceProvider extends AbstractProvider
                         devicesDiscovery(restSBDev, driver);
                 Set<DeviceId> deviceIds = devicesDiscovery.deviceIds();
                 restSBDev.setActive(true);
-                deviceIds.stream().forEach(deviceId -> {
+                deviceIds.forEach(deviceId -> {
                     controller.addProxiedDevice(deviceId, restSBDev);
                     DeviceDescription devDesc =
                             devicesDiscovery.deviceDetails(deviceId);
@@ -217,7 +237,6 @@ public class RestDeviceProvider extends AbstractProvider
                     }
 
                     checkAndUpdateDevice(deviceId);
-                    addedDevices.add(deviceId);
                 });
             } else {
                 log.warn("Driver not found for {}", restSBDev);
@@ -240,7 +259,6 @@ public class RestDeviceProvider extends AbstractProvider
             restSBDev.setActive(true);
             providerService.deviceConnected(deviceId, deviceDescription);
             checkAndUpdateDevice(deviceId);
-            addedDevices.add(deviceId);
         }
     }
 
@@ -312,60 +330,128 @@ public class RestDeviceProvider extends AbstractProvider
     private void deviceRemoved(DeviceId deviceId) {
         checkNotNull(deviceId, ISNOTNULL);
         providerService.deviceDisconnected(deviceId);
-        controller.getProxiedDevices(deviceId).stream().forEach(device -> {
+        controller.getProxiedDevices(deviceId).forEach(device -> {
             controller.removeProxiedDevice(device);
             providerService.deviceDisconnected(device);
         });
         controller.removeDevice(deviceId);
     }
 
-    private void connectDevices() {
-        RestProviderConfig cfg = cfgService.getConfig(appId, RestProviderConfig.class);
-        try {
-            if (cfg != null && cfg.getDevicesAddresses() != null) {
-                //Precomputing the devices to be removed
-                Set<RestSBDevice> toBeRemoved = new HashSet<>(controller.getDevices().values());
-                toBeRemoved.removeAll(cfg.getDevicesAddresses());
-                //Adding new devices
-                cfg.getDevicesAddresses().stream()
-                        .filter(device -> {
-                            device.setActive(false);
-                            controller.addDevice(device);
-                            return testDeviceConnection(device);
-                        })
-                        .forEach(device -> {
-                            deviceAdded(device);
-                        });
-                //Removing devices not wanted anymore
-                toBeRemoved.forEach(device -> deviceRemoved(device.deviceId()));
-            }
-        } catch (ConfigException e) {
-            log.error("Configuration error {}", e);
+    //Method to connect devices provided via net-cfg under devices/ tree
+    private void createAndConnectDevices() {
+        Set<DeviceId> deviceSubjects =
+                cfgService.getSubjects(DeviceId.class, RestDeviceConfig.class);
+        connectDevices(deviceSubjects.stream()
+                .filter(deviceId -> deviceService.getDevice(deviceId) == null)
+                .map(deviceId -> {
+                    RestDeviceConfig config =
+                            cfgService.getConfig(deviceId, RestDeviceConfig.class);
+                    return toInactiveRestSBDevice(config);
+                }).collect(Collectors.toSet()));
+    }
+
+    private RestSBDevice toInactiveRestSBDevice(RestDeviceConfig config) {
+        return new DefaultRestSBDevice(config.ip(),
+                config.port(),
+                config.username(),
+                config.password(),
+                config.protocol(),
+                config.url(),
+                false,
+                config.testUrl(),
+                config.manufacturer(),
+                config.hwVersion(),
+                config.swVersion(),
+                config.authenticationScheme(),
+                config.token()
+        );
+    }
+
+    private void connectDevices(Set<RestSBDevice> devices) {
+        //Precomputing the devices to be removed
+        Set<RestSBDevice> toBeRemoved = new HashSet<>(controller.getDevices().values());
+        toBeRemoved.removeAll(devices);
+        //Adding new devices
+        devices.stream()
+                .filter(device -> {
+                    device.setActive(false);
+                    controller.addDevice(device);
+                    return testDeviceConnection(device);
+                })
+                .forEach(this::deviceAdded);
+        //Removing devices not wanted anymore
+        toBeRemoved.forEach(device -> deviceRemoved(device.deviceId()));
+    }
+
+    private void connectDevice(RestSBDevice device) {
+        // TODO borrowed from above,
+        // not sure why setting it to inactive
+        device.setActive(false);
+        controller.addDevice(device);
+        if (testDeviceConnection(device)) {
+            deviceAdded(device);
         }
-        log.debug("REST Devices {}", controller.getDevices());
-        addedDevices.clear();
+    }
+
+    private ScheduledFuture schedulePolling() {
+        return portStatisticsExecutor.scheduleAtFixedRate(this::executePortStatisticsUpdate,
+                                                          DEFAULT_POLL_FREQUENCY_SECONDS / 2,
+                                                          DEFAULT_POLL_FREQUENCY_SECONDS,
+                                                          TimeUnit.SECONDS);
+    }
+
+    private void executePortStatisticsUpdate() {
+        controller.getDevices().keySet().forEach(this::updatePortStatistics);
+    }
+
+    private void updatePortStatistics(DeviceId deviceId) {
+        Device device = deviceService.getDevice(deviceId);
+        checkNotNull(device, "device cannot be null");
+
+        if (device.is(PortStatisticsDiscovery.class)) {
+            PortStatisticsDiscovery portStatisticsDiscovery = device.as(PortStatisticsDiscovery.class);
+            Collection<PortStatistics> portStatistics = portStatisticsDiscovery.discoverPortStatistics();
+            if (portStatistics != null && !portStatistics.isEmpty()) {
+                providerService.updatePortStatistics(deviceId, portStatistics);
+            }
+        } else {
+            log.debug("No port statistics getter behaviour for device {}", deviceId);
+        }
     }
 
     private void discoverPorts(DeviceId deviceId) {
         Device device = deviceService.getDevice(deviceId);
-        //TODO remove when PortDiscovery is removed from master
-        if (device.is(PortDiscovery.class)) {
-            PortDiscovery portConfig = device.as(PortDiscovery.class);
-            providerService.updatePorts(deviceId, portConfig.getPorts());
-        } else {
-            DeviceDescriptionDiscovery deviceDescriptionDiscovery =
-                    device.as(DeviceDescriptionDiscovery.class);
-            providerService.updatePorts(deviceId, deviceDescriptionDiscovery.discoverPortDetails());
-        }
+        DeviceDescriptionDiscovery deviceDescriptionDiscovery =
+                device.as(DeviceDescriptionDiscovery.class);
+        providerService.updatePorts(deviceId, deviceDescriptionDiscovery.discoverPortDetails());
     }
 
     private boolean testDeviceConnection(RestSBDevice dev) {
         try {
+            Callable<Boolean> connectionSuccess;
+
             if (dev.testUrl().isPresent()) {
-                return controller
-                        .get(dev.deviceId(), dev.testUrl().get(), JSON) != null;
+                connectionSuccess = () ->
+                        controller.get(dev.deviceId(), dev.testUrl().get(), MediaType.APPLICATION_JSON_TYPE) != null;
+            } else {
+                connectionSuccess = () ->
+                        controller.get(dev.deviceId(), "", MediaType.APPLICATION_JSON_TYPE) != null;
             }
-            return controller.get(dev.deviceId(), "", JSON) != null;
+
+            Future<Boolean> future = executor.submit(connectionSuccess);
+            try {
+                return future.get(REST_TIMEOUT_SEC, TimeUnit.SECONDS);
+            } catch (TimeoutException ex) {
+                log.warn("Connection to device {} timed out", dev.deviceId());
+                return false;
+            } catch (InterruptedException ex) {
+                log.warn("Connection to device {} interrupted", dev.deviceId());
+                Thread.currentThread().interrupt();
+                return false;
+            } catch (ExecutionException ex) {
+                log.warn("Connection to device {} had a execution exception", dev.deviceId());
+                return false;
+            }
 
         } catch (ProcessingException e) {
             log.warn("Cannot connect to device {}", dev, e);
@@ -376,21 +462,53 @@ public class RestDeviceProvider extends AbstractProvider
     private class InternalNetworkConfigListener implements NetworkConfigListener {
         @Override
         public void event(NetworkConfigEvent event) {
-            executor.execute(RestDeviceProvider.this::connectDevices);
+            ExecutorService bg = SharedExecutors.getSingleThreadExecutor();
+            if (event.type() == CONFIG_REMOVED) {
+                DeviceId did = (DeviceId) event.subject();
+                bg.execute(() -> deviceRemoved(did));
+            } else {
+                // CONFIG_ADDED or CONFIG_UPDATED
+                RestDeviceConfig cfg = (RestDeviceConfig) event.config().get();
+                RestSBDevice restSBDevice = toInactiveRestSBDevice(cfg);
+                bg.execute(() -> connectDevice(restSBDevice));
+            }
         }
 
         @Override
         public boolean isRelevant(NetworkConfigEvent event) {
-            //TODO refactor
-            return event.configClass().equals(RestProviderConfig.class) &&
+            return event.configClass().equals(RestDeviceConfig.class) &&
                     (event.type() == CONFIG_ADDED ||
-                            event.type() == CONFIG_UPDATED);
+                     event.type() == CONFIG_UPDATED ||
+                     event.type() == CONFIG_REMOVED);
         }
     }
 
     @Override
     public void changePortState(DeviceId deviceId, PortNumber portNumber,
                                 boolean enable) {
-        // TODO if required
+        Device device = deviceService.getDevice(deviceId);
+        if (device != null) {
+            if (device.is(PortAdmin.class)) {
+                PortAdmin portAdmin = device.as(PortAdmin.class);
+                CompletableFuture<Boolean> modified;
+                if (enable) {
+                    modified = portAdmin.enable(portNumber);
+                } else {
+                    modified = portAdmin.disable(portNumber);
+                }
+                modified.thenAcceptAsync(result -> {
+                    if (!result) {
+                        log.warn("Device {} port {} state can't be changed to {}",
+                                 deviceId, portNumber, enable);
+                    }
+                });
+
+            } else {
+                log.warn("Device {} does not support PortAdmin behavior", deviceId);
+            }
+        } else {
+            log.warn("unable to get the device {}, port {} state can't be changed to {}",
+                     deviceId, portNumber, enable);
+        }
     }
 }

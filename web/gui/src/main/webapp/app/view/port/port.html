@@ -14,6 +14,18 @@
 
             <div class="separator"></div>
 
+            <div class="refresh" ng-class="{active: isNZ()}"
+                 icon icon-size="42" icon-id="nonzero"
+                 tooltip tt-msg="toggleNZTip"
+                 ng-click="toggleNZ()"></div>
+
+            <div class="refresh" ng-class="{active: isDelta()}"
+                 icon icon-size="42" icon-id="delta"
+                 tooltip tt-msg="toggleDeltaTip"
+                 ng-click="toggleDelta()"></div>
+
+            <div class="separator"></div>
+
             <div class="active"
                  icon icon-id="deviceTable" icon-size="42"
                  tooltip tt-msg="deviceTip"
@@ -36,6 +48,11 @@
                  icon icon-id="meterTable" icon-size="42"
                  tooltip tt-msg="meterTip"
                  ng-click="nav('meter')"></div>
+
+            <div class="active"
+                 icon icon-id="pipeconfTable" icon-size="42"
+                 tooltip tt-msg="pipeconfTip"
+                 ng-click="nav('pipeconf')"></div>
         </div>
 
         <div class="search">
@@ -79,20 +96,24 @@
                     </td>
                 </tr>
 
-                <tr ng-repeat="port in tableData | filter:queryFilter track by $index"
+                <tr ng-repeat="port in tableData | filter: customFilter(queryFilter, query) track by $index"
+                    ng-click="selectCallback($event, port)"
+                    ng-class="{selected: port.id === selId}"
                     ng-repeat-complete row-id="{{port.id}}">
                     <td>{{port.id}}</td>
-                    <td class="right">{{port.pkt_rx}}</td>
-                    <td class="right">{{port.pkt_tx}}</td>
-                    <td class="right">{{port.bytes_rx}}</td>
-                    <td class="right">{{port.bytes_tx}}</td>
-                    <td class="right">{{port.pkt_rx_drp}}</td>
-                    <td class="right">{{port.pkt_tx_drp}}</td>
-                    <td class="right">{{port.duration}}</td>
+                    <td ng-class="(isDelta() ? 'delta' : 'right')">{{port.pkt_rx}}</td>
+                    <td ng-class="(isDelta() ? 'delta' : 'right')">{{port.pkt_tx}}</td>
+                    <td ng-class="(isDelta() ? 'delta' : 'right')">{{port.bytes_rx}}</td>
+                    <td ng-class="(isDelta() ? 'delta' : 'right')">{{port.bytes_tx}}</td>
+                    <td ng-class="(isDelta() ? 'delta' : 'right')">{{port.pkt_rx_drp}}</td>
+                    <td ng-class="(isDelta() ? 'delta' : 'right')">{{port.pkt_tx_drp}}</td>
+                    <td ng-class="(isDelta() ? 'delta' : 'right')">{{port.duration}}</td>
                 </tr>
             </table>
         </div>
 
     </div>
+
+    <port-details-panel></port-details-panel>
 
 </div>

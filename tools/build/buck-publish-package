@@ -1,9 +1,18 @@
 #!/bin/bash
 
-DEFAULT_TAG=${TAG:-$(date +v%Y.%m.%d.01)}
+for NEXT_VERSION in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20; do
+    DEFAULT_TAG=${TAG:-$(date +v%Y.%m.%d.$NEXT_VERSION)}
+    BUCK_ZIP="buck-$DEFAULT_TAG.zip"
+    DOWNLOAD_BASE="http://repo1.maven.org/maven2/org/onosproject/onos-buck/$DEFAULT_TAG"
+
+    if ! curl --output /dev/null --silent --head --fail "$DOWNLOAD_BASE/$BUCK_ZIP"; then
+        break;
+    fi
+done
+
 NO_BUCKD=1
 
-DOWNLOAD_BASE="http://onlab.vicci.org/onos/third-party"
+UPLOAD_BASE="https://oss.sonatype.org/service/local/staging/deploy/maven2/org/onosproject/onos-buck/$DEFAULT_TAG"
 BUCK_ZIP="buck-$DEFAULT_TAG.zip"
 ZIP_STAGE="buck-bin"
 
@@ -15,11 +24,11 @@ set -x
 # build plugins
 
 pushd buck
-buck build buck
+onos-buck build buck
 popd #buck
 
 pushd onos
-buck build //tools/build/buck-plugin:onos
+onos-buck build //tools/build/buck-plugin:onos
 popd #onos
 
 pushd onos-yang-tools
@@ -32,7 +41,7 @@ mkdir -p buck-bin/plugins
 
 cp buck/buck-out/gen/programs/buck.pex $ZIP_STAGE/buck
 cp onos/buck-out/gen/tools/build/buck-plugin/onos.jar $ZIP_STAGE/plugins/onos.jar
-cp onos-yang-tools/plugin/buck/target/onos-yang-buck-plugin-*.jar $ZIP_STAGE/plugins/yang.jar
+cp onos-yang-tools/compiler/plugin/buck/target/onos-yang-compiler-buck-plugin-*.jar $ZIP_STAGE/plugins/yang.jar
 
 BUCK_VERSION=$(buck/buck-out/gen/programs/buck.pex -V)
 echo $BUCK_VERSION > $ZIP_STAGE/.buck_version
@@ -44,9 +53,11 @@ pushd $ZIP_STAGE
 zip -r ../$BUCK_ZIP buck .buck_version plugins
 popd #$ZIP_STAGE
 
-# publish zip
-#FIXME check for s3 credentials
-uploadToS3.py --dest third-party/ $BUCK_ZIP
+if [ "$1" != "--dry-run" ]; then
+    # publish zip
+    curl -v -u "$SONATYPE_USER:$SONATYPE_PASSWORD" --upload-file $BUCK_ZIP $UPLOAD_BASE/$BUCK_ZIP
+    echo "New buck release is in " $BUCK_ZIP
+fi
 
 # update version in onos-buck
 URL="$DOWNLOAD_BASE/$BUCK_ZIP"
@@ -54,7 +65,6 @@ SHA=$(shasum $BUCK_ZIP | cut -d' ' -f1)
 
 sed -i "" -E "s#BUCK_URL=.*#BUCK_URL=\"$URL\"#" onos/tools/build/onos-buck
 sed -i "" -E "s#BUCK_SHA=.*#BUCK_SHA=\"$SHA\"#" onos/tools/build/onos-buck
-sed -i "" -E "s#REQUIRED_VERSION=.*#REQUIRED_VERSION=\"$BUCK_VERSION\"#" onos/tools/build/onos-buck
 
 set +x
 echo

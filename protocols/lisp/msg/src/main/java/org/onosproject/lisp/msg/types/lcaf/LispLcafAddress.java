@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ import static org.onosproject.lisp.msg.types.lcaf.LispCanonicalAddressFormatEnum
 
 /**
  * LISP Canonical Address Formatted address class.
- * <p>
+ *
  * <pre>
  * {@literal
  *  0                   1                   2                   3

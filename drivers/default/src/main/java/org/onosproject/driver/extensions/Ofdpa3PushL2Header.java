@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,13 +57,7 @@ public class Ofdpa3PushL2Header extends AbstractExtension implements ExtensionTr
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj instanceof Ofdpa3PushL2Header) {
-            return true;
-        }
-        return false;
+        return this == obj || obj instanceof Ofdpa3PushL2Header;
     }
 
     @Override

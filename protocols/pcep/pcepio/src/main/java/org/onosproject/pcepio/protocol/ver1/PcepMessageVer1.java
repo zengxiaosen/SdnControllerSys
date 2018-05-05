@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class PcepMessageVer1 {
 
-    protected static final Logger log = LoggerFactory.getLogger(PcepFactories.class);
+    private static final Logger log = LoggerFactory.getLogger(PcepFactories.class);
 
     // version: 1.0
     public static final byte WIRE_VERSION = 1;

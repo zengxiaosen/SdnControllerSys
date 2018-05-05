@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ public class AreaAddressTlv extends TlvHeader implements IsisTlv {
             int addressLength = channelBuffer.readByte();
             byte[] addressbytes = new byte[addressLength];
             channelBuffer.readBytes(addressbytes, 0, addressLength);
-            String areaAddress = IsisUtil.areaAddres(addressbytes);
+            String areaAddress = IsisUtil.areaAddress(addressbytes);
             this.areaAddress.add(areaAddress);
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import org.onosproject.net.statistic.StatisticStore;
 import org.onosproject.store.cluster.messaging.ClusterCommunicationService;
 import org.onosproject.store.cluster.messaging.MessageSubject;
 import org.onosproject.store.serializers.KryoNamespaces;
-import org.onosproject.store.serializers.StoreSerializer;
+import org.onosproject.store.service.Serializer;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 
@@ -101,7 +101,7 @@ public class DistributedStatisticStore implements StatisticStore {
     private Map<ConnectPoint, Set<FlowEntry>> current =
             new ConcurrentHashMap<>();
 
-    protected static final StoreSerializer SERIALIZER = StoreSerializer.using(KryoNamespaces.API);
+    protected static final Serializer SERIALIZER = Serializer.using(KryoNamespaces.API);
 
     private ExecutorService messageHandlingExecutor;
 

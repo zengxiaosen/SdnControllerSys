@@ -1,6 +1,9 @@
 SRC_DEPS = [
     '//lib:CORE_DEPS',
+    '//lib:JACKSON',
+    '//lib:METRICS',
     '//incubator/api:onos-incubator-api',
+    '//core/api:onos-api',
 ]
 
 TEST_DEPS = [

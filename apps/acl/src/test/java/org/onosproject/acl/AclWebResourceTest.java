@@ -1,9 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
- * Originally created by Pengfei Lu, Network and Cloud Computing Laboratory, Dalian University of Technology, China
- * Advisers: Keqiu Li and Heng Qi
- * This work is supported by the State Key Program of National Natural Science of China(Grant No. 61432002)
- * and Prospective Research Project on Future Networks in Jiangsu Future Networks Innovation Institute.
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Originally created by Pengfei Lu, Network and Cloud Computing Laboratory, Dalian University of Technology, China
+ * Advisers: Keqiu Li and Heng Qi
+ * This work is supported by the State Key Program of National Natural Science of China(Grant No. 61432002)
+ * and Prospective Research Project on Future Networks in Jiangsu Future Networks Innovation Institute.
  */
 
 package org.onosproject.acl;
@@ -26,6 +27,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.onlab.junit.TestUtils;
 import org.onlab.osgi.ServiceDirectory;
 import org.onlab.osgi.TestServiceDirectory;
 import org.onlab.rest.BaseResource;
@@ -38,10 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.verify;
+import static org.easymock.EasyMock.*;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertThat;
 
@@ -67,10 +66,9 @@ public class AclWebResourceTest extends JerseyTest {
         ServiceDirectory testDirectory = new TestServiceDirectory()
                 .add(AclService.class, mockAclService)
                 .add(AclStore.class, mockAclStore);
-        BaseResource.setServiceDirectory(testDirectory);
+        TestUtils.setField(BaseResource.class, "services", testDirectory);
 
-        IdGenerator idGenerator = new MockIdGenerator();
-        AclRule.bindIdGenerator(idGenerator);
+        AclRule.idGenerator = new MockIdGenerator();
     }
 
     @After

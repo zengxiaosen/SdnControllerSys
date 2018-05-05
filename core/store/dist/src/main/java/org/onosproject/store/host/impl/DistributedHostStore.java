@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,11 @@
  */
 package org.onosproject.store.host.impl;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalNotification;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
@@ -49,29 +43,41 @@ import org.onosproject.net.host.HostDescription;
 import org.onosproject.net.host.HostEvent;
 import org.onosproject.net.host.HostStore;
 import org.onosproject.net.host.HostStoreDelegate;
+import org.onosproject.net.host.HostLocationProbingService.ProbeMode;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.store.AbstractStore;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.ConsistentMap;
-import org.onosproject.store.service.DistributedPrimitive.Status;
 import org.onosproject.store.service.MapEvent;
 import org.onosproject.store.service.MapEventListener;
 import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.StorageService;
+import org.onosproject.store.service.DistributedPrimitive.Status;
+import org.onosproject.store.service.Versioned;
 import org.slf4j.Logger;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.onosproject.net.DefaultAnnotations.merge;
-import static org.onosproject.net.host.HostEvent.Type.HOST_ADDED;
-import static org.onosproject.net.host.HostEvent.Type.HOST_MOVED;
-import static org.onosproject.net.host.HostEvent.Type.HOST_REMOVED;
-import static org.onosproject.net.host.HostEvent.Type.HOST_UPDATED;
+import static org.onosproject.net.host.HostEvent.Type.*;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
@@ -91,29 +97,69 @@ public class DistributedHostStore
     private ConsistentMap<HostId, DefaultHost> hostsConsistentMap;
     private Map<HostId, DefaultHost> hosts;
     private Map<IpAddress, Set<Host>> hostsByIp;
-
     private MapEventListener<HostId, DefaultHost> hostLocationTracker =
             new HostLocationTracker();
+
+    private ConsistentMap<MacAddress, PendingHostLocation> pendingHostsConsistentMap;
+    private Map<MacAddress, PendingHostLocation> pendingHosts;
+    private MapEventListener<MacAddress, PendingHostLocation> pendingHostListener =
+            new PendingHostListener();
 
     private ScheduledExecutorService executor;
 
     private Consumer<Status> statusChangeListener;
 
+    // TODO make this configurable
+    private static final int PROBE_TIMEOUT_MS = 3000;
+
+    private Cache<MacAddress, PendingHostLocation> pendingHostsCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(PROBE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            .removalListener((RemovalNotification<MacAddress, PendingHostLocation> notification) -> {
+                switch (notification.getCause()) {
+                    case EXPIRED:
+                        PendingHostLocation expired = notification.getValue();
+                        if (expired != null) {
+                            if (timeoutPendingHostLocation(notification.getKey())) {
+                                log.info("Evict {} from pendingHosts due to probe timeout", notification.getValue());
+                            }
+                        }
+                        break;
+                    case EXPLICIT:
+                        break;
+                    default:
+                        log.warn("Remove {} from pendingHostLocations for unexpected reason {}",
+                                notification.getKey(), notification.getCause());
+                }
+            }).build();
+
+    private ScheduledExecutorService cacheCleaner = Executors.newSingleThreadScheduledExecutor();
+
     @Activate
     public void activate() {
         KryoNamespace.Builder hostSerializer = KryoNamespace.newBuilder()
                 .register(KryoNamespaces.API);
-
         hostsConsistentMap = storageService.<HostId, DefaultHost>consistentMapBuilder()
                 .withName("onos-hosts")
                 .withRelaxedReadConsistency()
                 .withSerializer(Serializer.using(hostSerializer.build()))
                 .build();
-
+        hostsConsistentMap.addListener(hostLocationTracker);
         hosts = hostsConsistentMap.asJavaMap();
 
+        KryoNamespace.Builder pendingHostSerializer = KryoNamespace.newBuilder()
+                .register(KryoNamespaces.API)
+                .register(PendingHostLocation.class)
+                .register(ProbeMode.class);
+        pendingHostsConsistentMap = storageService.<MacAddress, PendingHostLocation>consistentMapBuilder()
+                .withName("onos-hosts-pending")
+                .withRelaxedReadConsistency()
+                .withSerializer(Serializer.using(pendingHostSerializer.build()))
+                .build();
+        pendingHostsConsistentMap.addListener(pendingHostListener);
+        pendingHosts = pendingHostsConsistentMap.asJavaMap();
 
-        hostsConsistentMap.addListener(hostLocationTracker);
+        cacheCleaner.scheduleAtFixedRate(pendingHostsCache::cleanUp, 0,
+                PROBE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
         executor = newSingleThreadScheduledExecutor(groupedThreads("onos/hosts", "store", log));
         statusChangeListener = status -> {
@@ -130,12 +176,14 @@ public class DistributedHostStore
     public void deactivate() {
         hostsConsistentMap.removeListener(hostLocationTracker);
 
+        cacheCleaner.shutdown();
+
         log.info("Stopped");
     }
 
-     private void loadHostsByIp() {
+    private void loadHostsByIp() {
         hostsByIp = new ConcurrentHashMap<IpAddress, Set<Host>>();
-         hostsConsistentMap.asJavaMap().values().forEach(host -> {
+        hostsConsistentMap.asJavaMap().values().forEach(host -> {
             host.ipAddresses().forEach(ip -> {
                 Set<Host> existingHosts = hostsByIp.get(ip);
                 if (existingHosts == null) {
@@ -149,17 +197,21 @@ public class DistributedHostStore
 
     private boolean shouldUpdate(DefaultHost existingHost,
                                  ProviderId providerId,
-                                 HostId hostId,
                                  HostDescription hostDescription,
                                  boolean replaceIPs) {
         if (existingHost == null) {
             return true;
         }
 
+        // Avoid overriding configured host with learnt host
+        if (existingHost.configured() && !hostDescription.configured()) {
+            return false;
+        }
+
         if (!Objects.equals(existingHost.providerId(), providerId) ||
                 !Objects.equals(existingHost.mac(), hostDescription.hwAddress()) ||
                 !Objects.equals(existingHost.vlan(), hostDescription.vlan()) ||
-                !Objects.equals(existingHost.location(), hostDescription.location())) {
+                !Objects.equals(existingHost.locations(), hostDescription.locations())) {
             return true;
         }
 
@@ -177,8 +229,8 @@ public class DistributedHostStore
         // check to see if any of the annotations provided by hostDescription
         // differ from those in the existing host
         return hostDescription.annotations().keys().stream()
-                    .anyMatch(k -> !Objects.equals(hostDescription.annotations().value(k),
-                                                   existingHost.annotations().value(k)));
+                   .anyMatch(k -> !Objects.equals(hostDescription.annotations().value(k),
+                                                  existingHost.annotations().value(k)));
 
 
     }
@@ -190,10 +242,9 @@ public class DistributedHostStore
                                         HostDescription hostDescription,
                                         boolean replaceIPs) {
         hostsConsistentMap.computeIf(hostId,
-                       existingHost -> shouldUpdate(existingHost, providerId, hostId,
+                       existingHost -> shouldUpdate(existingHost, providerId,
                                                     hostDescription, replaceIPs),
                        (id, existingHost) -> {
-                           HostLocation location = hostDescription.location();
 
                            final Set<IpAddress> addresses;
                            if (existingHost == null || replaceIPs) {
@@ -204,23 +255,20 @@ public class DistributedHostStore
                            }
 
                            final Annotations annotations;
-                           final boolean configured;
                            if (existingHost != null) {
                                annotations = merge((DefaultAnnotations) existingHost.annotations(),
                                        hostDescription.annotations());
-                               configured = existingHost.configured();
                            } else {
                                annotations = hostDescription.annotations();
-                               configured = hostDescription.configured();
                            }
 
                            return new DefaultHost(providerId,
                                                   hostId,
                                                   hostDescription.hwAddress(),
                                                   hostDescription.vlan(),
-                                                  location,
+                                                  hostDescription.locations(),
                                                   addresses,
-                                                  configured,
+                                                  hostDescription.configured(),
                                                   annotations);
                        });
         return null;
@@ -252,8 +300,9 @@ public class DistributedHostStore
                             hostId,
                             existingHost.mac(),
                             existingHost.vlan(),
-                            existingHost.location(),
+                            existingHost.locations(),
                             ImmutableSet.copyOf(addresses),
+                            existingHost.configured(),
                             existingHost.annotations());
                 } else {
                     return existingHost;
@@ -262,6 +311,52 @@ public class DistributedHostStore
             return null;
         });
         return null;
+    }
+
+    @Override
+    public void appendLocation(HostId hostId, HostLocation location) {
+        log.debug("Appending location {} to host {}", location, hostId);
+        hosts.compute(hostId, (id, existingHost) -> {
+            if (existingHost != null) {
+                checkState(Objects.equals(hostId.mac(), existingHost.mac()),
+                        "Existing and new MAC addresses differ.");
+                checkState(Objects.equals(hostId.vlanId(), existingHost.vlan()),
+                        "Existing and new VLANs differ.");
+
+                Set<HostLocation> locations = new HashSet<>(existingHost.locations());
+                locations.add(location);
+
+                return new DefaultHost(existingHost.providerId(),
+                                hostId, existingHost.mac(), existingHost.vlan(),
+                                locations, existingHost.ipAddresses(),
+                                existingHost.configured(), existingHost.annotations());
+            }
+            return null;
+        });
+    }
+
+    @Override
+    public void removeLocation(HostId hostId, HostLocation location) {
+        log.debug("Removing location {} from host {}", location, hostId);
+        hosts.compute(hostId, (id, existingHost) -> {
+            if (existingHost != null) {
+                checkState(Objects.equals(hostId.mac(), existingHost.mac()),
+                        "Existing and new MAC addresses differ.");
+                checkState(Objects.equals(hostId.vlanId(), existingHost.vlan()),
+                        "Existing and new VLANs differ.");
+
+                Set<HostLocation> locations = new HashSet<>(existingHost.locations());
+                locations.remove(location);
+
+                // Remove entire host if we are removing the last location
+                return locations.isEmpty() ? null :
+                        new DefaultHost(existingHost.providerId(),
+                                hostId, existingHost.mac(), existingHost.vlan(),
+                                locations, existingHost.ipAddresses(),
+                                existingHost.configured(), existingHost.annotations());
+            }
+            return null;
+        });
     }
 
     @Override
@@ -298,7 +393,7 @@ public class DistributedHostStore
     @Override
     public Set<Host> getConnectedHosts(ConnectPoint connectPoint) {
         Set<Host> filtered = hosts.entrySet().stream()
-                .filter(entry -> entry.getValue().location().equals(connectPoint))
+                .filter(entry -> entry.getValue().locations().contains(connectPoint))
                 .map(Map.Entry::getValue)
                 .collect(Collectors.toSet());
         return ImmutableSet.copyOf(filtered);
@@ -307,10 +402,46 @@ public class DistributedHostStore
     @Override
     public Set<Host> getConnectedHosts(DeviceId deviceId) {
         Set<Host> filtered = hosts.entrySet().stream()
-                .filter(entry -> entry.getValue().location().deviceId().equals(deviceId))
+                .filter(entry -> entry.getValue().locations().stream()
+                        .map(HostLocation::deviceId).anyMatch(dpid -> dpid.equals(deviceId)))
                 .map(Map.Entry::getValue)
                 .collect(Collectors.toSet());
         return ImmutableSet.copyOf(filtered);
+    }
+
+    @Override
+    public MacAddress addPendingHostLocation(HostId hostId, ConnectPoint connectPoint, ProbeMode probeMode) {
+        // Use ONLab OUI (3 bytes) + atomic counter (3 bytes) as the source MAC of the probe
+        long nextIndex = storageService.getAtomicCounter("onos-hosts-probe-index").getAndIncrement();
+        MacAddress probeMac = MacAddress.valueOf(MacAddress.NONE.toLong() + nextIndex);
+        PendingHostLocation phl = new PendingHostLocation(hostId, connectPoint, probeMode);
+
+        pendingHostsCache.put(probeMac, phl);
+        pendingHosts.put(probeMac, phl);
+
+        return probeMac;
+    }
+
+    @Override
+    public void removePendingHostLocation(MacAddress probeMac) {
+        // Add the host location if probe replied in-time in DISCOVER mode
+        Optional.ofNullable(pendingHosts.get(probeMac)).ifPresent(phl -> {
+            if (phl.probeMode() == ProbeMode.DISCOVER) {
+                HostLocation newLocation = new HostLocation(phl.connectPoint(), System.currentTimeMillis());
+                appendLocation(phl.hostId(), newLocation);
+            }
+        });
+
+        pendingHostsCache.invalidate(probeMac);
+        pendingHosts.remove(probeMac);
+    }
+
+    private boolean timeoutPendingHostLocation(MacAddress probeMac) {
+        PendingHostLocation phl = pendingHosts.computeIfPresent(probeMac, (k, v) -> {
+            v.setExpired(true);
+            return v;
+        });
+        return phl != null;
     }
 
     private Set<Host> filter(Collection<DefaultHost> collection, Predicate<DefaultHost> predicate) {
@@ -346,7 +477,7 @@ public class DistributedHostStore
             }
         }
 
-        if (existingHosts.isEmpty()) {
+        if (existingHosts == null || existingHosts.isEmpty()) {
             return null;
         }
         return existingHosts;
@@ -355,7 +486,7 @@ public class DistributedHostStore
     private void updateHostsByIp(DefaultHost host) {
         host.ipAddresses().forEach(ip -> {
             hostsByIp.compute(ip, (k, v) -> v == null ? addHosts(host)
-                                                      : updateHosts(v, host));
+                    : updateHosts(v, host));
         });
     }
 
@@ -381,7 +512,7 @@ public class DistributedHostStore
                 case UPDATE:
                     updateHostsByIp(host);
                     DefaultHost prevHost = checkNotNull(event.oldValue().value());
-                    if (!Objects.equals(prevHost.location(), host.location())) {
+                    if (!Objects.equals(prevHost.locations(), host.locations())) {
                         notifyDelegate(new HostEvent(HOST_MOVED, host, prevHost));
                     } else if (!Objects.equals(prevHost, host)) {
                         notifyDelegate(new HostEvent(HOST_UPDATED, host, prevHost));
@@ -390,6 +521,32 @@ public class DistributedHostStore
                 case REMOVE:
                     removeHostsByIp(host);
                     notifyDelegate(new HostEvent(HOST_REMOVED, host));
+                    break;
+                default:
+                    log.warn("Unknown map event type: {}", event.type());
+            }
+        }
+    }
+
+    private class PendingHostListener implements MapEventListener<MacAddress, PendingHostLocation> {
+        @Override
+        public void event(MapEvent<MacAddress, PendingHostLocation> event) {
+            Versioned<PendingHostLocation> newValue = event.newValue();
+            switch (event.type()) {
+                case INSERT:
+                    break;
+                case UPDATE:
+                    // Remove the host location if probe timeout in VERIFY mode
+                    if (newValue.value().expired() && newValue.value().probeMode() == ProbeMode.VERIFY) {
+                        Executor locationRemover = Executors.newSingleThreadScheduledExecutor();
+                        locationRemover.execute(() -> {
+                            pendingHosts.remove(event.key());
+                            removeLocation(newValue.value().hostId(),
+                                    new HostLocation(newValue.value().connectPoint(), 0L));
+                        });
+                    }
+                    break;
+                case REMOVE:
                     break;
                 default:
                     log.warn("Unknown map event type: {}", event.type());

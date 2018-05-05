@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ import static org.onosproject.net.DeviceId.deviceId;
 import static org.onosproject.net.PortNumber.portNumber;
 
 /**
- * Query flow statistics.
+ * Query statistics.
  */
 @Path("statistics")
 public class StatisticsWebResource  extends AbstractWebResource {
@@ -331,4 +331,28 @@ public class StatisticsWebResource  extends AbstractWebResource {
         return ok(root).build();
     }
 
+    /**
+     * Gets sum of active entries in all tables for all devices.
+     *
+     * @onos.rsModel StatisticsFlowsActiveEntries
+     * @return 200 OK with JSON encoded array of active entry count per device
+     */
+    @GET
+    @Path("flows/activeentries")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getActiveEntriesCountPerDevice() {
+        final FlowRuleService service = get(FlowRuleService.class);
+        final Iterable<Device> devices = get(DeviceService.class).getDevices();
+        final ObjectNode root = mapper().createObjectNode();
+        final ArrayNode rootArrayNode = root.putArray("statistics");
+        for (final Device device : devices) {
+            long activeEntries = service.getActiveFlowRuleCount(device.id());
+            final ObjectNode entry = mapper().createObjectNode();
+            entry.put("device", device.id().toString());
+            entry.put("activeEntries", activeEntries);
+            rootArrayNode.add(entry);
+        }
+
+        return ok(root).build();
+    }
 }

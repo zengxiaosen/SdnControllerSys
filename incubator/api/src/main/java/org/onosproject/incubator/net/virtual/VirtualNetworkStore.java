@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,6 @@ import org.onosproject.net.HostLocation;
 import org.onosproject.net.Link;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.intent.Intent;
-import org.onosproject.net.intent.IntentData;
-import org.onosproject.net.intent.IntentState;
-import org.onosproject.net.intent.Key;
 import org.onosproject.store.Store;
 
 import java.util.Set;
@@ -169,6 +166,17 @@ public interface VirtualNetworkStore
                         PortNumber portNumber, ConnectPoint realizedBy);
 
     /**
+     * Updates port state of an existing virtual port.
+     *
+     * @param networkId  network identifier
+     * @param deviceId   device identifier
+     * @param portNumber port number
+     * @param isEnabled  indicator whether the port is up and active
+     */
+     void updatePortState(NetworkId networkId, DeviceId deviceId,
+                        PortNumber portNumber, boolean isEnabled);
+
+    /**
      * Removes the specified port from the given device and network.
      *
      * @param networkId  network identifier
@@ -238,27 +246,13 @@ public interface VirtualNetworkStore
     Set<VirtualPort> getPorts(NetworkId networkId, DeviceId deviceId);
 
     /**
-     * Add or update the intent to the store.
-     *
-     * @param intent virtual intent
-     * @param state  intent state
-     */
-    void addOrUpdateIntent(Intent intent, IntentState state);
-
-    /**
-     * Remove the virtual intent from the store.
-     *
-     * @param intentKey intent key
-     * @return intent data
-     */
-    IntentData removeIntent(Key intentKey);
-
-    /**
      * Adds the intent to tunnel identifier mapping to the store.
      *
      * @param intent   intent
      * @param tunnelId tunnel identifier
+     * @deprecated in Kingfisher Release (1.10)
      */
+    @Deprecated
     void addTunnelId(Intent intent, TunnelId tunnelId);
 
     /**
@@ -266,7 +260,9 @@ public interface VirtualNetworkStore
      *
      * @param intent intent
      * @return set of tunnel identifiers
+     * @deprecated in Kingfisher Release (1.10)
      */
+    @Deprecated
     Set<TunnelId> getTunnelIds(Intent intent);
 
     /**
@@ -274,36 +270,8 @@ public interface VirtualNetworkStore
      *
      * @param intent   intent
      * @param tunnelId tunnel identifier
+     * @deprecated in Kingfisher Release (1.10)
      */
+    @Deprecated
     void removeTunnelId(Intent intent, TunnelId tunnelId);
-
-    /**
-     * Return all intents.
-     *
-     * @return set of intents
-     */
-    Set<Intent> getIntents();
-
-    /**
-     * Return the intent for the specified intent key.
-     *
-     * @param key intent key
-     * @return intent
-     */
-    Intent getIntent(Key key);
-
-    /**
-     * Return the set of intent data.
-     *
-     * @return set of intent data
-     */
-    Set<IntentData> getIntentData();
-
-    /**
-     * Return the intent data matching the intent key.
-     *
-     * @param key intent key
-     * @return intent data
-     */
-    IntentData getIntentData(Key key);
 }

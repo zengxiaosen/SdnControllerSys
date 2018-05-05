@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -48,7 +48,7 @@ public interface BgpLocalRib {
     void delete(BgpLSNlri nlri) throws BgpParseException;
 
     /**
-     * Update NLRI identifier mapped with route distinguisher if it exists in tree otherwise add NLRI infomation mapped
+     * Update NLRI identifier mapped with route distinguisher if it exists in tree otherwise add NLRI information mapped
      * to respective route distinguisher.
      *
      * @param sessionInfo BGP session info

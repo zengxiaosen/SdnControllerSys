@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,10 @@
 package org.onosproject.net.packet;
 
 import static com.google.common.base.Preconditions.checkArgument;
-
+//precondition 预处理，前提
 /**
  * Abstraction of an inbound packet processor.
+ * 入站数据包的处理过程抽象
  */
 public interface PacketProcessor {
 

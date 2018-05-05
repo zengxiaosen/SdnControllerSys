@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package org.onosproject.provider.of.flow.util;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.onlab.packet.EthType;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
@@ -25,7 +26,7 @@ import org.onlab.packet.MacAddress;
 import org.onlab.packet.MplsLabel;
 import org.onlab.packet.TpPort;
 import org.onlab.packet.VlanId;
-import org.onosproject.core.DefaultGroupId;
+import org.onosproject.core.GroupId;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Lambda;
 import org.onosproject.net.OduSignalId;
@@ -42,23 +43,31 @@ import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowEntry.FlowEntryState;
 import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.flow.StatTriggerField;
+import org.onosproject.net.flow.StatTriggerFlag;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.ExtensionSelectorType.ExtensionSelectorTypes;
 import org.onosproject.net.flow.instructions.Instructions;
+import org.onosproject.net.meter.MeterId;
 import org.onosproject.openflow.controller.ExtensionSelectorInterpreter;
 import org.onosproject.openflow.controller.ExtensionTreatmentInterpreter;
 import org.onosproject.provider.of.flow.impl.NewAdaptiveFlowStatsCollector;
+import org.projectfloodlight.openflow.protocol.OFFlowLightweightStatsEntry;
 import org.projectfloodlight.openflow.protocol.OFFlowMod;
 import org.projectfloodlight.openflow.protocol.OFFlowRemoved;
 import org.projectfloodlight.openflow.protocol.OFFlowStatsEntry;
 import org.projectfloodlight.openflow.protocol.OFMatchV3;
+import org.projectfloodlight.openflow.protocol.OFObject;
+import org.projectfloodlight.openflow.protocol.OFOxsList;
+import org.projectfloodlight.openflow.protocol.OFStatTriggerFlags;
 import org.projectfloodlight.openflow.protocol.OFVersion;
 import org.projectfloodlight.openflow.protocol.action.OFAction;
 import org.projectfloodlight.openflow.protocol.action.OFActionCircuit;
 import org.projectfloodlight.openflow.protocol.action.OFActionEnqueue;
 import org.projectfloodlight.openflow.protocol.action.OFActionExperimenter;
 import org.projectfloodlight.openflow.protocol.action.OFActionGroup;
+import org.projectfloodlight.openflow.protocol.action.OFActionMeter;
 import org.projectfloodlight.openflow.protocol.action.OFActionOutput;
 import org.projectfloodlight.openflow.protocol.action.OFActionPopMpls;
 import org.projectfloodlight.openflow.protocol.action.OFActionPushVlan;
@@ -73,12 +82,14 @@ import org.projectfloodlight.openflow.protocol.action.OFActionSetVlanVid;
 import org.projectfloodlight.openflow.protocol.instruction.OFInstruction;
 import org.projectfloodlight.openflow.protocol.instruction.OFInstructionApplyActions;
 import org.projectfloodlight.openflow.protocol.instruction.OFInstructionGotoTable;
+import org.projectfloodlight.openflow.protocol.instruction.OFInstructionStatTrigger;
 import org.projectfloodlight.openflow.protocol.instruction.OFInstructionWriteActions;
 import org.projectfloodlight.openflow.protocol.instruction.OFInstructionWriteMetadata;
 import org.projectfloodlight.openflow.protocol.match.Match;
 import org.projectfloodlight.openflow.protocol.match.MatchField;
 import org.projectfloodlight.openflow.protocol.oxm.OFOxm;
 import org.projectfloodlight.openflow.protocol.oxm.OFOxmOchSigid;
+import org.projectfloodlight.openflow.protocol.oxs.OFOxs;
 import org.projectfloodlight.openflow.protocol.ver13.OFFactoryVer13;
 import org.projectfloodlight.openflow.types.CircuitSignalID;
 import org.projectfloodlight.openflow.types.IPv4Address;
@@ -96,9 +107,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.onosproject.net.flow.StatTriggerField.*;
+import static org.onosproject.net.flow.StatTriggerField.IDLE_TIME;
+import static org.onosproject.net.flow.StatTriggerFlag.ONLY_FIRST;
+import static org.onosproject.net.flow.StatTriggerFlag.PERIODIC;
 import static org.onosproject.net.flow.criteria.Criteria.*;
 import static org.onosproject.net.flow.instructions.Instructions.modL0Lambda;
 import static org.onosproject.net.flow.instructions.Instructions.modL1OduSignalId;
@@ -110,6 +127,7 @@ public class FlowEntryBuilder {
     private final OFFlowStatsEntry stat;
     private final OFFlowRemoved removed;
     private final OFFlowMod flowMod;
+    private final OFFlowLightweightStatsEntry lightWeightStat;
 
     private final Match match;
 
@@ -119,17 +137,17 @@ public class FlowEntryBuilder {
 
     private final DeviceId deviceId;
 
-    public enum FlowType { STAT, REMOVED, MOD }
+    public enum FlowType { STAT, LIGHTWEIGHT_STAT, REMOVED, MOD }
 
     private final FlowType type;
 
-    private final DriverService driverService;
+    private DriverHandler driverHandler;
 
     // NewAdaptiveFlowStatsCollector for AdaptiveFlowSampling mode,
     // null is not AFM mode, namely SimpleStatsCollector mode
     private NewAdaptiveFlowStatsCollector afsc;
 
-    public FlowEntryBuilder(DeviceId deviceId, OFFlowStatsEntry entry, DriverService driverService) {
+    public FlowEntryBuilder(DeviceId deviceId, OFFlowStatsEntry entry, DriverHandler driverHandler) {
         this.stat = entry;
         this.match = entry.getMatch();
         this.instructions = getInstructions(entry);
@@ -137,11 +155,26 @@ public class FlowEntryBuilder {
         this.removed = null;
         this.flowMod = null;
         this.type = FlowType.STAT;
-        this.driverService = driverService;
+        this.driverHandler = driverHandler;
         this.afsc = null;
+        this.lightWeightStat = null;
     }
 
-    public FlowEntryBuilder(DeviceId deviceId, OFFlowRemoved removed, DriverService driverService) {
+    public FlowEntryBuilder(DeviceId deviceId, OFFlowLightweightStatsEntry lightWeightStat,
+                            DriverService driverService) {
+        this.stat = null;
+        this.match = lightWeightStat.getMatch();
+        this.instructions = null;
+        this.deviceId = deviceId;
+        this.removed = null;
+        this.flowMod = null;
+        this.type = FlowType.LIGHTWEIGHT_STAT;
+        this.driverHandler = getDriver(deviceId, driverService);
+        this.afsc = null;
+        this.lightWeightStat = lightWeightStat;
+    }
+
+    public FlowEntryBuilder(DeviceId deviceId, OFFlowRemoved removed, DriverHandler driverHandler) {
         this.match = removed.getMatch();
         this.removed = removed;
         this.deviceId = deviceId;
@@ -149,11 +182,12 @@ public class FlowEntryBuilder {
         this.stat = null;
         this.flowMod = null;
         this.type = FlowType.REMOVED;
-        this.driverService = driverService;
+        this.driverHandler = driverHandler;
         this.afsc = null;
+        this.lightWeightStat = null;
     }
 
-    public FlowEntryBuilder(DeviceId deviceId, OFFlowMod fm, DriverService driverService) {
+    public FlowEntryBuilder(DeviceId deviceId, OFFlowMod fm, DriverHandler driverHandler) {
         this.match = fm.getMatch();
         this.deviceId = deviceId;
         this.instructions = getInstructions(fm);
@@ -161,8 +195,21 @@ public class FlowEntryBuilder {
         this.flowMod = fm;
         this.stat = null;
         this.removed = null;
-        this.driverService = driverService;
+        this.driverHandler = driverHandler;
         this.afsc = null;
+        this.lightWeightStat = null;
+    }
+
+    public FlowEntryBuilder(DeviceId deviceId, OFFlowStatsEntry entry, DriverService driverService) {
+        this(deviceId, entry, getDriver(deviceId, driverService));
+    }
+
+    public FlowEntryBuilder(DeviceId deviceId, OFFlowRemoved removed, DriverService driverService) {
+        this(deviceId, removed, getDriver(deviceId, driverService));
+    }
+
+    public FlowEntryBuilder(DeviceId deviceId, OFFlowMod fm, DriverService driverService) {
+        this(deviceId, fm, getDriver(deviceId, driverService));
     }
 
     public FlowEntryBuilder withSetAfsc(NewAdaptiveFlowStatsCollector afsc) {
@@ -171,83 +218,16 @@ public class FlowEntryBuilder {
     }
 
     public FlowEntry build(FlowEntryState... state) {
-        FlowRule.Builder builder;
         try {
             switch (this.type) {
                 case STAT:
-                    builder = DefaultFlowRule.builder()
-                            .forDevice(deviceId)
-                            .withSelector(buildSelector())
-                            .withTreatment(buildTreatment())
-                            .withPriority(stat.getPriority())
-                            .withIdleTimeout(stat.getIdleTimeout())
-                            .withCookie(stat.getCookie().getValue());
-                    if (stat.getVersion() != OFVersion.OF_10) {
-                        builder.forTable(stat.getTableId().getValue());
-                    }
-
-                    if (afsc != null) {
-                        FlowEntry.FlowLiveType liveType = afsc.calFlowLiveType(stat.getDurationSec());
-                        return new DefaultFlowEntry(builder.build(), FlowEntryState.ADDED,
-                                                    SECONDS.toNanos(stat.getDurationSec())
-                                                            + stat.getDurationNsec(), NANOSECONDS,
-                                                    liveType,
-                                                    stat.getPacketCount().getValue(),
-                                                    stat.getByteCount().getValue());
-                    } else {
-                        return new DefaultFlowEntry(builder.build(), FlowEntryState.ADDED,
-                                                    stat.getDurationSec(),
-                                                    stat.getPacketCount().getValue(),
-                                                    stat.getByteCount().getValue());
-                    }
-
+                    return createFlowEntryFromStat();
+                case LIGHTWEIGHT_STAT:
+                    return createFlowEntryFromLightweightStat();
                 case REMOVED:
-                    builder = DefaultFlowRule.builder()
-                            .forDevice(deviceId)
-                            .withSelector(buildSelector())
-                            .withPriority(removed.getPriority())
-                            .withIdleTimeout(removed.getIdleTimeout())
-                            .withCookie(removed.getCookie().getValue())
-                            .withReason(FlowRule.FlowRemoveReason.parseShort(removed.getReason()));
-
-                    if (removed.getVersion() != OFVersion.OF_10) {
-                        builder.forTable(removed.getTableId().getValue());
-                    }
-
-                    if (afsc != null) {
-                        FlowEntry.FlowLiveType liveType = afsc.calFlowLiveType(removed.getDurationSec());
-                        return new DefaultFlowEntry(builder.build(), FlowEntryState.REMOVED,
-                                                    SECONDS.toNanos(removed.getDurationSec())
-                                                            + removed.getDurationNsec(), NANOSECONDS,
-                                                    liveType,
-                                                    removed.getPacketCount().getValue(),
-                                                    removed.getByteCount().getValue());
-                    } else {
-                        return new DefaultFlowEntry(builder.build(), FlowEntryState.REMOVED,
-                                                    removed.getDurationSec(),
-                                                    removed.getPacketCount().getValue(),
-                                                    removed.getByteCount().getValue());
-                    }
-
+                    return createFlowEntryForFlowRemoved();
                 case MOD:
-                    FlowEntryState flowState = state.length > 0 ? state[0] : FlowEntryState.FAILED;
-                    builder = DefaultFlowRule.builder()
-                            .forDevice(deviceId)
-                            .withSelector(buildSelector())
-                            .withTreatment(buildTreatment())
-                            .withPriority(flowMod.getPriority())
-                            .withIdleTimeout(flowMod.getIdleTimeout())
-                            .withCookie(flowMod.getCookie().getValue());
-                    if (flowMod.getVersion() != OFVersion.OF_10) {
-                        builder.forTable(flowMod.getTableId().getValue());
-                    }
-
-                    if (afsc != null) {
-                        FlowEntry.FlowLiveType liveType = FlowEntry.FlowLiveType.IMMEDIATE;
-                        return new DefaultFlowEntry(builder.build(), flowState, 0, liveType, 0, 0);
-                    } else {
-                        return new DefaultFlowEntry(builder.build(), flowState, 0, 0, 0);
-                    }
+                    return createFlowEntryForFlowMod(state);
                 default:
                     log.error("Unknown flow type : {}", this.type);
                     return null;
@@ -259,6 +239,144 @@ public class FlowEntryBuilder {
 
     }
 
+    private FlowEntry createFlowEntryFromStat() {
+
+        FlowRule.Builder builder = DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(buildSelector())
+                .withTreatment(buildTreatment())
+                .withPriority(stat.getPriority())
+                .withIdleTimeout(stat.getIdleTimeout())
+                .withCookie(stat.getCookie().getValue());
+        if (stat.getVersion() != OFVersion.OF_10) {
+            builder.forTable(stat.getTableId().getValue());
+        }
+        if (stat.getVersion().getWireVersion() < OFVersion.OF_15.getWireVersion()) {
+            if (afsc != null) {
+                //在这里根据统计的持续时间计算FlowLiveType
+                FlowEntry.FlowLiveType liveType = afsc.calFlowLiveType(stat.getDurationSec());
+                return new DefaultFlowEntry(builder.build(), FlowEntryState.ADDED,
+                        SECONDS.toNanos(stat.getDurationSec())
+                                + stat.getDurationNsec(), NANOSECONDS,
+                        liveType,
+                        stat.getPacketCount().getValue(),
+                        stat.getByteCount().getValue());
+            } else {
+                return new DefaultFlowEntry(builder.build(), FlowEntryState.ADDED,
+                        stat.getDurationSec(),
+                        stat.getPacketCount().getValue(),
+                        stat.getByteCount().getValue());
+            }
+        }
+        FlowStatParser statParser = new FlowStatParser(stat.getStats());
+        if (afsc != null && statParser.isDurationReceived()) {
+            FlowEntry.FlowLiveType liveType = afsc.calFlowLiveType(statParser.getDuration());
+            return new DefaultFlowEntry(builder.build(), FlowEntryState.ADDED,
+                    SECONDS.toNanos(statParser.getDuration())
+                            + SECONDS.toNanos(statParser.getDuration()), NANOSECONDS,
+                    liveType,
+                    statParser.getPacketCount(),
+                    statParser.getByteCount());
+        } else {
+            return new DefaultFlowEntry(builder.build(), FlowEntryState.ADDED,
+                    statParser.getDuration(),
+                    statParser.getPacketCount(),
+                    statParser.getByteCount());
+        }
+
+    }
+
+    private FlowEntry createFlowEntryForFlowMod(FlowEntryState ...state) {
+        FlowEntryState flowState = state.length > 0 ? state[0] : FlowEntryState.FAILED;
+        FlowRule.Builder builder = DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(buildSelector())
+                .withTreatment(buildTreatment())
+                .withPriority(flowMod.getPriority())
+                .withIdleTimeout(flowMod.getIdleTimeout())
+                .withCookie(flowMod.getCookie().getValue());
+        if (flowMod.getVersion() != OFVersion.OF_10) {
+            builder.forTable(flowMod.getTableId().getValue());
+        }
+
+        if (afsc != null) {
+            FlowEntry.FlowLiveType liveType = FlowEntry.FlowLiveType.IMMEDIATE;
+            return new DefaultFlowEntry(builder.build(), flowState, 0, liveType, 0, 0);
+        } else {
+            return new DefaultFlowEntry(builder.build(), flowState, 0, 0, 0);
+        }
+    }
+
+    private FlowEntry createFlowEntryForFlowRemoved() {
+        FlowRule.Builder builder = DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(buildSelector())
+                .withPriority(removed.getPriority())
+                .withIdleTimeout(removed.getIdleTimeout())
+                .withCookie(removed.getCookie().getValue())
+                .withReason(FlowRule.FlowRemoveReason.parseShort((short) removed.getReason().ordinal()));
+
+        if (removed.getVersion() != OFVersion.OF_10) {
+            builder.forTable(removed.getTableId().getValue());
+        }
+        if (removed.getVersion().getWireVersion() < OFVersion.OF_15.getWireVersion()) {
+            if (afsc != null) {
+                FlowEntry.FlowLiveType liveType = afsc.calFlowLiveType(removed.getDurationSec());
+                return new DefaultFlowEntry(builder.build(), FlowEntryState.REMOVED,
+                        SECONDS.toNanos(removed.getDurationSec())
+                                + removed.getDurationNsec(), NANOSECONDS,
+                        liveType,
+                        removed.getPacketCount().getValue(),
+                        removed.getByteCount().getValue());
+            } else {
+                return new DefaultFlowEntry(builder.build(), FlowEntryState.REMOVED,
+                        removed.getDurationSec(),
+                        removed.getPacketCount().getValue(),
+                        removed.getByteCount().getValue());
+            }
+        }
+        FlowStatParser statParser = new FlowStatParser(removed.getStats());
+        if (afsc != null && statParser.isDurationReceived()) {
+            FlowEntry.FlowLiveType liveType = afsc.calFlowLiveType(statParser.getDuration());
+            return new DefaultFlowEntry(builder.build(), FlowEntryState.REMOVED,
+                    SECONDS.toNanos(statParser.getDuration())
+                            + SECONDS.toNanos(statParser.getDuration()), NANOSECONDS,
+                    liveType,
+                    statParser.getPacketCount(),
+                    statParser.getByteCount());
+        } else {
+            return new DefaultFlowEntry(builder.build(), FlowEntryState.REMOVED,
+                    statParser.getDuration(),
+                    statParser.getPacketCount(),
+                    statParser.getByteCount());
+        }
+    }
+
+    private FlowEntry createFlowEntryFromLightweightStat() {
+        FlowRule.Builder builder = DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(buildSelector())
+                .withPriority(lightWeightStat.getPriority())
+                .withIdleTimeout(0)
+                .withCookie(0);
+        FlowStatParser flowLightweightStatParser = new FlowStatParser(lightWeightStat.getStats());
+        builder.forTable(lightWeightStat.getTableId().getValue());
+        if (afsc != null && flowLightweightStatParser.isDurationReceived()) {
+            FlowEntry.FlowLiveType liveType = afsc.calFlowLiveType(flowLightweightStatParser.getDuration());
+            return new DefaultFlowEntry(builder.build(), FlowEntryState.ADDED,
+                    SECONDS.toNanos(flowLightweightStatParser.getDuration())
+                            + flowLightweightStatParser.getDuration(), NANOSECONDS,
+                    liveType,
+                    flowLightweightStatParser.getPacketCount(),
+                    flowLightweightStatParser.getByteCount());
+        } else {
+            return new DefaultFlowEntry(builder.build(), FlowEntryState.ADDED,
+                    flowLightweightStatParser.getDuration(),
+                    flowLightweightStatParser.getPacketCount(),
+                    flowLightweightStatParser.getByteCount());
+        }
+    }
+
     private List<OFInstruction> getInstructions(OFFlowMod entry) {
         switch (entry.getVersion()) {
             case OF_10:
@@ -268,6 +386,8 @@ public class FlowEntryBuilder {
             case OF_11:
             case OF_12:
             case OF_13:
+            case OF_14:
+            case OF_15:
                 return entry.getInstructions();
             default:
                 log.warn("Unknown OF version {}", entry.getVersion());
@@ -283,6 +403,8 @@ public class FlowEntryBuilder {
             case OF_11:
             case OF_12:
             case OF_13:
+            case OF_14:
+            case OF_15:
                 return entry.getInstructions();
             default:
                 log.warn("Unknown OF version {}", entry.getVersion());
@@ -316,6 +438,10 @@ public class FlowEntryBuilder {
                 case CLEAR_ACTIONS:
                     builder.wipeDeferred();
                     break;
+                case STAT_TRIGGER:
+                    OFInstructionStatTrigger statTrigger = (OFInstructionStatTrigger) in;
+                    buildStatTrigger(statTrigger.getThresholds(), statTrigger.getFlags(), builder);
+                    break;
                 case EXPERIMENTER:
                     break;
                 case METER:
@@ -326,6 +452,57 @@ public class FlowEntryBuilder {
         }
 
         return builder.build();
+    }
+
+    private TrafficTreatment.Builder buildStatTrigger(OFOxsList oxsList,
+                                                      Set<OFStatTriggerFlags> flagsSet,
+                                                      TrafficTreatment.Builder builder) {
+        Map<StatTriggerField, Long> statTriggerMap = Maps.newEnumMap(StatTriggerField.class);
+        for (OFOxs<?> ofOxs : oxsList) {
+            switch (ofOxs.getStatField().id) {
+                case DURATION:
+                    U64 durationType = (U64) ofOxs.getValue();
+                    statTriggerMap.put(DURATION, durationType.getValue());
+                    break;
+                case FLOW_COUNT:
+                    U32 flowCount = (U32) ofOxs.getValue();
+                    statTriggerMap.put(FLOW_COUNT, flowCount.getValue());
+                    break;
+                case PACKET_COUNT:
+                    U64 packetCount = (U64) ofOxs.getValue();
+                    statTriggerMap.put(PACKET_COUNT, packetCount.getValue());
+                    break;
+                case BYTE_COUNT:
+                    U64 byteCount = (U64) ofOxs.getValue();
+                    statTriggerMap.put(BYTE_COUNT, byteCount.getValue());
+                    break;
+                case IDLE_TIME:
+                    U64 idleTime = (U64) ofOxs.getValue();
+                    statTriggerMap.put(IDLE_TIME, idleTime.getValue());
+                    break;
+                default:
+                    log.warn("getStatField not supported {}", ofOxs.getStatField().id);
+                    break;
+            }
+        }
+        StatTriggerFlag flag = null;
+        for (OFStatTriggerFlags flags : flagsSet) {
+            switch (flags) {
+                case PERIODIC:
+                    flag = PERIODIC;
+                    break;
+                case ONLY_FIRST:
+                    flag = ONLY_FIRST;
+                    break;
+                default:
+                    log.warn("flag not supported {}", flags);
+                    break;
+            }
+        }
+        if (!statTriggerMap.isEmpty() && flag != null) {
+            builder.add(Instructions.statTrigger(statTriggerMap, flag));
+        }
+        return builder;
     }
 
     /**
@@ -424,7 +601,7 @@ public class FlowEntryBuilder {
                     break;
                 case GROUP:
                     OFActionGroup group = (OFActionGroup) act;
-                    builder.group(new DefaultGroupId(group.getGroup().getGroupNumber()));
+                    builder.group(new GroupId(group.getGroup().getGroupNumber()));
                     break;
                 case SET_QUEUE:
                     OFActionSetQueue setQueue = (OFActionSetQueue) act;
@@ -442,6 +619,10 @@ public class FlowEntryBuilder {
                 case PUSH_VLAN:
                     OFActionPushVlan pushVlan = (OFActionPushVlan) act;
                     builder.pushVlan(new EthType((short) pushVlan.getEthertype().getValue()));
+                    break;
+                case METER:
+                    OFActionMeter actionMeter = (OFActionMeter) act;
+                    builder.meter(MeterId.meterId(actionMeter.getMeterId()));
                     break;
                 case SET_TP_DST:
                 case SET_TP_SRC:
@@ -463,8 +644,6 @@ public class FlowEntryBuilder {
 
     private TrafficTreatment.Builder buildActions(List<OFAction> actions,
                                                   TrafficTreatment.Builder builder) {
-        DriverHandler driverHandler = getDriver(deviceId);
-
         return configureTreatmentBuilder(actions, builder, driverHandler, deviceId);
     }
 
@@ -690,7 +869,6 @@ public class FlowEntryBuilder {
         Ip6Prefix ip6Prefix;
         Ip4Address ip;
 
-        DriverHandler driverHandler = getDriver(deviceId);
         ExtensionSelectorInterpreter selectorInterpreter;
         if (driverHandler.hasBehaviour(ExtensionSelectorInterpreter.class)) {
             selectorInterpreter = driverHandler.behaviour(ExtensionSelectorInterpreter.class);
@@ -743,7 +921,7 @@ public class FlowEntryBuilder {
             case VLAN_VID:
                 if (selectorInterpreter != null &&
                         selectorInterpreter.supported(ExtensionSelectorTypes.OFDPA_MATCH_VLAN_VID.type())) {
-                    if (match.getVersion().equals(OFVersion.OF_13)) {
+                    if (isOF13OrLater(match)) {
                         OFOxm oxm = ((OFMatchV3) match).getOxmList().get(MatchField.VLAN_VID);
                         builder.extension(selectorInterpreter.mapOxm(oxm),
                                 deviceId);
@@ -813,16 +991,44 @@ public class FlowEntryBuilder {
                 builder.matchIPDst(ip4Prefix);
                 break;
             case TCP_SRC:
-                builder.matchTcpSrc(TpPort.tpPort(match.get(MatchField.TCP_SRC).getPort()));
+                if (match.isPartiallyMasked(MatchField.TCP_SRC)) {
+                    Masked<org.projectfloodlight.openflow.types.TransportPort> maskedPort =
+                            match.getMasked(MatchField.TCP_SRC);
+                    builder.matchTcpSrcMasked(TpPort.tpPort(maskedPort.getValue().getPort()),
+                                              TpPort.tpPort(maskedPort.getMask().getPort()));
+                } else {
+                    builder.matchTcpSrc(TpPort.tpPort(match.get(MatchField.TCP_SRC).getPort()));
+                }
                 break;
             case TCP_DST:
-                builder.matchTcpDst(TpPort.tpPort(match.get(MatchField.TCP_DST).getPort()));
+                if (match.isPartiallyMasked(MatchField.TCP_DST)) {
+                    Masked<org.projectfloodlight.openflow.types.TransportPort> maskedPort =
+                            match.getMasked(MatchField.TCP_DST);
+                    builder.matchTcpDstMasked(TpPort.tpPort(maskedPort.getValue().getPort()),
+                                              TpPort.tpPort(maskedPort.getMask().getPort()));
+                } else {
+                    builder.matchTcpDst(TpPort.tpPort(match.get(MatchField.TCP_DST).getPort()));
+                }
                 break;
             case UDP_SRC:
-                builder.matchUdpSrc(TpPort.tpPort(match.get(MatchField.UDP_SRC).getPort()));
+                if (match.isPartiallyMasked(MatchField.UDP_SRC)) {
+                    Masked<org.projectfloodlight.openflow.types.TransportPort> maskedPort =
+                            match.getMasked(MatchField.UDP_SRC);
+                    builder.matchUdpSrcMasked(TpPort.tpPort(maskedPort.getValue().getPort()),
+                                              TpPort.tpPort(maskedPort.getMask().getPort()));
+                } else {
+                    builder.matchUdpSrc(TpPort.tpPort(match.get(MatchField.UDP_SRC).getPort()));
+                }
                 break;
             case UDP_DST:
-                builder.matchUdpDst(TpPort.tpPort(match.get(MatchField.UDP_DST).getPort()));
+                if (match.isPartiallyMasked(MatchField.UDP_DST)) {
+                    Masked<org.projectfloodlight.openflow.types.TransportPort> maskedPort =
+                            match.getMasked(MatchField.UDP_DST);
+                    builder.matchUdpDstMasked(TpPort.tpPort(maskedPort.getValue().getPort()),
+                                              TpPort.tpPort(maskedPort.getMask().getPort()));
+                } else {
+                    builder.matchUdpDst(TpPort.tpPort(match.get(MatchField.UDP_DST).getPort()));
+                }
                 break;
             case MPLS_LABEL:
                 builder.matchMplsLabel(MplsLabel.mplsLabel((int) match.get(MatchField.MPLS_LABEL)
@@ -832,10 +1038,24 @@ public class FlowEntryBuilder {
                 builder.matchMplsBos(match.get(MatchField.MPLS_BOS).getValue());
                 break;
             case SCTP_SRC:
-                builder.matchSctpSrc(TpPort.tpPort(match.get(MatchField.SCTP_SRC).getPort()));
+                if (match.isPartiallyMasked(MatchField.SCTP_SRC)) {
+                    Masked<org.projectfloodlight.openflow.types.TransportPort> maskedPort =
+                            match.getMasked(MatchField.SCTP_SRC);
+                    builder.matchSctpSrcMasked(TpPort.tpPort(maskedPort.getValue().getPort()),
+                                               TpPort.tpPort(maskedPort.getMask().getPort()));
+                } else {
+                    builder.matchSctpSrc(TpPort.tpPort(match.get(MatchField.SCTP_SRC).getPort()));
+                }
                 break;
             case SCTP_DST:
-                builder.matchSctpDst(TpPort.tpPort(match.get(MatchField.SCTP_DST).getPort()));
+                if (match.isPartiallyMasked(MatchField.SCTP_DST)) {
+                    Masked<org.projectfloodlight.openflow.types.TransportPort> maskedPort =
+                            match.getMasked(MatchField.SCTP_DST);
+                    builder.matchSctpDstMasked(TpPort.tpPort(maskedPort.getValue().getPort()),
+                                               TpPort.tpPort(maskedPort.getMask().getPort()));
+                } else {
+                    builder.matchSctpDst(TpPort.tpPort(match.get(MatchField.SCTP_DST).getPort()));
+                }
                 break;
             case ICMPV4_TYPE:
                 byte icmpType = (byte) match.get(MatchField.ICMPV4_TYPE).getType();
@@ -937,7 +1157,7 @@ public class FlowEntryBuilder {
                         match.get(MatchField.EXP_ODU_SIG_ID).getTslen(),
                         match.get(MatchField.EXP_ODU_SIG_ID).getTsmap());
                 builder.add(matchOduSignalId(oduSignalId));
-            break;
+                break;
             case EXP_ODU_SIGTYPE:
                 try {
                     U8 oduSigType = match.get(MatchField.EXP_ODU_SIGTYPE);
@@ -1001,10 +1221,43 @@ public class FlowEntryBuilder {
                     }
                 }
                 break;
+            case CONNTRACK_STATE:
+                if (selectorInterpreter != null &&
+                        selectorInterpreter.supported(ExtensionSelectorTypes.NICIRA_MATCH_CONNTRACK_STATE.type())) {
+                    try {
+                        OFOxm oxm = ((OFMatchV3) match).getOxmList().get(MatchField.CONNTRACK_STATE);
+                        builder.extension(selectorInterpreter.mapOxm(oxm), deviceId);
+                    } catch (UnsupportedOperationException e) {
+                        log.debug(e.getMessage());
+                    }
+                }
+                break;
+            case CONNTRACK_ZONE:
+                if (selectorInterpreter != null &&
+                        selectorInterpreter.supported(ExtensionSelectorTypes.NICIRA_MATCH_CONNTRACK_ZONE.type())) {
+                    try {
+                        OFOxm oxm = ((OFMatchV3) match).getOxmList().get(MatchField.CONNTRACK_ZONE);
+                        builder.extension(selectorInterpreter.mapOxm(oxm), deviceId);
+                    } catch (UnsupportedOperationException e) {
+                        log.debug(e.getMessage());
+                    }
+                }
+                break;
+            case CONNTRACK_MARK:
+                if (selectorInterpreter != null &&
+                        selectorInterpreter.supported(ExtensionSelectorTypes.NICIRA_MATCH_CONNTRACK_MARK.type())) {
+                    try {
+                        OFOxm oxm = ((OFMatchV3) match).getOxmList().get(MatchField.CONNTRACK_MARK);
+                        builder.extension(selectorInterpreter.mapOxm(oxm), deviceId);
+                    } catch (UnsupportedOperationException e) {
+                        log.debug(e.getMessage());
+                    }
+                }
+                break;
             case OFDPA_OVID:
                 if (selectorInterpreter != null &&
                         selectorInterpreter.supported(ExtensionSelectorTypes.OFDPA_MATCH_OVID.type())) {
-                    if (match.getVersion().equals(OFVersion.OF_13)) {
+                    if (isOF13OrLater(match)) {
                         OFOxm oxm = ((OFMatchV3) match).getOxmList().get(MatchField.OFDPA_OVID);
                         builder.extension(selectorInterpreter.mapOxm(oxm),
                                           deviceId);
@@ -1016,7 +1269,7 @@ public class FlowEntryBuilder {
             case OFDPA_MPLS_L2_PORT:
                 if (selectorInterpreter != null &&
                         selectorInterpreter.supported(ExtensionSelectorTypes.OFDPA_MATCH_MPLS_L2_PORT.type())) {
-                    if (match.getVersion().equals(OFVersion.OF_13)) {
+                    if (isOF13OrLater(match)) {
                         OFOxm oxm = ((OFMatchV3) match).getOxmList().get(MatchField.OFDPA_MPLS_L2_PORT);
                         builder.extension(selectorInterpreter.mapOxm(oxm),
                                           deviceId);
@@ -1033,9 +1286,24 @@ public class FlowEntryBuilder {
         return builder.build();
     }
 
-    private DriverHandler getDriver(DeviceId devId) {
-        Driver driver = driverService.getDriver(devId);
-        DriverHandler handler = new DefaultDriverHandler(new DefaultDriverData(driver, devId));
+    /**
+     * @param obj OpenFlow object to test
+     * @return true if OFObject is OF_13 or later
+     */
+    private static boolean isOF13OrLater(OFObject obj) {
+        return obj.getVersion().wireVersion >= OFVersion.OF_13.wireVersion;
+    }
+
+    /**
+     * Retrieves the driver handler for the specified device.
+     *
+     * @param deviceId device identifier
+     * @param driverService service handle for the driver service
+     * @return driver handler
+     */
+    protected static DriverHandler getDriver(DeviceId deviceId, DriverService driverService) {
+        Driver driver = driverService.getDriver(deviceId);
+        DriverHandler handler = new DefaultDriverHandler(new DefaultDriverData(driver, deviceId));
         return handler;
     }
 }

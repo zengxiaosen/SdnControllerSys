@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.onosproject.provider.netconf.alarm;
 
 import com.google.common.collect.ImmutableSet;
 import org.onosproject.incubator.net.faultmanagement.alarm.Alarm;
+import org.onosproject.incubator.net.faultmanagement.alarm.AlarmId;
 import org.onosproject.incubator.net.faultmanagement.alarm.AlarmTranslator;
 import org.onosproject.incubator.net.faultmanagement.alarm.DefaultAlarm;
 import org.onosproject.net.DeviceId;
@@ -38,10 +39,11 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.joda.time.format.ISODateTimeFormat;
 import org.xml.sax.SAXException;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -70,7 +72,8 @@ public class NetconfAlarmTranslator implements AlarmTranslator {
             while (descriptionNode != null) {
                 if (descriptionNode.getNodeType() == Node.ELEMENT_NODE) {
                     String description = nodeToString(descriptionNode);
-                    alarms.add(new DefaultAlarm.Builder(deviceId, description,
+                    alarms.add(new DefaultAlarm.Builder(AlarmId.alarmId(deviceId, Long.toString(timeStamp)),
+                                                        deviceId, description,
                                                         Alarm.SeverityLevel.WARNING,
                                                         timeStamp).build());
                     descriptionNode = null;
@@ -82,7 +85,7 @@ public class NetconfAlarmTranslator implements AlarmTranslator {
         } catch (SAXException | IOException | ParserConfigurationException |
                 UnsupportedOperationException | IllegalArgumentException |
                 TransformerException e) {
-            log.error("Exception thrown translating {} from {}.", message, deviceId);
+            log.error("Exception thrown translating message from {}.", deviceId, e);
             return ImmutableSet.of();
         }
     }
@@ -96,7 +99,7 @@ public class NetconfAlarmTranslator implements AlarmTranslator {
 
     private long parseDate(String timeStr)
             throws UnsupportedOperationException, IllegalArgumentException {
-        return ISODateTimeFormat.dateTimeNoMillis().parseMillis(timeStr);
+        return DateTimeFormatter.ISO_DATE_TIME.parse(timeStr, Instant::from).getEpochSecond();
     }
 
     private static String nodeToString(Node rootNode) throws TransformerException {

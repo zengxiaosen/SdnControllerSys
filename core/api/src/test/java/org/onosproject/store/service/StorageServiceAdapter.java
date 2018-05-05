@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,12 +45,22 @@ public class StorageServiceAdapter implements StorageService {
     }
 
     @Override
+    public AtomicIdGeneratorBuilder atomicIdGeneratorBuilder() {
+        return null;
+    }
+
+    @Override
     public <V> AtomicValueBuilder<V> atomicValueBuilder() {
         return null;
     }
 
     @Override
     public TransactionContextBuilder transactionContextBuilder() {
+        return null;
+    }
+
+    @Override
+    public DistributedLockBuilder lockBuilder() {
         return null;
     }
 

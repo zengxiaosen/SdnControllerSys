@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,6 @@ import org.onosproject.net.topology.DefaultGraphDescription;
 import org.onosproject.net.topology.GeoDistanceLinkWeight;
 import org.onosproject.net.topology.GraphDescription;
 import org.onosproject.net.topology.LinkWeigher;
-import org.onosproject.net.topology.LinkWeight;
 import org.onosproject.net.topology.MetricLinkWeight;
 import org.onosproject.net.topology.PathAdminService;
 import org.onosproject.net.topology.Topology;
@@ -64,11 +63,11 @@ import org.slf4j.Logger;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.onlab.util.Tools.get;
 import static org.onlab.util.Tools.isNullOrEmpty;
-import static org.onosproject.net.topology.AdapterLinkWeigher.adapt;
 import static org.onosproject.net.topology.TopologyEvent.Type.TOPOLOGY_CHANGED;
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -153,20 +152,17 @@ public class DistributedTopologyStore
 
     @Modified
     protected void modified(ComponentContext context) {
-
         Dictionary<?, ?> properties = context.getProperties();
 
         String newLinkWeightFunction = get(properties, "linkWeightFunction");
         if (newLinkWeightFunction != null &&
                 !Objects.equals(newLinkWeightFunction, linkWeightFunction)) {
             linkWeightFunction = newLinkWeightFunction;
-            LinkWeight weight = linkWeightFunction.equals(LINK_METRIC) ?
+            LinkWeigher weight = linkWeightFunction.equals(LINK_METRIC) ?
                     new MetricLinkWeight() :
                     linkWeightFunction.equals(GEO_DISTANCE) ?
                             new GeoDistanceLinkWeight(deviceService) : null;
-
-
-            setDefaultLinkWeight(weight);
+            setDefaultLinkWeigher(weight);
         }
         log.info(FORMAT, linkWeightFunction);
     }
@@ -206,60 +202,42 @@ public class DistributedTopologyStore
     public Set<Link> getClusterLinks(Topology topology, TopologyCluster cluster) {
         return defaultTopology(topology).getClusterLinks(cluster);
     }
-
-    @Override
-    public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst) {
-
-
-
-        //log.info("store端调用的是DistributedTopologyStore。。。getPaths。。。。。。。。。。。。。。。。。。。。。。。。。。");
-        //return defaultTopology(topology).getPaths(src, dst);
-        return defaultTopology(topology).getPaths(src, dst);
-    }
-    @Override
-    public Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs){
-        //log.info("store端调用的是DistributedTopologyStore。。。getPaths1。。。。。。。。。。。。。。。。。。。。。。。。。。");
-        //return defaultTopology(topology).getPaths(src, dst);
-        return defaultTopology(topology).getPaths1(src, dst, hs);
-        //return null;
-    }
-
     @Override
     public LinkedList<Link> getAllPaths(Topology topology){
         return defaultTopology(topology).getAllPaths();
     }
 
-
-
-
     @Override
-    public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst,
-                              LinkWeight weight) {
-//        for(int i=0; i<2; i++){
-//            log.info("2是不是被调用了DistributedTopologyStore。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
-//        }
-        return getPaths(topology, src, dst, adapt(weight));
+    public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst) {
+        return defaultTopology(topology).getPaths(src, dst);
     }
+
 
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src,
                               DeviceId dst, LinkWeigher weigher) {
-        for(int i=0; i<10; i++){
-            log.info("3是不是被调用了DistributedTopologyStore。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
-        }
         return defaultTopology(topology).getPaths(src, dst, weigher);
+    }
 
+    @Override
+    public Set<Path> getKShortestPaths(Topology topology,
+                                       DeviceId src, DeviceId dst,
+                                       LinkWeigher weigher,
+                                       int maxPaths) {
+        return defaultTopology(topology).getKShortestPaths(src, dst, weigher, maxPaths);
+    }
+
+    @Override
+    public Stream<Path> getKShortestPaths(Topology topology,
+                                          DeviceId src,
+                                          DeviceId dst,
+                                          LinkWeigher weigher) {
+        return defaultTopology(topology).getKShortestPaths(src, dst, weigher);
     }
 
     @Override
     public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src, DeviceId dst) {
         return defaultTopology(topology).getDisjointPaths(src, dst);
-    }
-
-    @Override
-    public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src, DeviceId dst,
-                                              LinkWeight weight) {
-        return getDisjointPaths(topology, src, dst, adapt(weight));
     }
 
     @Override
@@ -272,12 +250,6 @@ public class DistributedTopologyStore
     public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src, DeviceId dst,
                                               Map<Link, Object> riskProfile) {
         return defaultTopology(topology).getDisjointPaths(src, dst, riskProfile);
-    }
-
-    @Override
-    public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src, DeviceId dst,
-                                              LinkWeight weight, Map<Link, Object> riskProfile) {
-        return getDisjointPaths(topology, src, dst, adapt(weight), riskProfile);
     }
 
     @Override
@@ -357,11 +329,6 @@ public class DistributedTopologyStore
         checkArgument(topology instanceof DefaultTopology,
                       "Topology class %s not supported", topology.getClass());
         return (DefaultTopology) topology;
-    }
-
-    @Override
-    public void setDefaultLinkWeight(LinkWeight linkWeight) {
-        DefaultTopology.setDefaultLinkWeigher(adapt(linkWeight));
     }
 
     @Override

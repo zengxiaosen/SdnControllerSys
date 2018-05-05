@@ -10,6 +10,7 @@
 \./bucklets/maven_jar\.bucklet
 \./tools/build/libgen
 \./utils/osgiwrap/
+\./tools/dev/bin/
 \./tools/build/onos-validate-change-version
 \./tools/build/onos-change-version
 \./tools/build/onos-release
@@ -28,9 +29,9 @@
 \./apps/vrouter/pom.xml
 \./protocols/ospf/
 \./protocols/snmp/
+\./protocols/restconf
 \./providers/snmp/
-\./providers/bmv2/
-\./drivers/bmv2/
+\./providers/ietfte/
 \./apps/kafka-integration/
 \./pom.xml.versionsBackup
 \./tools/build/buck-publish-api
@@ -39,3 +40,8 @@
 \./core/store/primitives/resources/impl/AtomixLeaderElectorCommands.java
 \./core/store/primitives/src/main/java/org/onosproject/store/primitives/resources/impl/AtomixLeaderElectorCommands.java
 \./core/store/primitives/src/main/java/org/onosproject/store/primitives/resources/impl/AtomixAtomicCounterMapCommands.java
+\./apps/openroadm/
+\./drivers/huawei/driver
+\./models/openroadm/pom.xml
+
+

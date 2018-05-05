@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,8 +58,7 @@ public final class ChannelData {
         PortNumber inPort = ((PortCriterion) in).port();
 
         Criterion och = rule.selector().getCriterion(Criterion.Type.OCH_SIGID);
-        checkNotNull(och);
-        OchSignal ochSignal = ((OchSignalCriterion) och).lambda();
+        OchSignal ochSignal = och == null ? null : ((OchSignalCriterion) och).lambda();
 
         PortNumber outPort = null;
         List<Instruction> instructions = rule.treatment().allInstructions();

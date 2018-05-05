@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import com.google.common.collect.Range;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.driver.HandlerBehaviour;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -86,5 +88,16 @@ public interface PowerConfig<T> extends HandlerBehaviour {
      */
     default Optional<Range<Long>> getInputPowerRange(PortNumber port, T component) {
         return Optional.empty();
+    }
+
+    /**
+     * Get the ports, which support {@code PowerConfig} operations for the specified
+     * {@code component}.
+     *
+     * @param component the port component
+     * @return a set of power config ports
+     */
+    default List<PortNumber> getPorts(T component) {
+        return new ArrayList<PortNumber>();
     }
 }

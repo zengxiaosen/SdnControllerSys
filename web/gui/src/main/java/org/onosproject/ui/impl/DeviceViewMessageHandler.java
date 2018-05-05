@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,8 @@ import org.onosproject.net.config.basics.BasicDeviceConfig;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.link.LinkService;
+import org.onosproject.net.pi.model.PiPipeconfId;
+import org.onosproject.net.pi.service.PiPipeconfService;
 import org.onosproject.ui.RequestHandler;
 import org.onosproject.ui.UiMessageHandler;
 import org.onosproject.ui.table.TableModel;
@@ -42,6 +44,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.Strings.emptyToNull;
@@ -57,6 +60,7 @@ public class DeviceViewMessageHandler extends UiMessageHandler {
     private static final String DEV_DATA_REQ = "deviceDataRequest";
     private static final String DEV_DATA_RESP = "deviceDataResponse";
     private static final String DEVICES = "devices";
+    private static final String DEVICE = "device";
 
     private static final String DEV_DETAILS_REQ = "deviceDetailsRequest";
     private static final String DEV_DETAILS_RESP = "deviceDetailsResponse";
@@ -79,6 +83,7 @@ public class DeviceViewMessageHandler extends UiMessageHandler {
     private static final String HW = "hw";
     private static final String SW = "sw";
     private static final String PROTOCOL = "protocol";
+    private static final String PIPECONF = "pipeconf";
     private static final String MASTER_ID = "masterid";
     private static final String CHASSIS_ID = "chassisid";
     private static final String SERIAL = "serial";
@@ -201,6 +206,7 @@ public class DeviceViewMessageHandler extends UiMessageHandler {
             data.put(CHASSIS_ID, device.chassisId().toString());
             data.put(MASTER_ID, masterFor != null ? masterFor.toString() : NONE);
             data.put(PROTOCOL, deviceProtocol(device));
+            data.put(PIPECONF, devicePipeconf(device));
 
             ArrayNode ports = arrayNode();
 
@@ -217,6 +223,11 @@ public class DeviceViewMessageHandler extends UiMessageHandler {
 
             ObjectNode rootNode = objectNode();
             rootNode.set(DETAILS, data);
+
+            // NOTE: ... an alternate way of getting all the details of an item:
+            // Use the codec context to get a JSON of the device. See ONOS-5976.
+            rootNode.set(DEVICE, getJsonCodecContext().encode(device, Device.class));
+
             sendMessage(DEV_DETAILS_RESP, rootNode);
         }
 
@@ -251,8 +262,17 @@ public class DeviceViewMessageHandler extends UiMessageHandler {
 
             return port;
         }
-    }
 
+        private String devicePipeconf(Device device) {
+            PiPipeconfService service = get(PiPipeconfService.class);
+            Optional<PiPipeconfId> pipeconfId = service.ofDevice(device.id());
+            if (pipeconfId.isPresent()) {
+                return pipeconfId.get().id();
+            } else {
+                return NONE;
+            }
+        }
+    }
 
     // handler for changing device friendly name
     private final class NameChangeHandler extends RequestHandler {

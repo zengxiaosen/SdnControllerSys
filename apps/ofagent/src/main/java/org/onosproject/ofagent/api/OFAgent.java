@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,31 @@
  */
 package org.onosproject.ofagent.api;
 
-import io.netty.channel.nio.NioEventLoopGroup;
 import org.onosproject.incubator.net.virtual.NetworkId;
+import org.onosproject.incubator.net.virtual.TenantId;
 
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 
 /**
- * Representation of an OF agent, which brokers virtual devices and external
- * controllers by handling OpenFlow connections and messages between them.
+ * Representation of an OpenFlow agent, which holds the mapping between the virtual
+ * network and the external OpenFlow controllers.
  */
 public interface OFAgent {
+
+    String TRACER_LOG_TENANT_ID_PREFIX = "OFAGENT_tenantId:";
+
+    enum State {
+
+        /**
+         * Specifies that the ofagent state is started.
+         */
+        STARTED,
+
+        /**
+         * Specifies that the ofagent state is stopped.
+         */
+        STOPPED
+    }
 
     /**
      * Returns the identifier of the virtual network that this agent cares for.
@@ -36,6 +49,13 @@ public interface OFAgent {
     NetworkId networkId();
 
     /**
+     * Returns the identifier of the tenant which owns virtual network this agent cares for.
+     *
+     * @return id of the tenant
+     */
+    TenantId tenantId();
+
+    /**
      * Returns the external OpenFlow controllers of the virtual network.
      *
      * @return set of openflow controllers
@@ -43,14 +63,11 @@ public interface OFAgent {
     Set<OFController> controllers();
 
     /**
-     * Starts the OpenFlow agent.
+     * Returns the admin state of the agent.
+     *
+     * @return state
      */
-    void start();
-
-    /**
-     * Stops the OpenFlow agent.
-     */
-    void stop();
+    State state();
 
     /**
      * Builder of OF agent entities.
@@ -64,6 +81,15 @@ public interface OFAgent {
          */
         OFAgent build();
 
+
+        /**
+         * Returns OF agent builder with the supplied OF agent.
+         *
+         * @param ofAgent ofagent
+         * @return of agent builder
+         */
+        Builder from(OFAgent ofAgent);
+
         /**
          * Returns OF agent builder with the supplied network ID.
          *
@@ -73,13 +99,12 @@ public interface OFAgent {
         Builder networkId(NetworkId networkId);
 
         /**
-         * Returns OF agent builder with the supplied network services for the
-         * virtual network.
+         * Returns OF agent builder with the supplied tenant ID.
          *
-         * @param services network services for the virtual network
+         * @param tenantId id of the virtual network
          * @return of agent builder
          */
-        Builder services(Map<Class<?>, Object> services);
+        Builder tenantId(TenantId tenantId);
 
         /**
          * Returns OF agent builder with the supplied controllers.
@@ -90,19 +115,27 @@ public interface OFAgent {
         Builder controllers(Set<OFController> controllers);
 
         /**
-         * Returns OF agent builder with the supplied event executor.
+         * Returns OF agent builder with the supplied additional controller.
          *
-         * @param eventExecutor event executor
+         * @param controller additional controller
          * @return of agent builder
          */
-        Builder eventExecutor(ExecutorService eventExecutor);
+        Builder addController(OFController controller);
 
         /**
-         * Returns OF agent builder with the supplied IO work group.
+         * Returns OF agent builder with the supplied controller removed.
          *
-         * @param ioWorker io worker group
+         * @param controller controller to delete
          * @return of agent builder
          */
-        Builder ioWorker(NioEventLoopGroup ioWorker);
+        Builder deleteController(OFController controller);
+
+        /**
+         * Returns OF agent builder with the supplied state.
+         *
+         * @param state state of the agent
+         * @return of agent builder
+         */
+        Builder state(State state);
     }
 }

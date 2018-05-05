@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,15 +24,16 @@
 
     var Collection, Model;
 
-    var hostIconDim = 20,
-        hostIconDimMin = 15,
-        hostIconDimMax = 20,
+    var hostIconDim = 15,
+        hostIconDimMin = 8,
+        hostIconDimMax = 15,
+        labelPadding = 20,
         remappedDeviceTypes = {};
 
     function createHostCollection(data, region) {
 
         var HostCollection = Collection.extend({
-            model: Model
+            model: Model,
         });
 
         var hosts = [];
@@ -48,18 +49,21 @@
     angular.module('ovTopo2')
     .factory('Topo2HostService', [
         'Topo2Collection', 'Topo2NodeModel', 'Topo2ViewService',
-        'IconService', 'Topo2ZoomService', 'Topo2HostsPanelService',
-        function (_c_, NodeModel, _t2vs_, is, zs, t2hds) {
+        'IconService', 'Topo2ZoomService', 'Topo2HostsPanelService', 'PrefsService',
+        'Topo2PrefsService',
+        function (_c_, NodeModel, _t2vs_, is, zs, t2hds, ps, t2ps) {
 
             Collection = _c_;
 
             Model = NodeModel.extend({
+
+                nodeType: 'host',
+                events: {
+                    'click': 'onClick',
+                },
                 initialize: function () {
                     this.super = this.constructor.__super__;
                     this.super.initialize.apply(this, arguments);
-                },
-                events: {
-                    'click': 'onClick'
                 },
                 onChange: function () {
                     // Update class names when the model changes
@@ -67,35 +71,47 @@
                         this.el.attr('class', this.svgClassName());
                     }
                 },
-                onClick: function () {
-                    var selected = this.select(d3.select);
-
-                    if (selected.length > 0) {
-                        t2hds.displayPanel(this);
-                    } else {
-                        t2hds.hide();
-                    }
+                showDetails: function () {
+                    t2hds.displayPanel(this);
                 },
-                nodeType: 'host',
                 icon: function () {
                     var type = this.get('type');
                     return remappedDeviceTypes[type] || type || 'm_endstation';
                 },
+                title: function () {
+                    var props = this.get('props');
+                    return props.name || this.get('ips')[0] || 'unknown';
+                },
+                labelIndex: function () {
+                    return t2ps.get('hlbls');
+                },
                 label: function () {
-                    var labelText = this.get('id'),
-                        ips = this.get('ips');
+                    var props = this.get('props'),
+                        id = this.get('ips')[0] || 'unknown',
+                        friendlyName = props && props.name ? props.name : id,
+                        labels = ['', friendlyName || id, id, this.get('id')],
+                        nli = this.labelIndex(),
+                        idx = (nli < labels.length) ? nli : 0;
 
-                    if (this.labelIndex() === 0) {
-                        return '';
-                    }
+                    return labels[idx];
+                },
+                updateLabel: function () {
+                    var node = this.el,
+                        label = this.trimLabel(this.label()),
+                        labelWidth;
 
-                    if (ips && ips.length > 0) {
-                        labelText = ips[0];
-                    }
+                    node.select('text').text(label);
+                    labelWidth = !_.isEmpty(this.label()) ? this.computeLabelWidth(node) + (labelPadding * 2) : 0;
 
-                    return labelText;
+                    node.select('rect')
+                        .transition()
+                        .attr({
+                            width: labelWidth,
+                        });
                 },
                 setScale: function () {
+
+                    if (!this.el) return;
 
                     var dim = hostIconDim,
                         multipler = 1;
@@ -109,25 +125,38 @@
                     this.el.select('g').selectAll('*')
                         .style('transform', 'scale(' + multipler + ')');
                 },
+                setVisibility: function () {
+                    var visible = ps.getPrefs('topo2_prefs')['hosts'];
+                    this.el.style('visibility', visible ? 'visible' : 'hidden');
+                },
                 onEnter: function (el) {
                     var node = d3.select(el),
                         icon = this.icon(),
-                        iconDim = hostIconDim,
                         textDy = 5,
-                        textDx = (hostIconDim * 2) + 20;
+                        textDx = (hostIconDim * 2);
 
                     this.el = node;
 
                     var g = node.append('g')
                         .attr('class', 'svgIcon hostIcon');
 
+                    // Add Label background to host
+
+                    var rect = g.append('rect').attr({
+                        width: 0,
+                        height: hostIconDim * 2,
+                        y: - hostIconDim,
+                    });
+
                     g.append('circle').attr('r', hostIconDim);
+
+                    var glyphSize = hostIconDim * 1.5;
                     g.append('use').attr({
                         'xlink:href': '#' + icon,
-                        width: iconDim,
-                        height: iconDim,
-                        x: -iconDim / 2,
-                        y: -iconDim / 2
+                        width: glyphSize,
+                        height: glyphSize,
+                        x: -glyphSize / 2,
+                        y: -glyphSize / 2,
                     });
 
                     var labelText = this.label();
@@ -136,17 +165,21 @@
                         .text(labelText)
                         .attr('dy', textDy)
                         .attr('dx', textDx)
-                        .attr('text-anchor', 'middle');
+                        .attr('text-anchor', 'left');
 
                     this.setScale();
                     this.setUpEvents();
-                }
+                    this.setVisibility();
+
+                    var labelWidth = !_.isEmpty(this.label()) ? this.computeLabelWidth(node) + (labelPadding * 2) : 0;
+                    rect.attr({ width: labelWidth });
+                },
             });
 
             return {
-                createHostCollection: createHostCollection
+                createHostCollection: createHostCollection,
             };
-        }
+        },
     ]);
 
 })();

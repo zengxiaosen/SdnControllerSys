@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ public class NexthopIPv6addressTlv implements PcepValueType {
                      NEXTHOP-IPV6-ADDRESS TLV:
 
      */
-    protected static final Logger log = LoggerFactory.getLogger(NexthopIPv6addressTlv.class);
+    private static final Logger log = LoggerFactory.getLogger(NexthopIPv6addressTlv.class);
 
     public static final short TYPE = 100; //to be defined
     //Length is header + value
@@ -99,7 +99,7 @@ public class NexthopIPv6addressTlv implements PcepValueType {
         boolean bFoundNoMask = true;
         //value starts from 3rd byte.
         for (int i = 5; i < 20; ++i) {
-            if (0xFF != raw[i]) {
+            if ((byte) 0xFF != raw[i]) {
                 bFoundNoMask = false;
             }
         }

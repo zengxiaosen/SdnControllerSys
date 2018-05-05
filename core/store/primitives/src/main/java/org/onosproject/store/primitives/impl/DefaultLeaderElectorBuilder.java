@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ import org.onosproject.store.primitives.DistributedPrimitiveCreator;
 import org.onosproject.store.service.AsyncLeaderElector;
 import org.onosproject.store.service.LeaderElectorBuilder;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * Default implementation of {@code LeaderElectorBuilder}.
  */
@@ -32,6 +34,11 @@ public class DefaultLeaderElectorBuilder extends LeaderElectorBuilder {
 
     @Override
     public AsyncLeaderElector build() {
-        return primitiveCreator.newAsyncLeaderElector(name(), executorSupplier());
+        AsyncLeaderElector leaderElector = primitiveCreator.newAsyncLeaderElector(name(), electionTimeoutMillis(),
+                                                                                  TimeUnit.MILLISECONDS);
+        if (relaxedReadConsistency()) {
+            leaderElector = new CachingAsyncLeaderElector(leaderElector);
+        }
+        return leaderElector;
     }
 }

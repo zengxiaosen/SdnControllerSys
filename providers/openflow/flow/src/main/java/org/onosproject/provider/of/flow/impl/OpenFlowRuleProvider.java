@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -31,18 +33,20 @@ import org.apache.felix.scr.annotations.Modified;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.driver.DefaultDriverData;
+import org.onosproject.net.driver.DefaultDriverHandler;
+import org.onosproject.net.driver.Driver;
+import org.onosproject.net.driver.DriverHandler;
 import org.onosproject.net.driver.DriverService;
 import org.onosproject.net.flow.CompletedBatchOperation;
 import org.onosproject.net.flow.DefaultTableStatisticsEntry;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.FlowRuleBatchEntry;
-import org.onosproject.net.flow.FlowRuleBatchOperation;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchEntry;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
 import org.onosproject.net.flow.FlowRuleExtPayLoad;
 import org.onosproject.net.flow.FlowRuleProvider;
 import org.onosproject.net.flow.FlowRuleProviderRegistry;
@@ -62,7 +66,9 @@ import org.onosproject.provider.of.flow.util.FlowEntryBuilder;
 import org.osgi.service.component.ComponentContext;
 import org.projectfloodlight.openflow.protocol.OFBadRequestCode;
 import org.projectfloodlight.openflow.protocol.OFBarrierRequest;
+import org.projectfloodlight.openflow.protocol.OFCapabilities;
 import org.projectfloodlight.openflow.protocol.OFErrorMsg;
+import org.projectfloodlight.openflow.protocol.OFFlowLightweightStatsReply;
 import org.projectfloodlight.openflow.protocol.OFFlowMod;
 import org.projectfloodlight.openflow.protocol.OFFlowRemoved;
 import org.projectfloodlight.openflow.protocol.OFFlowStatsReply;
@@ -141,6 +147,7 @@ public class OpenFlowRuleProvider extends AbstractProvider
     private Cache<Long, InternalCacheEntry> pendingBatches;
 
     private final Timer timer = new Timer("onos-openflow-collector");
+
 
     // Old simple collector set
     private final Map<Dpid, FlowStatsCollector> simpleCollectors = Maps.newConcurrentMap();
@@ -236,20 +243,24 @@ public class OpenFlowRuleProvider extends AbstractProvider
         if (sw == null) {
             return;
         }
-        if (adaptiveFlowSampling) {
-            // NewAdaptiveFlowStatsCollector Constructor
-            NewAdaptiveFlowStatsCollector fsc =
-                    new NewAdaptiveFlowStatsCollector(driverService, sw, flowPollFrequency);
-            fsc.start();
-            stopCollectorIfNeeded(afsCollectors.put(new Dpid(sw.getId()), fsc));
-        } else {
-            FlowStatsCollector fsc = new FlowStatsCollector(timer, sw, flowPollFrequency);
-            fsc.start();
-            stopCollectorIfNeeded(simpleCollectors.put(new Dpid(sw.getId()), fsc));
+        if (sw.features().getCapabilities().contains(OFCapabilities.FLOW_STATS)) {
+            if (adaptiveFlowSampling) {
+                // NewAdaptiveFlowStatsCollector Constructor
+                NewAdaptiveFlowStatsCollector fsc =
+                        new NewAdaptiveFlowStatsCollector(driverService, sw, flowPollFrequency);
+                stopCollectorIfNeeded(afsCollectors.put(new Dpid(sw.getId()), fsc));
+                fsc.start();
+            } else {
+                FlowStatsCollector fsc = new FlowStatsCollector(timer, sw, flowPollFrequency);
+                stopCollectorIfNeeded(simpleCollectors.put(new Dpid(sw.getId()), fsc));
+                fsc.start();
+            }
         }
-        TableStatisticsCollector tsc = new TableStatisticsCollector(timer, sw, flowPollFrequency);
-        tsc.start();
-        stopCollectorIfNeeded(tableStatsCollectors.put(new Dpid(sw.getId()), tsc));
+        if (sw.features().getCapabilities().contains(OFCapabilities.TABLE_STATS)) {
+            TableStatisticsCollector tsc = new TableStatisticsCollector(timer, sw, flowPollFrequency);
+            stopCollectorIfNeeded(tableStatsCollectors.put(new Dpid(sw.getId()), tsc));
+            tsc.start();
+        }
     }
 
     private void stopCollectorIfNeeded(SwitchDataCollector collector) {
@@ -433,18 +444,21 @@ public class OpenFlowRuleProvider extends AbstractProvider
                 case FLOW_REMOVED:
                     OFFlowRemoved removed = (OFFlowRemoved) msg;
 
-                    FlowEntry fr = new FlowEntryBuilder(deviceId, removed, driverService).build();
+                    FlowEntry fr = new FlowEntryBuilder(deviceId, removed, getDriver(deviceId)).build();
                     providerService.flowRemoved(fr);
                     break;
                 case STATS_REPLY:
                     if (((OFStatsReply) msg).getStatsType() == OFStatsType.FLOW) {
-                        pushFlowMetrics(dpid, (OFFlowStatsReply) msg);
+                        pushFlowMetrics(dpid, (OFFlowStatsReply) msg, getDriver(deviceId));
                     } else if (((OFStatsReply) msg).getStatsType() == OFStatsType.TABLE) {
                         pushTableStatistics(dpid, (OFTableStatsReply) msg);
+                    } else if (((OFStatsReply) msg).getStatsType() == OFStatsType.FLOW_LIGHTWEIGHT) {
+                        pushFlowLightWeightMetrics(dpid, (OFFlowLightweightStatsReply) msg);
                     }
                     break;
                 case BARRIER_REPLY:
                     try {
+                        //从缓存中拿到对应Xid的消息
                         InternalCacheEntry entry = pendingBatches.getIfPresent(msg.getXid());
                         if (entry != null) {
                             providerService
@@ -511,7 +525,7 @@ public class OpenFlowRuleProvider extends AbstractProvider
 
                     if (entry != null)  {
                         OFFlowMod ofFlowMod = (OFFlowMod) ofMessage;
-                        entry.appendFailure(new FlowEntryBuilder(deviceId, ofFlowMod, driverService).build());
+                        entry.appendFailure(new FlowEntryBuilder(deviceId, ofFlowMod, getDriver(deviceId)).build());
                     } else {
                       log.error("No matching batch for this error: {}", error);
                     }
@@ -565,8 +579,7 @@ public class OpenFlowRuleProvider extends AbstractProvider
                 return null;
             }
 
-            ChannelBuffer bb = ChannelBuffers.wrappedBuffer(
-                    msg.getData().getData());
+            ByteBuf bb = Unpooled.wrappedBuffer(msg.getData().getData());
 
             if (bb.readableBytes() < MIN_EXPECTED_BYTE_LEN) {
                 log.debug("Wrong length: Expected to be >= {}, was: {}",
@@ -608,14 +621,20 @@ public class OpenFlowRuleProvider extends AbstractProvider
             // Do nothing here for now.
         }
 
-        private void pushFlowMetrics(Dpid dpid, OFFlowStatsReply replies) {
+        private DriverHandler getDriver(DeviceId devId) {
+            Driver driver = driverService.getDriver(devId);
+            DriverHandler handler = new DefaultDriverHandler(new DefaultDriverData(driver, devId));
+            return handler;
+        }
+
+        private void pushFlowMetrics(Dpid dpid, OFFlowStatsReply replies, DriverHandler handler) {
 
             DeviceId did = DeviceId.deviceId(Dpid.uri(dpid));
             NewAdaptiveFlowStatsCollector afsc = afsCollectors.get(dpid);
 
             if (adaptiveFlowSampling && afsc != null)  {
                 List<FlowEntry> flowEntries = replies.getEntries().stream()
-                        .map(entry -> new FlowEntryBuilder(did, entry, driverService).withSetAfsc(afsc).build())
+                        .map(entry -> new FlowEntryBuilder(did, entry, handler).withSetAfsc(afsc).build())
                         .collect(Collectors.toList());
 
                 // Check that OFFlowStatsReply Xid is same with the one of OFFlowStatsRequest?
@@ -636,7 +655,7 @@ public class OpenFlowRuleProvider extends AbstractProvider
                 }
             } else {
                 List<FlowEntry> flowEntries = replies.getEntries().stream()
-                        .map(entry -> new FlowEntryBuilder(did, entry, driverService).build())
+                        .map(entry -> new FlowEntryBuilder(did, entry, handler).build())
                         .collect(Collectors.toList());
 
                 // call existing entire flow stats update with flowMissing synchronization
@@ -652,6 +671,40 @@ public class OpenFlowRuleProvider extends AbstractProvider
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
             providerService.pushTableStatistics(did, tableStatsEntries);
+        }
+
+        private void pushFlowLightWeightMetrics(Dpid dpid, OFFlowLightweightStatsReply replies) {
+
+            DeviceId did = DeviceId.deviceId(Dpid.uri(dpid));
+            NewAdaptiveFlowStatsCollector afsc = afsCollectors.get(dpid);
+            if (adaptiveFlowSampling && afsc != null)  {
+                List<FlowEntry> flowEntries = replies.getEntries().stream()
+                        .map(entry -> new FlowEntryBuilder(did, entry, driverService).withSetAfsc(afsc).build())
+                        .collect(Collectors.toList());
+
+                // Check that OFFlowStatsReply Xid is same with the one of OFFlowStatsRequest?
+                if (afsc.getFlowMissingXid() != NewAdaptiveFlowStatsCollector.NO_FLOW_MISSING_XID) {
+                    log.debug("OpenFlowRuleProvider:pushFlowMetrics, flowMissingXid={}, "
+                                    + "OFFlowStatsReply Xid={}, for {}",
+                            afsc.getFlowMissingXid(), replies.getXid(), dpid);
+                    if (afsc.getFlowMissingXid() == replies.getXid()) {
+                        // call entire flow stats update with flowMissing synchronization.
+                        // used existing pushFlowMetrics
+                        providerService.pushFlowMetrics(did, flowEntries);
+                    }
+                    // reset flowMissingXid to NO_FLOW_MISSING_XID
+                    afsc.setFlowMissingXid(NewAdaptiveFlowStatsCollector.NO_FLOW_MISSING_XID);
+                } else {
+                    // call individual flow stats update
+                    providerService.pushFlowMetricsWithoutFlowMissing(did, flowEntries);
+                }
+            } else {
+                List<FlowEntry> flowEntries = replies.getEntries().stream()
+                        .map(entry -> new FlowEntryBuilder(did, entry, driverService).build())
+                        .collect(Collectors.toList());
+                // call existing entire flow stats update with flowMissing synchronization
+                providerService.pushFlowMetrics(did, flowEntries);
+            }
         }
 
         private TableStatisticsEntry buildTableStatistics(DeviceId deviceId,
@@ -673,10 +726,12 @@ public class OpenFlowRuleProvider extends AbstractProvider
     /**
      * The internal cache entry holding the original request as well as
      * accumulating the any failures along the way.
+     * 内部缓存条目保存了原始请求，并且一路积累了任何故障。
      * <p/>
      * If this entry is evicted from the cache then the entire operation is
      * considered failed. Otherwise, only the failures reported by the device
      * will be propagated up.
+     * 如果该条目从缓存中被逐出，则整个操作被认为失败。 否则，只有设备报告的故障会传播出去。
      */
     private class InternalCacheEntry {
 

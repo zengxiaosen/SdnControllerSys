@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -227,8 +227,7 @@ public class DistributedTunnelStore
         for (TunnelId id : idSet) {
             deletedTunnel = tunnelIdAsKeyStore.get(id);
 
-            if (producerName == null || (producerName != null
-                    && producerName.equals(deletedTunnel.providerId()))) {
+            if (producerName == null || producerName.equals(deletedTunnel.providerId())) {
                 tunnelIdAsKeyStore.remove(deletedTunnel.tunnelId());
 
                 event = new TunnelEvent(TunnelEvent.Type.TUNNEL_REMOVED,
@@ -256,8 +255,8 @@ public class DistributedTunnelStore
         for (TunnelId id : idSet) {
             deletedTunnel = tunnelIdAsKeyStore.get(id);
 
-            if (type.equals(deletedTunnel.type()) && (producerName == null || (producerName != null
-                    && producerName.equals(deletedTunnel.providerId())))) {
+            if (type.equals(deletedTunnel.type()) && (producerName == null ||
+                    producerName.equals(deletedTunnel.providerId()))) {
                 tunnelIdAsKeyStore.remove(deletedTunnel.tunnelId());
 
                 event = new TunnelEvent(TunnelEvent.Type.TUNNEL_REMOVED,

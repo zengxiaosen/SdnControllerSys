@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@ import java.util.Objects;
  * Represents for source end point or destination end point of a tunnel. Maybe a tunnel
  * based on ConnectPoint, IpAddress, MacAddress and so on is built.
  */
-public class TunnelEndPoint<T> {
+public final class TunnelEndPoint<T> {
 
-    protected final T value;
+    private final T value;
 
     /**
      * Default constructor.

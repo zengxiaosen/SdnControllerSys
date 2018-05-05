@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,22 +52,22 @@ import static org.slf4j.LoggerFactory.getLogger;
 public final class ResourceRegistrar {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected ResourceAdminService adminService;
+    ResourceAdminService adminService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected ResourceService resourceService;
+    ResourceService resourceService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected DriverService driverService;
+    DriverService driverService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected DeviceService deviceService;
+    DeviceService deviceService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected MastershipService mastershipService;
+    MastershipService mastershipService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected NetworkConfigRegistry cfgRegistry;
+    NetworkConfigRegistry cfgRegistry;
 
     private final Logger log = getLogger(getClass());
 

@@ -1,11 +1,12 @@
-/**
- * Copyright 2016-present Open Networking Laboratory
+/*
+ * Copyright 2016-present Open Networking Foundation
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
-
- * http://www.apache.org/licenses/LICENSE-2.0
-
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,8 +50,8 @@ public interface EventSubscriptionService {
      * Allows registered listener to subscribe for a specific event type.
      *
      * @param subscriber Subscription data containing the event type
-     * @throws InvalidGroupIdException
-     * @throws InvalidApplicationException
+     * @throws InvalidGroupIdException if the subscriber group is duplicate
+     * @throws InvalidApplicationException if the application has not been registered
      */
     void subscribe(EventSubscriber subscriber)
             throws InvalidGroupIdException, InvalidApplicationException;
@@ -59,8 +60,8 @@ public interface EventSubscriptionService {
      * Allows the registered listener to unsubscribe for a specific event.
      *
      * @param subscriber Subscription data containing the event type
-     * @throws InvalidGroupIdException
-     * @throws InvalidApplicationException
+     * @throws InvalidGroupIdException if the subscriber group does not exist
+     * @throws InvalidApplicationException if the application has not been registered
      */
     void unsubscribe(EventSubscriber subscriber)
             throws InvalidGroupIdException, InvalidApplicationException;

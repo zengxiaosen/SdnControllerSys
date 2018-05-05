@@ -1,5 +1,6 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
+    '//lib:JACKSON',
     '//lib:jersey-client',
     '//lib:javax.ws.rs-api',
     '//lib:org.apache.karaf.shell.console',
@@ -14,8 +15,8 @@ osgi_jar_with_tests (
 )
 
 onos_app (
-    title = 'Virtual Broadband Gateway App',
-    category = 'Utility',
+    title = 'Virtual Broadband Gateway',
+    category = 'Traffic Steering',
     url = 'http://onosproject.org',
     description = 'A virtual Broadband Network Gateway(BNG) application.',
 )

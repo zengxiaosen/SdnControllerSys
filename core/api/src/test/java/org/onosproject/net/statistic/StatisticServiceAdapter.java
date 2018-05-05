@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,21 +21,19 @@ import org.onosproject.core.GroupId;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
-import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
 
-import java.util.HashMap;
 import java.util.Optional;
 
 /**
  * Test adapter for statistics service.
  */
 public class StatisticServiceAdapter implements StatisticService {
+
     @Override
     public Load vportload(ConnectPoint connectPoint) {
         return null;
     }
-
     @Override
     public Load load(Link link) {
         return null;
@@ -63,15 +61,6 @@ public class StatisticServiceAdapter implements StatisticService {
 
     @Override
     public Load load(Link link, ApplicationId appId, Optional<GroupId> groupId) {
-        return null;
-    }
-    /**
-     * 自研.增加对流速的统计
-     * @param connectPoint
-     * @return
-     */
-    @Override
-    public HashMap<FlowEntry, Long> flow_rate_interval(ConnectPoint connectPoint){
         return null;
     }
 }

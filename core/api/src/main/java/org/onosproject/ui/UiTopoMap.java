@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.onosproject.ui;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
@@ -35,10 +36,10 @@ public class UiTopoMap {
     /**
      * Creates a new topology map.
      *
-     * @param id map identifier
-     * @param desc map description
+     * @param id       map identifier
+     * @param desc     map description
      * @param filePath map filePath
-     * @param scale map scale
+     * @param scale    map scale
      */
     public UiTopoMap(String id, String desc, String filePath, double scale) {
         checkState(desc.length() <= MAX_LENGTH, DES_EXC_LIM);
@@ -82,5 +83,13 @@ public class UiTopoMap {
      */
     public double scale() {
         return scale;
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper(this)
+                .add("id", id)
+                .add("desc", desc)
+                .toString();
     }
 }

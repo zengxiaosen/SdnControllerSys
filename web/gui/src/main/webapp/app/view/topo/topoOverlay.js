@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,11 @@
     var overlays = {},
         current = null,
         reset = true;
+
+    // function to be replaced by the localization bundle function
+    var topoLion = function (x) {
+        return '#tov#' + x + '#';
+    };
 
     function error(fn, msg) {
         $log.error(tos + fn + '(): ' + msg);
@@ -126,7 +131,7 @@
             if (sicb && aicb && aicb(intentType)) {
                 result.push({
                     id: ovid,
-                    tt: ov.tooltip || '%' + ovid + '%'
+                    tt: ov.tooltip || '%' + ovid + '%',
                 });
             }
         });
@@ -142,10 +147,10 @@
         angular.forEach(overlays, function (ov) {
             rset.push({
                 gid: ov._glyphId,
-                tooltip: (ov.tooltip || '(no tooltip)'),
+                tooltip: (ov.tooltip || ''),
                 cb: function () {
                     tbSelection(ov.overlayId, switchFn);
-                }
+                },
             });
             map[ov.overlayId] = idx++;
         });
@@ -184,29 +189,29 @@
     var coreButtons = {
         showDeviceView: {
             gid: 'switch',
-            tt: 'Show Device View',
-            path: 'device'
+            tt: function () { return topoLion('btn_show_view_device'); },
+            path: 'device',
         },
         showFlowView: {
             gid: 'flowTable',
-            tt: 'Show Flow View for this Device',
-            path: 'flow'
+            tt: function () { return topoLion('btn_show_view_flow'); },
+            path: 'flow',
         },
         showPortView: {
             gid: 'portTable',
-            tt: 'Show Port View for this Device',
-            path: 'port'
+            tt: function () { return topoLion('btn_show_view_port'); },
+            path: 'port',
         },
         showGroupView: {
             gid: 'groupTable',
-            tt: 'Show Group View for this Device',
-            path: 'group'
+            tt: function () { return topoLion('btn_show_view_group'); },
+            path: 'group',
         },
         showMeterView: {
             gid: 'meterTable',
-            tt: 'Show Meter View for this Device',
-            path: 'meter'
-        }
+            tt: function () { return topoLion('btn_show_view_meter'); },
+            path: 'meter',
+        },
     };
 
     // retrieves a button definition from the current overlay and generates
@@ -221,7 +226,7 @@
             id: current.mkId(id),
             gid: current.mkGid(b.gid),
             tt: b.tt,
-            cb: f
+            cb: f,
         } : null;
     }
 
@@ -238,7 +243,7 @@
                     id: 'core-' + id,
                     gid: gid,
                     tt: tt,
-                    cb: function () { ns.navTo(path, {devId: devId }); }
+                    cb: function () { ns.navTo(path, { devId: devId }); },
                 });
             } else if (btn = _getButtonDef(id, data)) {
                 tps.addAction(btn);
@@ -253,7 +258,7 @@
                 id: current.mkId(id),
                 gid: current.mkGid(b.gid),
                 cb: b.cb,
-                tt: b.tt
+                tt: b.tt,
             });
         }
     }
@@ -297,17 +302,18 @@
         cb && cb();
     }
 
-    // Temporary function to allow overlays to modify link detail data
-    // in the client. (In the near future, this will be done on the server).
-    function modifyLinkDataHook(data, extra) {
-        var cb = _hook('modifylinkdata');
-        return cb && extra ? cb(data, extra) : data;
-    }
-
     // Request from Intent View to visualize an intent on the topo view
     function showIntentHook(intentData) {
         var cb = _hook('showIntent');
         return cb && cb(intentData);
+    }
+
+    // 'core.view.Topo' lion bundle will be injected here.
+    // NOTE: if an overlay wants additional bundles, it should use the
+    //       LionService to request them at this time.
+    function injectLion(topoBundle) {
+        var cb = _hook('injectLion');
+        return cb && cb(topoBundle);
     }
 
     // === -----------------------------------------------------
@@ -318,7 +324,7 @@
         tss = _tss_;
     }
 
-    //process highlight event with optional delay
+    // process highlight event with optional delay
     function showHighlights(data) {
         function doHighlight() {
             _showHighlights(data);
@@ -393,32 +399,15 @@
         });
 
         data.links.forEach(function (link) {
-            var ldata = api.findLinkById(link.id),
-                lab = link.label,
-                units, portcls, magnitude;
+            var ldata = api.findLinkById(link.id);
 
             if (ldata && ldata.el && !ldata.el.empty()) {
                 if (!link.subdue) {
                     api.unsupLink(ldata.key, less);
                 }
                 ldata.el.classed(link.css, true);
-                ldata.label = lab;
+                ldata.label = link.label;
 
-                // TODO: this needs to be pulled out into traffic overlay
-                // inject additional styling for port-based traffic
-                if (fs.endsWith(lab, 'bps')) {
-                    units = lab.substring(lab.length-4);
-                    portcls = 'port-traffic-' + units;
-
-                    // for GBps
-                    if (units.substring(0,1) === 'G') {
-                        magnitude = fs.parseBitRate(lab);
-                        if (magnitude >= 9) {
-                            portcls += '-choked'
-                        }
-                    }
-                    ldata.el.classed(portcls, true);
-                }
             } else {
                 $log.warn('HILITE: no link element:', link.id);
             }
@@ -426,6 +415,17 @@
 
         api.updateNodes();
         api.updateLinks();
+    }
+
+    // invoked after the localization bundle has been received from the server
+    function setLionBundle(bundle) {
+        topoLion = bundle;
+        // also inject the topo lion bundle to all overlays that request it
+        angular.forEach(overlays, function (ov) {
+            var hooks = fs.isO(ov.hooks) || {},
+                inj = fs.isF(hooks.injectLion);
+            inj && inj(bundle);
+        });
     }
 
     // ========================================================================
@@ -462,12 +462,12 @@
                     multiSelect: multiSelectHook,
                     mouseOver: mouseOverHook,
                     mouseOut: mouseOutHook,
-                    modifyLinkData: modifyLinkDataHook,
-                    showIntent: showIntentHook
+                    showIntent: showIntentHook,
                 },
 
-                showHighlights: showHighlights
-            }
+                showHighlights: showHighlights,
+                setLionBundle: setLionBundle,
+            };
         }]);
 
 }());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ public class OspfPipelineFactory implements ChannelPipelineFactory {
     }
 
     @Override
-    public ChannelPipeline getPipeline() throws Exception {
+    public ChannelPipeline getPipeline() {
         ChannelPipeline pipeline = Channels.pipeline();
         pipeline.addLast("encoder", new OspfMessageDecoder());
         pipeline.addLast("decoder", new OspfMessageEncoder());

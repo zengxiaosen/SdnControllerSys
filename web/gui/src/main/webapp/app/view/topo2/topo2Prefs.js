@@ -1,5 +1,5 @@
 /*
-* Copyright 2016-present Open Networking Laboratory
+* Copyright 2016-present Open Networking Foundation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -26,15 +26,16 @@
         hosts: 0,
         offdev: 1,
         dlbls: 0,
+        hlbls: 0,
         porthl: 1,
         bg: 0,
         spr: 0,
-        ovid: 'traffic',   // default to traffic overlay
-        toolbar: 0
+        ovid: 'traffic', // default to traffic overlay
+        toolbar: 0,
     };
 
     function topo2Prefs() {
-        return ps.getPrefs('topo_prefs', defaultPrefsState);
+        return ps.getPrefs('topo2_prefs', defaultPrefsState);
     }
 
     function get(key) {
@@ -45,7 +46,7 @@
     function set(key, value) {
         var preferences = topo2Prefs();
         preferences[key] = value;
-        ps.setPrefs('topo_prefs', preferences);
+        ps.setPrefs('topo2_prefs', preferences);
         return preferences[key];
     }
 
@@ -58,8 +59,8 @@
 
             return {
                 get: get,
-                set: set
+                set: set,
             };
-        }
+        },
     ]);
 })();

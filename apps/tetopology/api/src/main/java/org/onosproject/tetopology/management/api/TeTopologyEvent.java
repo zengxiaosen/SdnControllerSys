@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Open Networking Laboratory
+ * Copyright 2016 Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -130,7 +130,7 @@ public class TeTopologyEvent
         /**
          * Designates removal of a TE link.
          */
-        TE_LINK_REMOVED;
+        TE_LINK_REMOVED
     }
 
     /**

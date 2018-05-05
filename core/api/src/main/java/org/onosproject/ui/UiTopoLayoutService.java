@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Laboratory
+ *  Copyright 2016-present Open Networking Foundation
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -66,6 +66,9 @@ public interface UiTopoLayoutService {
      * @param regionId region identifier
      * @return corresponding layout
      */
+    // FIXME: We will need to add support for multiple layouts (logical & physical)
+    // for the same region and this method won't have sufficient inputs to resolve
+    // the desired layout.
     UiTopoLayout getLayout(RegionId regionId);
 
     /**

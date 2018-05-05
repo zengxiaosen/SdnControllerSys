@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,11 @@ import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
+import org.onosproject.config.RpcExecutor;
+import org.onosproject.config.RpcMessageId;
+import org.onosproject.d.config.DeviceResourceIds;
+import org.onosproject.d.config.ResourceIds;
+import org.onosproject.event.AbstractListenerManager;
 import org.onosproject.config.DynamicConfigEvent;
 import org.onosproject.config.DynamicConfigListener;
 import org.onosproject.config.DynamicConfigService;
@@ -28,118 +33,202 @@ import org.onosproject.config.DynamicConfigStore;
 import org.onosproject.config.DynamicConfigStoreDelegate;
 import org.onosproject.config.FailedException;
 import org.onosproject.config.Filter;
-import org.onosproject.config.RpcCaller;
-import org.onosproject.config.RpcCommand;
-import org.onosproject.config.RpcHandler;
-import org.onosproject.config.RpcInput;
-import org.onosproject.config.RpcOutput;
-import org.onosproject.config.model.DataNode;
-import org.onosproject.config.model.ResourceId;
-import org.onosproject.event.AbstractListenerManager;
-import org.onosproject.event.EventDeliveryService;
+import org.onosproject.yang.model.RpcInput;
+import org.onosproject.yang.model.RpcOutput;
+import org.onosproject.yang.model.DataNode;
+import org.onosproject.yang.model.DataNode.Type;
+import org.onosproject.yang.model.InnerNode;
+import org.onosproject.yang.model.ResourceId;
+import org.onosproject.yang.model.RpcContext;
+import org.onosproject.yang.model.RpcRegistry;
+import org.onosproject.yang.model.RpcService;
+import org.onosproject.yang.model.SchemaContextProvider;
+
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static org.onosproject.d.config.DeviceResourceIds.DCS_NAMESPACE;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
- * Demo application to use the DynamicConfig Service and DynamicConfigStore.
+ * Implementation of the Dynamic Config Service.
  *
  */
 @Component(immediate = true)
 @Service
 public class DynamicConfigManager
         extends AbstractListenerManager<DynamicConfigEvent, DynamicConfigListener>
-        implements DynamicConfigService {
+        implements DynamicConfigService, RpcRegistry {
+
     private final Logger log = getLogger(getClass());
     private final DynamicConfigStoreDelegate storeDelegate = new InternalStoreDelegate();
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected EventDeliveryService eventDispatcher;
+
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected DynamicConfigStore store;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected SchemaContextProvider contextProvider;
+
+    // FIXME is it OK this is not using the Store?
+    private ConcurrentHashMap<String, RpcService> handlerRegistry = new ConcurrentHashMap<>();
+
     @Activate
     public void activate() {
+        initStore();
         store.setDelegate(storeDelegate);
-        log.info("DynamicConfigService Started");
+        eventDispatcher.addSink(DynamicConfigEvent.class, listenerRegistry);
+        log.info("Started");
+    }
+
+    /**
+     * Ensure built-in tree nodes exists.
+     */
+    private void initStore() {
+        store.nodeExist(ResourceIds.ROOT_ID)
+            .thenAccept(exists -> {
+                if (!exists) {
+                    log.info("Root node does not exist!, creating...");
+                    store.addNode(null,
+                                  InnerNode.builder(DeviceResourceIds.ROOT_NAME, DCS_NAMESPACE)
+                                  .type(Type.SINGLE_INSTANCE_NODE).build());
+                }
+            }).join();
+
+        store.nodeExist(DeviceResourceIds.DEVICES_ID)
+            .thenAccept(exists -> {
+                if (!exists) {
+                    log.info("devices node does not exist!, creating...");
+                    store.addNode(ResourceIds.ROOT_ID,
+                                  InnerNode.builder(DeviceResourceIds.DEVICES_NAME, DCS_NAMESPACE)
+                                  .type(Type.SINGLE_INSTANCE_NODE).build());
+                }
+            }).join();
     }
 
     @Deactivate
     public void deactivate() {
         store.unsetDelegate(storeDelegate);
-        log.info("DynamicConfigService Stopped");
+        eventDispatcher.removeSink(DynamicConfigEvent.class);
+        handlerRegistry.clear();
+        log.info("Stopped");
     }
 
     @Override
     public void createNode(ResourceId path, DataNode node) {
-        Boolean stat = false;
-        stat = this.store.addNode(path, node).join();
+        store.addNode(path, node).join();
     }
 
-    public void createNodeRecursive(ResourceId path, DataNode node) {
-        Boolean stat = false;
-        stat = this.store.addRecursive(path, node).join();
-    }
-
+    @Override
     public DataNode readNode(ResourceId path, Filter filter) {
         return store.readNode(path, filter).join();
     }
 
-    public Integer getNumberOfChildren(ResourceId path, Filter filter) {
-        throw new FailedException("Not yet implemented");
-    }
-
+    @Override
     public void updateNode(ResourceId path, DataNode node) {
-        throw new FailedException("Not yet implemented");
+        store.updateNode(path, node).join();
     }
 
+    @Override
     public void deleteNode(ResourceId path) {
-        throw new FailedException("Not yet implemented");
+        store.deleteNodeRecursive(path).join();
     }
 
-    public void deleteNodeRecursive(ResourceId path) {
-        throw new FailedException("Not yet implemented");
-    }
-
-    public void updateNodeRecursive(ResourceId path, DataNode node) {
-        throw new FailedException("Not yet implemented");
-    }
-
+    @Override
     public void replaceNode(ResourceId path, DataNode node) {
         throw new FailedException("Not yet implemented");
     }
 
-    public void addConfigListener(ResourceId path, DynamicConfigListener listener) {
-        throw new FailedException("Not yet implemented");
+    @Override
+    public Boolean nodeExist(ResourceId path) {
+        return store.nodeExist(path).join();
     }
 
-    public void removeConfigListener(ResourceId path, DynamicConfigListener listener) {
-        throw new FailedException("Not yet implemented");
+    @Override
+    public Set<RpcService> getRpcServices() {
+        Set<RpcService> res = new HashSet();
+        for (Map.Entry<String, RpcService> e : handlerRegistry.entrySet()) {
+            res.add(e.getValue());
+        }
+        return res;
     }
 
-    public void registerHandler(RpcHandler handler, RpcCommand command) {
-        throw new FailedException("Not yet implemented");
+    @Override
+    public RpcService getRpcService(Class<? extends RpcService> intfc) {
+        return handlerRegistry.get(intfc.getName());
     }
 
-    public void unRegisterHandler(RpcHandler handler, RpcCommand command) {
-        //check obj1.getClass().equals(obj2.getClass())
-        throw new FailedException("Not yet implemented");
+    @Override
+    public void registerRpcService(RpcService handler) {
+        for (Class<?> intfc : handler.getClass().getInterfaces()) {
+            if (RpcService.class.isAssignableFrom(intfc)) {
+                handlerRegistry.put(intfc.getName(), handler);
+            }
+        }
     }
 
-    public void invokeRpc(RpcCaller caller, Integer msgId, RpcCommand command, RpcInput input) {
-        throw new FailedException("Not yet implemented");
+    @Override
+    public void unregisterRpcService(RpcService handler) {
+        for (Class<?> intfc : handler.getClass().getInterfaces()) {
+            if (RpcService.class.isAssignableFrom(intfc)) {
+                String key = intfc.getName();
+                if (handlerRegistry.get(key) == null) {
+                    throw new FailedException("No registered handler found, cannot unregister");
+                }
+                handlerRegistry.remove(key);
+            }
+        }
     }
 
-    public void rpcResponse(Integer msgId, RpcOutput output) {
-        throw new FailedException("Not yet implemented");
+    private int getSvcId(RpcService handler, String srvc) {
+        Class<?>[] intfcs = handler.getClass().getInterfaces();
+        for (int i = 0; i < intfcs.length; i++) {
+            if (intfcs[i].getName().compareTo(srvc) == 0) {
+                return i;
+            }
+        }
+        throw new FailedException("No handler found, cannot invoke");
     }
+
+    @Override
+    public CompletableFuture<RpcOutput> invokeRpc(ResourceId id, RpcInput input) {
+        RpcContext context = contextProvider.getRpcContext(id);
+        String srvcIntf = context.serviceIntf().getName();
+        RpcService handler = handlerRegistry.get(srvcIntf);
+        if (handler == null) {
+            throw new FailedException("No registered handler found, cannot invoke");
+        }
+        return CompletableFuture.supplyAsync(
+                new RpcExecutor(handler, getSvcId(handler, srvcIntf),
+                                context.rpcName(), RpcMessageId.generate(), input));
+    }
+
+    @Override
+    public CompletableFuture<RpcOutput> invokeRpc(RpcInput input) {
+        checkNotNull(input);
+        checkNotNull(input.id());
+        RpcContext context = contextProvider.getRpcContext(input.id());
+        String srvcIntf = context.serviceIntf().getName();
+        RpcService handler = handlerRegistry.get(srvcIntf);
+        if (handler == null) {
+            throw new FailedException("No registered handler found, cannot invoke");
+        }
+        return CompletableFuture.supplyAsync(
+            new RpcExecutor(handler, getSvcId(handler, srvcIntf),
+                context.rpcName(), RpcMessageId.generate(), input));
+    }
+
     /**
-     * Auxiliary store delegate to receive notification about changes in
-     * the prop configuration store state - by the store itself.
+     * Auxiliary store delegate to receive notification about changes in the store.
      */
     private class InternalStoreDelegate implements DynamicConfigStoreDelegate {
+        @Override
         public void notify(DynamicConfigEvent event) {
-            // TODO
-            // post(event);
+            post(event);
         }
     }
 }

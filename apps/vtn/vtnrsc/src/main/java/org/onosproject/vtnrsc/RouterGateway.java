@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ public final class RouterGateway {
     private RouterGateway(TenantNetworkId networkId, boolean enableSnat,
                          Set<FixedIp> externalFixedIps) {
         this.networkId = checkNotNull(networkId, "networkId cannot be null");
-        this.enableSnat = checkNotNull(enableSnat, "enableSnat cannot be null");
+        this.enableSnat = enableSnat;
         this.externalFixedIps = checkNotNull(externalFixedIps, "externalFixedIps cannot be null");
     }
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Laboratory
+ *  Copyright 2016-present Open Networking Foundation
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Represents a specific "subset" of the UI model of the network topology
  * that a user might wish to view. Backed by a {@link Region}.
  * <p>
- * These instances include information about which geo-map (or sprite definition)
+ * These instances include information about which geo-map or grid-layout
  * should be displayed, along with zoom and offset parameters.
  */
 public class UiTopoLayout {
@@ -202,7 +202,7 @@ public class UiTopoLayout {
 
     /**
      * Sets the name of the sprites definition for this layout. This is the
-     * symbolic name for a "json" file containing a definition of sprites,
+     * symbolic name for a definition of sprites,
      * which render as a symbolic background (e.g. a campus, or floor plan),
      * to be displayed in the topology view, for this layout.
      * <p>

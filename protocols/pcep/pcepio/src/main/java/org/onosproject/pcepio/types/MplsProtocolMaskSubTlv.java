@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ public class MplsProtocolMaskSubTlv implements PcepValueType {
      |L|R|  Reserved |
      +-+-+-+-+-+-+-+-+
      */
-    protected static final Logger log = LoggerFactory.getLogger(MplsProtocolMaskSubTlv.class);
+    private static final Logger log = LoggerFactory.getLogger(MplsProtocolMaskSubTlv.class);
 
     public static final short TYPE = 28;
     public static final short LENGTH = 1;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ public class Controller {
     private static final BgpFactory FACTORY4 = BgpFactories.getFactory(BgpVersion.BGP_4);
 
     private ChannelGroup cg;
-    public Channel serverChannel;
+    private Channel serverChannel;
 
     // Configuration options
     protected static final short BGP_PORT_NUM = 179;
@@ -129,7 +129,7 @@ public class Controller {
             cg.add(serverChannel);
             log.info("Listening for Peer connection on {}", sa);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
         }
     }
 

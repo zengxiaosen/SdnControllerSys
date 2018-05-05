@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ import org.onosproject.net.statistic.FlowStatisticStore;
 import org.onosproject.store.cluster.messaging.ClusterCommunicationService;
 import org.onosproject.store.cluster.messaging.MessageSubject;
 import org.onosproject.store.serializers.KryoNamespaces;
-import org.onosproject.store.serializers.StoreSerializer;
+import org.onosproject.store.service.Serializer;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 
@@ -68,6 +68,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 /**
  * Maintains flow statistics using RPC calls to collect stats from remote instances
  * on demand.
+ * 使用RPC调用维护流量统计信息，以根据需要从远程实例收集统计信息。
  */
 @Component(immediate = true)
 @Service
@@ -97,7 +98,7 @@ public class DistributedFlowStatisticStore implements FlowStatisticStore {
     public static final MessageSubject GET_CURRENT = new MessageSubject("peer-return-current");
     public static final MessageSubject GET_PREVIOUS = new MessageSubject("peer-return-previous");
 
-    protected static final StoreSerializer SERIALIZER = StoreSerializer.using(KryoNamespaces.API);
+    protected static final Serializer SERIALIZER = Serializer.using(KryoNamespaces.API);
 
     private NodeId local;
     private ExecutorService messageHandlingExecutor;
@@ -197,10 +198,14 @@ public class DistributedFlowStatisticStore implements FlowStatisticStore {
 
         // create one if absent and add this rule
         current.putIfAbsent(cp, new HashSet<>());
-        current.computeIfPresent(cp, (c, e) -> { e.add(rule); return e; });
+        current.computeIfPresent(cp, (c, e) -> {
+            e.add(rule); return e;
+        });
 
         // remove previous one if present
-        previous.computeIfPresent(cp, (c, e) -> { e.remove(rule); return e; });
+        previous.computeIfPresent(cp, (c, e) -> {
+            e.remove(rule); return e;
+        });
     }
 
     @Override

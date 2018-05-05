@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ import org.onlab.packet.MacAddress;
 import org.onlab.packet.VlanId;
 import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.utils.Comparators;
-import org.onosproject.incubator.net.intf.Interface;
-import org.onosproject.incubator.net.intf.InterfaceService;
+import org.onosproject.net.intf.Interface;
+import org.onosproject.net.intf.InterfaceService;
 
 import java.util.Collections;
 import java.util.List;
@@ -58,9 +58,9 @@ public class InterfacesListCommand extends AbstractShellCommand {
     private void printInterface(Interface intf) {
         StringBuilder formatStringBuilder = new StringBuilder(FORMAT);
 
-        if (!intf.ipAddresses().isEmpty()) {
+        if (!intf.ipAddressesList().isEmpty()) {
             formatStringBuilder.append(IP_FORMAT);
-            formatStringBuilder.append(intf.ipAddresses().toString());
+            formatStringBuilder.append(intf.ipAddressesList().toString());
         }
 
         if (!intf.mac().equals(MacAddress.NONE)) {

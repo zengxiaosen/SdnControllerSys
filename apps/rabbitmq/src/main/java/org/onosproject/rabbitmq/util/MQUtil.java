@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,8 @@
  */
 package org.onosproject.rabbitmq.util;
 
-import java.io.File;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Date;
@@ -144,7 +142,7 @@ public final class MQUtil {
         jo.addProperty(SWITCH_ID, pkt.receivedFrom().deviceId().toString());
         jo.addProperty(IN_PORT, pkt.receivedFrom().port().name());
         jo.addProperty(LOGICAL, pkt.receivedFrom().port().isLogical());
-        jo.addProperty(RECIEVED, new Date(context.time()).toString());
+        jo.addProperty(RECEIVED, new Date(context.time()).toString());
         jo.addProperty(MSG_TYPE, PKT_TYPE);
         // parse ethernet
         jo.addProperty(SUB_MSG_TYPE,
@@ -208,32 +206,26 @@ public final class MQUtil {
      * @throws RuntimeException if property file not found.
      */
     public static Properties getProp(ComponentContext context) {
+        InputStream is;
         URL configUrl;
         try {
             configUrl = context.getBundleContext().getBundle()
                                                   .getResource(MQ_PROP_NAME);
+            is = configUrl.openStream();
         } catch (Exception ex) {
             // This will be used only during junit test case since bundle
             // context will be available during runtime only.
-            File file = new File(
-                    MQUtil.class.getClassLoader().getResource(MQ_PROP_NAME)
-                                                 .getFile());
-            try {
-                configUrl = file.toURL();
-            } catch (MalformedURLException e) {
-                log.error(ExceptionUtils.getFullStackTrace(e));
-                throw new RuntimeException(e);
-            }
+            // FIXME - this should be configured with component config when running as a test
+            is = MQUtil.class.getClassLoader().getResourceAsStream(MQ_PROP_NAME);
         }
 
         Properties properties;
         try {
-            InputStream is = configUrl.openStream();
             properties = new Properties();
             properties.load(is);
         } catch (Exception e) {
             log.error(ExceptionUtils.getFullStackTrace(e));
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
         }
         return properties;
     }

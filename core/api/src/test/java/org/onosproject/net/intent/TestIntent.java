@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ public class TestIntent extends Intent {
      */
     public TestIntent(int value) { // FIXME
         super(new TestApplicationId("foo"), null, Collections.emptyList(),
-                Intent.DEFAULT_INTENT_PRIORITY);
+                Intent.DEFAULT_INTENT_PRIORITY, null);
         this.value = value;
     }
 

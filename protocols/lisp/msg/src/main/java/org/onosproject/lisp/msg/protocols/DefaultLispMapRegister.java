@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -401,8 +401,8 @@ public final class DefaultLispMapRegister extends AbstractLispMessage
             MapRecordWriter writer = new MapRecordWriter();
             List<LispMapRecord> records = message.getMapRecords();
 
-            for (int i = 0; i < records.size(); i++) {
-                writer.writeTo(byteBuf, records.get(i));
+            for (LispMapRecord record : records) {
+                writer.writeTo(byteBuf, record);
             }
         }
     }

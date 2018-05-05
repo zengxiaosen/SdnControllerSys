@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -921,6 +921,11 @@ public abstract class Config<S> {
         if (num.compareTo(max) > 0) {
             fail("Field must be less than " + max);
         }
+    }
+
+    @Override
+    public String toString() {
+        return String.valueOf(node);
     }
 
 }

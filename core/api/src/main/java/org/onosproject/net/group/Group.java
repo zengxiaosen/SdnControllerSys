@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,12 @@
 package org.onosproject.net.group;
 
 import org.onosproject.core.GroupId;
+import org.onosproject.net.pi.service.PiTranslatable;
 
 /**
  * ONOS representation of group that is stored in the system.
  */
-public interface Group extends GroupDescription {
+public interface Group extends GroupDescription, PiTranslatable {
     /**
      * State of the group object in ONOS.
      */

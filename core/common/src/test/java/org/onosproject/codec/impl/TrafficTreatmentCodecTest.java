@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import org.onosproject.net.meter.MeterId;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -114,7 +115,7 @@ public class TrafficTreatmentCodecTest {
             int counter = 0;
             for (int idx = 0; idx < node.size(); idx++) {
                 String type = node.get(idx).get("type").asText();
-                if (!type.equals("METER") && !type.equals("TABLE")) {
+                if (!"METER".equals(type) && !"TABLE".equals(type)) {
                     counter++;
                 }
             }
@@ -163,9 +164,11 @@ public class TrafficTreatmentCodecTest {
             // check metered
             JsonNode meterNode = getInstNode(jsonInstructions, "METER");
             String jsonMeterId = meterNode != null ? meterNode.get("meterId").asText() : null;
-            if (trafficTreatment.metered() != null) {
-                String meterId = trafficTreatment.metered().meterId().toString();
-                if (!StringUtils.equals(jsonMeterId, meterId)) {
+            if (trafficTreatment.metered() != null && !trafficTreatment.meters().isEmpty()) {
+                Optional<Instructions.MeterInstruction> optional = trafficTreatment.meters().stream().filter(
+                        meterInstruction -> StringUtils.equals(jsonMeterId, meterInstruction.meterId().toString()))
+                        .findAny();
+                if (!optional.isPresent()) {
                     description.appendText("meter id was " + jsonMeterId);
                     return false;
                 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ public class BgpOpenMsgVer4 implements BgpOpenMsg {
        REFERENCE : RFC 4271
     */
 
-    protected static final Logger log = LoggerFactory.getLogger(BgpOpenMsgVer4.class);
+    private static final Logger log = LoggerFactory.getLogger(BgpOpenMsgVer4.class);
 
     public static final byte PACKET_VERSION = 4;
     public static final int OPEN_MSG_MINIMUM_LENGTH = 10;
@@ -77,7 +77,7 @@ public class BgpOpenMsgVer4 implements BgpOpenMsg {
     public static final byte SAFI = 71;
     public static final byte RES = 0;
     public static final int FOUR_OCTET_AS_NUM_CAPA_TYPE = 65;
-    public static final byte[] MARKER = new byte[]{(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,
+    private static final byte[] MARKER = new byte[]{(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,
         (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,
         (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff};
     public static final BgpHeader DEFAULT_OPEN_HEADER = new BgpHeader(MARKER,
@@ -209,24 +209,26 @@ public class BgpOpenMsgVer4 implements BgpOpenMsg {
 
             // Read Capabilities if optional parameter length is greater than 0
             if (optParaLen != 0) {
-                // Read optional parameter type
-                optParaType = cb.readByte();
+                while (cb.readableBytes() > 0) {
+                    // Read optional parameter type
+                    optParaType = cb.readByte();
 
-                // Read optional parameter length
-                capParaLen = cb.readByte();
+                    // Read optional parameter length
+                    capParaLen = cb.readByte();
 
-                if (cb.readableBytes() < capParaLen) {
-                    throw new BgpParseException(BgpErrorType.OPEN_MESSAGE_ERROR, (byte) 0, null);
-                }
+                    if (cb.readableBytes() < capParaLen) {
+                        throw new BgpParseException(BgpErrorType.OPEN_MESSAGE_ERROR, (byte) 0, null);
+                    }
 
-                ChannelBuffer capaCb = cb.readBytes(capParaLen);
+                    ChannelBuffer capaCb = cb.readBytes(capParaLen);
 
-                // Parse capabilities only if optional parameter type is 2
-                if ((optParaType == OPT_PARA_TYPE_CAPABILITY) && (capParaLen != 0)) {
-                    capabilityTlv = parseCapabilityTlv(capaCb);
-                } else {
-                    throw new BgpParseException(BgpErrorType.OPEN_MESSAGE_ERROR,
-                        BgpErrorType.UNSUPPORTED_OPTIONAL_PARAMETER, null);
+                    // Parse capabilities only if optional parameter type is 2
+                    if ((optParaType == OPT_PARA_TYPE_CAPABILITY) && (capParaLen != 0)) {
+                        capabilityTlv = parseCapabilityTlv(capaCb);
+                    } else {
+                        throw new BgpParseException(BgpErrorType.OPEN_MESSAGE_ERROR,
+                                BgpErrorType.UNSUPPORTED_OPTIONAL_PARAMETER, null);
+                    }
                 }
             }
             return new BgpOpenMsgVer4(bgpHeader, version, asNumber, holdTime, bgpId, capabilityTlv);
@@ -322,6 +324,7 @@ public class BgpOpenMsgVer4 implements BgpOpenMsg {
         private boolean isFlowSpecCapabilityTlvSet = false;
         private boolean isVpnFlowSpecCapabilityTlvSet = false;
         private boolean isFlowSpecRpdCapabilityTlvSet = false;
+        private boolean isEvpnCapabilityTlvSet = false;
 
         LinkedList<BgpValueType> capabilityTlv = new LinkedList<>();
 
@@ -378,6 +381,12 @@ public class BgpOpenMsgVer4 implements BgpOpenMsg {
                 this.capabilityTlv.add(tlv);
             }
 
+            if (this.isEvpnCapabilityTlvSet) {
+                BgpValueType tlv;
+                tlv = new MultiProtocolExtnCapabilityTlv(Constants.AFI_EVPN_VALUE,
+                        RES, Constants.SAFI_EVPN_VALUE);
+                this.capabilityTlv.add(tlv);
+            }
 
             return new BgpOpenMsgVer4(bgpMsgHeader, PACKET_VERSION, this.asNumber, holdTime, this.bgpId,
                        this.capabilityTlv);
@@ -443,6 +452,12 @@ public class BgpOpenMsgVer4 implements BgpOpenMsg {
         @Override
         public Builder setFlowSpecRpdCapabilityTlv(boolean isFlowSpecRpdCapabilityTlvSet) {
             this.isFlowSpecRpdCapabilityTlvSet = isFlowSpecRpdCapabilityTlvSet;
+            return this;
+        }
+
+        @Override
+        public Builder setEvpnCapabilityTlv(boolean isEvpnCapabilitySet) {
+            this.isEvpnCapabilityTlvSet = isEvpnCapabilitySet;
             return this;
         }
     }

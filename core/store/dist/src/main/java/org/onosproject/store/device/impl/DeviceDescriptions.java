@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,7 +97,9 @@ class DeviceDescriptions {
             SparseAnnotations merged = union(oldOne.value().annotations(),
                                              newDesc.value().annotations());
             newOne = new Timestamped<>(
-                            new DefaultPortDescription(newDesc.value(), merged),
+                            DefaultPortDescription.builder(newDesc.value())
+                                .annotations(merged)
+                                .build(),
                             newDesc.timestamp());
         }
         portDescs.put(newOne.value().portNumber(), newOne);

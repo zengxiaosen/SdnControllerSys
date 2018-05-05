@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ public class SrEroSubObject implements PcepValueType {
            NAI for Unnumbered adjacency with IPv4 Node IDs
 
      */
-    protected static final Logger log = LoggerFactory.getLogger(SrEroSubObject.class);
+    private static final Logger log = LoggerFactory.getLogger(SrEroSubObject.class);
 
     public static final short TYPE = 0x24; //TODO : type to be defined
     public static final short LENGTH = 12;

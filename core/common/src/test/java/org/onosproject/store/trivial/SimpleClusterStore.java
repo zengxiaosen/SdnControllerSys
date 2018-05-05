@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
-import org.joda.time.DateTime;
 import org.onlab.packet.IpAddress;
 import org.onosproject.cluster.ClusterEvent;
 import org.onosproject.cluster.ClusterStore;
@@ -31,6 +30,8 @@ import org.onosproject.cluster.ClusterStoreDelegate;
 import org.onosproject.cluster.ControllerNode;
 import org.onosproject.cluster.DefaultControllerNode;
 import org.onosproject.cluster.NodeId;
+import org.onosproject.core.Version;
+import org.onosproject.core.VersionService;
 import org.onosproject.event.EventDeliveryService;
 import org.onosproject.event.ListenerRegistry;
 import org.onosproject.net.intent.WorkPartitionEvent;
@@ -39,6 +40,7 @@ import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.store.AbstractStore;
 import org.slf4j.Logger;
 
+import java.time.Instant;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -62,10 +64,13 @@ public class SimpleClusterStore
 
     private ControllerNode instance;
 
-    private final DateTime creationTime = DateTime.now();
+    private final Instant creationTime = Instant.now();
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected EventDeliveryService eventDispatcher;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected VersionService versionService;
 
     private ListenerRegistry<WorkPartitionEvent, WorkPartitionEventListener> listenerRegistry;
     private boolean started = false;
@@ -108,12 +113,17 @@ public class SimpleClusterStore
     }
 
     @Override
+    public Version getVersion(NodeId nodeId) {
+        return instance.id().equals(nodeId) ? versionService.version() : null;
+    }
+
+    @Override
     public void markFullyStarted(boolean started) {
         this.started = started;
     }
 
     @Override
-    public DateTime getLastUpdated(NodeId nodeId) {
+    public Instant getLastUpdatedInstant(NodeId nodeId) {
         return creationTime;
     }
 

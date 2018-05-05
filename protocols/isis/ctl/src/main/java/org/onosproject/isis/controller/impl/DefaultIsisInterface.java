@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -862,6 +862,10 @@ public class DefaultIsisInterface implements IsisInterface {
             neighbor.setNeighborState(IsisInterfaceState.UP);
             neighbor.setLocalExtendedCircuitId(stateTlv.localCircuitId());
             buildStoreAndSendSelfGeneratedLspIfNotExistInDb(channel, IsisRouterType.get(helloPacket.circuitType()));
+        }
+        if (neighbor == null) {
+            log.debug("neighbor object is null!!!!");
+            return;
         }
 
         neighbor.setHoldingTime(helloPacket.holdingTime());

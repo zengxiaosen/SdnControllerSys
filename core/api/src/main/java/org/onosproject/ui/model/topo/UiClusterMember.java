@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Laboratory
+ *  Copyright 2016-present Open Networking Foundation
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,17 +20,17 @@ import org.onlab.packet.IpAddress;
 import org.onosproject.cluster.ControllerNode;
 import org.onosproject.cluster.NodeId;
 
-import static org.onosproject.cluster.ControllerNode.State.INACTIVE;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Represents an individual member of the cluster (ONOS instance).
  */
 public class UiClusterMember extends UiElement {
 
-    private final UiTopology topology;
-    private final ControllerNode cnode;
+    private static final String NODE_CANNOT_BE_NULL = "Node cannot be null";
 
-    private ControllerNode.State state = INACTIVE;
+    private final UiTopology topology;
+    private final NodeId nodeId;
 
     /**
      * Constructs a UI cluster member, with a reference to the parent
@@ -40,15 +40,14 @@ public class UiClusterMember extends UiElement {
      * @param cnode    underlying controller node
      */
     public UiClusterMember(UiTopology topology, ControllerNode cnode) {
+        checkNotNull(cnode, NODE_CANNOT_BE_NULL);
         this.topology = topology;
-        this.cnode = cnode;
+        this.nodeId = cnode.id();
     }
 
     @Override
     public String toString() {
-        return "UiClusterMember{" + cnode +
-                ", online=" + isOnline() +
-                ", ready=" + isReady() +
+        return "UiClusterMember{" + nodeId +
                 "}";
     }
 
@@ -63,16 +62,7 @@ public class UiClusterMember extends UiElement {
      * @return the backing controller node instance
      */
     public ControllerNode backingNode() {
-        return cnode;
-    }
-
-    /**
-     * Sets the state of this cluster member.
-     *
-     * @param state the state
-     */
-    public void setState(ControllerNode.State state) {
-        this.state = state;
+        return topology.services.cluster().getNode(nodeId);
     }
 
     /**
@@ -81,7 +71,7 @@ public class UiClusterMember extends UiElement {
      * @return member identifier
      */
     public NodeId id() {
-        return cnode.id();
+        return nodeId;
     }
 
     /**
@@ -90,24 +80,7 @@ public class UiClusterMember extends UiElement {
      * @return the IP address
      */
     public IpAddress ip() {
-        return cnode.ip();
+        return backingNode().ip();
     }
 
-    /**
-     * Returns true if this cluster member is online (active).
-     *
-     * @return true if online, false otherwise
-     */
-    public boolean isOnline() {
-        return state.isActive();
-    }
-
-    /**
-     * Returns true if this cluster member is considered ready.
-     *
-     * @return true if ready, false otherwise
-     */
-    public boolean isReady() {
-        return state.isReady();
-    }
 }

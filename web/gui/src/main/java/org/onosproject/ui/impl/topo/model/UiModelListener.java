@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Laboratory
+ *  Copyright 2016-present Open Networking Foundation
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.onosproject.ui.impl.topo.model;
 
 import org.onosproject.event.EventListener;
+import org.onosproject.ui.model.topo.UiModelEvent;
 
 /**
  * Can receive {@link UiModelEvent}s.

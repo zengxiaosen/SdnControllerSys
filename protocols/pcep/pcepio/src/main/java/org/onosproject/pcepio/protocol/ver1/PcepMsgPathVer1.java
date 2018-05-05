@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ public class PcepMsgPathVer1 implements PcepMsgPath {
      *  <path>         ::= <ERO><attribute-list>
      */
 
-    protected static final Logger log = LoggerFactory.getLogger(PcepMsgPathVer1.class);
+    private static final Logger log = LoggerFactory.getLogger(PcepMsgPathVer1.class);
     //PcepEroObject
     private PcepEroObject eroObj;
     private boolean isEroObjectSet;

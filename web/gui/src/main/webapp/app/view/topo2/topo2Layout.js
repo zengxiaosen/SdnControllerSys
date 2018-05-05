@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,24 +33,21 @@
             // note: key is node.class
             device: -8000,
             host: -20000,
-            region: -5000,
-            _def_: -12000
+            region: -8000,
+            _def_: -12000,
         },
         linkDistance: {
             // note: key is link.type
             direct: 100,
             optical: 120,
-            UiEdgeLink: 30,
-            _def_: 50
+            UiEdgeLink: 100,
+            _def_: 50,
         },
         linkStrength: {
             // note: key is link.type
             // range: {0.0 ... 1.0}
-            direct: 1.0,
-            optical: 1.0,
-            UiEdgeLink: 15.0,
-            _def_: 1.0
-        }
+            _def_: 1.0,
+        },
     };
 
     // configuration
@@ -58,56 +55,47 @@
         light: {
             baseColor: '#939598',
             inColor: '#66f',
-            outColor: '#f00'
+            outColor: '#f00',
         },
         dark: {
             // TODO : theme
             baseColor: '#939598',
             inColor: '#66f',
-            outColor: '#f00'
+            outColor: '#f00',
         },
         inWidth: 12,
-        outWidth: 10
+        outWidth: 10,
     };
 
     // internal state
-    var nodeLock = false;       // whether nodes can be dragged or not (locked)
+    var nodeLock = false; // whether nodes can be dragged or not (locked)
 
     // predicate that indicates when clicking is active
     function clickEnabled() {
         return true;
     }
 
-    function getDefaultPosition(link) {
-        return {
-            x1: link.get('source').x,
-            y1: link.get('source').y,
-            x2: link.get('target').x,
-            y2: link.get('target').y
-        };
-    }
-
     angular.module('ovTopo2')
     .factory('Topo2LayoutService',
         [
             '$log', '$timeout', 'WebSocketService', 'SvgUtilService', 'Topo2RegionService',
-            'Topo2D3Service', 'Topo2ViewService', 'Topo2SelectService', 'Topo2ZoomService',
-            'Topo2ViewController',
-            function ($log, $timeout, wss, sus, t2rs, t2d3, t2vs, t2ss, t2zs,
-                      ViewController) {
+            'Topo2ViewService', 'Topo2SelectService', 'Topo2ZoomService',
+            'Topo2ViewController', 'Topo2RegionNavigationService',
+            function ($log, $timeout, wss, sus, t2rs, t2vs, t2ss, t2zs,
+                      ViewController, t2rns) {
 
                 var Layout = ViewController.extend({
-                    initialize: function (svg, forceG, uplink, dim, zoomer, opts) {
-
-                        $log.debug('initialize Layout');
+                    init: function (svg, forceG, uplink, dim, zoomer, opts) {
                         instance = this;
+
+                        var navToRegion = this.navigateToRegionHandler.bind(this);
+                        t2rns.addListener('region:navigation-start', navToRegion);
 
                         this.svg = svg;
 
                         // Append all the SVG Group elements to the forceG object
                         this.createForceElements();
 
-                        this.uplink = uplink;
                         this.dim = dim;
                         this.zoomer = zoomer;
 
@@ -121,15 +109,15 @@
 
                         this.prevForce = this.forceG;
 
-                        this.forceG = d3.select('#topo-zoomlayer')
-                            .append('g').attr('class', 'topo-force');
+                        this.forceG = d3.select('#topo2-zoomlayer')
+                            .append('g').attr('class', 'topo2-force');
 
                         this.elements = {
-                            linkG: this.addElement(this.forceG, 'topo-links'),
-                            linkLabelG: this.addElement(this.forceG, 'topo-linkLabels'),
-                            numLinksLabels: this.addElement(this.forceG, 'topo-numLinkLabels'),
-                            nodeG: this.addElement(this.forceG, 'topo-nodes'),
-                            portLabels: this.addElement(this.forceG, 'topo-portLabels')
+                            linkG: this.addElement(this.forceG, 'topo2-links'),
+                            linkLabelG: this.addElement(this.forceG, 'topo2-linkLabels'),
+                            numLinksLabels: this.addElement(this.forceG, 'topo2-numLinkLabels'),
+                            nodeG: this.addElement(this.forceG, 'topo2-nodes'),
+                            portLabels: this.addElement(this.forceG, 'topo2-portLabels'),
                         };
                     },
                     addElement: function (parent, className) {
@@ -140,9 +128,6 @@
                         return this.settings[settingName][nodeType] || this.settings[settingName]._def_;
                     },
                     createForceLayout: function () {
-                        var _this = this,
-                            regionLinks = t2rs.regionLinks(),
-                            regionNodes = t2rs.regionNodes();
 
                         this.force = d3.layout.force()
                             .size(t2vs.getDimensions())
@@ -151,38 +136,25 @@
                             .charge(this.settingOrDefault.bind(this, 'charge'))
                             .linkDistance(this.settingOrDefault.bind(this, 'linkDistance'))
                             .linkStrength(this.settingOrDefault.bind(this, 'linkStrength'))
-                            .nodes(regionNodes)
-                            .links(regionLinks)
-                            .on("tick", this.tick.bind(this))
-                            .on("start", function () {
-
-                                // TODO: Find a better way to do this
-                                // TODO: BROKEN - Click and dragging and element triggers this event
-//                                setTimeout(function () {
-//                                    _this.centerLayout();
-//                                }, 500);
-                            })
+                            .nodes([])
+                            .links([])
+                            .on('tick', this.tick.bind(this))
                             .start();
 
-                        this.link = this.elements.linkG.selectAll('.link')
-                            .data(regionLinks, function (d) { return d.get('key'); });
-
-                        this.node = this.elements.nodeG.selectAll('.node')
-                            .data(regionNodes, function (d) { return d.get('id'); });
-
                         this.drag = sus.createDragBehavior(this.force,
-                            t2ss.selectObject,
+                            function () {}, // click event is no longer handled in the drag service
                             this.atDragEnd,
                             this.dragEnabled.bind(this),
-                            clickEnabled
+                            clickEnabled,
+                            t2zs
                         );
 
                         this.update();
                     },
                     centerLayout: function () {
-                        d3.select('#topo-zoomlayer').attr('data-layout', t2rs.model.get('id'));
+                        d3.select('#topo2-zoomlayer').attr('data-layout', t2rs.model.get('id'));
 
-                        var zoomer = d3.select('#topo-zoomlayer').node().getBBox(),
+                        var zoomer = d3.select('#topo2-zoomlayer').node().getBBox(),
                             layoutBBox = this.forceG.node().getBBox(),
                             scale = (zoomer.height - 150) / layoutBBox.height,
                             x = (zoomer.width / 2) - ((layoutBBox.x + layoutBBox.width / 2) * scale),
@@ -190,13 +162,10 @@
 
                         t2zs.panAndZoom([x, y], scale, 1000);
                     },
+                    setLinkPosition: function (link) {
+                        link.setPosition.bind(link)();
+                    },
                     tick: function () {
-
-                        this.link
-                            .attr("x1", function (d) { return d.get('source').x; })
-                            .attr("y1", function (d) { return d.get('source').y; })
-                            .attr("x2", function (d) { return d.get('target').x; })
-                            .attr("y2", function (d) { return d.get('target').y; });
 
                         this.node
                             .attr({
@@ -204,8 +173,15 @@
                                     var dx = isNaN(d.x) ? 0 : d.x,
                                         dy = isNaN(d.y) ? 0 : d.y;
                                     return sus.translate(dx, dy);
-                                }
+                                },
                             });
+
+                        this.link
+                            .each(this.setLinkPosition)
+                            .attr('x1', function (d) { return d.get('position').x1; })
+                            .attr('y1', function (d) { return d.get('position').y1; })
+                            .attr('x2', function (d) { return d.get('position').x2; })
+                            .attr('y2', function (d) { return d.get('position').y2; });
                     },
 
                     start: function () {
@@ -221,6 +197,7 @@
                     _update: function () {
                         this.updateNodes();
                         this.updateLinks();
+                        this.force.start();
                     },
                     updateNodes: function () {
                         var regionNodes = t2rs.regionNodes();
@@ -238,22 +215,22 @@
                                     // Need to guard against NaN here ??
                                     return sus.translate(d.node.x, d.node.y);
                                 },
-                                opacity: 0
+                                opacity: 0,
                             })
                             .call(this.drag)
                             .transition()
                             .attr('opacity', 1);
 
-                        entering.filter('.device').each(t2d3.nodeEnter);
-                        entering.filter('.sub-region').each(t2d3.nodeEnter);
-                        entering.filter('.host').each(t2d3.hostEnter);
+                        entering.each(function (d) { d.onEnter(this, d); });
+
+                        this.force.nodes(regionNodes);
                     },
                     updateLinks: function () {
 
                         var regionLinks = t2rs.regionLinks();
 
                         this.link = this.elements.linkG.selectAll('.link')
-                            .data(regionLinks, function (d) { return d.get('key'); });
+                            .data(regionLinks, function (d) { return d.get('id'); });
 
                         // operate on entering links:
                         var entering = this.link.enter()
@@ -265,10 +242,10 @@
                                 x2: function (d) { return d.get('position').x2; },
                                 y2: function (d) { return d.get('position').y2; },
                                 stroke: linkConfig.light.inColor,
-                                'stroke-width': linkConfig.inWidth
+                                'stroke-width': linkConfig.inWidth,
                             });
 
-                        entering.each(t2d3.linkEntering);
+                        entering.each(function (d) { d.onEnter(this, d); });
 
                         // operate on exiting links:
                         this.link.exit()
@@ -281,18 +258,13 @@
                             })
                             .style('opacity', 0.0)
                             .remove();
+
+                        this.force.links(regionLinks);
                     },
                     calcPosition: function () {
                         var lines = this;
-
                         lines.each(function (d) {
-                            if (d.get('type') === 'hostLink') {
-                                d.set('position', getDefaultPosition(d));
-                            }
-                        });
-
-                        lines.each(function (d) {
-                            d.set('position', getDefaultPosition(d));
+                            d.setPosition.bind(d)();
                         });
                     },
                     sendUpdateMeta: function (d, clearPos) {
@@ -308,15 +280,15 @@
                                 y: d.y,
                                 equivLoc: {
                                     lng: ll[0],
-                                    lat: ll[1]
-                                }
+                                    lat: ll[1],
+                                },
                             };
                         }
                         d.metaUi = metaUi;
                         wss.sendEvent('updateMeta2', {
                             id: d.get('id'),
                             class: d.get('class'),
-                            memento: metaUi
+                            memento: metaUi,
                         });
                     },
                     setDimensions: function () {
@@ -334,8 +306,7 @@
                     },
                     atDragEnd: function (d) {
                         // once we've finished moving, pin the node in position
-                        d.fixed = true;
-                        d3.select(this).classed('fixed', true);
+                        d.fix(true);
                         instance.sendUpdateMeta(d);
                         t2ss.clickConsumed(true);
                     },
@@ -351,7 +322,10 @@
                             .transition()
                             .delay(500)
                             .duration(500)
-                            .style('opacity', 1);
+                            .style('opacity', 1)
+                            .each('end', function () {
+                                t2rns.navigateToRegionComplete();
+                            });
                     },
                     transitionUpRegion: function () {
                         this.prevForce.transition()
@@ -364,16 +338,23 @@
                             .transition()
                             .delay(500)
                             .duration(500)
-                            .style('opacity', 1);
-                    }
+                            .style('opacity', 1)
+                            .each('end', function () {
+                                t2rns.navigateToRegionComplete();
+                            }); ;
+                    },
+                    navigateToRegionHandler: function () {
+                        this.createForceElements();
+                        this.transitionDownRegion();
+                    },
                 });
 
                 function getInstance(svg, forceG, uplink, dim, zoomer, opts) {
                     return instance || new Layout(svg, forceG, uplink, dim, zoomer, opts);
                 }
 
-                return getInstance;
-            }
+                return getInstance();
+            },
         ]
     );
 })();

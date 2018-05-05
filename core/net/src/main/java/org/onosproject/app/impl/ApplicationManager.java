@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -177,6 +177,12 @@ public class ApplicationManager
         checkNotNull(appId, APP_ID_NULL);
         checkNotNull(permissions, "Permissions cannot be null");
         store.setPermissions(appId, permissions);
+    }
+
+    @Override
+    public InputStream getApplicationArchive(ApplicationId appId) {
+        checkNotNull(appId, APP_ID_NULL);
+        return store.getApplicationArchive(appId);
     }
 
     private void updateStoreAndWaitForNotificationHandling(ApplicationId appId,

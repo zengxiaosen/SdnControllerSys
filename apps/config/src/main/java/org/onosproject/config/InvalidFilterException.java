@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,15 @@
  */
 package org.onosproject.config;
 
+import com.google.common.annotations.Beta;
+
 /**
  * Exceptions for use by the {@code ConfigFilter}.
  */
+@Beta
 public class InvalidFilterException extends RuntimeException {
+
+    private static final long serialVersionUID = 7270417891847061766L;
 
     /**
      * Constructs a new runtime exception with no error message.
@@ -35,4 +40,6 @@ public class InvalidFilterException extends RuntimeException {
     public InvalidFilterException(String message) {
         super(message);
     }
+
+    // TODO add constructor with cause
 }

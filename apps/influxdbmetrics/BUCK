@@ -1,12 +1,16 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
+    '//lib:METRICS',
     '//lib:org.apache.karaf.shell.console',
     '//lib:metrics-influxdb',
     '//lib:influxdb-java',
     '//lib:commons-codec',
     '//lib:retrofit',
     '//lib:okhttp',
+    '//lib:logging-interceptor',
     '//lib:okio',
+    '//lib:moshi',
+    '//lib:converter-moshi',
     '//lib:gson',
     '//cli:onos-cli',
 ]
@@ -17,8 +21,11 @@ EXCLUDED_BUNDLES = [
     '//lib:commons-codec',
     '//lib:retrofit',
     '//lib:okhttp',
+    '//lib:logging-interceptor',
     '//lib:gson',
     '//lib:okio',
+    '//lib:moshi',
+    '//lib:converter-moshi',
 ]
 
 TEST_DEPS = [
@@ -31,7 +38,7 @@ osgi_jar_with_tests (
 )
 
 onos_app (
-    title = 'InfluxDB Report and Query App',
+    title = 'InfluxDB Report and Query',
     category = 'Monitoring',
     url = 'http://onosproject.org',
     description = 'Performance metric service reporter and retriever for influxDB.',

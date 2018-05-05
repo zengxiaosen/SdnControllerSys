@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,26 +15,16 @@
  */
 package org.onosproject.pce.pcestore.api;
 
-import java.util.List;
-
 import org.onosproject.incubator.net.tunnel.TunnelId;
-import org.onosproject.net.resource.ResourceConsumer;
 import org.onosproject.pce.pceservice.ExplicitPathInfo;
 import org.onosproject.pce.pcestore.PcePathInfo;
 
-import java.util.Map;
+import java.util.List;
 
 /**
  * Abstraction of an entity providing pool of available labels to devices, links and tunnels.
  */
 public interface PceStore {
-    /**
-     * Checks whether tunnel id is present in tunnel info store.
-     *
-     * @param tunnelId tunnel id
-     * @return success of failure
-     */
-    boolean existsTunnelInfo(TunnelId tunnelId);
 
     /**
      * Checks whether path info is present in failed path info list.
@@ -45,25 +35,11 @@ public interface PceStore {
     boolean existsFailedPathInfo(PcePathInfo failedPathInfo);
 
     /**
-     * Retrieves the tunnel info count.
-     *
-     * @return tunnel info count
-     */
-    int getTunnelInfoCount();
-
-    /**
      * Retrieves the failed path info count.
      *
      * @return failed path info count
      */
     int getFailedPathInfoCount();
-
-    /**
-     * Retrieves tunnel id and pcecc tunnel info pairs collection from tunnel info store.
-     *
-     * @return collection of tunnel id and resource consumer pairs
-     */
-    Map<TunnelId, ResourceConsumer> getTunnelInfos();
 
     /**
      * Retrieves path info collection from failed path info store.
@@ -73,35 +49,12 @@ public interface PceStore {
     Iterable<PcePathInfo> getFailedPathInfos();
 
     /**
-     * Retrieves local label info with tunnel consumer id from tunnel info store.
-     *
-     * @param tunnelId tunnel id
-     * @return resource consumer
-     */
-    ResourceConsumer getTunnelInfo(TunnelId tunnelId);
-
-    /**
-     * Stores local label info with tunnel consumer id into tunnel info store for specified tunnel id.
-     *
-     * @param tunnelId tunnel id
-     * @param tunnelConsumerId tunnel consumer id
-     */
-    void addTunnelInfo(TunnelId tunnelId, ResourceConsumer tunnelConsumerId);
-
-    /**
      * Stores path information into failed path info store.
      *
      * @param failedPathInfo failed path information
      */
     void addFailedPathInfo(PcePathInfo failedPathInfo);
 
-    /**
-     * Removes local label info with tunnel consumer id from tunnel info store for specified tunnel id.
-     *
-     * @param tunnelId tunnel id
-     * @return success or failure
-     */
-    boolean removeTunnelInfo(TunnelId tunnelId);
 
     /**
      * Removes path info from failed path info store.
@@ -127,4 +80,35 @@ public interface PceStore {
      * @return list of explicit path info
      */
     List<ExplicitPathInfo> getTunnelNameExplicitPathInfoMap(String tunnelName);
+
+    //DisjointPath getDisjointPaths(String tunnelName);
+
+    //boolean addDisjointPathInfo(String tunnelName, DisjointPath path);
+
+    /**
+     * Stores load balancing tunnels by load balance path name.
+     *
+     * @param loadBalancingPathName load balancing path name
+     * @param tunnelIds list load balancing tunnels
+     * @return success or failure
+     */
+    boolean addLoadBalancingTunnelIdsInfo(String loadBalancingPathName, TunnelId... tunnelIds);
+
+    /**
+     * Query load balancing tunnels by load balance path name.
+     *
+     * @param loadBalancingPathName load balancing path name
+     * @return list of load balancing tunnels
+     */
+    List<TunnelId> getLoadBalancingTunnelIds(String loadBalancingPathName);
+
+    /**
+     * Removes load balancing tunnel info.
+     *
+     * @param loadBalancingPathName load balancing path name
+     * @return success or failure
+     */
+    boolean removeLoadBalancingTunnelIdsInfo(String loadBalancingPathName);
+
+    //boolean removeDisjointPathInfo(String tunnelName);
 }

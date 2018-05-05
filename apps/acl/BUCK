@@ -1,5 +1,7 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
+    '//lib:JACKSON',
+    '//lib:KRYO',
     '//lib:javax.ws.rs-api',
     '//utils/rest:onlab-rest',
     '//core/store/serializers:onos-core-serializers',
@@ -17,7 +19,7 @@ osgi_jar_with_tests (
 )
 
 onos_app (
-    title = 'ACL App',
+    title = 'Access Control Lists',
     category = 'Security',
     url = 'http://onosproject.org',
     description = 'ONOS ACL application.',

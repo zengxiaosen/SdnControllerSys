@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ import org.onosproject.core.CoreService;
 import org.onosproject.mastership.MastershipService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Device;
+import org.onosproject.net.FilteredConnectPoint;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultTrafficSelector;
@@ -288,7 +289,7 @@ public class IntentPerfInstaller {
         }
 
         try {
-            workers.awaitTermination(5 * cyclePeriod, TimeUnit.MILLISECONDS);
+            workers.awaitTermination(5L * cyclePeriod, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             log.warn("Failed to stop worker", e);
         }
@@ -333,8 +334,8 @@ public class IntentPerfInstaller {
                 .key(key)
                 .selector(selector)
                 .treatment(treatment)
-                .ingressPoint(ingress)
-                .egressPoint(egress)
+                .filteredIngressPoint(new FilteredConnectPoint(ingress))
+                .filteredEgressPoint(new FilteredConnectPoint(egress))
                 .build();
     }
 
@@ -389,6 +390,9 @@ public class IntentPerfInstaller {
         return Sets.newHashSet(intents.values());
     }
 
+    final Set<Intent> submitted = Sets.newConcurrentHashSet();
+    final Set<Intent> withdrawn = Sets.newConcurrentHashSet();
+
     // Submits intent operations.
     final class Submitter implements Runnable {
 
@@ -396,8 +400,7 @@ public class IntentPerfInstaller {
         private int lastCount;
 
         private Set<Intent> intents = Sets.newHashSet();
-        private Set<Intent> submitted = Sets.newHashSet();
-        private Set<Intent> withdrawn = Sets.newHashSet();
+
 
         private Submitter(Set<Intent> intents) {
             this.intents = intents;
@@ -421,20 +424,18 @@ public class IntentPerfInstaller {
         private Iterable<Intent> subset(Set<Intent> intents) {
             List<Intent> subset = Lists.newArrayList(intents);
             Collections.shuffle(subset);
-            return subset.subList(0, Math.min(intents.size(), lastCount));
+            return subset.subList(0, Math.min(subset.size(), lastCount));
         }
 
         // Submits the specified intent.
         private void submit(Intent intent) {
             intentService.submit(intent);
-            submitted.add(intent);
             withdrawn.remove(intent); //TODO could check result here...
         }
 
         // Withdraws the specified intent.
         private void withdraw(Intent intent) {
             intentService.withdraw(intent);
-            withdrawn.add(intent);
             submitted.remove(intent); //TODO could check result here...
         }
 
@@ -533,6 +534,12 @@ public class IntentPerfInstaller {
         @Override
         public void event(IntentEvent event) {
             if (event.subject().appId().equals(appId)) {
+                if (event.type() == INSTALLED) {
+                    submitted.add(event.subject());
+                }
+                if (event.type() == WITHDRAWN) {
+                    withdrawn.add(event.subject());
+                }
                 counters.get(event.type()).add(1);
             }
         }

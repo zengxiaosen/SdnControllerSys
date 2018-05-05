@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ public interface OpenFlowAgent {
      * Called when this controller's role for a switch transitions from equal
      * to master. For 1.0 switches, we internally refer to the role 'slave' as
      * 'equal' - so this transition is equivalent to 'addActivatedMasterSwitch'.
-     * @param dpid the dpid to transistion.
+     * @param dpid the dpid to transition.
      */
     void transitionToMasterSwitch(Dpid dpid);
 
@@ -73,7 +73,7 @@ public interface OpenFlowAgent {
      * Called when this controller's role for a switch transitions to equal.
      * For 1.0 switches, we internally refer to the role 'slave' as
      * 'equal'.
-     * @param dpid the dpid to transistion.
+     * @param dpid the dpid to transition.
      */
     void transitionToEqualSwitch(Dpid dpid);
 

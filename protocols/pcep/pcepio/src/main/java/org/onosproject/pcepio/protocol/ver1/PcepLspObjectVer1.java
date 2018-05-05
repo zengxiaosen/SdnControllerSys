@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ public class PcepLspObjectVer1 implements PcepLspObject {
 
                      The LSP Object format
      */
-    protected static final Logger log = LoggerFactory.getLogger(PcepLspObjectVer1.class);
+    private static final Logger log = LoggerFactory.getLogger(PcepLspObjectVer1.class);
 
     public static final byte LSP_OBJ_TYPE = 1;
     public static final byte LSP_OBJ_CLASS = 32;

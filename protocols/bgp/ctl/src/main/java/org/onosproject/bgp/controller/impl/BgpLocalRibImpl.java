@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -469,7 +469,7 @@ public class BgpLocalRibImpl implements BgpLocalRib {
     }
 
     /**
-     * Update local RIB node based on avaliable peer adjacency RIB.
+     * Update local RIB node based on available peer adjacency RIB.
      *
      * @param o adjacency-in/VPN adjacency-in
      * @throws BgpParseException BGP parse exception
@@ -511,7 +511,7 @@ public class BgpLocalRibImpl implements BgpLocalRib {
     }
 
     /**
-     * Update localRIB link based on avaliable peer adjacency RIB.
+     * Update localRIB link based on available peer adjacency RIB.
      *
      * @param o adjacency-in/VPN adjacency-in
      * @throws BgpParseException BGP parse exceptions
@@ -553,7 +553,7 @@ public class BgpLocalRibImpl implements BgpLocalRib {
     }
 
     /**
-     * Update localRIB prefix based on avaliable peer adjacency RIB.
+     * Update localRIB prefix based on available peer adjacency RIB.
      *
      * @param o instance of adjacency-in/VPN adjacency-in
      * @throws BgpParseException BGP parse exception

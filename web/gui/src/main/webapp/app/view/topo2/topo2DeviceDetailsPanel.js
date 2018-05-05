@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,42 +30,43 @@
 
     // configuration
     var id = 'topo2-p-detail',
+        devicePath = 'device',
         handlerMap = {
-            'showDetails': showDetails
+            'showDetails': showDetails,
         };
 
     var coreButtons = {
         showDeviceView: {
             gid: 'switch',
             tt: 'Show Device View',
-            path: 'device'
+            path: 'device',
         },
         showFlowView: {
             gid: 'flowTable',
             tt: 'Show Flow View for this Device',
-            path: 'flow'
+            path: 'flow',
         },
         showPortView: {
             gid: 'portTable',
             tt: 'Show Port View for this Device',
-            path: 'port'
+            path: 'port',
         },
         showGroupView: {
             gid: 'groupTable',
             tt: 'Show Group View for this Device',
-            path: 'group'
+            path: 'group',
         },
         showMeterView: {
             gid: 'meterTable',
             tt: 'Show Meter View for this Device',
-            path: 'meter'
-        }
+            path: 'meter',
+        },
     };
 
-    function init() {
+    function init(summaryPanel) {
 
         bindHandlers();
-        detailsPanel = panel();
+        detailsPanel = panel(summaryPanel);
     }
 
     function addBtnFooter() {
@@ -93,28 +94,38 @@
                     id: 'core-' + id,
                     gid: gid,
                     tt: tt,
-                    cb: function () { ns.navTo(path, { devId: devId }); }
+                    cb: function () { ns.navTo(path, { devId: devId }); },
                 });
             }
         });
     }
 
     function renderSingle(data) {
+        var endedWithSeparator;
 
         detailsPanel.emptyRegions();
+
+        var navFn = function () {
+            ns.navTo(devicePath, { devId: data.id });
+        };
 
         var svg = detailsPanel.appendToHeader('div')
                 .classed('icon clickable', true)
                 .append('svg'),
             title = detailsPanel.appendToHeader('h2')
+                .on('click', navFn)
                 .classed('clickable', true),
             table = detailsPanel.appendToBody('table'),
             tbody = table.append('tbody');
 
-        gs.addGlyph(svg, (data.type || 'unknown'), 26);
+        gs.addGlyph(svg, (data.glyphId || 'm_unknown'), 26);
         title.text(data.title);
 
-        ls.listProps(tbody, data);
+        // TODO: add navigation hot-link if defined
+        //  See topoPanel.js for equivalent code in "classic" topo
+
+        endedWithSeparator = ls.listProps(tbody, data);
+        // TODO : review whether we need to use/store end-with-sep state
         addBtnFooter();
     }
 
@@ -157,7 +168,7 @@
     function updateDetails(id, nodeType) {
         wss.sendEvent('requestDetails', {
             id: id,
-            class: nodeType
+            class: nodeType,
         });
     }
 
@@ -174,7 +185,7 @@
     }
 
     function show() {
-        detailsPanel.el.show();
+        detailsPanel.show();
     }
 
     function hide() {
@@ -211,8 +222,9 @@
                 show: show,
                 hide: hide,
                 destroy: destroy,
-                isVisible: function () { return detailsPanel.isVisible(); }
+                isVisible: function () { return detailsPanel.isVisible(); },
+                getInstance: function () { return detailsPanel; },
             };
-        }
+        },
     ]);
 })();

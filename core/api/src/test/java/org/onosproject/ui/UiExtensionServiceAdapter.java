@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 package org.onosproject.ui;
+
+import org.onosproject.ui.lion.LionBundle;
 
 import java.util.List;
 
@@ -37,5 +39,14 @@ public class UiExtensionServiceAdapter implements UiExtensionService {
     @Override
     public UiExtension getViewExtension(String viewId) {
         return null;
+    }
+
+    @Override
+    public LionBundle getNavLionBundle() {
+        return null;
+    }
+
+    @Override
+    public void refreshModel() {
     }
 }

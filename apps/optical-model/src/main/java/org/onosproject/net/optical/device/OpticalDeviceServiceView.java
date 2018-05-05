@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,13 +73,7 @@ public class OpticalDeviceServiceView
         = CacheBuilder.newBuilder()
             .weakKeys() // == for Key comparison
             .maximumSize(100)
-            .build(CacheLoader.from(elm -> {
-                if (elm.is(OpticalDevice.class)) {
-                    return Optional.of(elm.as(OpticalDevice.class));
-                } else {
-                    return Optional.empty();
-                }
-            }));
+            .build(CacheLoader.from(elm -> elm.project(OpticalDevice.class)));
 
     // Not intended to be instantiated directly
     protected OpticalDeviceServiceView(DeviceService base) {
@@ -200,12 +194,6 @@ public class OpticalDeviceServiceView
         public void event(DeviceEvent event) {
             listener.event(opticalEvent(event));
         }
-    }
-
-
-    @Override
-    public String localStatus(DeviceId deviceId) {
-        return null;
     }
 
 }

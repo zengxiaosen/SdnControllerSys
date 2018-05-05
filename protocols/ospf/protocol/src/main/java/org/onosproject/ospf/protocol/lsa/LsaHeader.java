@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ public class LsaHeader implements OspfLsa {
        LSA header format
        REFERENCE : RFC 2328
      */
-    protected static final Logger log = LoggerFactory.getLogger(LsaHeader.class);
+    public static final Logger log = LoggerFactory.getLogger(LsaHeader.class);
     private int age;
     private int options;
     private int lsType;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,11 @@ public class VirtualNetworkTestUtil extends TestDeviceParams {
     protected static final DeviceId VDID2 = deviceId("of:bar_v");
     protected static final DeviceId VDID3 = deviceId("of:who_v");
     protected static final DeviceId VDID4 = deviceId("of:what_v");
+
+    protected static final DeviceId PHYDID1 = deviceId("physical:1");
+    protected static final DeviceId PHYDID2 = deviceId("physical:2");
+    protected static final DeviceId PHYDID3 = deviceId("physical:3");
+    protected static final DeviceId PHYDID4 = deviceId("physical:4");
 
     /**
      * Method to create the virtual network for further testing.

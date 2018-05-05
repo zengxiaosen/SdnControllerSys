@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,10 +37,13 @@ import java.net.ConnectException;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -155,6 +158,44 @@ public class NettyMessagingManagerTest {
         assertTrue(handlerInvoked.get());
         assertTrue(Arrays.equals(request.get(), "hello world".getBytes()));
         assertEquals(ep1, sender.get());
+    }
+
+    @Test
+    public void testDefaultTimeout() {
+        String subject = nextSubject();
+        BiFunction<Endpoint, byte[], CompletableFuture<byte[]>> handler = (ep, payload) -> new CompletableFuture<>();
+        netty2.registerHandler(subject, handler);
+
+        try {
+            netty1.sendAndReceive(ep2, subject, "hello world".getBytes()).join();
+            fail();
+        } catch (CompletionException e) {
+            assertTrue(e.getCause() instanceof TimeoutException);
+        }
+    }
+
+    @Test
+    public void testDynamicTimeout() {
+        String subject = nextSubject();
+        AtomicInteger counter = new AtomicInteger();
+        BiFunction<Endpoint, byte[], CompletableFuture<byte[]>> handler = (ep, payload) -> {
+            if (counter.incrementAndGet() <= 50) {
+                return CompletableFuture.completedFuture(new byte[0]);
+            } else {
+                return new CompletableFuture<>();
+            }
+        };
+        netty2.registerHandler(subject, handler);
+
+        for (int i = 0; i < 50; i++) {
+            netty1.sendAndReceive(ep2, subject, "hello world".getBytes()).join();
+        }
+        try {
+            netty1.sendAndReceive(ep2, subject, "hello world".getBytes()).join();
+            fail();
+        } catch (CompletionException e) {
+            assertTrue(e.getCause() instanceof TimeoutException);
+        }
     }
 
     /*

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ public class DeviceDescriptionDiscoveryAristaImpl extends AbstractHandlerBehavio
     private static final String ETHERNET = "Ethernet";
     private static final String MANAGEMENT = "Management";
     private static final String INTERFACE_TYPE = "interfaceType";
-    private static final int WEIGHTING_FACTOR_MANAGEMENT_INTERFACE = 100;
+    private static final int WEIGHTING_FACTOR_MANAGEMENT_INTERFACE = 10000;
     private static final String JSONRPC = "jsonrpc";
     private static final String METHOD = "method";
     private static final String RUN_CMDS = "runCmds";
@@ -107,7 +107,7 @@ public class DeviceDescriptionDiscoveryAristaImpl extends AbstractHandlerBehavio
 
         String response = controller.post(deviceId, API_ENDPOINT,
                 new ByteArrayInputStream(sendObjNode.toString().getBytes()),
-                MediaType.APPLICATION_JSON, String.class);
+                MediaType.APPLICATION_JSON_TYPE, String.class);
 
         try {
             ObjectNode node = (ObjectNode) mapper.readTree(response);
@@ -128,22 +128,26 @@ public class DeviceDescriptionDiscoveryAristaImpl extends AbstractHandlerBehavio
                         .set(INTERFACE_TYPE, interfaceNode.path(INTERFACE_TYPE).asText())
                         .build();
 
-                PortDescription portDescription = new DefaultPortDescription(PortNumber
-                        .portNumber(getPortNumber(name)),
-                        true, Port.Type.FIBER, bandwidth, annotations);
+                PortDescription portDescription = DefaultPortDescription.builder()
+                        .withPortNumber(PortNumber.portNumber(getPortNumber(name)))
+                        .isEnabled(true)
+                        .type(Port.Type.FIBER)
+                        .portSpeed(bandwidth)
+                        .annotations(annotations)
+                        .build();
                 ports.add(portDescription);
 
             });
 
         } catch (IOException e) {
-            log.warn("IO exception occured because of ", e);
+            log.warn("IO exception occurred because of ", e);
         }
         return ports;
     }
 
     private int getPortNumber(String interfaceName) {
         if (interfaceName.startsWith(ETHERNET)) {
-            return Integer.valueOf(interfaceName.substring(ETHERNET.length()));
+            return Integer.valueOf(interfaceName.substring(ETHERNET.length()).replace('/', '0'));
         } else {
             return Integer.valueOf(interfaceName.substring(MANAGEMENT.length())).intValue()
                     + WEIGHTING_FACTOR_MANAGEMENT_INTERFACE;

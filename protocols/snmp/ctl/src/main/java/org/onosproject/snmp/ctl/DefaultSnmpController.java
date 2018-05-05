@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Service;
 import org.onosproject.incubator.net.faultmanagement.alarm.Alarm;
+import org.onosproject.incubator.net.faultmanagement.alarm.AlarmId;
 import org.onosproject.incubator.net.faultmanagement.alarm.DefaultAlarm;
 import org.onosproject.net.DeviceId;
 import org.onosproject.snmp.SnmpController;
@@ -122,9 +123,10 @@ public class DefaultSnmpController implements SnmpController {
 
     @Override
     public DefaultAlarm buildWalkFailedAlarm(DeviceId deviceId) {
+        long timeRaised = System.currentTimeMillis();
         return new DefaultAlarm.Builder(
+                AlarmId.alarmId(deviceId, Long.toString(timeRaised)),
                 deviceId, "SNMP alarm retrieval failed",
-                Alarm.SeverityLevel.CRITICAL,
-                System.currentTimeMillis()).build();
+                Alarm.SeverityLevel.CRITICAL, timeRaised).build();
     }
 }

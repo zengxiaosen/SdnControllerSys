@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,25 @@
  */
 package org.onosproject.net.intent.impl.phase;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.onlab.graph.ScalarWeight;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.IdGenerator;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DefaultLink;
 import org.onosproject.net.DefaultPath;
+import org.onosproject.net.FilteredConnectPoint;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
-import org.onosproject.net.intent.Intent;
+import org.onosproject.net.intent.AbstractIntentTest;
 import org.onosproject.net.intent.IntentCompilationException;
 import org.onosproject.net.intent.IntentData;
-import org.onosproject.net.intent.MockIdGenerator;
 import org.onosproject.net.intent.PathIntent;
 import org.onosproject.net.intent.PointToPointIntent;
 import org.onosproject.net.intent.impl.IntentProcessor;
@@ -44,10 +44,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.verify;
+import static org.easymock.EasyMock.*;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -59,7 +56,7 @@ import static org.onosproject.net.intent.IntentState.INSTALL_REQ;
 /**
  * Unit tests for Compiling phase.
  */
-public class CompilingTest {
+public class CompilingTest extends AbstractIntentTest {
 
     private final ApplicationId appId = new TestApplicationId("test");
     private final ProviderId pid = new ProviderId("of", "test");
@@ -72,7 +69,7 @@ public class CompilingTest {
 
     private final List<Link> links = Collections.singletonList(
             DefaultLink.builder().providerId(pid).src(cp2).dst(cp4).type(DIRECT).build());
-    private final Path path = new DefaultPath(pid, links, 10);
+    private final Path path = new DefaultPath(pid, links, ScalarWeight.toWeight(10));
 
     private PointToPointIntent input;
     private PathIntent compiled;
@@ -83,21 +80,18 @@ public class CompilingTest {
 
     @Before
     public void setUp() {
+        super.setUp();
+
         processor = createMock(IntentProcessor.class);
         version = createMock(Timestamp.class);
-
-        idGenerator = new MockIdGenerator();
-
-        Intent.unbindIdGenerator(idGenerator);
-        Intent.bindIdGenerator(idGenerator);
 
         // Intent creation should be placed after binding an ID generator
         input = PointToPointIntent.builder()
                 .appId(appId)
                 .selector(selector)
                 .treatment(treatment)
-                .ingressPoint(cp1)
-                .egressPoint(cp3)
+                .filteredIngressPoint(new FilteredConnectPoint(cp1))
+                .filteredEgressPoint(new FilteredConnectPoint(cp3))
                 .build();
         compiled = PathIntent.builder()
                 .appId(appId)
@@ -105,12 +99,6 @@ public class CompilingTest {
                 .treatment(treatment)
                 .path(path)
                 .build();
-    }
-
-
-    @After
-    public void tearDown() {
-        Intent.unbindIdGenerator(idGenerator);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.utils.Comparators;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -237,7 +238,7 @@ public class VirtualFlowsListCommand extends AbstractShellCommand {
                 print(LONG_FORMAT, Long.toHexString(f.id().value()), f.state(),
                         f.bytes(), f.packets(), f.life(), f.liveType(), f.priority(), f.tableId(),
                         appId != null ? appId.name() : "<none>",
-                        f.payLoad() == null ? null : f.payLoad().payLoad().toString(),
+                        f.payLoad() == null ? null : Arrays.toString(f.payLoad().payLoad()),
                         f.selector().criteria(), f.treatment());
             }
         }

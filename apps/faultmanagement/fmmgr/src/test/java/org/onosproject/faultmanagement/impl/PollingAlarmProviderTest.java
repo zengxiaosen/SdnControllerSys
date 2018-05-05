@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,13 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onlab.osgi.ComponentContextAdapter;
 import org.onlab.packet.ChassisId;
+import org.onosproject.cfg.ComponentConfigAdapter;
+import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.cluster.NodeId;
 import org.onosproject.cluster.RoleInfo;
 import org.onosproject.incubator.net.faultmanagement.alarm.Alarm;
 import org.onosproject.incubator.net.faultmanagement.alarm.AlarmConsumer;
+import org.onosproject.incubator.net.faultmanagement.alarm.AlarmId;
 import org.onosproject.incubator.net.faultmanagement.alarm.AlarmProvider;
 import org.onosproject.incubator.net.faultmanagement.alarm.AlarmProviderRegistry;
 import org.onosproject.incubator.net.faultmanagement.alarm.AlarmProviderRegistryAdapter;
@@ -79,6 +82,8 @@ public class PollingAlarmProviderTest {
 
     private final AlarmProviderService alarmProviderService = new MockAlarmProviderService();
 
+    private final ComponentConfigService cfgService = new ComponentConfigAdapter();
+
     private final ComponentContext context = new MockComponentContext();
 
     private static final DeviceId DEVICE_ID = DeviceId.deviceId("foo:1.1.1.1:1");
@@ -96,8 +101,9 @@ public class PollingAlarmProviderTest {
     private final DeviceEvent deviceEvent =
             new DeviceEvent(DeviceEvent.Type.DEVICE_AVAILABILITY_CHANGED, device);
 
-
-    private static final DefaultAlarm ALARM = new DefaultAlarm.Builder(
+    private static final String UNIQUE_ID_1 = "unique_id_1";
+    private static final AlarmId A_ID = AlarmId.alarmId(DEVICE_ID, UNIQUE_ID_1);
+    private static final DefaultAlarm ALARM = new DefaultAlarm.Builder(A_ID,
             DEVICE_ID, "aaa", Alarm.SeverityLevel.CRITICAL, 0).build();
 
     private final Driver driver = new MockDriver();
@@ -112,13 +118,14 @@ public class PollingAlarmProviderTest {
         provider.providerRegistry = providerRegistry;
         provider.deviceService = deviceService;
         provider.mastershipService = mastershipService;
+        provider.cfgService = cfgService;
         AbstractProjectableModel.setDriverService(null, new DriverServiceAdapter());
         provider.activate(context);
     }
 
     @Test
     public void activate() throws Exception {
-        assertFalse("Provider should be registered", providerRegistry.getProviders().contains(provider));
+        assertFalse("Provider should be registered", providerRegistry.getProviders().contains(provider.id()));
         assertEquals("Device listener should be added", 1, deviceListeners.size());
         assertEquals("Incorrect alarm provider service", alarmProviderService, provider.providerService);
         assertEquals("Mastership listener should be added", 1, mastershipListeners.size());
@@ -133,7 +140,7 @@ public class PollingAlarmProviderTest {
         provider.deactivate();
         assertEquals("Device listener should be removed", 0, deviceListeners.size());
         assertEquals("Mastership listener should be removed", 0, mastershipListeners.size());
-        assertFalse("Provider should not be registered", providerRegistry.getProviders().contains(provider));
+        assertFalse("Provider should not be registered", providerRegistry.getProviders().contains(provider.id()));
         assertTrue(provider.alarmsExecutor.isShutdown());
         assertNull(provider.providerService);
     }
@@ -298,7 +305,7 @@ public class PollingAlarmProviderTest {
 
         @Override
         public Object get(Object key) {
-            if (key.equals("pollFrequency")) {
+            if ("pollFrequency".equals(key)) {
                 return "1";
             }
             return null;

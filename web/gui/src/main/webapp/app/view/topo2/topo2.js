@@ -1,5 +1,5 @@
 /*
-* Copyright 2016-present Open Networking Laboratory
+* Copyright 2016-present Open Networking Foundation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 */
 
 /*
- ONOS GUI -- Topology View Module
+ ONOS GUI -- Topology (2) View Module
 
  NOTE: currently under development to support Regions.
  */
@@ -24,8 +24,8 @@
     'use strict';
 
     // references to injected services
-    var $scope, $log, fs, mast, ks,
-        gs, sus, ps, t2es, t2fs, t2is, t2bcs, t2kcs, t2ms, t2mcs, t2zs;
+    var $scope, $log, fs, mast, ks, wss,
+        gs, sus, t2es, t2fs, t2is, t2bcs, t2kcs, t2ms, t2zs, t2ts;
 
     // DOM elements
     var ovtopo2, svg, defs, zoomLayer, forceG;
@@ -38,17 +38,14 @@
     function setUpDefs() {
         defs = svg.append('defs');
         gs.loadDefs(defs);
+
+        // TODO: consider using something other than the "glow" styles
         sus.loadGlowDefs(defs);
     }
 
     // callback invoked when the SVG view has been resized..
     function svgResized(s) {
-        $log.debug('topo2 view resized', s);
         t2fs.newDim([s.width, s.height]);
-    }
-
-    function setUpKeys(overlayKeys) {
-        $log.debug('topo2: set up keys....');
     }
 
     // --- Pan and Zoom --------------------------------------------------
@@ -60,19 +57,35 @@
 
     function zoomCallback() {
         var sc = zoomer.scale(),
-            tr = zoomer.translate();
+            tr = zoomer.translate(),
+            metaUi = isNaN(sc) ? {
+                useCfg: 1,
+            } : {
+                scale: sc,
+                offsetX: tr[0],
+                offsetY: tr[1],
+            };
 
-        ps.setPrefs('topo_zoom', { tx: tr[0], ty: tr[1], sc: sc });
+        // Allow map service to react to change in zoom parameters
+        t2ms.zoomCallback(sc, tr);
+
+        // Note: Meta data stored in the context of the current layout,
+        //       automatically, by the server
+
+        wss.sendEvent('updateMeta2', {
+            id: 'layoutZoom',
+            memento: metaUi,
+        });
     }
 
     function setUpZoom() {
-        zoomLayer = svg.append('g').attr('id', 'topo-zoomlayer');
+        zoomLayer = svg.append('g').attr('id', 'topo2-zoomlayer');
 
         zoomer = t2zs.createZoomer({
             svg: svg,
             zoomLayer: zoomLayer,
             zoomEnabled: zoomEnabled,
-            zoomCallback: zoomCallback
+            zoomCallback: zoomCallback,
         });
     }
 
@@ -80,33 +93,31 @@
 
     angular.module('ovTopo2', ['onosUtil', 'onosSvg', 'onosRemote'])
     .controller('OvTopo2Ctrl', [
-        '$scope', '$log', '$location', 'FnService', 'MastService', 'KeyService',
-        'GlyphService', 'MapService', 'SvgUtilService', 'FlashService',
-        'WebSocketService', 'PrefsService', 'ThemeService',
+        '$scope', '$log', '$location',
+        'FnService', 'MastService', 'KeyService', 'GlyphService', 'MapService',
+        'SvgUtilService', 'FlashService', 'WebSocketService', 'ThemeService',
         'Topo2EventService', 'Topo2ForceService', 'Topo2InstanceService',
         'Topo2BreadcrumbService', 'Topo2KeyCommandService', 'Topo2MapService',
-        'Topo2MapConfigService', 'Topo2ZoomService',
-        'Topo2SummaryPanelService', 'Topo2DeviceDetailsPanel', 'Topo2SpriteLayerService',
+        'Topo2ZoomService', 'Topo2SpriteLayerService',
+        'Topo2SummaryPanelService', 'Topo2DeviceDetailsPanel', 'Topo2ToolbarService',
+        'Topo2NoDevicesConnectedService', 'Topo2OverlayService', 'Topo2TrafficService',
 
-        function (_$scope_, _$log_, _$loc_,
-            _fs_, _mast_, _ks_,
-            _gs_, _ms_, _sus_, _flash_,
-            _wss_, _ps_, _th_,
-            _t2es_, _t2fs_, _t2is_, _t2bcs_, _t2kcs_, _t2ms_, _t2mcs_,
-            _t2zs_, summaryPanel, detailsPanel, t2sls
+        function (
+            _$scope_, _$log_, _$loc_,
+            _fs_, _mast_, _ks_, _gs_, _ms_,
+            _sus_, _flash_, _wss_, _th_,
+            _t2es_, _t2fs_, _t2is_,
+            _t2bcs_, _t2kcs_, _t2ms_,
+            _t2zs_, t2sls,
+            summaryPanel, detailsPanel, t2tbs, t2ndcs, t2os,
+            _t2ts_
         ) {
-
             var params = _$loc_.search(),
                 dim,
                 wh,
                 uplink = {
-                    // provides function calls back into this space
-                    // showNoDevs: showNoDevs,
-                    // projection: function () { return projection; },
                     zoomLayer: function () { return zoomLayer; },
-                    zoomer: function () { return zoomer; }
-                    // opacifyMap: opacifyMap,
-                    // topoStartDone: topoStartDone
+                    zoomer: function () { return zoomer; },
                 };
 
             $scope = _$scope_;
@@ -115,11 +126,9 @@
             fs = _fs_;
             mast = _mast_;
             ks = _ks_;
-
+            wss = _wss_;
             gs = _gs_;
             sus = _sus_;
-
-            ps = _ps_;
 
             t2es = _t2es_;
             t2fs = _t2fs_;
@@ -127,8 +136,8 @@
             t2bcs = _t2bcs_;
             t2kcs = _t2kcs_;
             t2ms = _t2ms_;
-            t2mcs = _t2mcs_;
             t2zs = _t2zs_;
+            t2ts = _t2ts_;
 
             // capture selected intent parameters (if they are set in the
             //  query string) so that the traffic overlay can highlight
@@ -140,7 +149,8 @@
                 $scope.intentData = {
                     key: params.intentKey,
                     appId: params.intentAppId,
-                    appName: params.intentAppName
+                    appName: params.intentAppName,
+                    intentType: params.intentType,
                 };
             }
 
@@ -169,55 +179,32 @@
             dim = [wh.width, wh.height];
 
             // set up our keyboard shortcut bindings
-            setUpKeys();
             setUpZoom();
             setUpDefs();
+
+            t2ndcs.init();
 
             // make sure we can respond to topology events from the server
             t2es.bindHandlers();
 
-            // Add the map SVG Group
-            t2ms.init(zoomLayer, zoomer).then(
-                function (proj) {
-                    var z = ps.getPrefs('topo_zoom', { tx: 0, ty: 0, sc: 1 });
-                    zoomer.panZoom([z.tx, z.ty], z.sc);
-
-                    t2mcs.projection(proj);
-                    $log.debug('** Zoom restored:', z);
-                    $log.debug('** We installed the projection:', proj);
-
-                    // Now the map has load and we have a projection we can
-                    // get the info from the server
-                    t2es.start();
-                }
-            );
-
-            t2sls.init(svg, zoomLayer);
-            t2fs.init(svg, forceG, uplink, dim, zoomer);
             t2bcs.init();
-            t2kcs.init(t2fs);
+            t2kcs.init(t2fs, t2tbs, svg);
             t2is.initInst({ showMastership: t2fs.showMastership });
+            t2fs.init(svg, forceG, uplink, dim, zoomer);
 
             // === ORIGINAL CODE ===
-
-            // setUpToolbar();
-            // setUpNoDevs();
-
-            // tes.bindHandlers();
-            // setUpSprites();
-
-            // forceG = zoomLayer.append('g').attr('id', 'topo-force');
-            // tfs.initForce(svg, forceG, uplink, dim);
-            // tis.initInst({ showMastership: tfs.showMastership });
-            // tps.initPanels();
-
             // restoreConfigFromPrefs();
             // ttbs.setDefaultOverlay(prefsState.ovid);
 
-            // $log.debug('registered overlays...', tov.list());
+            // ++ TEMPORARY HARD-CODE TRAFFIC OVERLAY ++
+            t2os.setOverlay('traffic-2-overlay');
 
-            summaryPanel.init();
-            detailsPanel.init();
+            summaryPanel.init(detailsPanel);
+            detailsPanel.init(summaryPanel);
+
+            // Now that we are initialized, ask the server for what we
+            // need to show.
+            t2es.start();
 
             $log.log('OvTopo2Ctrl has been created');
         }]);

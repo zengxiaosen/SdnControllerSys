@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -221,8 +221,8 @@ public class IntentViewMessageHandler extends UiMessageHandler {
 
             private void buildPointToPointDetails(PointToPointIntent intent,
                                                   StringBuilder sb) {
-                ConnectPoint ingress = intent.ingressPoint();
-                ConnectPoint egress = intent.egressPoint();
+                ConnectPoint ingress = intent.filteredIngressPoint().connectPoint();
+                ConnectPoint egress = intent.filteredEgressPoint().connectPoint();
                 sb.append(" Ingress: ")
                         .append(ingress.elementId())
                         .append('/')

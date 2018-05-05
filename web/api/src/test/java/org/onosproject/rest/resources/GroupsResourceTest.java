@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,14 +28,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onlab.osgi.ServiceDirectory;
 import org.onlab.osgi.TestServiceDirectory;
-import org.onlab.rest.BaseResource;
 import org.onosproject.codec.CodecService;
 import org.onosproject.codec.impl.CodecManager;
 import org.onosproject.codec.impl.GroupCodec;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.core.DefaultApplicationId;
-import org.onosproject.core.DefaultGroupId;
 import org.onosproject.core.GroupId;
 import org.onosproject.net.DefaultDevice;
 import org.onosproject.net.Device;
@@ -120,14 +118,14 @@ public class GroupsResourceTest extends ResourceTest {
             this.deviceId = deviceId;
             this.appId = new DefaultApplicationId(appId, String.valueOf(appId));
             this.appCookie = new DefaultGroupKey(appCookie.getBytes());
-            this.baseValue = id * 100;
+            this.baseValue = id * 100L;
             this.bucketList = new ArrayList<>();
             this.buckets = new GroupBuckets(bucketList);
         }
 
         @Override
         public GroupId id() {
-            return new DefaultGroupId((int) baseValue + 55);
+            return new GroupId((int) baseValue + 55);
         }
 
         @Override
@@ -242,7 +240,7 @@ public class GroupsResourceTest extends ResourceTest {
                         .add(CodecService.class, codecService)
                         .add(CoreService.class, mockCoreService);
 
-        BaseResource.setServiceDirectory(testDirectory);
+        setServiceDirectory(testDirectory);
     }
 
     /**

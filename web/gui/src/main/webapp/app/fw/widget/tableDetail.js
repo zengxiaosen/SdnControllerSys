@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,14 @@
     'use strict';
 
     // injected refs
-    var $log, $interval, $timeout, fs, wss;
+    var $log, fs;
 
     // constants
     // var refreshInterval = 2000;
+
+    /*
+     * NOTE: work-in-progress; this relates to ONOS-5579 (currently stalled)
+     */
 
     function noop() {}
 
@@ -50,17 +54,14 @@
     // TODO: add ref to PanelService
     angular.module('onosWidget')
     .factory('TableDetailService',
-    ['$log', '$interval', '$timeout', 'FnService', 'WebSocketService',
+    ['$log', 'FnService',
 
-    function (_$log_, _$interval_, _$timeout_, _fs_, _wss_) {
+    function (_$log_, _fs_) {
         $log = _$log_;
-        $interval = _$interval_;
-        $timeout = _$timeout_;
         fs = _fs_;
-        wss = _wss_;
 
         return {
-            buildBasePanel: buildBasePanel
+            buildBasePanel: buildBasePanel,
         };
     }]);
 }());

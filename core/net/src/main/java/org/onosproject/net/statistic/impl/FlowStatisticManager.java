@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,21 @@
 
 package org.onosproject.net.statistic.impl;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableSet;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
-import org.onosproject.utils.Comparators;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Device;
 import org.onosproject.net.Port;
@@ -46,25 +51,21 @@ import org.onosproject.net.statistic.PollInterval;
 import org.onosproject.net.statistic.StatisticStore;
 import org.onosproject.net.statistic.SummaryFlowEntryWithLoad;
 import org.onosproject.net.statistic.TypedFlowEntryWithLoad;
-
+import org.onosproject.utils.Comparators;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onosproject.security.AppGuard.checkPermission;
+import static org.onosproject.security.AppPermission.Type.STATISTIC_READ;
 import static org.slf4j.LoggerFactory.getLogger;
-import static org.onosproject.security.AppPermission.Type.*;
 
 /**
  * Provides an implementation of the Flow Statistic Service.
+ * 提供流统计服务的一个实现
  */
 @Component(immediate = true)
 @Service
@@ -81,8 +82,6 @@ public class FlowStatisticManager implements FlowStatisticService {
     public DeviceService getDeviceService() {
         return deviceService;
     }
-
-
 
     @Activate
     public void activate() {
@@ -195,10 +194,7 @@ public class FlowStatisticManager implements FlowStatisticService {
     }
 
     @Override
-    public   SummaryFlowEntryWithLoad loadSummaryPortInternal(ConnectPoint cp) {
-//        for (int i=0; i< 1; i++){
-//            log.info("method:loadSummaryPortInternal..");
-//        }
+    public SummaryFlowEntryWithLoad loadSummaryPortInternal(ConnectPoint cp) {
         checkPermission(STATISTIC_READ);
 
         Set<FlowEntry> currentStats;
@@ -208,20 +204,11 @@ public class FlowStatisticManager implements FlowStatisticService {
         synchronized (statisticStore) {
              currentStats = statisticStore.getCurrentStatistic(cp);
             if (currentStats == null) {
-                //log.info("currentStats是空。。。");
-                DefaultLoad defaultLoad = new DefaultLoad();
-                return new SummaryFlowEntryWithLoad(cp, defaultLoad);
-            }else{
-                //log.info("currentStats不是空。。。");
+                return new SummaryFlowEntryWithLoad(cp, new DefaultLoad());
             }
             previousStats = statisticStore.getPreviousStatistic(cp);
             if (previousStats == null) {
-                // previousStats基本都不是空
-                //log.info("previousStats是空。。。");
                 return new SummaryFlowEntryWithLoad(cp, new DefaultLoad());
-            }else{
-                //log.info("previousStats不是空。。。");
-
             }
             // copy to local flow entry
             typedStatistics = new TypedStatistics(currentStats, previousStats);
@@ -397,75 +384,6 @@ public class FlowStatisticManager implements FlowStatisticService {
             case IMMEDIATE:
             default: // UNKNOWN
                 return pollIntervalInstance.getPollInterval();
-        }
-    }
-
-    //
-    // Deprecated interfaces...
-    //
-    @Override
-    public Map<ConnectPoint, List<TypedFlowEntryWithLoad>> loadAllByType(Device device,
-                                                                  TypedStoredFlowEntry.FlowLiveType liveType,
-                                                                  Instruction.Type instType) {
-        FlowEntry.FlowLiveType type = toFlowEntryLiveType(liveType);
-
-        Map<ConnectPoint, List<FlowEntryWithLoad>> loadMap = loadAllByType(device, type, instType);
-
-        return toFlowEntryWithLoadMap(loadMap);
-    }
-
-    @Override
-    public List<TypedFlowEntryWithLoad> loadAllByType(Device device, PortNumber pNumber,
-                                               TypedStoredFlowEntry.FlowLiveType liveType,
-                                               Instruction.Type instType) {
-        FlowEntry.FlowLiveType type = toFlowEntryLiveType(liveType);
-
-        List<FlowEntryWithLoad> loadList = loadAllByType(device, pNumber, type, instType);
-
-        return toFlowEntryWithLoad(loadList);
-    }
-
-    @Override
-    public Map<ConnectPoint, List<TypedFlowEntryWithLoad>> loadTopnByType(Device device,
-                                                                   TypedStoredFlowEntry.FlowLiveType liveType,
-                                                                   Instruction.Type instType,
-                                                                   int topn) {
-        FlowEntry.FlowLiveType type = toFlowEntryLiveType(liveType);
-
-        Map<ConnectPoint, List<FlowEntryWithLoad>> loadMap = loadTopnByType(device, type, instType, topn);
-
-        return toFlowEntryWithLoadMap(loadMap);
-    }
-
-    @Override
-    public List<TypedFlowEntryWithLoad> loadTopnByType(Device device, PortNumber pNumber,
-                                                TypedStoredFlowEntry.FlowLiveType liveType,
-                                                Instruction.Type instType,
-                                                int topn) {
-        FlowEntry.FlowLiveType type = toFlowEntryLiveType(liveType);
-
-        List<FlowEntryWithLoad> loadList = loadTopnByType(device, pNumber, type, instType, topn);
-
-        return toFlowEntryWithLoad(loadList);
-    }
-
-    private FlowEntry.FlowLiveType toFlowEntryLiveType(TypedStoredFlowEntry.FlowLiveType liveType) {
-        if (liveType == null) {
-            return null;
-        }
-
-        // convert TypedStoredFlowEntry flow live type to FlowEntry one
-        switch (liveType) {
-            case IMMEDIATE_FLOW:
-                return FlowEntry.FlowLiveType.IMMEDIATE;
-            case SHORT_FLOW:
-                return FlowEntry.FlowLiveType.SHORT;
-            case MID_FLOW:
-                return FlowEntry.FlowLiveType.MID;
-            case LONG_FLOW:
-                return FlowEntry.FlowLiveType.LONG;
-            default:
-                return FlowEntry.FlowLiveType.UNKNOWN;
         }
     }
 

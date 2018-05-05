@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ class PcepCloseMsgVer1 implements PcepCloseMsg {
         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      */
 
-    protected static final Logger log = LoggerFactory.getLogger(PcepCloseMsgVer1.class);
+    private static final Logger log = LoggerFactory.getLogger(PcepCloseMsgVer1.class);
 
     // Pcep version: 1
     public static final byte PACKET_VERSION = 1;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,29 +39,6 @@ public class ProtectionEndpointIntent extends Intent {
 
     private final DeviceId deviceId;
     private final ProtectedTransportEndpointDescription description;
-
-    /**
-     * Creates a ProtectionEndpointIntent by specific resource and description.
-     *
-     * @param appId application identification
-     * @param key intent key
-     * @param resources network resource to be set
-     * @param priority priority to use for flows from this intent
-     * @param deviceId target device id
-     * @param description protected transport endpoint description of the intent
-     * @deprecated 1.9.1
-     */
-    @Deprecated
-    protected ProtectionEndpointIntent(ApplicationId appId, Key key,
-                                       Collection<NetworkResource> resources,
-                                       int priority,
-                                       DeviceId deviceId,
-                                       ProtectedTransportEndpointDescription description) {
-        super(appId, key, resources, priority, null);
-
-        this.deviceId = checkNotNull(deviceId);
-        this.description = checkNotNull(description);
-    }
 
     /**
      * Creates a ProtectionEndpointIntent by specific resource and description.

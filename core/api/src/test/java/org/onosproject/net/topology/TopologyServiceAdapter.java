@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,10 +34,6 @@ public class TopologyServiceAdapter implements TopologyService {
         return null;
     }
 
-    @Override
-    public LinkedList<Link> getAllPaths(Topology topology){
-        return null;
-    }
     @Override
     public boolean isLatest(Topology topology) {
         return false;
@@ -76,17 +72,6 @@ public class TopologyServiceAdapter implements TopologyService {
     }
 
     @Override
-    public Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs) {
-        return null;
-    }
-
-    @Override
-    public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst,
-                              LinkWeight weight) {
-        return null;
-    }
-
-    @Override
     public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst,
                               LinkWeigher weigher) {
         return null;
@@ -121,13 +106,6 @@ public class TopologyServiceAdapter implements TopologyService {
     @Override
     public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src,
                                               DeviceId dst,
-                                              LinkWeight weight) {
-        return null;
-    }
-
-    @Override
-    public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src,
-                                              DeviceId dst,
                                               LinkWeigher weigher) {
         return null;
     }
@@ -141,16 +119,13 @@ public class TopologyServiceAdapter implements TopologyService {
 
     @Override
     public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src,
-                                              DeviceId dst, LinkWeight weight,
-                                              Map<Link, Object> riskProfile) {
-        return null;
-    }
-
-    @Override
-    public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src,
                                               DeviceId dst,
                                               LinkWeigher weigher,
                                               Map<Link, Object> riskProfile) {
+        return null;
+    }
+    @Override
+    public LinkedList<Link> getAllPaths(Topology topology){
         return null;
     }
 

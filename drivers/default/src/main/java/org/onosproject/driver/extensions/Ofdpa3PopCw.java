@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,13 +57,7 @@ public class Ofdpa3PopCw extends AbstractExtension implements ExtensionTreatment
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj instanceof Ofdpa3PopCw) {
-            return true;
-        }
-        return false;
+        return this == obj || obj instanceof Ofdpa3PopCw;
     }
 
     @Override

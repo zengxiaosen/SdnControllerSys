@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ class PcepLabelRangeResvMsgVer1 implements PcepLabelRangeResvMsg {
           Where
                <labelrange-list>::=<LABEL-RANGE>[<labelrange-list>]
      */
-    protected static final Logger log = LoggerFactory.getLogger(PcepLabelRangeResvMsgVer1.class);
+    private static final Logger log = LoggerFactory.getLogger(PcepLabelRangeResvMsgVer1.class);
 
     public static final byte PACKET_VERSION = 1;
     // LabelRangeResvMsgMinLength = COMMON-HEADER(4)+SrpObjMinLentgh(12)+LABEL-RANGE-MIN-LENGTH(12)

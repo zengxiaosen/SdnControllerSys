@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,8 @@ describe('factory: fw/util/theme.js', function() {
 
     it('should define api functions', function () {
         expect(fs.areFunctions(ts, [
-            'init', 'theme', 'toggleTheme', 'addListener', 'removeListener'
+            'init', 'theme', 'toggleTheme', 'addListener', 'removeListener',
+            'spriteColor'
         ])).toBeTruthy();
     });
 
@@ -117,6 +118,10 @@ describe('factory: fw/util/theme.js', function() {
         var cb = jasmine.createSpy('cb');
         expect(cb.calls.count()).toEqual(0);
 
+        // make sure previous tests don't affect our theme state...
+        ts.theme('light');
+        expect(ts.theme()).toEqual('light');
+
         ts.toggleTheme(); // -> dark
         expect(cb.calls.count()).toEqual(0);
 
@@ -127,17 +132,31 @@ describe('factory: fw/util/theme.js', function() {
         expect(cb.calls.count()).toEqual(1);
 
         ts.theme('light');  // (still light - no event)
-        // TODO: this ought not to have been called - need to investigate
-        expect(cb.calls.count()).toEqual(2);
+        expect(cb.calls.count()).toEqual(1);
 
         ts.theme('dark');   // -> dark
-        expect(cb.calls.count()).toEqual(3);
+        expect(cb.calls.count()).toEqual(2);
 
         ts.removeListener(cb);
-        expect(cb.calls.count()).toEqual(3);
+        expect(cb.calls.count()).toEqual(2);
 
-        ts.toggleTheme();   // -> light
-        expect(cb.calls.count()).toEqual(4);
+        ts.toggleTheme();   // -> light (but we weren't registered to hear it)
+        expect(cb.calls.count()).toEqual(2);
+    });
+
+    it('should return a color', function () {
+        ts.theme('light');
+        var color = ts.spriteColor('gray1', 'stroke');
+        expect(color).toEqual('#cccccc');
+
+        color = ts.spriteColor('gray1');
+        expect(color).toEqual('#cccccc');
+
+        color = ts.spriteColor('gray1', 'fill');
+        expect(color).toEqual('#eeeeee');
+
+        color = ts.spriteColor(null, 'stroke');
+        expect(color).toEqual('none');
     });
 
 });

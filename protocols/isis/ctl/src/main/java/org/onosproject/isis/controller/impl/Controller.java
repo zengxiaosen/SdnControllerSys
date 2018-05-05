@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,9 +94,8 @@ public class Controller {
      * Updates the processes configuration.
      *
      * @param jsonNode json node instance
-     * @throws Exception might throws parse exception
      */
-    public void updateConfig(JsonNode jsonNode) throws Exception {
+    public void updateConfig(JsonNode jsonNode) {
         log.debug("Controller::UpdateConfig called");
         configPacket = new byte[IsisConstants.CONFIG_LENGTH];
         byte numberOfInterface = 0; // number of interfaces to configure
@@ -206,7 +205,7 @@ public class Controller {
      * @param json posted json
      * @return list of processes configured
      */
-    private List<IsisProcess> getConfig(JsonNode json) throws Exception {
+    private List<IsisProcess> getConfig(JsonNode json) {
         List<IsisProcess> isisProcessesList = new ArrayList<>();
         JsonNode jsonNodes = json;
         if (jsonNodes == null) {

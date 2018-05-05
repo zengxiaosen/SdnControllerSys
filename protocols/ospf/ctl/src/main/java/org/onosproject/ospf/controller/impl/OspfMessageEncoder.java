@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ public class OspfMessageEncoder extends OneToOneEncoder {
     private static final Logger log = LoggerFactory.getLogger(OspfMessageEncoder.class);
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
+    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) {
 
         byte[] byteMsg = (byte[]) msg;
         log.debug("Encoding ospfMessage of length {}", byteMsg.length);

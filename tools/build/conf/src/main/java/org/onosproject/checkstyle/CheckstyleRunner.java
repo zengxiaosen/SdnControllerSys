@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,7 +81,8 @@ public class CheckstyleRunner implements BuckTask {
             checker.addListener(listener);
 
             // run Checker
-            List<File> fileList = input.subList(2, input.size() - 1).stream()
+            List<File> fileList = input.subList(2, input.size()).stream()
+                    .filter(s -> !s.contains("/:"))  // Yes, fighting a hack with a hack.
                     .map(File::new)
                     .collect(Collectors.toList());
             int errorCounter = checker.process(fileList);

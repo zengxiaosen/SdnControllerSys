@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package org.onosproject.net.host.impl;
 
 import static org.junit.Assert.assertEquals;
 
+import com.google.common.collect.Sets;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.packet.IpAddress;
@@ -59,7 +60,7 @@ public class BasicHostOperatorTest {
     @Before
     public void setUp() {
         BHC.init(ID, "test", JsonNodeFactory.instance.objectNode(), mapper, delegate);
-        BHC.name(NAME).latitude(40.96);
+        BHC.setLocations(Sets.newHashSet(LOC)).name(NAME).latitude(40.96);
         // if you set lat or long, the other becomes valid as 0.0 (not null)
     }
 

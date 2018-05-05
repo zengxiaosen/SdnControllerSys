@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -132,7 +132,7 @@ public final class PortNumber {
     /**
      * Returns the port number representing the specified string value.
      *
-     * @param string port number as string value
+     * @param string port number as decimal, hexadecimal, or octal number string
      * @return port number
      */
     public static PortNumber portNumber(String string) {

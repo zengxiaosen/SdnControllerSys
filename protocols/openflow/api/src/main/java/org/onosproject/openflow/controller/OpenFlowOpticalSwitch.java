@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import com.google.common.annotations.Beta;
 public interface OpenFlowOpticalSwitch extends OpenFlowSwitch, WithTypedPorts {
 
     // OpenFlowOpticalSwitch only returns Ethernet ports.
-    // This is a limitation due to issue described in ONOS-3796.
+    // This is a limitation due to issue described in ONOS-3736.
     // This method should return all port type once the limitation is fixed.
     /**
      * Returns a list of standard (Ethernet) ports.
@@ -40,7 +40,7 @@ public interface OpenFlowOpticalSwitch extends OpenFlowSwitch, WithTypedPorts {
      */
     @Beta
     @Override
-    abstract List<OFPortDesc> getPorts();
+    List<OFPortDesc> getPorts();
 
     /**
      * Returns updated PortDescriptions built from experimenter message

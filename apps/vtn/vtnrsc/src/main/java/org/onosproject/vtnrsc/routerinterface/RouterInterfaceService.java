@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.onosproject.vtnrsc.SubnetId;
 
 /**
  * Service for interacting with the inventory of Router interface.
+ * 用于与Router接口的库存/清单进行交互的服务。
  */
 public interface RouterInterfaceService {
     /**

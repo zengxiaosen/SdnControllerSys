@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,9 +69,9 @@ public class RemoteInterfaceIpAddress extends TlvHeader implements LinkSubType {
      * Reads bytes from channel buffer .
      *
      * @param channelBuffer channel buffer instance
-     * @throws Exception might throws exception while parsing packet
+     * @throws OspfParseException might throws exception while parsing packet
      */
-    public void readFrom(ChannelBuffer channelBuffer) throws Exception {
+    public void readFrom(ChannelBuffer channelBuffer) throws OspfParseException {
         while (channelBuffer.readableBytes() >= OspfUtil.FOUR_BYTES) {
             try {
                 byte[] tempByteArray = new byte[OspfUtil.FOUR_BYTES];
@@ -89,9 +89,9 @@ public class RemoteInterfaceIpAddress extends TlvHeader implements LinkSubType {
      * Gets byte array of remote interface ip address .
      *
      * @return byte array of remote interface ip address
-     * @throws Exception might throws exception while parsing packet
+     * @throws OspfParseException might throws exception while parsing packet
      */
-    public byte[] asBytes() throws Exception {
+    public byte[] asBytes() throws OspfParseException {
         byte[] linkSubType = null;
 
         byte[] linkSubTlvHeader = getTlvHeaderAsByteArray();
@@ -105,9 +105,9 @@ public class RemoteInterfaceIpAddress extends TlvHeader implements LinkSubType {
      * Gets byte array of remote interface ip address.
      *
      * @return byte array of remote interface ip address
-     * @throws Exception might throws exception while parsing packet
+     * @throws OspfParseException might throws exception while parsing packet
      */
-    public byte[] getLinkSubTypeTlvBodyAsByteArray() throws Exception {
+    public byte[] getLinkSubTypeTlvBodyAsByteArray() throws OspfParseException {
         List<Byte> linkSubTypeBody = new ArrayList<>();
 
         for (String remoteAddress : this.remoteInterfaceAddress) {

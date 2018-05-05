@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
     'use strict';
 
     // injected refs
-    var $log, $scope, wss, fs, ks, ps, is;
+    var $log, $scope, fs, ks, ps, is;
 
     // internal state
     var detailsPanel,
@@ -38,20 +38,20 @@
         topPdg = 60,
         propOrder = ['fqComponent', 'prop', 'type', 'value', 'defValue', 'desc'],
         friendlyProps = [
-            'Component', 'Property', 'Type', 'Value', 'Default Value',
-            'Description'
+            'Component', 'Property', 'Type', 'Value', 'Default',
+            'Description',
         ];
 
     function createDetailsPanel() {
         detailsPanel = ps.createPanel(pName, {
             width: wSize.width,
             margin: 0,
-            hideMargin: 0
+            hideMargin: 0,
         });
 
         detailsPanel.el().style({
             position: 'absolute',
-            top: pStartY + 'px'
+            top: pStartY + 'px',
         });
 
         detailsPanel.hide();
@@ -68,7 +68,7 @@
     }
 
     function addCloseBtn(div) {
-        is.loadEmbeddedIcon(div, 'close', 26);
+        is.loadEmbeddedIcon(div, 'close', 20);
         div.on('click', closePanel);
     }
 
@@ -87,7 +87,7 @@
         div = top.append('div').classed('top-content', true);
 
         function ndiv(cls, addTable) {
-            var  d = div.append('div').classed(cls, true);
+            var d = div.append('div').classed(cls, true);
             if (addTable) {
                 d.append('table');
             }
@@ -110,7 +110,7 @@
     }
 
     function populateTop(details) {
-        var propsBody = top.select('.settings-props').append('tbody');
+        var propsBody = top.select('.settings-props table').append('tbody');
 
         top.select('.settings-title-1').text(details.component);
         top.select('.settings-title-2').text(details.prop);
@@ -129,13 +129,12 @@
     angular.module('ovSettings', [])
         .controller('OvSettingsCtrl',
             ['$log', '$scope',
-            'WebSocketService', 'FnService', 'KeyService', 'PanelService',
+            'FnService', 'KeyService', 'PanelService',
             'IconService', 'TableBuilderService',
 
-        function (_$log_, _$scope_, _wss_, _fs_, _ks_, _ps_, _is_, tbs) {
+        function (_$log_, _$scope_, _fs_, _ks_, _ps_, _is_, tbs) {
             $log = _$log_;
             $scope = _$scope_;
-            wss = _wss_;
             fs = _fs_;
             ks = _ks_;
             ps = _ps_;
@@ -156,16 +155,16 @@
             tbs.buildTable({
                 scope: $scope,
                 tag: 'setting',
-                selCb: selCb
+                selCb: selCb,
             });
 
             ks.keyBindings({
                 esc: [$scope.selectCallback, 'Deselect property'],
-                _helpFormat: ['esc']
+                _helpFormat: ['esc'],
             });
             ks.gestureNotes([
                 ['click row', 'Select / deselect settings property'],
-                ['scroll down', 'See more settings']
+                ['scroll down', 'See more settings'],
             ]);
 
             $scope.$on('$destroy', function () {
@@ -204,11 +203,11 @@
                     // create key bindings to handle panel
                     ks.keyBindings({
                         esc: [closePanel, 'Close the details panel'],
-                        _helpFormat: ['esc']
+                        _helpFormat: ['esc'],
                     });
                     ks.gestureNotes([
                         ['click', 'Select a row to show property details'],
-                        ['scroll down', 'See more properties']
+                        ['scroll down', 'See more properties'],
                     ]);
 
                     // if the window size changes
@@ -216,7 +215,7 @@
                         function () {
                             return {
                                 h: $window.innerHeight,
-                                w: $window.innerWidth
+                                w: $window.innerWidth,
                             };
                         }, function () {
                             if (panelData) {

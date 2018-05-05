@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@
 
         svg = veil.select('svg').attr({
             width: ww,
-            height: wh
+            height: wh,
         }).style('opacity', 0.2);
 
         gs.addGlyph(svg, 'bird', birdDim, false, [birdCenter, shrink/2]);
@@ -71,7 +71,7 @@
     function lostServer(ctrlName, msg) {
         if ($route.current.$$route.controller === ctrlName) {
             $log.debug('VEIL-service: ', ctrlName);
-            show(msg)
+            show(msg);
         } else {
             $log.debug('VEIL-service: IGNORING ', ctrlName);
         }
@@ -92,7 +92,7 @@
                 init: init,
                 show: show,
                 hide: hide,
-                lostServer: lostServer
+                lostServer: lostServer,
             };
             wss._setVeilDelegate(self);
             return self;

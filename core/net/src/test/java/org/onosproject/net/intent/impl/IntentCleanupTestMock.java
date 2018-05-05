@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,13 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.onosproject.cfg.ComponentConfigAdapter;
-import org.onosproject.core.IdGenerator;
+import org.onosproject.net.intent.AbstractIntentTest;
 import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.IntentData;
 import org.onosproject.net.intent.IntentEvent;
 import org.onosproject.net.intent.IntentService;
 import org.onosproject.net.intent.IntentStore;
 import org.onosproject.net.intent.IntentStoreDelegate;
-import org.onosproject.net.intent.MockIdGenerator;
 import org.onosproject.store.Timestamp;
 import org.onosproject.store.trivial.SimpleIntentStore;
 import org.onosproject.store.trivial.SystemClockTimestamp;
@@ -42,53 +41,33 @@ import static org.onosproject.net.intent.IntentTestsMocks.MockIntent;
  * Test intent cleanup using Mocks.
  * FIXME remove this or IntentCleanupTest
  */
-public class IntentCleanupTestMock {
+public class IntentCleanupTestMock extends AbstractIntentTest {
 
     private IntentCleanup cleanup;
     private IntentService service;
     private IntentStore store;
-    protected IdGenerator idGenerator; // global or one per test? per test for now.
 
     @Before
     public void setUp() {
         service = createMock(IntentService.class);
         store = new SimpleIntentStore();
         cleanup = new IntentCleanup();
-        idGenerator = new MockIdGenerator();
-
-        service.addListener(cleanup);
-        expectLastCall().once();
-        replay(service);
 
         cleanup.cfgService = new ComponentConfigAdapter();
         cleanup.service = service;
         cleanup.store = store;
         cleanup.period = 1000;
         cleanup.retryThreshold = 3;
-        cleanup.activate();
-
-        verify(service);
-        reset(service);
 
         assertTrue("store should be empty",
                    Sets.newHashSet(cleanup.store.getIntents()).isEmpty());
 
-        Intent.unbindIdGenerator(idGenerator);
-        Intent.bindIdGenerator(idGenerator);
+        super.setUp();
     }
 
     @After
     public void tearDown() {
-        service.removeListener(cleanup);
-        expectLastCall().once();
-        replay(service);
-
-        cleanup.deactivate();
-
-        verify(service);
-        reset(service);
-
-        Intent.unbindIdGenerator(idGenerator);
+        super.tearDown();
     }
 
     /**
@@ -117,9 +96,8 @@ public class IntentCleanupTestMock {
         expectLastCall().once();
         replay(service);
 
-        synchronized (service) {
-            cleanup.run();
-        }
+        cleanup.run();
+
         verify(service);
         reset(service);
     }
@@ -213,6 +191,9 @@ public class IntentCleanupTestMock {
         Timestamp version = new SystemClockTimestamp(1L);
         data = new IntentData(intent2, INSTALL_REQ, version);
         store.addPending(data);
+
+        service.submit(intent);
+        expectLastCall().once();
 
         service.submit(intent2);
         expectLastCall().once();

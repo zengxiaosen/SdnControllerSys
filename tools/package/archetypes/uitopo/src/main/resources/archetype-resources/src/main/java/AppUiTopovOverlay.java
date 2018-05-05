@@ -2,7 +2,7 @@
 #set( $symbol_dollar = '$' )
 #set( $symbol_escape = '\' )
 /*
- * Copyright ${year}-present Open Networking Laboratory
+ * Copyright ${year}-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ public class AppUiTopovOverlay extends UiTopoOverlay {
     @Override
     public void modifySummary(PropertyPanel pp) {
         pp.title(MY_TITLE)
-                .typeId(GlyphConstants.CROWN)
+                .glyphId(GlyphConstants.CROWN)
                 .removeProps(
                         TOPOLOGY_SSCS,
                         INTENTS,

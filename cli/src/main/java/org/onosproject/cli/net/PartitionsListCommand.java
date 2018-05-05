@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,12 +42,12 @@ import com.google.common.collect.Ordering;
 public class PartitionsListCommand extends AbstractShellCommand {
 
     @Option(name = "-c", aliases = "--clients",
-            description = "Show inforamtion about partition clients",
+            description = "Show information about partition clients",
             required = false, multiValued = false)
     private boolean reportClientInfo = false;
 
     private static final String SERVER_FMT = "%-20s %8s %25s %s";
-    private static final String CLIENT_FMT = "%-20s %8s %10s %25s";
+    private static final String CLIENT_FMT = "%-20s %8s";
 
     /**
      * Displays partition info as text.
@@ -66,7 +66,7 @@ public class PartitionsListCommand extends AbstractShellCommand {
             boolean first = true;
             for (String member : Ordering.natural().sortedCopy(info.members())) {
                 if (first) {
-                    print(SERVER_FMT, info.name(), info.term(), member,
+                    print(SERVER_FMT, info.id(), info.term(), member,
                             member.equals(info.leader()) ? "*" : "");
                     first = false;
                 } else {
@@ -91,7 +91,7 @@ public class PartitionsListCommand extends AbstractShellCommand {
         }
         ClusterService clusterService = get(ClusterService.class);
         print("-------------------------------------------------------------------");
-        print(CLIENT_FMT, "Name", "SessionId", "Status", "Servers");
+        print(CLIENT_FMT, "Name", "Servers");
         print("-------------------------------------------------------------------");
 
         for (PartitionClientInfo info : partitionClientInfo) {
@@ -100,11 +100,10 @@ public class PartitionsListCommand extends AbstractShellCommand {
                 ControllerNode server = clusterService.getNode(serverId);
                 String serverString = String.format("%s:%d", server.id(), server.tcpPort());
                 if (first) {
-                    print(CLIENT_FMT, info.partitionId(), info.sessionId(),
-                            info.status(), serverString);
+                    print(CLIENT_FMT, info.partitionId(), serverString);
                     first = false;
                 } else {
-                    print(CLIENT_FMT, "", "", "", serverString);
+                    print(CLIENT_FMT, "", serverString);
                 }
             }
             if (!first) {
@@ -131,7 +130,7 @@ public class PartitionsListCommand extends AbstractShellCommand {
             info.members().forEach(members::add);
 
             // Complete the partition attributes and add it to the array
-            partition.put("name", info.name())
+            partition.put("name", info.id().toString())
                     .put("term", info.term())
                     .put("leader", info.leader());
             partitions.add(partition);
@@ -164,9 +163,7 @@ public class PartitionsListCommand extends AbstractShellCommand {
                     .forEach(servers::add);
 
             // Complete the partition attributes and add it to the array
-            partition.put("partitionId", info.partitionId().toString())
-                    .put("sessionId", info.sessionId())
-                    .put("status", info.status().toString());
+            partition.put("partitionId", info.partitionId().toString());
             partitions.add(partition);
 
         });

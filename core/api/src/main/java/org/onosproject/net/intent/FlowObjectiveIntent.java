@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,44 +45,6 @@ public final class FlowObjectiveIntent extends Intent {
         super();
         this.objectives = null;
         this.devices = null;
-    }
-
-    /**
-     * Creates a flow objective intent with the specified objectives and
-     * resources.
-     *
-     * @param appId      application id
-     * @param devices    list of target devices; in same order as the objectives
-     * @param objectives backing flow objectives
-     * @param resources  backing network resources
-     * @deprecated 1.9.1
-     */
-    @Deprecated
-    public FlowObjectiveIntent(ApplicationId appId,
-                               List<DeviceId> devices,
-                               List<Objective> objectives,
-                               Collection<NetworkResource> resources) {
-        this(appId, null, devices, objectives, resources, null);
-    }
-
-    /**
-     * Creates a flow objective intent with the specified objectives and
-     * resources.
-     *
-     * @param appId      application id
-     * @param key        intent key
-     * @param devices    list of target devices; in same order as the objectives
-     * @param objectives backing flow objectives
-     * @param resources  backing network resources
-     * @deprecated 1.9.1
-     */
-    @Deprecated
-    public FlowObjectiveIntent(ApplicationId appId,
-                               Key key,
-                               List<DeviceId> devices,
-                               List<Objective> objectives,
-                               Collection<NetworkResource> resources) {
-        this(appId, key, devices, objectives, resources, null);
     }
 
     /**

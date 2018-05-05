@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,10 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
 import static org.onosproject.net.DefaultAnnotations.EMPTY;
-import static org.onosproject.pcep.controller.LspType.WITH_SIGNALLING;
-import static org.onosproject.pcep.controller.LspType.SR_WITHOUT_SIGNALLING;
-import static org.onosproject.pcep.controller.LspType.WITHOUT_SIGNALLING_AND_WITHOUT_SR;
-import static org.onosproject.pcep.controller.PcepAnnotationKeys.LSP_SIG_TYPE;
+import static org.onosproject.pcep.server.LspType.WITH_SIGNALLING;
+import static org.onosproject.pcep.server.LspType.SR_WITHOUT_SIGNALLING;
+import static org.onosproject.pcep.server.LspType.WITHOUT_SIGNALLING_AND_WITHOUT_SR;
+import static org.onosproject.pcep.server.PcepAnnotationKeys.LSP_SIG_TYPE;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,9 +32,10 @@ import java.util.List;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.onlab.graph.ScalarWeight;
 import org.onlab.packet.IpAddress;
 import org.onosproject.cfg.ComponentConfigAdapter;
-import org.onosproject.core.DefaultGroupId;
+import org.onosproject.core.GroupId;
 import org.onosproject.incubator.net.tunnel.DefaultTunnel;
 import org.onosproject.incubator.net.tunnel.IpTunnelEndPoint;
 import org.onosproject.incubator.net.tunnel.Tunnel;
@@ -52,8 +53,8 @@ import org.onosproject.net.Path;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceServiceAdapter;
 import org.onosproject.net.provider.ProviderId;
-import org.onosproject.pcep.controller.ClientCapability;
-import org.onosproject.pcep.controller.PccId;
+import org.onosproject.pcep.server.ClientCapability;
+import org.onosproject.pcep.server.PccId;
 import org.onosproject.pcepio.types.StatefulIPv4LspIdentifiersTlv;
 
 /**
@@ -115,14 +116,14 @@ public class PcepReleaseTunnelProviderTest {
                 .type(Link.Type.DIRECT).build();
         links.add(link);
 
-        path = new DefaultPath(pid, links, 20, EMPTY);
+        path = new DefaultPath(pid, links, ScalarWeight.toWeight(20), EMPTY);
 
         Annotations annotations = DefaultAnnotations.builder()
                 .set(LSP_SIG_TYPE, WITH_SIGNALLING.name())
                 .build();
 
         tunnel = new DefaultTunnel(pid, ipTunnelEndPointSrc, ipTunnelEndPointDst, Tunnel.Type.MPLS,
-                                   new DefaultGroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
+                                   new GroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
                                    path, annotations);
 
         // for releasing tunnel tunnel should exist in db
@@ -171,14 +172,14 @@ public class PcepReleaseTunnelProviderTest {
                 .type(Link.Type.DIRECT).build();
         links.add(link);
 
-        path = new DefaultPath(pid, links, 20, EMPTY);
+        path = new DefaultPath(pid, links, ScalarWeight.toWeight(20), EMPTY);
 
         Annotations annotations = DefaultAnnotations.builder()
                 .set(LSP_SIG_TYPE, WITH_SIGNALLING.name())
                 .build();
 
         tunnel = new DefaultTunnel(pid, ipTunnelEndPointSrc, ipTunnelEndPointDst, Tunnel.Type.MPLS,
-                                   new DefaultGroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
+                                   new GroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
                                    path, annotations);
 
         // for releasing tunnel tunnel should exist in db
@@ -227,14 +228,14 @@ public class PcepReleaseTunnelProviderTest {
                 .type(Link.Type.DIRECT).build();
         links.add(link);
 
-        path = new DefaultPath(pid, links, 20, EMPTY);
+        path = new DefaultPath(pid, links, ScalarWeight.toWeight(20), EMPTY);
 
         Annotations annotations = DefaultAnnotations.builder()
                 .set(LSP_SIG_TYPE, SR_WITHOUT_SIGNALLING.name())
                 .build();
 
         tunnel = new DefaultTunnel(pid, ipTunnelEndPointSrc, ipTunnelEndPointDst, Tunnel.Type.MPLS,
-                                   new DefaultGroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
+                                   new GroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
                                    path, annotations);
 
         // for releasing tunnel tunnel should exist in db
@@ -283,14 +284,14 @@ public class PcepReleaseTunnelProviderTest {
                 .type(Link.Type.DIRECT).build();
         links.add(link);
 
-        path = new DefaultPath(pid, links, 20, EMPTY);
+        path = new DefaultPath(pid, links, ScalarWeight.toWeight(20), EMPTY);
 
         Annotations annotations = DefaultAnnotations.builder()
                 .set(LSP_SIG_TYPE, WITHOUT_SIGNALLING_AND_WITHOUT_SR.name())
                 .build();
 
         tunnel = new DefaultTunnel(pid, ipTunnelEndPointSrc, ipTunnelEndPointDst, Tunnel.Type.MPLS,
-                                   new DefaultGroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
+                                   new GroupId(0), TunnelId.valueOf("1"), TunnelName.tunnelName("T123"),
                                    path, annotations);
 
         // for releasing tunnel tunnel should exist in db

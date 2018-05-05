@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package org.onosproject.provider.nil.cli;
 
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
-import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.config.NetworkConfigService;
@@ -31,27 +30,33 @@ import org.onosproject.provider.nil.TopologySimulator;
  */
 @Command(scope = "onos", name = "null-create-device",
         description = "Adds a simulated device to the custom topology simulation")
-public class CreateNullDevice extends AbstractShellCommand {
+public class CreateNullDevice extends CreateNullEntity {
 
     @Argument(index = 0, name = "type", description = "Device type, e.g. switch, roadm",
-            required = true, multiValued = false)
+            required = true)
     String type = null;
 
     @Argument(index = 1, name = "name", description = "Device name",
-            required = true, multiValued = false)
+            required = true)
     String name = null;
 
     @Argument(index = 2, name = "portCount", description = "Port count",
-            required = true, multiValued = false)
+            required = true)
     Integer portCount = null;
 
-    @Argument(index = 3, name = "latitude", description = "Geo latitude",
-            required = true, multiValued = false)
-    Double latitude = null;
+    @Argument(index = 3, name = "latOrY",
+            description = "Geo latitude / Grid y-coord",
+            required = false)
+    Double latOrY = null;
 
-    @Argument(index = 4, name = "longitude", description = "Geo longitude",
-            required = true, multiValued = false)
-    Double longitude = null;
+    @Argument(index = 4, name = "longOrX",
+            description = "Geo longitude / Grid x-coord",
+            required = false)
+    Double longOrX = null;
+
+    @Argument(index = 5, name = "locType", description = "Location type {geo|grid}",
+            required = false)
+    String locType = GEO;
 
     @Override
     protected void execute() {
@@ -59,18 +64,15 @@ public class CreateNullDevice extends AbstractShellCommand {
         NetworkConfigService cfgService = get(NetworkConfigService.class);
 
         TopologySimulator simulator = service.currentSimulator();
-        if (!(simulator instanceof CustomTopologySimulator)) {
-            error("Custom topology simulator is not active.");
+        if (!validateSimulator(simulator) || !validateLocType(locType)) {
             return;
         }
 
         CustomTopologySimulator sim = (CustomTopologySimulator) simulator;
         DeviceId deviceId = sim.nextDeviceId();
         BasicDeviceConfig cfg = cfgService.addConfig(deviceId, BasicDeviceConfig.class);
-        cfg.name(name)
-                .latitude(latitude)
-                .longitude(longitude)
-                .apply();
+        cfg.name(name);
+        setUiCoordinates(cfg, locType, latOrY, longOrX);
 
         sim.createDevice(deviceId, name, Device.Type.valueOf(type.toUpperCase()), portCount);
     }

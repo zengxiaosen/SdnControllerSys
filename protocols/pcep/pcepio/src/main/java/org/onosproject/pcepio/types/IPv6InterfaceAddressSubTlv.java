@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import java.util.Arrays;
  */
 public class IPv6InterfaceAddressSubTlv implements PcepValueType {
 
-    protected static final Logger log = LoggerFactory.getLogger(IPv6InterfaceAddressSubTlv.class);
+    private static final Logger log = LoggerFactory.getLogger(IPv6InterfaceAddressSubTlv.class);
 
     public static final short TYPE = 9;
     public static final short LENGTH = 20;
@@ -80,7 +80,7 @@ public class IPv6InterfaceAddressSubTlv implements PcepValueType {
         boolean bFoundNoMask = true;
         //value starts from 3rd byte.
         for (int i = 2; i < 20; ++i) {
-            if (0xFF != raw[i]) {
+            if ((byte) 0xFF != raw[i]) {
                 bFoundNoMask = false;
             }
         }

@@ -1,2 +1,0 @@
-#!/bin/bash
-cd /root/onos/buck-out/gen/tools/package/onos-package/onos-1.9.3-SNAPSHOT/apache-karaf-3.0.8/data/log

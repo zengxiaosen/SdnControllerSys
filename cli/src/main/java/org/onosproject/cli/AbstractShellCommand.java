@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.onosproject.net.Annotations;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.onosproject.net.DefaultAnnotations;
 
 import java.util.Set;
 import java.util.TreeSet;
@@ -90,8 +91,12 @@ public abstract class AbstractShellCommand extends AbstractAction implements Cod
      * @return string image with ", k1=v1, k2=v2, ..." pairs
      */
     public static String annotations(Annotations annotations) {
+        if (annotations == null) {
+            annotations = DefaultAnnotations.EMPTY;
+        }
         StringBuilder sb = new StringBuilder();
-        for (String key : annotations.keys()) {
+        Set<String> keys = new TreeSet<>(annotations.keys());
+        for (String key : keys) {
             sb.append(", ").append(key).append('=').append(annotations.value(key));
         }
         return sb.toString();

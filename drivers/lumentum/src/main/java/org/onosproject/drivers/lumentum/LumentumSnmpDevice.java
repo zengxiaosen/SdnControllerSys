@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ public class LumentumSnmpDevice {
         target.setCommunity(new OctetString("public"));
         target.setAddress(targetAddress);
         target.setRetries(3);
-        target.setTimeout(1000 * 3);
+        target.setTimeout(1000L * 3L);
         target.setVersion(SnmpConstants.version2c);
         target.setMaxSizeRequestPDU(MAX_SIZE_RESPONSE_PDU);
     }

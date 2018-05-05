@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package org.onosproject.net.flowobjective;
 
 import com.google.common.annotations.Beta;
+import org.onosproject.core.ApplicationId;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 
@@ -24,18 +25,22 @@ import org.onosproject.net.flow.TrafficTreatment;
  * be forwarded through the device. A forwarding objective may
  * result in multiple rules at the device. There are two main types
  * of forwarding objectives:
- *
- *  - Versatile
- *  - Specific
+ *代表需要通过设备转发哪些类型的流量的描述。 转发目标可能会导致设备出现多条规则。 转发目标主要有两种类型：
+ *  - Versatile,单片
+ *  - Specific,分解
  *
  * A versatile forwarding objective represents a composite rule that matches
  * two or more header fields. The use of versatile usually indicates that this
  * rule should be inserted in its entirety into the ACL table. Although,
  * drivers for some devices are free to implement this differently.
+ * 多功能转发对象表示与两个或更多包头字段匹配的组合规则。 通用的使用方式通常是应
+ * 将此规则完整地插入到ACL表中。 当然，一些设备的驱动程序可以自由地以不同方式实现。
  *
  * A specific forwarding objective represents a specific rule matching one or
  * more header fields. The installation of this rule may result in several rules
  * at the device. For example, one per table type.
+ * 一个特定的转发目标代表一个匹配一个或多个头字段的特定规则。 此规则的安装可能会导致设备出现若干
+ * 规则。 例如，每个表类型一个。
  */
 @Beta
 public interface ForwardingObjective extends Objective {
@@ -47,11 +52,13 @@ public interface ForwardingObjective extends Objective {
     enum Flag {
         /**
          * A decomposable objective.
+         * 分解对象
          */
         SPECIFIC,
 
         /**
          * A monolithic objective.
+         * 单片对象
          */
         VERSATILE
     }
@@ -97,6 +104,14 @@ public interface ForwardingObjective extends Objective {
     TrafficSelector meta();
 
     /**
+     * Returns a new builder set to create a copy of this objective.
+     *
+     * @return new builder
+     */
+    @Override
+    Builder copy();
+
+    /**
      * A forwarding objective builder.
      */
     interface Builder extends Objective.Builder {
@@ -140,6 +155,32 @@ public interface ForwardingObjective extends Objective {
          * @return an objective builder
          */
         Builder withMeta(TrafficSelector selector);
+
+        /**
+         * Assigns an application id.
+         *
+         * @param appId an application id
+         * @return a filtering builder
+         */
+        @Override
+        Builder fromApp(ApplicationId appId);
+
+        /**
+         * Sets the priority for this objective.
+         *
+         * @param priority an integer
+         * @return an objective builder
+         */
+        @Override
+        Builder withPriority(int priority);
+
+        /**
+         * Makes the filtering objective permanent.
+         *
+         * @return an objective builder
+         */
+        @Override
+        Builder makePermanent();
 
         /**
          * Builds the forwarding objective that will be added.

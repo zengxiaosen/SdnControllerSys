@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ public class LearningSwitchTutorial {
      * send the packet out the port previously learned for the destination MAC.  If it does not exist,
      * flood the packet out (to all ports).
      */
-    private class SwitchPacketProcesser implements PacketProcessor {
+    private class SwitchPacketProcessor implements PacketProcessor {
         /**
          * Learns the source port associated with the packet's DeviceId if it has not already been learned.
          * Calls actLikeSwitch to process and send the packet.

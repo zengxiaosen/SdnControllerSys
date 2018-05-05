@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,7 +134,7 @@ public final class YobUtils {
                 break;
 
             case EMPTY:
-                if (leafValue == null || leafValue.equals("")) {
+                if (leafValue == null || "".equals(leafValue)) {
                     parentSetterMethod.invoke(parentBuilderObject, true);
                 } else {
                     log.info(E_INVALID_EMPTY_DATA);
@@ -235,6 +235,7 @@ public final class YobUtils {
             interfaceClass = regClass.getClassLoader().loadClass(qualName);
         } catch (ClassNotFoundException e) {
             log.info(E_FAIL_TO_LOAD_CLASS, qualName);
+            return;
         }
 
         Class<?>[] innerClasses = interfaceClass.getClasses();
@@ -673,7 +674,7 @@ public final class YobUtils {
         } catch (ClassNotFoundException e) {
             log.error(E_FAIL_TO_LOAD_CLASS, className);
             throw new YobException(E_FAIL_TO_LOAD_CLASS +
-                                           eventSubjectClass.getName());
+                                           qualName);
         } catch (InstantiationException e) {
             log.error(E_FAIL_TO_CREATE_OBJ, className);
             throw new YobException(E_FAIL_TO_CREATE_OBJ +

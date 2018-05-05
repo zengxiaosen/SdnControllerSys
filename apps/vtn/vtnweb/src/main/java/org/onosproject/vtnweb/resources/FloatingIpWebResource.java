@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -170,8 +170,7 @@ public class FloatingIpWebResource extends AbstractWebResource {
         }
     }
 
-    private Collection<FloatingIp> createOrUpdateByInputStream(JsonNode subnode)
-            throws Exception {
+    private Collection<FloatingIp> createOrUpdateByInputStream(JsonNode subnode) {
         checkNotNull(subnode, JSON_NOT_NULL);
         Collection<FloatingIp> floatingIps = null;
         JsonNode floatingIpNodes = subnode.get("floatingips");
@@ -193,10 +192,8 @@ public class FloatingIpWebResource extends AbstractWebResource {
      *
      * @param floatingIpNodes the floatingIp json node
      * @return floatingIps a collection of floatingIp
-     * @throws Exception when any argument is illegal
      */
-    public Collection<FloatingIp> changeJsonToSub(JsonNode floatingIpNodes)
-            throws Exception {
+    public Collection<FloatingIp> changeJsonToSub(JsonNode floatingIpNodes) {
         checkNotNull(floatingIpNodes, JSON_NOT_NULL);
         Map<FloatingIpId, FloatingIp> subMap = new HashMap<FloatingIpId, FloatingIp>();
         if (!floatingIpNodes.hasNonNull("id")) {

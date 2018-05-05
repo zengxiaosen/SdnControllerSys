@@ -1,5 +1,5 @@
 /*
- *  Copyright 2015-present Open Networking Laboratory
+ *  Copyright 2015-present Open Networking Foundation
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import java.util.HashMap;
 public final class DefaultHashMap<K, V> extends HashMap<K, V> {
 
     /** Default value to return when no key binding exists. */
-    protected final V defaultValue;
+    private final V defaultValue;
 
     /**
      * Constructs an empty map with the given default value.

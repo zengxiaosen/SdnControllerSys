@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,16 +33,16 @@ import org.slf4j.LoggerFactory;
  */
 public class IsisMessageReader {
 
-    protected static final Logger log = LoggerFactory.getLogger(IsisMessageReader.class);
+    private static final Logger log = LoggerFactory.getLogger(IsisMessageReader.class);
 
     /**
      * Reads from ISIS packet from buffer.
      *
      * @param channelBuffer buffer
      * @return ISIS message
-     * @throws Exception exception
+     * @throws IsisParseException exception
      */
-    public IsisMessage readFromBuffer(ChannelBuffer channelBuffer) throws Exception {
+    public IsisMessage readFromBuffer(ChannelBuffer channelBuffer) throws IsisParseException {
 
         int dataLength = channelBuffer.readableBytes();
         log.debug("IsisMessageReader::readFromBuffer Data length {}", dataLength);
@@ -103,9 +103,8 @@ public class IsisMessageReader {
      *
      * @param channelBuffer ISIS header
      * @return ISIS header
-     * @throws Exception
      */
-    private IsisHeader getIsisHeader(ChannelBuffer channelBuffer) throws Exception {
+    private IsisHeader getIsisHeader(ChannelBuffer channelBuffer) {
 
         IsisHeader isisHeader = new IsisHeader();
         isisHeader.setIrpDiscriminator(channelBuffer.readByte());

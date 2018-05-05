@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ import java.util.Set;
 @Service
 public class DefaultIsisController implements IsisController {
 
-    protected static final Logger log = LoggerFactory.getLogger(DefaultIsisController.class);
+    private static final Logger log = LoggerFactory.getLogger(DefaultIsisController.class);
     private final Controller controller = new Controller();
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected DriverService driverService;

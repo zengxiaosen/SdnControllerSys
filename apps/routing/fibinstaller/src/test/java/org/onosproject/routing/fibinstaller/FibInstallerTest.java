@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,14 +31,15 @@ import org.onosproject.app.ApplicationService;
 import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.incubator.net.intf.Interface;
-import org.onosproject.incubator.net.intf.InterfaceListener;
-import org.onosproject.incubator.net.intf.InterfaceService;
-import org.onosproject.incubator.net.intf.InterfaceServiceAdapter;
-import org.onosproject.incubator.net.routing.ResolvedRoute;
-import org.onosproject.incubator.net.routing.RouteEvent;
-import org.onosproject.incubator.net.routing.RouteListener;
-import org.onosproject.incubator.net.routing.RouteServiceAdapter;
+import org.onosproject.net.intf.Interface;
+import org.onosproject.net.intf.InterfaceListener;
+import org.onosproject.net.intf.InterfaceService;
+import org.onosproject.net.intf.InterfaceServiceAdapter;
+import org.onosproject.routeservice.ResolvedRoute;
+import org.onosproject.routeservice.Route;
+import org.onosproject.routeservice.RouteEvent;
+import org.onosproject.routeservice.RouteListener;
+import org.onosproject.routeservice.RouteServiceAdapter;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
@@ -60,6 +61,7 @@ import org.onosproject.net.flowobjective.NextObjective;
 import org.onosproject.net.host.InterfaceIpAddress;
 import org.onosproject.routing.RoutingService;
 import org.onosproject.routing.config.RouterConfig;
+import org.onosproject.routing.config.RoutersConfig;
 import org.osgi.service.component.ComponentContext;
 
 import java.util.ArrayList;
@@ -189,6 +191,8 @@ public class FibInstallerTest {
         expect(networkConfigService.getConfig(
                 anyObject(ApplicationId.class), eq(RoutingService.ROUTER_CONFIG_CLASS))).
         andReturn(routerConfig);
+        expect(networkConfigService.getConfig(anyObject(ApplicationId.class), eq(RoutersConfig.class)))
+                .andReturn(null);
         replay(networkConfigService);
     }
 
@@ -280,7 +284,7 @@ public class FibInstallerTest {
      */
     @Test
     public void testRouteAdd() {
-        ResolvedRoute resolvedRoute = new ResolvedRoute(PREFIX1, NEXT_HOP1, MAC1, SW1_ETH1);
+        ResolvedRoute resolvedRoute = createRoute(PREFIX1, NEXT_HOP1, MAC1, SW1_ETH1);
 
         // Create the next objective
         NextObjective nextObjective = createNextObjective(MAC1, MAC1, SW1_ETH1.port(), VlanId.NONE, true);
@@ -306,7 +310,7 @@ public class FibInstallerTest {
      */
     @Test
     public void testRouteAddWithVlan() {
-        ResolvedRoute route = new ResolvedRoute(PREFIX1, NEXT_HOP2, MAC2, SW1_ETH2);
+        ResolvedRoute route = createRoute(PREFIX1, NEXT_HOP2, MAC2, SW1_ETH2);
 
         // Create the next objective
         NextObjective nextObjective = createNextObjective(MAC2, MAC2, SW1_ETH2.port(), VLAN1, true);
@@ -336,8 +340,8 @@ public class FibInstallerTest {
         testRouteAdd();
         reset(flowObjectiveService);
 
-        ResolvedRoute oldRoute = new ResolvedRoute(PREFIX1, NEXT_HOP1, MAC1, SW1_ETH1);
-        ResolvedRoute route = new ResolvedRoute(PREFIX1, NEXT_HOP2, MAC2, SW1_ETH2);
+        ResolvedRoute oldRoute = createRoute(PREFIX1, NEXT_HOP1, MAC1, SW1_ETH1);
+        ResolvedRoute route = createRoute(PREFIX1, NEXT_HOP2, MAC2, SW1_ETH2);
 
         // Create the next objective
         NextObjective nextObjective = createNextObjective(MAC2, MAC2, SW1_ETH2.port(), VLAN1, true);
@@ -367,7 +371,7 @@ public class FibInstallerTest {
         testRouteAdd();
 
         // Construct the existing route
-        ResolvedRoute route = new ResolvedRoute(PREFIX1, NEXT_HOP1, MAC1, SW1_ETH1);
+        ResolvedRoute route = createRoute(PREFIX1, NEXT_HOP1, MAC1, SW1_ETH1);
 
         // Create the flow objective
         reset(flowObjectiveService);
@@ -379,6 +383,12 @@ public class FibInstallerTest {
         routeListener.event(new RouteEvent(RouteEvent.Type.ROUTE_REMOVED, route));
 
         verify(flowObjectiveService);
+    }
+
+    private static ResolvedRoute createRoute(IpPrefix prefix, IpAddress nextHop,
+                                             MacAddress nextHopMac, ConnectPoint location) {
+        return new ResolvedRoute(
+                new Route(Route.Source.UNDEFINED, prefix, nextHop), nextHopMac, location);
     }
 
     private class TestInterfaceService extends InterfaceServiceAdapter {

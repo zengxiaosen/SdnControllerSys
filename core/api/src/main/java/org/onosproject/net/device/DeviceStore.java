@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,13 @@ public interface DeviceStore extends Store<DeviceEvent, DeviceStoreDelegate> {
      * @return number of devices
      */
     int getDeviceCount();
+
+    /**
+     * Returns the number of currently available devices known to the system.
+     *
+     * @return number of devices
+     */
+    int getAvailableDeviceCount();
 
     /**
      * Returns an iterable collection of all devices known to the system.

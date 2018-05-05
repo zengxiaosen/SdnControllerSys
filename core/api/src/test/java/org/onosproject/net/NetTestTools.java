@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package org.onosproject.net;
 
 import com.google.common.collect.ImmutableList;
+import org.onlab.graph.ScalarWeight;
 import org.onlab.junit.TestUtils;
 import org.onlab.packet.ChassisId;
 import org.onlab.packet.IpPrefix;
@@ -130,7 +131,7 @@ public final class NetTestTools {
         for (int i = 0; i < ids.length - 1; i++) {
             links.add(link(ids[i], 2, ids[i + 1], 1));
         }
-        return new DefaultPath(PID, links, ids.length);
+        return new DefaultPath(PID, links, ScalarWeight.toWeight(ids.length));
     }
 
     // Creates a path that leads through the given hosts.
@@ -145,7 +146,7 @@ public final class NetTestTools {
                 links.add(link(ids[i], 2, ids[i + 1], 1));
             }
         }
-        return new DefaultPath(PID, links, ids.length);
+        return new DefaultPath(PID, links, ScalarWeight.toWeight(ids.length));
     }
 
     // Creates OCh signal
@@ -231,6 +232,12 @@ public final class NetTestTools {
     public static TrafficSelector ipPrefixDstSelector(String prefix) {
         return DefaultTrafficSelector.builder()
                 .matchIPDst(IpPrefix.valueOf(prefix))
+                .build();
+    }
+
+    public static TrafficSelector ethDstSelector(String macAddress) {
+        return DefaultTrafficSelector.builder()
+                .matchEthDst(MacAddress.valueOf(macAddress))
                 .build();
     }
 

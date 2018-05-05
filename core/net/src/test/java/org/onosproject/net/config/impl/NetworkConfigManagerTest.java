@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.junit.TestUtils;
+import org.onosproject.cluster.ClusterService;
+import org.onosproject.cluster.ClusterServiceAdapter;
 import org.onosproject.event.EventDeliveryServiceAdapter;
 import org.onosproject.net.config.Config;
 import org.onosproject.net.config.ConfigFactory;
@@ -45,6 +47,9 @@ import com.google.common.testing.EqualsTester;
  * Unit tests for network config registry.
  */
 public class NetworkConfigManagerTest {
+
+    private final ClusterService clusterService = new ClusterServiceAdapter();
+
     private NetworkConfigManager manager;
     private NetworkConfigRegistry registry;
     private NetworkConfigService configService;
@@ -111,6 +116,7 @@ public class NetworkConfigManagerTest {
         manager = new NetworkConfigManager();
         manager.store = configStore;
         NetTestTools.injectEventDispatcher(manager, new EventDeliveryServiceAdapter());
+        manager.clusterService = clusterService;
         manager.activate();
         registry = manager;
         configService = manager;

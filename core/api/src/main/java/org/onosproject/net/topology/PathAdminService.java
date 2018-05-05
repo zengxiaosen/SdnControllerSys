@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,18 +22,6 @@ import org.onlab.graph.GraphPathSearch;
  * Provides administrative abilities to tailor the path service behaviours.
  */
 public interface PathAdminService {
-
-    /**
-     * Sets the specified link-weight function to be used as a default.
-     * If null is specified, the builtin default hop-count link-weight will be
-     * used.
-     *
-     * @param linkWeight default link-weight function
-     *
-     * @deprecated in Junco (1.9.0), use setDefaultLinkWeigher() instead
-     */
-    @Deprecated
-    void setDefaultLinkWeight(LinkWeight linkWeight);
 
     /**
      * Sets the specified link-weight function to be used as a default.

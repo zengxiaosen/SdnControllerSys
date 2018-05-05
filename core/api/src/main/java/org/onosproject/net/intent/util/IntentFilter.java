@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -132,18 +132,18 @@ public class IntentFilter {
 
             if (objective instanceof NextObjective) {
                 nextObjective = (DefaultNextObjective) objective;
-                continue;
-
             } else if (objective instanceof ForwardingObjective) {
                 forwardObjective = (DefaultForwardingObjective) objective;
-                FlowRule flowRule = DefaultFlowRule.builder()
+                FlowRule.Builder builder = DefaultFlowRule.builder()
                         .forDevice(deviceId)
                         .withSelector(forwardObjective.selector())
-                        .withTreatment(nextObjective.next().iterator().next())
                         .withPriority(intent.priority())
                         .fromApp(intent.appId())
-                        .makePermanent()
-                        .build();
+                        .makePermanent();
+                if (nextObjective != null) {
+                    builder.withTreatment(nextObjective.next().iterator().next());
+                }
+                FlowRule flowRule = builder.build();
                 flowEntry = getFlowEntry(flowRule);
 
                 if (flowEntry != null) {

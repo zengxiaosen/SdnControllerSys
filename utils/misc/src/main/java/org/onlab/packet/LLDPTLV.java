@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,9 @@ import java.util.Arrays;
  *
  */
 public class LLDPTLV {
+
+    public static final int MAX_LENGTH = 0x1ff;
+
     protected byte type;
     protected short length;
     protected byte[] value;

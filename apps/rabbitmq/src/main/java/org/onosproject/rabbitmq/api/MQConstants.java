@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,7 +109,7 @@ public final class MQConstants {
     public static final String CHASIS_ID = "chassis_id";
 
     /**
-     * Specifies event occurence time.
+     * Specifies event occurrence time.
      */
     public static final String OCC_TIME = "occurrence_time";
 
@@ -129,9 +129,9 @@ public final class MQConstants {
     public static final String LOGICAL = "logical";
 
     /**
-     * Specifies packet recieved time.
+     * Specifies packet received time.
      */
-    public static final String RECIEVED = "received";
+    public static final String RECEIVED = "received";
 
     /**
      * Specifies message type.

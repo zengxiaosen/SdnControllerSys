@@ -6,17 +6,26 @@ COMPILE_DEPS = [
     '//lib:amqp-client',
 ]
 
-BUNDLES = [
-   '//apps/rabbitmq:onos-apps-rabbitmq',
+TEST_DEPS = [
+    '//lib:TEST_ADAPTERS',
 ]
 
-osgi_jar (
+BUNDLES = [
+    '//lib:gson',
+    '//lib:amqp-client',
+    '//apps/rabbitmq:onos-apps-rabbitmq',
+]
+
+osgi_jar_with_tests (
     deps = COMPILE_DEPS,
+    test_deps = TEST_DEPS,
+    resources_root = 'src/main/resources',
+    resources = glob(['src/main/resources/**']),
 )
 
 onos_app (
-    title = 'Rabbit MQ APP',
-    category = 'Traffic Steering',
+    title = 'Rabbit MQ Integration',
+    category = 'Integration',
     url = 'http://onosproject.org',
     description = 'Rabbit MQ application.',
     required_apps = [ 'org.onosproject.proxyarp' ],

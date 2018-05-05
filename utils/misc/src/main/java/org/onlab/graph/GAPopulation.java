@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package org.onlab.graph;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,7 +26,7 @@ import java.util.Random;
  * to run a genetic algorithm on the population and return the fittest solutions.
  */
 class GAPopulation<Organism extends GAOrganism> extends ArrayList<Organism> {
-    Random r = new Random();
+    Random r = new SecureRandom();
 
     /**
      * Steps the population through one generation. The 75% least fit

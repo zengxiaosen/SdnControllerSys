@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onlab.junit.TestUtils;
 import org.onlab.osgi.TestServiceDirectory;
-import org.onlab.rest.BaseResource;
 import org.onosproject.common.event.impl.TestEventDispatcher;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -42,10 +41,8 @@ import org.onosproject.net.NetTestTools;
 import org.onosproject.net.Path;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.TestDeviceParams;
-import org.onosproject.net.intent.FakeIntentManager;
-import org.onosproject.net.intent.TestableIntentService;
 import org.onosproject.net.topology.LinkWeigher;
-import org.onosproject.net.topology.LinkWeight;
+import org.onosproject.net.topology.LinkWeigherAdapter;
 import org.onosproject.net.topology.Topology;
 import org.onosproject.net.topology.TopologyCluster;
 import org.onosproject.net.topology.TopologyService;
@@ -57,7 +54,9 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Junit tests for VirtualNetworkTopologyService.
@@ -69,7 +68,6 @@ public class VirtualNetworkTopologyManagerTest extends TestDeviceParams {
     private VirtualNetworkManager manager;
     private DistributedVirtualNetworkStore virtualNetworkManagerStore;
     private CoreService coreService;
-    private TestableIntentService intentService = new FakeIntentManager();
     private TestServiceDirectory testDirectory;
 
     @Before
@@ -80,10 +78,8 @@ public class VirtualNetworkTopologyManagerTest extends TestDeviceParams {
         TestUtils.setField(virtualNetworkManagerStore, "storageService", new TestStorageService());
         virtualNetworkManagerStore.activate();
 
-        BaseResource.setServiceDirectory(testDirectory);
         manager = new VirtualNetworkManager();
         manager.store = virtualNetworkManagerStore;
-        manager.intentService = intentService;
         manager.coreService = coreService;
         NetTestTools.injectEventDispatcher(manager, new TestEventDispatcher());
 
@@ -418,7 +414,7 @@ public class VirtualNetworkTopologyManagerTest extends TestDeviceParams {
         assertEquals("The paths size did not match.", 1, paths.size());
 
         // test the getPaths() by weight method.
-        LinkWeight weight = edge -> 1.0;
+        LinkWeigher weight = new LinkWeigherAdapter(1.0);
         Set<Path> paths1 = topologyService.getPaths(topology, srcVirtualDevice.id(), dstVirtualDevice.id(), weight);
         assertNotNull("The paths should not be null.", paths1);
         assertEquals("The paths size did not match.", 1, paths1.size());
@@ -476,7 +472,7 @@ public class VirtualNetworkTopologyManagerTest extends TestDeviceParams {
 
         // test the getDisjointPaths() method using a null weight.
         Set<DisjointPath> paths = topologyService.getDisjointPaths(topology, srcVirtualDevice.id(),
-                                                                   dstVirtualDevice.id(), (LinkWeight) null);
+                                                                   dstVirtualDevice.id(), (LinkWeigher) null);
     }
 
     /**
@@ -517,7 +513,7 @@ public class VirtualNetworkTopologyManagerTest extends TestDeviceParams {
         assertEquals("The paths size did not match.", 1, paths.size());
 
         // test the getDisjointPaths() method using a weight.
-        LinkWeight weight = edge -> 1.0;
+        LinkWeigher weight = new LinkWeigherAdapter(1.0);
         Set<DisjointPath> paths1 = topologyService.getDisjointPaths(topology, srcVirtualDevice.id(),
                                                                     dstVirtualDevice.id(), weight);
         assertNotNull("The paths should not be null.", paths1);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.mcast.McastRoute;
 import org.onosproject.net.mcast.MulticastRouteService;
 import org.onosproject.rest.AbstractWebResource;
+
+import static org.onlab.util.Tools.nullIsNotFound;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -73,11 +75,19 @@ public class MulticastRouteWebResource extends AbstractWebResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response createRoute(InputStream stream) {
+
+        final String ingressStr = "ingress";
         MulticastRouteService service = get(MulticastRouteService.class);
         try {
             ObjectNode jsonTree = (ObjectNode) mapper().readTree(stream);
             McastRoute route = codec(McastRoute.class).decode(jsonTree, this);
             service.add(route);
+            if (jsonTree.has(ingressStr)) {
+                String ingressPathStr = jsonTree.path(ingressStr).asText();
+                ConnectPoint ingressConnectPoint = nullIsNotFound(ConnectPoint.deviceConnectPoint(ingressPathStr),
+                                                                  "ingress connection point cannot be null!");
+                service.addSource(route, ingressConnectPoint);
+            }
         } catch (IOException ex) {
             throw new IllegalArgumentException(ex);
         }
@@ -132,6 +142,7 @@ public class MulticastRouteWebResource extends AbstractWebResource {
             McastRoute route = new McastRoute(IpAddress.valueOf(source), IpAddress.valueOf(group),
                     McastRoute.Type.STATIC);
             ObjectNode jsonTree = (ObjectNode) mapper().readTree(stream);
+
             jsonTree.path("sinks").forEach(node -> {
                 ConnectPoint sink = ConnectPoint.deviceConnectPoint(node.asText());
                 service.addSink(route, sink);

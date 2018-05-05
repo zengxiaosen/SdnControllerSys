@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,10 +31,10 @@ import org.onosproject.net.device.DeviceDescription;
 import org.onosproject.net.device.DeviceDescriptionDiscovery;
 import org.onosproject.net.device.PortDescription;
 import org.onosproject.net.driver.AbstractHandlerBehaviour;
+import org.onosproject.tl1.DefaultTl1Command;
 import org.onosproject.tl1.Tl1Command;
 import org.onosproject.tl1.Tl1Controller;
 import org.onosproject.tl1.Tl1Device;
-import org.onosproject.tl1.impl.DefaultTl1Command;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -182,14 +182,14 @@ public class LumentumWaveReadyDiscovery extends AbstractHandlerBehaviour impleme
         Arrays.stream(s.split("\"\"")).forEach(p -> {
             if (p.contains(EIGHTFIFTY)) {
                 PortDescription cltPort = oduCltPortDescription(
-                        PortNumber.portNumber(ports.size() + 1),
+                        PortNumber.portNumber(ports.size() + 1L),
                         true,
                         CltSignalType.CLT_10GBE,
                         extractAnnotations(p));
                 ports.add(cltPort);
             } else {
                 PortDescription netPort = ochPortDescription(
-                        PortNumber.portNumber(ports.size() + 1),
+                        PortNumber.portNumber(ports.size() + 1L),
                         true,
                         OduSignalType.ODU2e,
                         true,

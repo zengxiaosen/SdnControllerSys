@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import org.onlab.metrics.MetricsReporter;
 import org.onlab.metrics.MetricsService;
 import org.onlab.osgi.ServiceDirectory;
 import org.onlab.osgi.TestServiceDirectory;
-import org.onlab.rest.BaseResource;
 import org.onosproject.cpman.ControlPlaneMonitorService;
 import org.onosproject.cpman.SystemInfo;
 import org.onosproject.cpman.impl.SystemInfoFactory;
@@ -86,7 +85,7 @@ public class ControlMetricsCollectorResourceTest extends ResourceTest {
                 new TestServiceDirectory()
                         .add(ControlPlaneMonitorService.class, mockControlPlaneMonitorService)
                         .add(MetricsService.class, mockMetricsService);
-        BaseResource.setServiceDirectory(testDirectory);
+        setServiceDirectory(testDirectory);
     }
 
     /**

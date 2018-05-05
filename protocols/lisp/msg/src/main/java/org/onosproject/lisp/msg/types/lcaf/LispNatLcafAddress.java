@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import static com.google.common.base.MoreObjects.toStringHelper;
  * Network Address Translation (NAT) address class.
  * <p>
  * Instance ID type is defined in draft-ietf-lisp-lcaf-22
- * https://tools.ietf.org/html/draft-ietf-lisp-lcaf-22#page-12
+ * https://tools.ietf.org/html/draft-ietf-lisp-lcaf-22#page-13
  *
  * <pre>
  * {@literal
@@ -329,8 +329,8 @@ public final class LispNatLcafAddress extends LispLcafAddress {
 
             List<LispAfiAddress> rtrRlocAddresses = address.getRtrRlocAddresses();
 
-            for (int i = 0; i < rtrRlocAddresses.size(); i++) {
-                writer.writeTo(byteBuf, rtrRlocAddresses.get(i));
+            for (LispAfiAddress rtrRlocAddress : rtrRlocAddresses) {
+                writer.writeTo(byteBuf, rtrRlocAddress);
             }
 
             updateLength(lcafIndex, byteBuf);

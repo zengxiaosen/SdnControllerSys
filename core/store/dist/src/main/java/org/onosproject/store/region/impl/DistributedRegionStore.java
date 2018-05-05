@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -247,9 +247,12 @@ public class DistributedRegionStore
         @Override
         public void event(MapEvent<RegionId, Set<DeviceId>> event) {
             if (event.type() != MapEvent.Type.REMOVE) {
-                notifyDelegate(new RegionEvent(REGION_MEMBERSHIP_CHANGED,
-                        regionsById.get(event.key()),
-                        event.newValue().value()));
+                Region r = regionsById.get(event.key());
+                if (r != null) {
+                    notifyDelegate(new RegionEvent(REGION_MEMBERSHIP_CHANGED,
+                                                   r,
+                                                   event.newValue().value()));
+                }
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,29 +31,31 @@
                 // none for now
             },
             addRect: {
-                // none for now
+                fill: 'gray1',
+                stroke: 'none',
             },
             addPath: {
-                // none for now
-            }
+                fill: 'none',
+                stroke: 'gray1',
+            },
         },
         layout: {
             builder: {
-                grid: 10            // grid square size (in layout coord-space
+                grid: 10, // grid square size (in layout coord-space)
             },
             addSprite: {
-                anchor: 'topleft'       // topleft, center
+                anchor: 'topleft', // topleft, center
             },
             addLabel: {
-                anchor: 'center',       // center, left, right
-                fontStyle: 'normal'     // normal, italic, bold
-            }
-        }
+                anchor: 'center', // center, left, right
+                fontStyle: 'normal', // normal, italic, bold
+            },
+        },
     };
 
     // internal state
-    var sprites,    // sprite cache
-        layouts,    // layout cache
+    var sprites, // sprite cache
+        layouts, // layout cache
         api;
 
     // ----------------------------------------------------------------------
@@ -62,8 +64,8 @@
     // Sample usage:
     //
     //     ss.createSprite('foo', 100, 100)
-    //         .addPath('M40,40h20v20h-20z')
-    //         .addRect(50, 50, 10, 20)
+    //         .addPath('M40,40h20v20h-20z', {fill: 'gold1'})
+    //         .addRect(50, 50, 10, 20, {stroke: 'gold1'})
     //         .register();
 
     function spriteBuilder(id, w, h, opts) {
@@ -79,7 +81,7 @@
             var o = angular.extend({}, optDefaults.sprite.addRect, opts);
 
             rects.push({
-                x: x, y: y, w: w, h: h
+                x: x, y: y, w: w, h: h, o: o,
             });
             return builder;
         }
@@ -88,9 +90,9 @@
             var o = angular.extend({}, optDefaults.sprite.addPath, opts);
 
             if (fs.isS(d)) {
-                paths.push(d);
+                paths.push({ d: d, o: o });
             } else if (fs.isA(d)) {
-                paths.push(d.join(''));
+                paths.push({ d: d.join(''), o: o });
             } else {
                 $log.warn('addPath: path not a string or array', d);
             }
@@ -108,7 +110,7 @@
                 id: id,
                 w: w,
                 h: h,
-                opts: o
+                opts: o,
             },
             paths: paths,
             rects: rects,
@@ -116,7 +118,7 @@
             // builder API
             addRect: addRect,
             addPath: addPath,
-            register: register
+            register: register,
         };
 
         return builder;
@@ -151,7 +153,7 @@
             }
 
             sprs.push({
-                sprite: s, x: x, y: y, w: w, anchor: o.anchor
+                sprite: s, x: x, y: y, w: w, anchor: o.anchor,
             });
             return builder;
         }
@@ -160,7 +162,7 @@
             var o = angular.extend({}, optDefaults.layout.addLabel, opts);
 
             labs.push({
-                text: text, x: x, y: y, anchor: o.anchor, style: o.fontStyle
+                text: text, x: x, y: y, anchor: o.anchor, style: o.fontStyle,
             });
             return builder;
         }
@@ -176,7 +178,7 @@
                 id: id,
                 w: w,
                 h: h,
-                opts: o
+                opts: o,
             },
             sprites: sprs,
             labels: labs,
@@ -184,7 +186,7 @@
             // builder API
             addSprite: addSprite,
             addLabel: addLabel,
-            register: register
+            register: register,
         };
 
         return builder;
@@ -213,9 +215,9 @@
 
     // Returns a layout "builder", which can be used to programmatically
     // define a layout.
-    function createLayout(id, w, h, grid) {
-        $log.debug('createLayout:', id, w, 'x', h, '(grid=' + grid + ')');
-        return layoutBuilder(id, w, h, grid);
+    function createLayout(id, w, h, opts) {
+        $log.debug('createLayout:', id, w, 'x', h, '(opts:', opts, ')');
+        return layoutBuilder(id, w, h, opts);
     }
 
     // Registers a sprite defined by the given object (JSON structure).
@@ -244,7 +246,7 @@
     function count() {
         return {
             sprites: sprites.size(),
-            layouts: layouts.size()
+            layouts: layouts.size(),
         };
     }
 
@@ -276,7 +278,7 @@
                 sprite: sprite,
                 layout: layout,
                 count: count,
-                dump: dump
+                dump: dump,
             };
             return api;
         }]

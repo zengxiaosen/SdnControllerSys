@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.ExtensionCriterion;
 import org.onosproject.net.flow.criteria.ExtensionSelector;
 import org.onosproject.net.flow.criteria.ExtensionSelectorType;
+import org.onosproject.net.flow.criteria.PiCriterion;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -41,6 +42,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onosproject.net.flow.criteria.Criterion.Type.EXTENSION;
 
 /**
@@ -263,8 +265,18 @@ public final class DefaultTrafficSelector implements TrafficSelector {
         }
 
         @Override
+        public TrafficSelector.Builder matchTcpSrcMasked(TpPort tcpPort, TpPort mask) {
+            return add(Criteria.matchTcpSrcMasked(tcpPort, mask));
+        }
+
+        @Override
         public Builder matchTcpDst(TpPort tcpPort) {
             return add(Criteria.matchTcpDst(tcpPort));
+        }
+
+        @Override
+        public TrafficSelector.Builder matchTcpDstMasked(TpPort tcpPort, TpPort mask) {
+            return add(Criteria.matchTcpDstMasked(tcpPort, mask));
         }
 
         @Override
@@ -273,8 +285,18 @@ public final class DefaultTrafficSelector implements TrafficSelector {
         }
 
         @Override
+        public TrafficSelector.Builder matchUdpSrcMasked(TpPort udpPort, TpPort mask) {
+            return add(Criteria.matchUdpSrcMasked(udpPort, mask));
+        }
+
+        @Override
         public Builder matchUdpDst(TpPort udpPort) {
             return add(Criteria.matchUdpDst(udpPort));
+        }
+
+        @Override
+        public TrafficSelector.Builder matchUdpDstMasked(TpPort udpPort, TpPort mask) {
+            return add(Criteria.matchUdpDstMasked(udpPort, mask));
         }
 
         @Override
@@ -283,8 +305,18 @@ public final class DefaultTrafficSelector implements TrafficSelector {
         }
 
         @Override
+        public TrafficSelector.Builder matchSctpSrcMasked(TpPort sctpPort, TpPort mask) {
+            return add(Criteria.matchSctpSrcMasked(sctpPort, mask));
+        }
+
+        @Override
         public Builder matchSctpDst(TpPort sctpPort) {
             return add(Criteria.matchSctpDst(sctpPort));
+        }
+
+        @Override
+        public TrafficSelector.Builder matchSctpDstMasked(TpPort sctpPort, TpPort mask) {
+            return add(Criteria.matchSctpDstMasked(sctpPort, mask));
         }
 
         @Override
@@ -380,6 +412,11 @@ public final class DefaultTrafficSelector implements TrafficSelector {
         @Override
         public Builder matchArpOp(int arpOp) {
             return add(Criteria.matchArpOp(arpOp));
+        }
+
+        @Override
+        public Builder matchPi(PiCriterion piCriterion) {
+            return add(checkNotNull(piCriterion, "Protocol-independent criterion cannot be null"));
         }
 
         @Override

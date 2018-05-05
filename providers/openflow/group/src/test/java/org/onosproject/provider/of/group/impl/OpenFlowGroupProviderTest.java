@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import com.google.common.collect.Lists;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.onosproject.core.DefaultGroupId;
+import org.onosproject.cfg.ComponentConfigAdapter;
 import org.onosproject.core.GroupId;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
@@ -63,6 +63,7 @@ import org.projectfloodlight.openflow.types.OFGroup;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.Assert.*;
 
@@ -80,7 +81,8 @@ public class OpenFlowGroupProviderTest {
     public void setUp() {
         provider.controller = controller;
         provider.providerRegistry = providerRegistry;
-        provider.activate();
+        provider.cfgService = new ComponentConfigAdapter();
+        provider.activate(null);
     }
 
     @Test
@@ -92,7 +94,7 @@ public class OpenFlowGroupProviderTest {
     @Test
     public void addGroup() {
 
-        GroupId groupId = new DefaultGroupId(1);
+        GroupId groupId = new GroupId(1);
 
         List<GroupBucket> bucketList = Lists.newArrayList();
         TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder();
@@ -123,7 +125,7 @@ public class OpenFlowGroupProviderTest {
         TestOpenFlowGroupProviderService testProviderService =
                 (TestOpenFlowGroupProviderService) providerService;
 
-        GroupId groupId = new DefaultGroupId(1);
+        GroupId groupId = new GroupId(1);
         List<GroupBucket> bucketList = Lists.newArrayList();
         TrafficTreatment.Builder builder = DefaultTrafficTreatment.builder();
         builder.setOutput(PortNumber.portNumber(1));
@@ -263,6 +265,11 @@ public class OpenFlowGroupProviderTest {
         @Override
         public void write(Dpid dpid, OFMessage msg) {
 
+        }
+
+        @Override
+        public CompletableFuture<OFMessage> writeResponse(Dpid dpid, OFMessage msg) {
+            return null;
         }
 
         @Override

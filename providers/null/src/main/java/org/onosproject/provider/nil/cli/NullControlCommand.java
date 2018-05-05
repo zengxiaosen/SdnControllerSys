@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import org.apache.karaf.shell.commands.Command;
 import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.provider.nil.NullProviders;
+import org.onosproject.provider.nil.TopologySimulator;
 
 import static org.onosproject.cli.StartStopCompleter.START;
 
@@ -31,18 +32,26 @@ import static org.onosproject.cli.StartStopCompleter.START;
 public class NullControlCommand extends AbstractShellCommand {
 
     @Argument(index = 0, name = "cmd", description = "Control command: start/stop",
-            required = true, multiValued = false)
+            required = true)
     String cmd = null;
 
     @Argument(index = 1, name = "topoShape",
-            description = "Topology shape: e.g. configured, linear, reroute, centipede, tree, spineleaf, " +
-                    ", mesh, fattree",
-            required = false, multiValued = false)
+            description = "Topology shape: e.g. configured, linear, reroute, " +
+                    "centipede, tree, spineleaf, mesh, fattree, custom")
     String topoShape = null;
 
     @Override
     protected void execute() {
         ComponentConfigService service = get(ComponentConfigService.class);
+        // If there is an existing topology; make sure it's stopped before restarting
+        if (cmd.equals(START)) {
+            NullProviders npService = get(NullProviders.class);
+            TopologySimulator simulator = npService.currentSimulator();
+            if (simulator != null) {
+                simulator.tearDownTopology();
+            }
+        }
+
         if (topoShape != null) {
             service.setProperty(NullProviders.class.getName(), "topoShape", topoShape);
         }

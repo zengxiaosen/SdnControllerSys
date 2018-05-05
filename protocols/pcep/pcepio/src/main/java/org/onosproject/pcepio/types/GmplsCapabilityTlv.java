@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ public class GmplsCapabilityTlv implements PcepValueType {
     |                             Flags                             |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      */
-    protected static final Logger log = LoggerFactory.getLogger(GmplsCapabilityTlv.class);
+    private static final Logger log = LoggerFactory.getLogger(GmplsCapabilityTlv.class);
 
     public static final short TYPE = 14;
     public static final short LENGTH = 4;

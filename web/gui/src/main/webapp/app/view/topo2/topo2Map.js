@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,145 +23,81 @@
     'use strict';
 
     // Injected Services
-    var $loc, ps, ms, flash, sus, countryFilters;
-
-    // Injected Classes
-    var MapSelectionDialog;
+    var t2zs, countryFilters, ms;
 
     // internal state
-    var mapG, zoomLayer, zoomer;
+    var instance, zoomer, currentMap;
 
-    function init(_zoomLayer_, _zoomer_) {
-        zoomLayer = _zoomLayer_;
-        zoomer = _zoomer_;
-        return setUpMap();
+    function init() {
+        this.appendElement('#topo2-background', 'g');
+        zoomer = t2zs.getZoomer();
+        currentMap = null;
     }
 
-    function setUpMap() {
-        var prefs = currentMap(),
-            mapId = prefs.mapid,
-            mapFilePath = prefs.mapfilepath,
-            mapScale = prefs.mapscale,
-            loadMap = ms.loadMapInto,
-            promise, cfilter;
+    function setUpMap(mapId, mapFilePath, mapScale) {
 
-        mapG = d3.select('#topo-map');
-
-        if (mapG.empty()) {
-            mapG = zoomLayer.append('g').attr('id', 'topo-map');
-        } else {
-            mapG.each(function (d, i) {
-                d3.selectAll(this.childNodes).remove();
+        if (currentMap === mapId) {
+            return new Promise(function (resolve) {
+                resolve();
             });
         }
+
+        currentMap = mapId;
+
+        var loadMap = ms.loadMapInto,
+            promise, cfilter;
+
+        this.node().selectAll('*').remove();
 
         if (mapFilePath === '*countries') {
             cfilter = countryFilters[mapId] || countryFilters.uk;
             loadMap = ms.loadMapRegionInto;
         }
 
-        promise = loadMap(mapG, mapFilePath, mapId, {
+        promise = loadMap(this.node(), mapFilePath, mapId, {
             countryFilters: cfilter,
-            adjustScale: mapScale,
-            shading: ''
+            adjustScale: mapScale || 1,
+            shading: '',
         });
-
-        if (!ps.getPrefs('topo_prefs').bg) {
-            toggle(false);
-        }
 
         return promise;
     }
 
-    function currentMap() {
-        return ps.getPrefs(
-            'topo_mapid',
-            {
-                mapid: 'usa',
-                mapscale: 1,
-                mapfilepath: '*continental_us',
-                tint: 'off'
-            },
-            $loc.search()
-        );
-    }
-
-    function opacifyMap(b) {
-        mapG.transition()
-            .duration(1000)
-            .attr('opacity', b ? 1 : 0);
-    }
-
-    function setMap(map) {
-        ps.setPrefs('topo_mapid', map);
-        setUpMap();
-        opacifyMap(true);
-    }
-
-    // TODO: -- START -- Move to dedicated module
-    var prefsState = {};
-
-    function updatePrefsState(what, b) {
-        prefsState[what] = b ? 1 : 0;
-        ps.setPrefs('topo_prefs', prefsState);
-    }
-
-    function _togSvgLayer(x, G, tag, what) {
-        var on = (x === 'keyev') ? !sus.visible(G) : Boolean(x),
-            verb = on ? 'Show' : 'Hide';
-        sus.visible(G, on);
-        updatePrefsState(tag, on);
-
-        if (x === 'keyev') {
-            flash.flash(verb + ' ' + what);
-        }
-
-        return on;
-    }
-    // TODO: -- END -- Move to dedicated module
-
-    function toggle(x) {
-        return _togSvgLayer(x, mapG, 'bg', 'background map');
-    }
-
-    function openMapSelection() {
-
-        // TODO: Create a view class with extend method
-        MapSelectionDialog.prototype.currentMap = currentMap;
-
-        new MapSelectionDialog({
-            okHandler: function (preferences) {
-                setMap(preferences);
-            }
-        }).open();
-    }
 
     function resetZoom() {
         zoomer.reset();
     }
 
+    function zoomCallback(sc, tr) {
+        // keep the map lines constant width while zooming
+        this.node().style('stroke-width', (2.0 / sc) + 'px');
+    }
+
+    function getCurrentMap() {
+        return currentMap;
+    }
+
     angular.module('ovTopo2')
-    .factory('Topo2MapService',
-        ['$location', 'PrefsService', 'MapService', 'FlashService',
-            'SvgUtilService', 'Topo2CountryFilters', 'Topo2MapDialog',
-            function (_$loc_, _ps_, _ms_, _flash_, _sus_, _t2cf_, _t2md_) {
+    .factory('Topo2MapService', [
+        'Topo2ZoomService', 'MapService', 'Topo2ViewController',
 
-                $loc = _$loc_;
-                ps = _ps_;
-                ms = _ms_;
-                flash = _flash_;
-                sus = _sus_;
-                countryFilters = _t2cf_;
-                MapSelectionDialog = _t2md_;
+        function (_t2zs_, _ms_, ViewController) {
+            t2zs = _t2zs_;
+            ms = _ms_;
 
-                return {
-                    init: init,
-                    openMapSelection: openMapSelection,
-                    toggle: toggle,
+            var MapLayer = ViewController.extend({
 
-                    resetZoom: resetZoom
-                };
-            }
-        ]);
+                id: 'topo2-map',
+                displayName: 'Map',
 
+                init: init,
+                setUpMap: setUpMap,
+                resetZoom: resetZoom,
+                zoomCallback: zoomCallback,
+                getCurrentMap: getCurrentMap,
+            });
+
+            return instance || new MapLayer();
+        },
+    ]);
 })();

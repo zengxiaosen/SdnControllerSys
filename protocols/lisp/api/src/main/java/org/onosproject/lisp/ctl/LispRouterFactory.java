@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,12 @@
  */
 package org.onosproject.lisp.ctl;
 
+import com.google.common.collect.Maps;
 import org.onlab.packet.IpAddress;
 import org.slf4j.Logger;
+
+import java.util.Collection;
+import java.util.Map;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -29,6 +33,7 @@ public final class LispRouterFactory {
     private final Logger log = getLogger(getClass());
 
     private LispRouterAgent agent;
+    private Map<LispRouterId, LispRouter> routerMap = Maps.newConcurrentMap();
 
     // non-instantiable (except for our Singleton)
     private LispRouterFactory() {
@@ -53,25 +58,41 @@ public final class LispRouterFactory {
      * Cleans up LISP router agent.
      */
     public void cleanAgent() {
-        synchronized (agent) {
-            if (this.agent != null) {
-                this.agent = null;
-            } else {
-                log.warn("LISP Router Agent is not configured.");
-            }
+        if (this.agent == null) {
+            log.warn("LISP Router Agent is not configured.");
+            return;
+        }
+        LispRouterAgent existingAgent = agent;
+        synchronized (existingAgent) {
+            this.agent = null;
         }
     }
 
     /**
      * Returns a LISP router instance.
      *
-     * @param routerId LISP router identifier
+     * @param ipAddress IP address of LISP router
      * @return LISP router instance
      */
-    public LispRouter getRouterInstance(IpAddress routerId) {
-        LispRouter router = new DefaultLispRouter(new LispRouterId(routerId));
-        router.setAgent(agent);
-        return router;
+    public LispRouter getRouterInstance(IpAddress ipAddress) {
+        LispRouterId routerId = new LispRouterId(ipAddress);
+        if (!routerMap.containsKey(routerId)) {
+            LispRouter router = new DefaultLispRouter(routerId);
+            router.setAgent(agent);
+            routerMap.put(routerId, router);
+            return router;
+        } else {
+            return routerMap.get(routerId);
+        }
+    }
+
+    /**
+     * Returns all LISP routers.
+     *
+     * @return all LISP routers
+     */
+    public Collection<LispRouter> getRouters() {
+        return routerMap.values();
     }
 
     /**

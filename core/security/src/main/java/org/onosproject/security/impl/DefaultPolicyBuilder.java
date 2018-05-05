@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.onosproject.cluster.ClusterAdminService;
+import org.onosproject.cluster.ClusterMetadataAdminService;
 import org.onosproject.cluster.ClusterMetadataService;
 import org.onosproject.cluster.ClusterService;
-import org.onosproject.cluster.ClusterMetadataAdminService;
-import org.onosproject.cluster.LeadershipService;
 import org.onosproject.cluster.LeadershipAdminService;
+import org.onosproject.cluster.LeadershipService;
 import org.onosproject.codec.CodecService;
 import org.onosproject.event.EventDeliveryService;
 import org.onosproject.mastership.MastershipTermService;
@@ -63,7 +63,6 @@ import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.link.LinkAdminService;
 import org.onosproject.net.link.LinkService;
 import org.onosproject.net.packet.PacketService;
-import org.onosproject.net.proxyarp.ProxyArpService;
 import org.onosproject.net.statistic.StatisticService;
 import org.onosproject.net.topology.PathService;
 import org.onosproject.net.topology.TopologyService;
@@ -76,6 +75,8 @@ import org.onosproject.store.service.LogicalClockService;
 import org.onosproject.store.service.StorageAdminService;
 import org.onosproject.store.service.StorageService;
 import org.onosproject.ui.UiExtensionService;
+import org.onosproject.upgrade.UpgradeAdminService;
+import org.onosproject.upgrade.UpgradeService;
 import org.osgi.framework.ServicePermission;
 import org.osgi.framework.AdminPermission;
 import org.osgi.framework.AdaptPermission;
@@ -110,11 +111,11 @@ import static org.onosproject.security.AppPermission.Type.*;
 
 public final class DefaultPolicyBuilder {
 
-    protected static ConcurrentHashMap<AppPermission.Type,
+    static ConcurrentHashMap<AppPermission.Type,
             Set<String>> serviceDirectory = getServiceDirectory();
 
-    protected static List<Permission> defaultPermissions = getDefaultPerms();
-    protected static List<Permission> adminServicePermissions = getAdminDefaultPerms();
+    static List<Permission> defaultPermissions = getDefaultPerms();
+    static List<Permission> adminServicePermissions = getAdminDefaultPerms();
 
     private DefaultPolicyBuilder(){
     }
@@ -203,7 +204,6 @@ public final class DefaultPolicyBuilder {
         permSet.add(new ServicePermission(RegionAdminService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(PartitionAdminService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(StorageAdminService.class.getName(), ServicePermission.GET));
-
         permSet.add(new ServicePermission(ApplicationService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(ComponentConfigService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(ClusterMetadataService.class.getName(), ServicePermission.GET));
@@ -234,7 +234,6 @@ public final class DefaultPolicyBuilder {
 //        permSet.add(new ServicePermission(MeterService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(ResourceService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(PacketService.class.getName(), ServicePermission.GET));
-        permSet.add(new ServicePermission(ProxyArpService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(RegionService.class.getName(), ServicePermission.GET));
 //      permSet.add(new ServicePermission(LinkResourceService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(FlowStatisticService.class.getName(), ServicePermission.GET));
@@ -249,7 +248,8 @@ public final class DefaultPolicyBuilder {
         permSet.add(new ServicePermission(LogicalClockService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(StorageService.class.getName(), ServicePermission.GET));
         permSet.add(new ServicePermission(UiExtensionService.class.getName(), ServicePermission.GET));
-
+        permSet.add(new ServicePermission(UpgradeService.class.getName(), ServicePermission.GET));
+        permSet.add(new ServicePermission(UpgradeAdminService.class.getName(), ServicePermission.GET));
         return permSet;
     }
 
@@ -328,11 +328,6 @@ public final class DefaultPolicyBuilder {
 //        serviceDirectory.put(LINK_EVENT, ImmutableSet.of(
 //                LinkService.class.getName(), LinkResourceService.class.getName(),
 //                LabelResourceService.class.getName()));
-        serviceDirectory.put(PACKET_READ, ImmutableSet.of(
-                PacketService.class.getName(), ProxyArpService.class.getName()));
-        serviceDirectory.put(PACKET_WRITE, ImmutableSet.of(
-                PacketService.class.getName(), ProxyArpService.class.getName(),
-                EdgePortService.class.getName()));
         serviceDirectory.put(PACKET_EVENT, ImmutableSet.of(
                 PacketService.class.getName()));
         serviceDirectory.put(STATISTIC_READ, ImmutableSet.of(
@@ -374,6 +369,12 @@ public final class DefaultPolicyBuilder {
                 PartitionService.class.getName()));
         serviceDirectory.put(CLOCK_WRITE, ImmutableSet.of(
                 LogicalClockService.class.getName()));
+        serviceDirectory.put(UPGRADE_READ, ImmutableSet.of(
+                UpgradeService.class.getName(), UpgradeAdminService.class.getName()));
+        serviceDirectory.put(UPGRADE_WRITE, ImmutableSet.of(
+                UpgradeAdminService.class.getName()));
+        serviceDirectory.put(UPGRADE_EVENT, ImmutableSet.of(
+                UpgradeService.class.getName(), UpgradeAdminService.class.getName()));
 
         return serviceDirectory;
     }

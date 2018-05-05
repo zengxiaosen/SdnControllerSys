@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,6 +61,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.Assert.*;
 
@@ -325,6 +326,11 @@ public class OpenFlowPacketProviderTest {
 
         @Override
         public void write(Dpid dpid, OFMessage msg) {
+        }
+
+        @Override
+        public CompletableFuture<OFMessage> writeResponse(Dpid dpid, OFMessage msg) {
+            return null;
         }
 
         @Override

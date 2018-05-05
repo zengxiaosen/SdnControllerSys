@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,10 +96,8 @@ public class WideCommunityIpV4Neighbour implements BgpValueType {
 
         while (listIterator.hasNext()) {
             IpV4Neighbour speaker = listIterator.next();
-            if (speaker instanceof IpV4Neighbour) {
-                c.writeBytes(speaker.localSpeaker().toOctets());
-                c.writeBytes(speaker.remoteSpeaker().toOctets());
-            }
+            c.writeBytes(speaker.localSpeaker().toOctets());
+            c.writeBytes(speaker.remoteSpeaker().toOctets());
         }
 
         int length = c.writerIndex() - iLengthIndex;

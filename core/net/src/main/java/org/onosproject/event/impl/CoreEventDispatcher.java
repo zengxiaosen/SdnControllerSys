@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -176,22 +176,21 @@ public class CoreEventDispatcher extends DefaultEventSinkRegistry
         @Override
         public void run() {
             stopped = false;
-            log.info("Dispatch loop initiated");
+            log.info("Dispatch loop({}) initiated", name);
             while (!stopped) {
                 try {
                     // Fetch the next event and if it is the kill-pill, bail
                     Event event = eventsQueue.take();
-                    if (event == KILL_PILL) {
-                        break;
+                    if (event != KILL_PILL) {
+                        process(event);
                     }
-                    process(event);
                 } catch (InterruptedException e) {
                     log.warn("Dispatch loop interrupted");
                 } catch (Exception | Error e) {
                     log.warn("Error encountered while dispatching event:", e);
                 }
             }
-            log.info("Dispatch loop terminated");
+            log.info("Dispatch loop({}) terminated", name);
         }
 
         // Locate the sink for the event class and use it to process the event
@@ -211,8 +210,12 @@ public class CoreEventDispatcher extends DefaultEventSinkRegistry
 
         void stop() {
             stopped = true;
-            stopWatchdog();
             add(KILL_PILL);
+        }
+
+        void restart() {
+            dispatchFuture.cancel(true);
+            dispatchFuture = executor.submit(this);
         }
 
         // Monitors event sinks to make sure none take too long to execute.
@@ -231,9 +234,8 @@ public class CoreEventDispatcher extends DefaultEventSinkRegistry
 
                     // Cancel the old dispatch loop and submit a new one.
 
-                stop();
-                dispatchFuture.cancel(true);
-                dispatchFuture = executor.submit(this);
+                    stop();
+                    restart();
                 }
             }
         }

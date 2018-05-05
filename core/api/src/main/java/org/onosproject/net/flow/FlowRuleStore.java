@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,12 @@
  */
 package org.onosproject.net.flow;
 
-import java.util.List;
-
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchEvent;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
 import org.onosproject.store.Store;
+
+import java.util.List;
 
 /**
  * Manages inventory of flow rules; not intended for direct use.
@@ -26,11 +28,21 @@ import org.onosproject.store.Store;
 public interface FlowRuleStore extends Store<FlowRuleBatchEvent, FlowRuleStoreDelegate> {
 
     /**
-     * Returns the number of flow rule in the store.
+     * Returns the number of flow rules in the store.
      *
      * @return number of flow rules
      */
     int getFlowRuleCount();
+
+    /**
+     * Returns the number of flow rules for the given device in the store.
+     *
+     * @param deviceId device identifier
+     * @return number of flow rules for the given device
+     */
+    default int getFlowRuleCount(DeviceId deviceId) {
+        return 0;
+    }
 
     /**
      * Returns the stored flow.
@@ -136,4 +148,12 @@ public interface FlowRuleStore extends Store<FlowRuleBatchEvent, FlowRuleStoreDe
      * @return the flow table statistics
      */
     Iterable<TableStatisticsEntry> getTableStatistics(DeviceId deviceId);
+
+    /**
+     * Returns number of flow rules in ADDED state for specified device.
+     *
+     * @param deviceId the device ID
+     * @return number of flow rules in ADDED state
+     */
+    long getActiveFlowRuleCount(DeviceId deviceId);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ public class MeteredAsyncConsistentMap<K, V>  extends DelegatingAsyncConsistentM
     private static final String CONTAINS_KEY = "containsKey";
     private static final String CONTAINS_VALUE = "containsValue";
     private static final String GET = "get";
+    private static final String GET_OR_DEFAULT = "getOrDefault";
     private static final String COMPUTE_IF = "computeIf";
     private static final String PUT = "put";
     private static final String PUT_AND_GET = "putAndGet";
@@ -116,6 +117,13 @@ public class MeteredAsyncConsistentMap<K, V>  extends DelegatingAsyncConsistentM
         final MeteringAgent.Context timer = monitor.startTimer(GET);
         return super.get(key)
                     .whenComplete((r, e) -> timer.stop(e));
+    }
+
+    @Override
+    public CompletableFuture<Versioned<V>> getOrDefault(K key, V defaultValue) {
+        final MeteringAgent.Context timer = monitor.startTimer(GET_OR_DEFAULT);
+        return super.getOrDefault(key, defaultValue)
+                .whenComplete((r, e) -> timer.stop(e));
     }
 
     @Override

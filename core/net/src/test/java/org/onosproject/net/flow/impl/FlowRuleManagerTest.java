@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,14 +42,16 @@ import org.onosproject.net.MastershipRole;
 import org.onosproject.net.device.DeviceServiceAdapter;
 import org.onosproject.net.driver.AbstractHandlerBehaviour;
 import org.onosproject.net.driver.DefaultDriver;
+import org.onosproject.net.driver.DriverRegistry;
 import org.onosproject.net.driver.impl.DriverManager;
+import org.onosproject.net.driver.impl.DriverRegistryManager;
 import org.onosproject.net.flow.CompletedBatchOperation;
 import org.onosproject.net.flow.DefaultFlowEntry;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowEntry.FlowEntryState;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.FlowRuleBatchOperation;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
 import org.onosproject.net.flow.FlowRuleEvent;
 import org.onosproject.net.flow.FlowRuleListener;
 import org.onosproject.net.flow.FlowRuleProgrammable;
@@ -118,7 +120,6 @@ public class FlowRuleManagerTest {
 
     private TestDriverManager driverService;
 
-
     @Before
     public void setUp() {
         mgr = new FlowRuleManager();
@@ -133,19 +134,20 @@ public class FlowRuleManagerTest {
         service = mgr;
         registry = mgr;
 
-        driverService = new TestDriverManager();
-        driverService.addDriver(new DefaultDriver("foo", ImmutableList.of(), "", "", "",
-                                                  ImmutableMap.of(FlowRuleProgrammable.class,
-                                                                  TestFlowRuleProgrammable.class),
-                                                  ImmutableMap.of()));
+        DriverRegistryManager driverRegistry = new DriverRegistryManager();
+        driverService = new TestDriverManager(driverRegistry);
+        driverRegistry.addDriver(new DefaultDriver("foo", ImmutableList.of(), "", "", "",
+                                                   ImmutableMap.of(FlowRuleProgrammable.class,
+                                                                   TestFlowRuleProgrammable.class),
+                                                   ImmutableMap.of()));
 
         mgr.activate(null);
         mgr.addListener(listener);
         provider = new TestProvider(PID);
-        providerService = registry.register(provider);
+        providerService = this.registry.register(provider);
         appId = new TestApplicationId(0, "FlowRuleManagerTest");
         assertTrue("provider should be registered",
-                   registry.getProviders().contains(provider.id()));
+                   this.registry.getProviders().contains(provider.id()));
     }
 
     @After
@@ -270,7 +272,7 @@ public class FlowRuleManagerTest {
         FlowEntry fe3 = new DefaultFlowEntry(f3);
         providerService.pushFlowMetrics(DID, ImmutableList.of(fe1, fe2, fe3));
         validateEvents(RULE_ADD_REQUESTED, RULE_ADD_REQUESTED, RULE_ADD_REQUESTED,
-                RULE_ADDED, RULE_ADDED, RULE_ADDED);
+                       RULE_ADDED, RULE_ADDED, RULE_ADDED);
         mgr.purgeFlowRules(DID);
         assertEquals("0 rule should exist", 0, flowCount());
     }
@@ -358,7 +360,7 @@ public class FlowRuleManagerTest {
                            f3, FlowEntryState.PENDING_ADD)));
 
         validateEvents(RULE_ADD_REQUESTED, RULE_ADD_REQUESTED, RULE_ADD_REQUESTED,
-                       RULE_ADDED, RULE_ADDED);
+                       RULE_ADDED, RULE_ADDED, RULE_ADD_REQUESTED);
     }
 
     @Test
@@ -662,8 +664,18 @@ public class FlowRuleManagerTest {
         }
 
         @Override
+        public Instructions.StatTriggerInstruction statTrigger() {
+            return null;
+        }
+
+        @Override
         public Instructions.MeterInstruction metered() {
             return null;
+        }
+
+        @Override
+        public Set<Instructions.MeterInstruction> meters() {
+            return Sets.newHashSet();
         }
 
     }
@@ -697,7 +709,8 @@ public class FlowRuleManagerTest {
     }
 
     private class TestDriverManager extends DriverManager {
-        TestDriverManager() {
+        TestDriverManager(DriverRegistry registry) {
+            this.registry = registry;
             this.deviceService = mgr.deviceService;
             activate();
         }

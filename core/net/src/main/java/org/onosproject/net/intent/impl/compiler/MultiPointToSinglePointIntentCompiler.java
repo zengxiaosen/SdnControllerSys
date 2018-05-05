@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import org.onosproject.net.intent.IntentException;
 import org.onosproject.net.intent.IntentExtensionService;
 import org.onosproject.net.intent.LinkCollectionIntent;
 import org.onosproject.net.intent.MultiPointToSinglePointIntent;
-import org.onosproject.net.intent.PointToPointIntent;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -65,7 +64,7 @@ public class MultiPointToSinglePointIntentCompiler
 
     @Deactivate
     public void deactivate() {
-        intentManager.unregisterCompiler(PointToPointIntent.class);
+        intentManager.unregisterCompiler(MultiPointToSinglePointIntent.class);
     }
 
     @Override

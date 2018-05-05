@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,6 +63,7 @@ public interface FlowRuleProviderService extends ProviderService<FlowRuleProvide
     /**
      * Indicates to the core that the requested batch operation has
      * been completed.
+     * 向核心表明所请求的批处理操作已完成。
      *
      * @param batchId the batch which was processed
      * @param operation the resulting outcome of the operation

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import org.onosproject.net.flowobjective.FlowObjectiveStore;
 import org.onosproject.net.flowobjective.FlowObjectiveStoreDelegate;
 import org.onosproject.net.flowobjective.ObjectiveEvent;
 import org.onosproject.store.AbstractStore;
-import org.onosproject.store.service.AtomicCounter;
+import org.onosproject.store.service.AtomicIdGenerator;
 import org.onosproject.store.service.ConsistentMap;
 import org.onosproject.store.service.MapEvent;
 import org.onosproject.store.service.MapEventListener;
@@ -63,7 +63,7 @@ public class DistributedFlowObjectiveStore
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected StorageService storageService;
 
-    private AtomicCounter nextIds;
+    private AtomicIdGenerator nextIds;
     private MapEventListener<Integer, byte[]> mapListener = new NextGroupListener();
     // event queue to separate map-listener threads from event-handler threads (tpool)
     private BlockingQueue<ObjectiveEvent> eventQ;
@@ -83,7 +83,7 @@ public class DistributedFlowObjectiveStore
                                 .build("DistributedFlowObjectiveStore")))
                 .build();
         nextGroups.addListener(mapListener);
-        nextIds = storageService.getAtomicCounter("next-objective-counter");
+        nextIds = storageService.getAtomicIdGenerator("next-objective-id-generator");
         log.info("Started");
     }
 
@@ -132,7 +132,7 @@ public class DistributedFlowObjectiveStore
 
     @Override
     public int allocateNextId() {
-        return (int) nextIds.incrementAndGet();
+        return (int) nextIds.nextId();
     }
 
     private class FlowObjectiveNotifier implements Runnable {

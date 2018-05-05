@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Efficiently and adaptively collects flow statistics for the specified switch.
+ * 高效自适应地收集指定交换机的流量统计信息。
  */
 public class NewAdaptiveFlowStatsCollector implements SwitchDataCollector {
     private final Logger log = getLogger(getClass());
@@ -94,6 +95,7 @@ public class NewAdaptiveFlowStatsCollector implements SwitchDataCollector {
     private static final int MIN_CAL_AND_POLL_FREQUENCY = 2;
     private static final int MAX_CAL_AND_POLL_FREQUENCY = 60;
 
+    //计算和论寻间隔
     private int calAndPollInterval; // CAL_AND_POLL_TIMES * DEFAULT_CAL_AND_POLL_FREQUENCY;
     private int midPollInterval; // MID_POLL_TIMES * DEFAULT_CAL_AND_POLL_FREQUENCY;
     private int longPollInterval; // LONG_POLL_TIMES * DEFAULT_CAL_AND_POLL_FREQUENCY;
@@ -143,6 +145,7 @@ public class NewAdaptiveFlowStatsCollector implements SwitchDataCollector {
     }
 
     // check calAndPollInterval validity and set all pollInterval values and finally initialize each task call count
+    //检查calAndPollInterval有效性并设置所有轮询间隔值，并最终初始化每个任务调用计数
     private void initMemberVars(int pollInterval) {
         if (pollInterval < MIN_CAL_AND_POLL_FREQUENCY) {
             this.calAndPollInterval = MIN_CAL_AND_POLL_FREQUENCY;
@@ -230,7 +233,7 @@ public class NewAdaptiveFlowStatsCollector implements SwitchDataCollector {
 
                     callCountCalAndShortFlowsTask += CAL_AND_POLL_TIMES;
                     isFirstTimeStart = false;
-                } else  if (callCountCalAndShortFlowsTask == ENTIRE_POLL_TIMES) {
+                } else  if (callCountCalAndShortFlowsTask >= ENTIRE_POLL_TIMES) {
                     // entire_poll_times, get entire flow stats from a given switch sw
                     log.trace("CalAndShortFlowsTask Collecting Entire AdaptiveStats for {}", sw.getStringId());
                     ofFlowStatsRequestAllSend();
@@ -306,6 +309,7 @@ public class NewAdaptiveFlowStatsCollector implements SwitchDataCollector {
                               sw.getStringId());
                     // for exiting while loop gracefully
                     interrupted = true;
+                    Thread.currentThread().interrupt();
                 }
             } else {
                 log.debug("ofFlowStatsRequestFlowSend: previous FlowStatsRequestAll (xid={})" +
@@ -347,7 +351,7 @@ public class NewAdaptiveFlowStatsCollector implements SwitchDataCollector {
                 log.trace("MidFlowsTask Collecting AdaptiveStats for {}", sw.getStringId());
 
                 // skip collecting because CalAndShortFlowsTask collects entire flow stats from a given switch sw
-                if (callCountMidFlowsTask == ENTIRE_POLL_TIMES) {
+                if (callCountMidFlowsTask >= ENTIRE_POLL_TIMES) {
                     callCountMidFlowsTask = MID_POLL_TIMES;
                 } else {
                     midFlowsTaskInternal();
@@ -368,7 +372,7 @@ public class NewAdaptiveFlowStatsCollector implements SwitchDataCollector {
                 log.trace("LongFlowsTask Collecting AdaptiveStats for {}", sw.getStringId());
 
                 // skip collecting because CalAndShortFlowsTask collects entire flow stats from a given switch sw
-                if (callCountLongFlowsTask == ENTIRE_POLL_TIMES) {
+                if (callCountLongFlowsTask >= ENTIRE_POLL_TIMES) {
                     callCountLongFlowsTask = LONG_POLL_TIMES;
                 } else {
                     longFlowsTaskInternal();
@@ -460,6 +464,7 @@ public class NewAdaptiveFlowStatsCollector implements SwitchDataCollector {
 
     /**
      * Calculates the flow live type.
+     * 根据FlowEntry的FlowRule已经持续的秒数来计算FlowLiveType
      *
      * @param life the flow life time in seconds
      * @return computed flow live type

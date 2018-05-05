@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -161,7 +161,48 @@ public interface ProtectionConfigBehaviour extends HandlerBehaviour {
      * @return Completes if request was accepted, fails exceptionally on error.
      *         Note: completion does not always assure working path has switched.
      */
+    @Deprecated
     CompletableFuture<Void> switchWorkingPath(ConnectPoint identifier, int index);
+
+    /**
+     * Attempts to forcibly switch to the one specified path by {@code index}.
+     *
+     * @param identifier {@link ConnectPoint} for the virtual Port representing
+     *                     protected path endpoint
+     * @param index path index to switch to
+     * @return Completes if request was accepted, fails exceptionally on error.
+     *         Note: completion does not always assure working path has switched.
+     */
+    default CompletableFuture<Void> switchToForce(ConnectPoint identifier, int index) {
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * Attempts to manually switch to the one specified path by {@code index}.
+     * This operation would be rejected if the specified path is a fault path.
+     *
+     * @param identifier {@link ConnectPoint} for the virtual Port representing
+     *                     protected path endpoint
+     * @param index path index to switch to
+     * @return Completes if request was accepted, fails exceptionally on error.
+     *         Note: completion does not always assure working path has switched.
+     */
+    default CompletableFuture<Void> switchToManual(ConnectPoint identifier, int index) {
+        return switchWorkingPath(identifier, index);
+    }
+
+    /**
+     * Attempts to set the device to automatic protection mode.
+     *
+     * @param identifier {@link ConnectPoint} for the virtual Port representing
+     *                     protected path endpoint
+     * @return Completes if request was accepted, fails exceptionally on error.
+     */
+    default CompletableFuture<Void> switchToAutomatic(ConnectPoint identifier) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.completeExceptionally(new UnsupportedOperationException());
+        return future;
+    }
 
     // TODO How to let one listen to async events? e.g., working path changed event
 }

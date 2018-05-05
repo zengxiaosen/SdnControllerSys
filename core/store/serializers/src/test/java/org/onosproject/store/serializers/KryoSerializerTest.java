@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,14 +27,14 @@ import org.junit.Test;
 import org.onlab.packet.VlanId;
 import org.onlab.util.Bandwidth;
 import org.onlab.util.Frequency;
+import org.onlab.util.KryoNamespace;
 import org.onosproject.cluster.NodeId;
 import org.onosproject.cluster.RoleInfo;
 import org.onosproject.core.DefaultApplicationId;
-import org.onosproject.core.DefaultGroupId;
+import org.onosproject.core.GroupId;
 import org.onosproject.mastership.MastershipTerm;
 import org.onosproject.net.Annotations;
 import org.onosproject.net.ChannelSpacing;
-import org.onosproject.net.CltSignalType;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.DefaultDevice;
@@ -47,21 +47,14 @@ import org.onosproject.net.HostLocation;
 import org.onosproject.net.Link;
 import org.onosproject.net.LinkKey;
 import org.onosproject.net.MarkerResource;
-import org.onosproject.net.OchPort;
-import org.onosproject.net.OchSignal;
-import org.onosproject.net.OduCltPort;
-import org.onosproject.net.OmsPort;
-import org.onosproject.net.OtuPort;
-import org.onosproject.net.OtuSignalType;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.OduSignalType;
 import org.onosproject.net.SparseAnnotations;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowId;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.FlowRuleBatchEntry;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchEntry;
 import org.onosproject.net.intent.IntentId;
 import org.onosproject.net.resource.ResourceAllocation;
 import org.onosproject.net.resource.ResourceConsumerId;
@@ -84,6 +77,7 @@ import org.onlab.packet.MacAddress;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
 import java.time.Duration;
 
@@ -105,7 +99,6 @@ public class KryoSerializerTest {
     private static final String MFR = "whitebox";
     private static final String HW = "1.1.x";
     private static final String SW1 = "3.8.1";
-    private static final String SW2 = "3.9.5";
     private static final String SN = "43311-12345";
     private static final ChassisId CID = new ChassisId();
     private static final Device DEV1 = new DefaultDevice(PID, DID1, Device.Type.SWITCH, MFR, HW,
@@ -118,8 +111,6 @@ public class KryoSerializerTest {
             .remove("A1")
             .set("B3", "b3")
             .build();
-    private static final OchSignal OCH_SIGNAL1 = (OchSignal) org.onosproject.net.Lambda.ochSignal(
-            GridType.DWDM, ChannelSpacing.CHL_100GHZ, -8, 4);
     private static final VlanId VLAN1 = VlanId.vlanId((short) 100);
 
     private StoreSerializer serializer;
@@ -135,6 +126,29 @@ public class KryoSerializerTest {
 
     @After
     public void tearDown() throws Exception {
+    }
+
+    private byte[] serialize(Object object) {
+        return serialize(object, serializer);
+    }
+
+    private byte[] serialize(Object object, StoreSerializer serializer) {
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
+        serializer.encode(object, buffer);
+        buffer.flip();
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+        return bytes;
+    }
+
+    private <T> T deserialize(byte[] bytes, StoreSerializer serializer) {
+        return serializer.decode(bytes);
+    }
+
+    private <T> void testBytesEqual(T expected, T actual) {
+        byte[] expectedBytes = serialize(expected);
+        byte[] actualBytes = serialize(actual);
+        assertArrayEquals(expectedBytes, actualBytes);
     }
 
     private <T> void testSerializedEquals(T original) {
@@ -156,6 +170,66 @@ public class KryoSerializerTest {
         assertNotNull(copy);
     }
 
+    public static class Versioned1 {
+        private int value1;
+    }
+
+    public static class Versioned2 {
+        private int value1;
+        private int value2;
+        private int value3;
+    }
+
+    public static class Versioned3 {
+        private int value1;
+        private int value3;
+    }
+
+    @Test
+    public void testVersioned() {
+        StoreSerializer serializer1 = StoreSerializer.using(KryoNamespace.newBuilder()
+                .register(KryoNamespaces.BASIC)
+                .register(Versioned1.class)
+                .setCompatible(true)
+                .build());
+
+        StoreSerializer serializer2 = StoreSerializer.using(KryoNamespace.newBuilder()
+                .register(KryoNamespaces.BASIC)
+                .register(Versioned2.class)
+                .setCompatible(true)
+                .build());
+
+        StoreSerializer serializer3 = StoreSerializer.using(KryoNamespace.newBuilder()
+                .register(KryoNamespaces.BASIC)
+                .register(Versioned3.class)
+                .setCompatible(true)
+                .build());
+
+        Versioned1 versioned1 = new Versioned1();
+        versioned1.value1 = 1;
+
+        Versioned2 versioned2 = new Versioned2();
+        versioned2.value1 = 1;
+        versioned2.value2 = 2;
+        versioned2.value3 = 3;
+
+        Versioned3 versioned3 = new Versioned3();
+        versioned3.value1 = 1;
+        versioned3.value3 = 3;
+
+        Versioned2 versioned1Upgrade = deserialize(serialize(versioned1, serializer1), serializer2);
+        assertEquals(versioned1.value1, versioned1Upgrade.value1);
+
+        Versioned1 versioned2Downgrade = deserialize(serialize(versioned2, serializer2), serializer1);
+        assertEquals(versioned2.value1, versioned2Downgrade.value1);
+
+        Versioned3 versioned2Upgrade = deserialize(serialize(versioned2, serializer2), serializer3);
+        assertEquals(versioned2.value1, versioned2Upgrade.value1);
+        assertEquals(versioned2.value3, versioned2Upgrade.value3);
+
+        Versioned2 versioned3Downgrade = deserialize(serialize(versioned3, serializer3), serializer2);
+        assertEquals(versioned3.value1, versioned3Downgrade.value1);
+    }
 
     @Test
     public void testConnectPoint() {
@@ -186,31 +260,6 @@ public class KryoSerializerTest {
     }
 
     @Test
-    public void testOmsPort() {
-        testSerializedEquals(new OmsPort(DEV1, P1, true, Frequency.ofGHz(190_100), Frequency.ofGHz(197_300),
-                Frequency.ofGHz(100)));
-        testSerializedEquals(new OmsPort(DEV1, P1, true, Frequency.ofGHz(190_100), Frequency.ofGHz(197_300),
-                Frequency.ofGHz(100), A1_2));
-    }
-
-    @Test
-    public void testOchPort() {
-        testSerializedEquals(new OchPort(DEV1, P1, true, OduSignalType.ODU0, false, OCH_SIGNAL1));
-        testSerializedEquals(new OchPort(DEV1, P1, true, OduSignalType.ODU0, false, OCH_SIGNAL1, A1_2));
-    }
-
-    @Test
-    public void testOduCltPort() {
-        testSerializedEquals(new OduCltPort(DEV1, P1, true, CltSignalType.CLT_10GBE));
-        testSerializedEquals(new OduCltPort(DEV1, P1, true, CltSignalType.CLT_10GBE, A1_2));
-    }
-
-    @Test
-    public void testOtuPort() {
-        testSerializedEquals(new OtuPort(DEV1, P1, true, OtuSignalType.OTU2));
-        testSerializedEquals(new OtuPort(DEV1, P1, true, OtuSignalType.OTU2, A1_2));
-    }
-    @Test
     public void testDeviceId() {
         testSerializedEquals(DID1);
     }
@@ -231,6 +280,7 @@ public class KryoSerializerTest {
 
     @Test
     public void testImmutableList() {
+        testBytesEqual(ImmutableList.of(DID1, DID2), ImmutableList.of(DID1, DID2, DID1, DID2).subList(0, 2));
         testSerializedEquals(ImmutableList.of(DID1, DID2));
         testSerializedEquals(ImmutableList.of(DID1));
         testSerializedEquals(ImmutableList.of());
@@ -406,8 +456,8 @@ public class KryoSerializerTest {
     }
 
     @Test
-    public void testDefaultGroupId() {
-        testSerializedEquals(new DefaultGroupId(99));
+    public void testGroupId() {
+        testSerializedEquals(new GroupId(99));
     }
 
     @Test
@@ -442,6 +492,19 @@ public class KryoSerializerTest {
         for (String key : expected.keys()) {
             assertEquals(expected.value(key), actual.value(key));
         }
+    }
+
+    @Test
+    public void testBitSet() {
+        BitSet bs = new BitSet(32);
+        bs.set(2);
+        bs.set(8);
+        bs.set(12);
+        bs.set(18);
+        bs.set(25);
+        bs.set(511);
+
+        testSerializedEquals(bs);
     }
 
 }

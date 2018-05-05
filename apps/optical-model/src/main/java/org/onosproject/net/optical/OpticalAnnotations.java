@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ public final class OpticalAnnotations {
     private OpticalAnnotations() {}
 
     /**
-     * Annotation key for mininum frequency in Hz.
+     * Annotation key for minimum frequency in Hz.
      * Value is expected to be an integer.
      */
     public static final String MIN_FREQ_HZ = "minFrequency";
@@ -45,15 +45,21 @@ public final class OpticalAnnotations {
 
     /**
      * Annotation key for optical port's target power.
-     * Value is expected to be an integer.
+     * Value is expected to be an integer in 0.01 dBm unit.
      */
     public static final String TARGET_POWER = "targetPower";
 
     /**
-     * Annotation key for optical port's current power.
-     * Value is expected to be an integer.
+     * Annotation key for optical port's current receiving power.
+     * Value is expected to be an integer in 0.01 dBm unit.
      */
     public static final String CURRENT_POWER = "currentPower";
+
+    /**
+     * Annotation key for bidirectional optical port's transmitting power.
+     * Value is expected to be an integer in 0.01 dBm unit.
+     */
+    public static final String OUTPUT_POWER = "ouputPower";
 
     /**
      * Annotation key for optical port's neighbor's DeviceId#toString().
@@ -65,4 +71,26 @@ public final class OpticalAnnotations {
      * Value is expected to be an integer.
      */
     public static final String NEIGHBOR_PORT = "neighborPort";
+
+    /**
+     * Annotation key for optical port's status in receiving direction.
+     * Value is expected to be STATUS_IN_SERVICE or STATUS_OUT_SERVICE.
+     */
+    public static final String INPUT_PORT_STATUS = "inputStatus";
+
+    /**
+     * Annotation key for optical port's status in transmitting direction.
+     * Value is expected to be STATUS_IN_SERVICE or STATUS_OUT_SERVICE.
+     */
+    public static final String OUTPUT_PORT_STATUS = "ouputStatus";
+
+    /**
+     * Annotation value for optical port's in-service status.
+     */
+    public static final String STATUS_IN_SERVICE = "inService";
+
+    /**
+     * Annotation value for optical port's out-of-service status.
+     */
+    public static final String STATUS_OUT_SERVICE = "outOfService";
 }

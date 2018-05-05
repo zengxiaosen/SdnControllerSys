@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,111 +15,161 @@
  */
 package org.onosproject.ofagent.impl;
 
-import io.netty.channel.nio.NioEventLoopGroup;
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.onosproject.incubator.net.virtual.NetworkId;
-import org.onosproject.net.DeviceId;
-import org.onosproject.net.device.DeviceEvent;
-import org.onosproject.net.device.DeviceListener;
-import org.onosproject.net.flow.FlowRuleEvent;
-import org.onosproject.net.flow.FlowRuleListener;
-import org.onosproject.net.packet.PacketContext;
-import org.onosproject.net.packet.PacketProcessor;
+import org.onosproject.incubator.net.virtual.TenantId;
 import org.onosproject.ofagent.api.OFAgent;
 import org.onosproject.ofagent.api.OFController;
-import org.onosproject.ofagent.api.OFSwitch;
 
-import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * Implementation of OF agent.
+ * Implementation of OpenFlow agent.
  */
 public final class DefaultOFAgent implements OFAgent {
 
     private final NetworkId networkId;
-    private final Map<Class<?>, Object> services;
+    private final TenantId tenantId;
+
     private final Set<OFController> controllers;
-    private final ExecutorService eventExecutor;
-    private final NioEventLoopGroup ioWorker;
+    private final State state;
 
-    private final ConcurrentHashMap<DeviceId, OFSwitch> switchMap = new ConcurrentHashMap<>();
-    private final DeviceListener deviceListener = new InternalDeviceListener();
-    private final FlowRuleListener flowRuleListener = new InternalFlowRuleListener();
-    private final InternalPacketProcessor packetProcessor = new InternalPacketProcessor();
-
-    private DefaultOFAgent(NetworkId networkId,
-                           Map<Class<?>, Object> services,
+    private DefaultOFAgent(NetworkId networkId, TenantId tenantId,
                            Set<OFController> controllers,
-                           ExecutorService eventExecutor,
-                           NioEventLoopGroup ioWorker) {
+                           State state) {
         this.networkId = networkId;
-        this.services = services;
+        this.tenantId = tenantId;
         this.controllers = controllers;
-        this.eventExecutor = eventExecutor;
-        this.ioWorker = ioWorker;
+        this.state = state;
     }
 
     @Override
     public NetworkId networkId() {
-        return null;
+        return networkId;
+    }
+
+    @Override
+    public TenantId tenantId() {
+        return tenantId;
     }
 
     @Override
     public Set<OFController> controllers() {
-        return null;
+        return controllers;
     }
 
     @Override
-    public void start() {
-        // TODO add listeners to the services
-        // TODO connect all virtual devices in this network to the controllers
+    public State state() {
+        return state;
     }
 
     @Override
-    public void stop() {
-        // TODO remove listeners from the services
-        // TODO disconnect all active connections
+    public int hashCode() {
+        return Objects.hash(networkId);
     }
 
-    private void connect(OFSwitch ofSwitch, OFController controller) {
-        // TODO connect the switch to the controller
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (obj instanceof DefaultOFAgent) {
+            DefaultOFAgent that = (DefaultOFAgent) obj;
+            if (Objects.equals(networkId, that.networkId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    private void disconnect(OFSwitch ofSwitch, OFController controller) {
-        // TODO disconnect the controller from the ofSwitch
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("networkId", this.networkId)
+                .add("tenantId", this.tenantId)
+                .add("controllers", this.controllers)
+                .add("state", this.state)
+                .toString();
     }
 
-    private class InternalFlowRuleListener implements FlowRuleListener {
+    /**
+     * Returns new builder instance.
+     *
+     * @return default ofagent builder
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder implements OFAgent.Builder {
+
+        private NetworkId networkId;
+        private TenantId tenantId;
+        private Set<OFController> controllers = Sets.newHashSet();
+        private State state;
+
+        private Builder() {
+        }
 
         @Override
-        public void event(FlowRuleEvent event) {
-            // TODO handle flow rule event
-        }
-    }
+        public OFAgent build() {
+            checkNotNull(networkId, "Network ID cannot be null");
+            checkNotNull(tenantId, "Tenant ID cannot be null");
+            checkNotNull(state, "State cannot be null");
+            controllers = controllers == null ? ImmutableSet.of() : controllers;
 
-    private class InternalDeviceListener implements DeviceListener {
+            return new DefaultOFAgent(networkId, tenantId, controllers, state);
+        }
 
         @Override
-        public void event(DeviceEvent event) {
-            // TODO handle device event
-            // device detected: connect the device to controllers
-            // device removed: disconnect and remove the switch from the map
-            // device state available: connect the switch to the controllers
-            // device state unavailable: disconnect the switch from the controllers
-            // port added: send out features reply
-            // port status change
+        public Builder from(OFAgent ofAgent) {
+            this.networkId = ofAgent.networkId();
+            this.tenantId = ofAgent.tenantId();
+            this.controllers = Sets.newHashSet(ofAgent.controllers());
+            this.state = ofAgent.state();
+            return this;
         }
-    }
-
-    private class InternalPacketProcessor implements PacketProcessor {
 
         @Override
-        public void process(PacketContext context) {
-            // TODO handle packet-in
+        public Builder networkId(NetworkId networkId) {
+            this.networkId = networkId;
+            return this;
+        }
+
+        @Override
+        public Builder tenantId(TenantId tenantId) {
+            this.tenantId = tenantId;
+            return this;
+        }
+
+        @Override
+        public Builder controllers(Set<OFController> controllers) {
+            this.controllers = controllers;
+            return this;
+        }
+
+        @Override
+        public OFAgent.Builder addController(OFController controller) {
+            this.controllers.add(controller);
+            return this;
+        }
+
+        @Override
+        public OFAgent.Builder deleteController(OFController controller) {
+            this.controllers.remove(controller);
+            return this;
+        }
+
+        @Override
+        public Builder state(State state) {
+            this.state = state;
+            return this;
         }
     }
-
-    // TODO implement builder
 }

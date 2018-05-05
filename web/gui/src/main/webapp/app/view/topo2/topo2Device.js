@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,13 +26,13 @@
 
     var remappedDeviceTypes = {
         switch: 'm_switch',
-        virtual: 'cord'
+        virtual: 'cord',
     };
 
-    function createDeviceCollection(data, region) {
+    function createDeviceCollection(data) {
 
         var DeviceCollection = Collection.extend({
-            model: Model
+            model: Model,
         });
 
         var devices = [];
@@ -46,50 +46,55 @@
     }
 
     angular.module('ovTopo2')
-    .factory('Topo2DeviceService',
-        ['Topo2Collection', 'Topo2NodeModel', 'Topo2DeviceDetailsPanel',
-            function (_c_, _nm_, detailsPanel) {
+    .factory('Topo2DeviceService', [
+            'Topo2Collection', 'Topo2NodeModel', 'Topo2DeviceDetailsPanel',
+            'PrefsService',
+            function (_c_, _nm_, detailsPanel, ps) {
 
                 Collection = _c_;
 
                 Model = _nm_.extend({
+
+                    nodeType: 'device',
+                    multiSelectEnabled: true,
+                    events: {
+                        'click': 'onClick',
+                    },
+
                     initialize: function () {
                         this.super = this.constructor.__super__;
                         this.super.initialize.apply(this, arguments);
                     },
-                    events: {
-                        'click': 'onClick'
-                    },
-                    onChange: function (change) {
+                    onChange: function () {
                         if (this.el) {
                             this.el.attr('class', this.svgClassName());
                             var rect = this.el.select('.icon-rect');
                             rect.style('fill', this.devGlyphColor());
+
+                            this.setOfflineVisibility();
                         }
                     },
-                    nodeType: 'device',
                     icon: function () {
                         var type = this.get('type');
                         return remappedDeviceTypes[type] || type || 'unknown';
                     },
-                    onClick: function () {
+                    showDetails: function () {
+                        var id = this.get('id'),
+                            nodeType = this.get('nodeType');
+                        detailsPanel.updateDetails(id, nodeType);
+                        detailsPanel.show();
+                    },
+                    displayMastership: function () {
+                        var id = this.mastershipService.mastership(),
+                            suppress = id ? this.get('master') !== id : false;
 
-                        var selected = this.select(d3.event);
+                        this.set({ mastership: suppress });
+                    },
+                    setOfflineVisibility: function () {
+                        var showOffline = ps.getPrefs('topo2_prefs')['offline_devices'],
+                            display = this.get('online') || showOffline;
 
-                        if (_.isArray(selected) && selected.length > 0) {
-                            if (selected.length === 1) {
-                                var model = selected[0],
-                                    id = model.get('id'),
-                                    nodeType = model.get('nodeType');
-                                detailsPanel.updateDetails(id, nodeType);
-                                detailsPanel.show();
-                            } else {
-                                // Multi Panel
-                                detailsPanel.showMulti(selected);
-                            }
-                        } else {
-                            detailsPanel.hide();
-                        }
+                        this.el.style('visibility', display ? 'visible' : 'hidden');
                     },
                     onExit: function () {
                         var node = this.el;
@@ -103,13 +108,13 @@
                             .style('stroke-fill', '#555')
                             .style('fill', '#888')
                             .style('opacity', 0.5);
-                    }
+                    },
                 });
 
                 return {
-                    createDeviceCollection: createDeviceCollection
+                    createDeviceCollection: createDeviceCollection,
                 };
-            }
+            },
         ]);
 
 })();

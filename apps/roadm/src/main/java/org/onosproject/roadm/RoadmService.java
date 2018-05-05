@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,14 @@
 package org.onosproject.roadm;
 
 import com.google.common.collect.Range;
+import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.OchSignal;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.behaviour.protection.ProtectedTransportEndpointState;
 import org.onosproject.net.flow.FlowId;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -41,6 +44,44 @@ import java.util.Set;
  * This application currently only supports fixed grid channels.
  */
 public interface RoadmService {
+
+    /**
+     * Attempts to manually switch working path to the one specified by {@code index}.
+     *
+     * @param deviceId DeviceId of the device to configure
+     * @param index working path index to switch to
+     * @deprecated 1.11.0
+     */
+    @Deprecated
+    void setProtectionSwitchWorkingPath(DeviceId deviceId, int index);
+
+    /**
+     * Retrieves protection switch specified port's service status.
+     *
+     * @param deviceId DeviceId of the device to configure
+     * @param portNumber the port
+     * @return port service status
+     * @deprecated 1.11.0
+     */
+    @Deprecated
+    String getProtectionSwitchPortState(DeviceId deviceId, PortNumber portNumber);
+
+    /**
+     * Attempts to config protection switch by specified {@code operation} and {@code index}.
+     *
+     * @param deviceId DeviceId of the device to configure
+     * @param operation switch configuration, automatic, force or manual
+     * @param identifier {@link ConnectPoint} for the virtual Port representing protected path endpoint
+     * @param index working path index to switch to
+     */
+    void configProtectionSwitch(DeviceId deviceId, String operation, ConnectPoint identifier, int index);
+
+    /**
+     * Retrieves protection switch endpoint states.
+     * @param deviceId DeviceId of the device to configure
+     * @return map groups of underlying paths
+     */
+    Map<ConnectPoint, ProtectedTransportEndpointState> getProtectionSwitchStates(DeviceId deviceId);
 
     /**
      * Set target power for a port if the port has configurable target power.
@@ -69,8 +110,7 @@ public interface RoadmService {
      * @param ochSignal channel to set attenuation for
      * @param attenuation attenuation value to set to
      */
-    void setAttenuation(DeviceId deviceId, PortNumber portNumber, OchSignal ochSignal,
-                        long attenuation);
+    void setAttenuation(DeviceId deviceId, PortNumber portNumber, OchSignal ochSignal, long attenuation);
 
     /**
      * Returns the attenuation of a connection.
@@ -99,8 +139,7 @@ public interface RoadmService {
      * @param ochSignal channel to search for
      * @return channel power if found, null otherwise
      */
-    Long getCurrentChannelPower(DeviceId deviceId, PortNumber portNumber,
-                                OchSignal ochSignal);
+    Long getCurrentChannelPower(DeviceId deviceId, PortNumber portNumber, OchSignal ochSignal);
 
     /**
      * Returns the channels supported by a port.
@@ -117,7 +156,7 @@ public interface RoadmService {
      * output port).
      *
      * Connections are represented as flows with an input port, output port, and
-     * channel. Implementation of attenuation is up to the vendor.
+     * channel.
      *
      * @param deviceId DeviceId of the device to create this connection for
      * @param priority priority of the flow
@@ -129,8 +168,7 @@ public interface RoadmService {
      * @return FlowId of the FlowRule representing the connection
      */
     FlowId createConnection(DeviceId deviceId, int priority, boolean isPermanent,
-                          int timeout, PortNumber inPort, PortNumber outPort,
-                          OchSignal ochSignal);
+                          int timeout, PortNumber inPort, PortNumber outPort, OchSignal ochSignal);
 
     /**
      * Creates a new internal connection on a device with attenuation. This does
@@ -269,8 +307,7 @@ public interface RoadmService {
      * @param ochSignal channel to check
      * @return range if found, null otherwise
      */
-    Range<Long> attenuationRange(DeviceId deviceId, PortNumber portNumber,
-                                 OchSignal ochSignal);
+    Range<Long> attenuationRange(DeviceId deviceId, PortNumber portNumber, OchSignal ochSignal);
 
     /**
      * Returns the expected input power range for an input port.

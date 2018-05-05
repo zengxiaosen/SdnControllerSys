@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,15 @@ package org.onosproject.lisp.msg.protocols;
 
 import io.netty.buffer.ByteBuf;
 import com.google.common.base.Objects;
+import org.onlab.packet.IpAddress;
 import org.onosproject.lisp.msg.exceptions.LispParseError;
 import org.onosproject.lisp.msg.exceptions.LispReaderException;
 import org.onosproject.lisp.msg.exceptions.LispWriterException;
 import org.onosproject.lisp.msg.types.LispAfiAddress;
 import org.onosproject.lisp.msg.types.LispAfiAddress.AfiAddressReader;
 import org.onosproject.lisp.msg.types.LispAfiAddress.AfiAddressWriter;
+import org.onosproject.lisp.msg.types.LispIpv4Address;
+import org.onosproject.lisp.msg.types.LispIpv6Address;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -35,6 +38,9 @@ public final class LispEidRecord {
     private final byte maskLength;
     private final LispAfiAddress prefix;
 
+    // Cache the hash code for the string, default to 0
+    private final int hash;
+
     /**
      * Initializes LispEidRecord with mask length and EID prefix.
      *
@@ -46,7 +52,21 @@ public final class LispEidRecord {
 
         checkNotNull(prefix, "Must specify an address prefix");
 
-        this.prefix = prefix;
+        // re-calculate the IP address based on the maskLength
+        switch (prefix.getAfi()) {
+            case IP4:
+                this.prefix = new LispIpv4Address(IpAddress.makeMaskedAddress(
+                        IpAddress.valueOf(prefix.toString()), maskLength));
+                break;
+            case IP6:
+                this.prefix = new LispIpv6Address(IpAddress.makeMaskedAddress(
+                        IpAddress.valueOf(prefix.toString()), maskLength));
+                break;
+            default:
+                this.prefix = prefix;
+        }
+
+        this.hash = 31 * 17 + Objects.hashCode(maskLength, prefix);
     }
 
     /**
@@ -90,7 +110,7 @@ public final class LispEidRecord {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(maskLength, prefix);
+        return hash;
     }
 
     /**

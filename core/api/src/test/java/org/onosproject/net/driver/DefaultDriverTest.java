@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,25 @@ package org.onosproject.net.driver;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import org.junit.Test;
 
 import java.util.ArrayList;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.onosproject.net.driver.DefaultDriverDataTest.DEVICE_ID;
 
 public class DefaultDriverTest {
+    public static final String MFR = "mfr";
+    public static final String HW = "hw";
+    public static final String SW = "sw";
+    public static final String KEY = "key";
+    public static final String VALUE = "value";
+    public static final String ROOT = "rootDriver";
+    public static final String CHILD = "childDriver";
+    public static final String GRAND_CHILD = "grandChildDriver";
 
     @Test
     public void basics() {
@@ -41,6 +51,7 @@ public class DefaultDriverTest {
                                               ImmutableMap.of("foo", "bar"));
         assertEquals("incorrect name", "foo.bar", ddc.name());
         assertEquals("incorrect parent", ddp, ddc.parent());
+        assertEquals("incorrect empty parent", ImmutableList.of(), ddp.parents());
         assertEquals("incorrect mfr", "Circus", ddc.manufacturer());
         assertEquals("incorrect hw", "lux", ddc.hwVersion());
         assertEquals("incorrect sw", "1.2a", ddc.swVersion());
@@ -88,5 +99,21 @@ public class DefaultDriverTest {
         assertEquals("incorrect property", "wee", ddc.value("goo"));
 
         assertTrue("incorrect toString", ddc.toString().contains("Circus"));
+    }
+
+    @Test
+    public void testGetProperty() throws Exception {
+        DefaultDriver root = new DefaultDriver(ROOT, Lists.newArrayList(), MFR, HW, SW,
+                ImmutableMap.of(), ImmutableMap.of());
+
+        DefaultDriver child = new DefaultDriver(CHILD, Lists.newArrayList(root), MFR, HW, SW,
+                ImmutableMap.of(), ImmutableMap.of(KEY, VALUE));
+
+        DefaultDriver grandChild = new DefaultDriver(GRAND_CHILD, Lists.newArrayList(child),
+                MFR, HW, SW, ImmutableMap.of(), ImmutableMap.of());
+
+        assertNull(root.getProperty(KEY));
+        assertEquals(VALUE, child.getProperty(KEY));
+        assertEquals(VALUE, grandChild.getProperty(KEY));
     }
 }

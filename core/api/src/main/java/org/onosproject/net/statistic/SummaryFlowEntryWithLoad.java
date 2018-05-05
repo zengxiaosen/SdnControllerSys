@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import org.onosproject.net.ConnectPoint;
 
 /**
  * Summary Load classified by flow live type.
+ * 摘要负载按流量 live 类型分类。
  */
 public class SummaryFlowEntryWithLoad {
     private ConnectPoint cp;
@@ -28,55 +29,6 @@ public class SummaryFlowEntryWithLoad {
     private Load shortLoad;
     private Load midLoad;
     private Load longLoad;
-
-    public ConnectPoint getCp() {
-        return cp;
-    }
-
-    public void setCp(ConnectPoint cp) {
-        this.cp = cp;
-    }
-
-    public Load getTotalLoad() {
-        return totalLoad;
-    }
-
-    public void setTotalLoad(Load totalLoad) {
-        this.totalLoad = totalLoad;
-    }
-
-    public Load getImmediateLoad() {
-        return immediateLoad;
-    }
-
-    public void setImmediateLoad(Load immediateLoad) {
-        this.immediateLoad = immediateLoad;
-    }
-
-    public Load getShortLoad() {
-        return shortLoad;
-    }
-
-    public void setShortLoad(Load shortLoad) {
-        this.shortLoad = shortLoad;
-    }
-
-    public Load getMidLoad() {
-        return midLoad;
-    }
-
-    public void setMidLoad(Load midLoad) {
-        this.midLoad = midLoad;
-    }
-
-    public Load getLongLoad() {
-        return longLoad;
-    }
-
-    public void setLongLoad(Load longLoad) {
-        this.longLoad = longLoad;
-    }
-
     private Load unknownLoad;
 
     /**

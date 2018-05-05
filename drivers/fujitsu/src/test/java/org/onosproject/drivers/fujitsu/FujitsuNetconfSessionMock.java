@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +17,19 @@
 package org.onosproject.drivers.fujitsu;
 
 import com.google.common.annotations.Beta;
+
+import org.onosproject.netconf.DatastoreId;
 import org.onosproject.netconf.NetconfDeviceOutputEventListener;
 import org.onosproject.netconf.NetconfException;
-import org.onosproject.netconf.NetconfSession;
+import org.onosproject.netconf.NetconfSessionAdapter;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 
 /**
  * Mock NetconfSessionImpl.
  */
-public class FujitsuNetconfSessionMock implements NetconfSession {
+public class FujitsuNetconfSessionMock extends NetconfSessionAdapter {
 
     private FujitsuNetconfSessionListenerTest listener;
 
@@ -80,17 +81,6 @@ public class FujitsuNetconfSessionMock implements NetconfSession {
     }
 
     @Override
-    public String getConfig(String targetConfiguration) throws NetconfException {
-        return null;
-    }
-
-    @Override
-    public String getConfig(String targetConfiguration, String configurationFilterSchema)
-            throws NetconfException {
-        return null;
-    }
-
-    @Override
     public boolean editConfig(String newConfiguration) throws NetconfException {
         boolean result = true;
         if (listener != null) {
@@ -100,7 +90,7 @@ public class FujitsuNetconfSessionMock implements NetconfSession {
     }
 
     @Override
-    public boolean editConfig(String targetConfiguration, String mode, String newConfiguration)
+    public boolean editConfig(DatastoreId targetConfiguration, String mode, String newConfiguration)
             throws NetconfException {
         boolean result = true;
         if (listener != null) {
@@ -110,13 +100,19 @@ public class FujitsuNetconfSessionMock implements NetconfSession {
     }
 
     @Override
+    public boolean copyConfig(DatastoreId targetConfiguration, String newConfiguration)
+            throws NetconfException {
+        return false;
+    }
+
+    @Override
     public boolean copyConfig(String targetConfiguration, String newConfiguration)
             throws NetconfException {
         return false;
     }
 
     @Override
-    public boolean deleteConfig(String targetConfiguration) throws NetconfException {
+    public boolean deleteConfig(DatastoreId targetConfiguration) throws NetconfException {
         return false;
     }
 
@@ -138,12 +134,12 @@ public class FujitsuNetconfSessionMock implements NetconfSession {
     }
 
     @Override
-    public boolean lock(String configType) throws NetconfException {
+    public boolean lock(DatastoreId configType) throws NetconfException {
         return false;
     }
 
     @Override
-    public boolean unlock(String configType) throws NetconfException {
+    public boolean unlock(DatastoreId configType) throws NetconfException {
         return false;
     }
 
@@ -168,12 +164,7 @@ public class FujitsuNetconfSessionMock implements NetconfSession {
     }
 
     @Override
-    public String getServerCapabilities() {
-        return null;
-    }
-
-    @Override
-    public void setDeviceCapabilities(List<String> capabilities) {
+    public void checkAndReestablish() throws NetconfException {
     }
 
     @Override

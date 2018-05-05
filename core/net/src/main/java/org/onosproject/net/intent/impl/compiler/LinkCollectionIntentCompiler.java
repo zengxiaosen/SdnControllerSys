@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package org.onosproject.net.intent.impl.compiler;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.SetMultimap;
 import org.apache.felix.scr.annotations.Activate;
@@ -29,6 +30,7 @@ import org.onosproject.core.CoreService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.domain.DomainService;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
@@ -42,19 +44,18 @@ import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.IntentCompilationException;
 import org.onosproject.net.intent.IntentCompiler;
 import org.onosproject.net.intent.LinkCollectionIntent;
+import org.onosproject.net.intent.PathIntent;
 import org.onosproject.net.intent.constraint.EncapsulationConstraint;
 import org.onosproject.net.resource.ResourceService;
 import org.onosproject.net.resource.impl.LabelAllocator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.onosproject.net.domain.DomainId.LOCAL;
 import static org.onosproject.net.flow.instructions.Instruction.Type.NOACTION;
 
 /**
@@ -68,8 +69,6 @@ public class LinkCollectionIntentCompiler
     private static final String UNKNOWN_INSTRUCTION = "Unknown instruction type";
     private static final String UNSUPPORTED_INSTRUCTION = "Unsupported %s instruction";
 
-    private static Logger log = LoggerFactory.getLogger(LinkCollectionIntentCompiler.class);
-
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected IntentConfigurableRegistrator registrator;
@@ -79,6 +78,9 @@ public class LinkCollectionIntentCompiler
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ResourceService resourceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DomainService domainService;
 
     private ApplicationId appId;
 
@@ -109,21 +111,36 @@ public class LinkCollectionIntentCompiler
 
         if (encapConstraint.isPresent()) {
             labels = labelAllocator.assignLabelToPorts(intent.links(),
-                                                       intent.id(),
+                                                       intent.key(),
                                                        encapConstraint.get().encapType());
         }
 
-        List<FlowRule> rules = new ArrayList<>();
-        for (DeviceId deviceId: outputPorts.keySet()) {
-            rules.addAll(createRules(
-                    intent,
-                    deviceId,
-                    inputPorts.get(deviceId),
-                    outputPorts.get(deviceId),
-                    labels)
-            );
+        ImmutableList.Builder<Intent> intentList = ImmutableList.builder();
+        if (this.isDomainProcessingEnabled(intent)) {
+            intentList.addAll(this.getDomainIntents(intent, domainService));
         }
-        return Collections.singletonList(new FlowRuleIntent(appId, intent.key(), rules, intent.resources()));
+
+        List<FlowRule> rules = new ArrayList<>();
+        for (DeviceId deviceId : outputPorts.keySet()) {
+            // add only flows that are not inside of a domain
+            if (LOCAL.equals(domainService.getDomain(deviceId))) {
+                rules.addAll(createRules(
+                        intent,
+                        deviceId,
+                        inputPorts.get(deviceId),
+                        outputPorts.get(deviceId),
+                        labels)
+                );
+            }
+        }
+        // if any rules have been created
+        if (!rules.isEmpty()) {
+            intentList.add(new FlowRuleIntent(appId, intent.key(), rules,
+                                              intent.resources(),
+                                              PathIntent.ProtectionType.PRIMARY,
+                                 null));
+        }
+        return intentList.build();
     }
 
     @Override
@@ -287,7 +304,7 @@ public class LinkCollectionIntentCompiler
      *         if we have to perform it
      */
     private Instruction optimizeTtlInstructions(int index, Instruction instruction, List<Instruction> instructions) {
-        /**
+        /*
          * Here we handle the optimization of decrement mpls ttl. The optimization
          * is to come back to the start of the list looking for the same
          * action. If we find the same action, we can optimize.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@
 package org.onlab.graph;
 
 
+import java.security.SecureRandom;
 import java.util.Map;
 import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Set;
 import java.util.Random;
-
+import java.util.Set;
 
 /**
  * SRLG Graph Search finds a pair of paths with disjoint risk groups; i.e
@@ -171,7 +171,7 @@ public class SrlgGraphSearch<V extends Vertex, E extends Edge<V>>
 
         boolean[] subset;
         boolean[] not;
-        Random r = new Random();
+        Random r = new SecureRandom();
 
         /**
          * Creates a Subset from the given subset array.

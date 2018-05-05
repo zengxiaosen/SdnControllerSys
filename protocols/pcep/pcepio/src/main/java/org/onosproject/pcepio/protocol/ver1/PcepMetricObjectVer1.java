@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ public class PcepMetricObjectVer1 implements PcepMetricObject {
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      */
 
-    protected static final Logger log = LoggerFactory.getLogger(PcepMetricObjectVer1.class);
+    private static final Logger log = LoggerFactory.getLogger(PcepMetricObjectVer1.class);
 
     public static final byte METRIC_OBJ_TYPE = 1;
     public static final byte METRIC_OBJ_CLASS = 6;

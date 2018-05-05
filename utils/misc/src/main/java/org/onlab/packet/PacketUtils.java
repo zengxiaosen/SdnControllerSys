@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ public final class PacketUtils {
     public static void checkBufferLength(int byteLength, int offset, int length)
             throws DeserializationException {
         boolean ok = (offset >= 0 && offset < byteLength);
-        ok = ok & (length >= 0 && offset + length <= byteLength);
+        ok = ok && (length >= 0 && offset + length <= byteLength);
 
         if (!ok) {
             throw new DeserializationException("Unable to read " + length + " bytes from a "

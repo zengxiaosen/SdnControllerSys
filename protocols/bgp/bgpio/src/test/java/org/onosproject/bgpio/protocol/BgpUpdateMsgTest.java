@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ import static org.hamcrest.core.Is.is;
  * Test cases for BGP update Message.
  */
 public class BgpUpdateMsgTest {
-    protected static final Logger log = LoggerFactory.getLogger(BgpUpdateMsgTest.class);
+    private static final Logger log = LoggerFactory.getLogger(BgpUpdateMsgTest.class);
     public static final byte[] MARKER = new byte[]{(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,
         (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,
         (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff};

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.onlab.packet.MacAddress;
 import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.FilteredConnectPoint;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -134,7 +135,7 @@ public class IntentPushTestCommand extends AbstractShellCommand
         TrafficTreatment treatment = DefaultTrafficTreatment.emptyTreatment();
 
         List<Intent> intents = Lists.newArrayList();
-        for (int i = 0; i < count; i++) {
+        for (long i = 0; i < count; i++) {
             TrafficSelector selector = selectorBldr
                     .matchEthSrc(MacAddress.valueOf(i + keyOffset))
                     .build();
@@ -143,8 +144,8 @@ public class IntentPushTestCommand extends AbstractShellCommand
                     .key(Key.of(i + keyOffset, appId()))
                     .selector(selector)
                     .treatment(treatment)
-                    .ingressPoint(ingress)
-                    .egressPoint(egress)
+                    .filteredIngressPoint(new FilteredConnectPoint(ingress))
+                    .filteredEgressPoint(new FilteredConnectPoint(egress))
                     .build());
             keysForInstall.add(Key.of(i + keyOffset, appId()));
             keysForWithdraw.add(Key.of(i + keyOffset, appId()));
@@ -167,7 +168,7 @@ public class IntentPushTestCommand extends AbstractShellCommand
         try {
             // In this way with the tests in place the timeout will be
             // 61 seconds.
-            if (latch.await(1000 + count * 60, TimeUnit.MILLISECONDS)) {
+            if (latch.await(1000L + count * 60L, TimeUnit.MILLISECONDS)) {
                 printResults(count);
             } else {
                 print("Failure: %d intents not installed", latch.getCount());

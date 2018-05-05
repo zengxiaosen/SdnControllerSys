@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import org.onlab.packet.MacAddress;
 import org.onlab.packet.MplsLabel;
 import org.onlab.packet.TpPort;
 import org.onlab.packet.VlanId;
-import org.onosproject.core.DefaultGroupId;
+import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.GroupId;
 import org.onosproject.net.ChannelSpacing;
 import org.onosproject.net.DeviceId;
@@ -31,9 +31,18 @@ import org.onosproject.net.GridType;
 import org.onosproject.net.Lambda;
 import org.onosproject.net.OduSignalId;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.flow.StatTriggerField;
+import org.onosproject.net.flow.StatTriggerFlag;
 import org.onosproject.net.meter.MeterId;
+import org.onosproject.net.pi.model.PiActionId;
+import org.onosproject.net.pi.model.PiActionParamId;
+import org.onosproject.net.pi.runtime.PiAction;
+import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.pi.runtime.PiTableAction;
 
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -112,6 +121,7 @@ public class InstructionsTest {
         assertThatClassIsImmutable(L2ModificationInstruction.ModMplsBosInstruction.class);
         assertThatClassIsImmutable(L2ModificationInstruction.ModMplsTtlInstruction.class);
         assertThatClassIsImmutable(L2ModificationInstruction.ModTunnelIdInstruction.class);
+        assertThatClassIsImmutable(PiInstruction.class);
     }
 
     //  NoActionInstruction
@@ -732,8 +742,8 @@ public class InstructionsTest {
 
     //  GroupInstruction
 
-    private final GroupId groupId1 = new DefaultGroupId(1);
-    private final GroupId groupId2 = new DefaultGroupId(2);
+    private final GroupId groupId1 = new GroupId(1);
+    private final GroupId groupId2 = new GroupId(2);
     private final Instruction groupInstruction1 = Instructions.createGroup(groupId1);
     private final Instruction sameAsGroupInstruction1 = Instructions.createGroup(groupId1);
     private final Instruction groupInstruction2 = Instructions.createGroup(groupId2);
@@ -821,6 +831,49 @@ public class InstructionsTest {
         checkEqualsAndToString(meterInstruction1,
                                sameAsMeterInstruction1,
                                meterInstruction2);
+    }
+
+    private long packetCountValue1 = 5L;
+    private long byteCountValue1 = 10L;
+    private long packetCountValue2 = 10L;
+    private long byteCountValue2 = 5L;
+    private StatTriggerFlag flag1 = StatTriggerFlag.ONLY_FIRST;
+    private StatTriggerFlag flag2 = StatTriggerFlag.PERIODIC;
+    Map<StatTriggerField, Long> statTriggerFieldMap1 = new EnumMap<StatTriggerField, Long>(StatTriggerField.class) {
+        {
+            put(StatTriggerField.BYTE_COUNT, packetCountValue1);
+            put(StatTriggerField.PACKET_COUNT, byteCountValue1);
+        }
+    };
+    Map<StatTriggerField, Long> statTriggerFieldMap2 = new EnumMap<StatTriggerField, Long>(StatTriggerField.class) {
+        {
+            put(StatTriggerField.BYTE_COUNT, packetCountValue2);
+            put(StatTriggerField.PACKET_COUNT, byteCountValue2);
+        }
+    };
+
+    final Instruction statInstruction1 = Instructions.statTrigger(statTriggerFieldMap1, flag1);
+    final Instruction statInstruction1Same = Instructions.statTrigger(statTriggerFieldMap1, flag1);
+    final Instruction statInstruction2 = Instructions.statTrigger(statTriggerFieldMap2, flag2);
+
+    @Test
+    public void testStatTriggerTrafficMethod() {
+        final Instruction instruction = Instructions.statTrigger(statTriggerFieldMap1, flag1);
+        final Instructions.StatTriggerInstruction statTriggerInstruction =
+                checkAndConvert(instruction,
+                        Instruction.Type.STAT_TRIGGER,
+                        Instructions.StatTriggerInstruction.class);
+        assertThat(statTriggerInstruction.getStatTriggerFieldMap(), is(equalTo(statTriggerFieldMap1)));
+        assertThat(statTriggerInstruction.getStatTriggerFlag(), is(equalTo(flag1)));
+        assertThat(statTriggerInstruction.getStatTriggerFieldMap(), is(not(equalTo(statTriggerFieldMap2))));
+        assertThat(statTriggerInstruction.getStatTriggerFlag(), is(not(equalTo(flag2))));
+    }
+
+    @Test
+    public void testStatTriggerTrafficInstructionEquals() {
+        checkEqualsAndToString(statInstruction1,
+                statInstruction1Same,
+                statInstruction2);
     }
 
     //  TableTypeTransition
@@ -987,7 +1040,7 @@ public class InstructionsTest {
                                 Instruction.Type.L2MODIFICATION,
                                 L2ModificationInstruction.ModMplsHeaderInstruction.class);
         assertThat(pushHeaderInstruction.ethernetType().toString(),
-                   is(EthType.EtherType.MPLS_MULTICAST.toString()));
+                   is(EthType.EtherType.MPLS_UNICAST.toString()));
         assertThat(pushHeaderInstruction.subtype(),
                    is(L2ModificationInstruction.L2SubType.MPLS_PUSH));
     }
@@ -1003,7 +1056,7 @@ public class InstructionsTest {
                                 Instruction.Type.L2MODIFICATION,
                                 L2ModificationInstruction.ModMplsHeaderInstruction.class);
         assertThat(pushHeaderInstruction.ethernetType().toString(),
-                   is(EthType.EtherType.MPLS_MULTICAST.toString()));
+                   is(EthType.EtherType.MPLS_UNICAST.toString()));
         assertThat(pushHeaderInstruction.subtype(),
                    is(L2ModificationInstruction.L2SubType.MPLS_POP));
     }
@@ -1305,6 +1358,45 @@ public class InstructionsTest {
                 .addEqualityGroup(modArpTtlInstruction1, sameAsModArpTtlInstruction1)
                 .addEqualityGroup(modArpTtlInstruction2)
                 .addEqualityGroup(modArpTtlInstruction3)
+                .testEquals();
+    }
+
+    // PiInstruction
+    PiTableAction piTableAction1 = PiAction.builder()
+            .withId(PiActionId.of("set_egress_port_0"))
+            .withParameter(new PiActionParam(PiActionParamId.of("port"),
+                                                             ImmutableByteSequence.copyFrom(10))).build();
+    PiTableAction piTableAction2 = PiAction.builder()
+            .withId(PiActionId.of("set_egress_port_0"))
+            .withParameter(new PiActionParam(PiActionParamId.of("port"),
+                    ImmutableByteSequence.copyFrom(20))).build();
+    private final Instruction piSetEgressPortInstruction1 = new PiInstruction(piTableAction1);
+    private final Instruction sameAsPiSetEgressPortInstruction1 = new PiInstruction(piTableAction1);
+    private final Instruction piSetEgressPortInstruction2 = new PiInstruction(piTableAction2);
+
+    /**
+     * Test the PiInstruction() method.
+     */
+    @Test
+    public void testPiMethod() {
+        final Instruction instruction = new PiInstruction(piTableAction1);
+        final PiInstruction piInstruction = checkAndConvert(instruction,
+                Instruction.Type.PROTOCOL_INDEPENDENT, PiInstruction.class);
+
+        assertThat(piInstruction.action(), is(piTableAction1));
+        assertThat(piInstruction.type(), is(Instruction.Type.PROTOCOL_INDEPENDENT));
+    }
+
+    /**
+     * Tests the equals(), hashCode() and toString() methods of the
+     * PiInstruction class.
+     */
+
+    @Test
+    public void testPiInstructionEquals() {
+        new EqualsTester()
+                .addEqualityGroup(piSetEgressPortInstruction1, sameAsPiSetEgressPortInstruction1)
+                .addEqualityGroup(piSetEgressPortInstruction2)
                 .testEquals();
     }
 

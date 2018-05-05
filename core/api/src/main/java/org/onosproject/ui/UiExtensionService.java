@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 package org.onosproject.ui;
+
+import org.onosproject.ui.lion.LionBundle;
 
 import java.util.List;
 
@@ -50,4 +52,16 @@ public interface UiExtensionService {
      * @return contributing user interface extension
      */
     UiExtension getViewExtension(String viewId);
+
+    /**
+     * Returns the navigation pane localization bundle.
+     *
+     * @return the navigation localization bundle
+     */
+    LionBundle getNavLionBundle();
+
+    /**
+     * Refreshes the backing model.
+     */
+    void refreshModel();
 }

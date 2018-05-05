@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2014-present Open Networking Laboratory
+  ~ Copyright 2014-present Open Networking Foundation
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.onosproject</groupId>
         <artifactId>onos-apps</artifactId>
-        <version>1.9.3-SNAPSHOT</version>
+        <version>1.13.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>onos-app-fwd</artifactId>
@@ -39,11 +39,6 @@
     </properties>
 
     <dependencies>
-        <!--<dependency>-->
-            <!--<groupId>redis.clients</groupId>-->
-            <!--<artifactId>jedis</artifactId>-->
-            <!--<version>2.9.0</version>-->
-        <!--</dependency>-->
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.compendium</artifactId>
@@ -67,95 +62,14 @@
             <artifactId>onos-cli</artifactId>
             <version>${project.version}</version>
         </dependency>
-<!--onos-incubator-api PortStatisticService -->
-        <dependency>
-            <groupId>org.onosproject</groupId>
-            <artifactId>onos-incubator-api</artifactId>
-            <version>1.9.3-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish.jersey.containers</groupId>
-            <artifactId>jersey-container-servlet-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.onosproject</groupId>
-            <artifactId>onos-core-common</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.onosproject</groupId>
-            <artifactId>onos-app-routing-api</artifactId>
-            <version>1.9.3-SNAPSHOT</version>
-        </dependency>
-        <!--<dependency>-->
-            <!--<groupId>org.onosproject</groupId>-->
-            <!--<artifactId>onos-incubator-core</artifactId>-->
-            <!--<version>1.9.3-SNAPSHOT</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.onosproject</groupId>-->
-            <!--<artifactId>onos-incubator-grpc</artifactId>-->
-            <!--<version>1.9.3-SNAPSHOT</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.onosproject</groupId>-->
-            <!--<artifactId>onos-incubator-grpc-dependencies</artifactId>-->
-            <!--<version>1.9.3-SNAPSHOT</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.onosproject</groupId>-->
-            <!--<artifactId>onos-incubator-net</artifactId>-->
-            <!--<version>1.9.3-SNAPSHOT</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.onosproject</groupId>-->
-            <!--<artifactId>onos-incubator-protobuf</artifactId>-->
-            <!--<version>1.9.3-SNAPSHOT</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.onosproject</groupId>-->
-            <!--<artifactId>onos-incubator-protobuf-dependencies</artifactId>-->
-            <!--<version>1.9.3-SNAPSHOT</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.onosproject</groupId>-->
-            <!--<artifactId>onos-incubator-protobuf-nb</artifactId>-->
-            <!--<version>1.9.3-SNAPSHOT</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.onosproject</groupId>-->
-            <!--<artifactId>onos-incubator-rpc</artifactId>-->
-            <!--<version>1.9.3-SNAPSHOT</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.onosproject</groupId>-->
-            <!--<artifactId>onos-incubator-rpc-grpc</artifactId>-->
-            <!--<version>1.9.3-SNAPSHOT</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.onosproject</groupId>-->
-            <!--<artifactId>onos-incubator-rpc-nb</artifactId>-->
-            <!--<version>1.9.3-SNAPSHOT</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.onosproject</groupId>-->
-            <!--<artifactId>onos-incubator-store</artifactId>-->
-            <!--<version>1.9.3-SNAPSHOT</version>-->
-        <!--</dependency>-->
-
-
-
-
         <dependency>
             <groupId>org.apache.karaf.shell</groupId>
             <artifactId>org.apache.karaf.shell.console</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.scr.annotations</artifactId>
         </dependency>
-
     </dependencies>
 
 </project>

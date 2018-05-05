@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.onosproject.cli.net;
 import static org.onosproject.cli.net.DevicesListCommand.getSortedDevices;
 import static org.onosproject.net.DeviceId.deviceId;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -28,6 +29,7 @@ import org.apache.karaf.shell.commands.Option;
 import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.device.PortStatistics;
 
@@ -60,14 +62,20 @@ public class DevicePortStatsCommand extends AbstractShellCommand {
 
     @Argument(index = 1, name = "portNumber", description = "Port Number",
             required = false, multiValued = false)
-    Integer portNumber = null;
+    String portNumberStr = null;
+
+    PortNumber portNumber = null;
 
     private static final String FORMAT =
-            "   port=%s, pktRx=%s, pktTx=%s, bytesRx=%s, bytesTx=%s, pktRxDrp=%s, pktTxDrp=%s, Dur=%s";
+            "   port=%s, pktRx=%s, pktTx=%s, bytesRx=%s, bytesTx=%s, pktRxDrp=%s, pktTxDrp=%s, Dur=%s%s";
 
     @Override
     protected void execute() {
         DeviceService deviceService = get(DeviceService.class);
+
+        if (portNumberStr != null) {
+            portNumber = PortNumber.fromString(portNumberStr);
+        }
 
         if (uri == null) {
             for (Device d : getSortedDevices(deviceService)) {
@@ -106,15 +114,21 @@ public class DevicePortStatsCommand extends AbstractShellCommand {
     private void printPortStats(DeviceId deviceId, Iterable<PortStatistics> portStats) {
         print("deviceId=%s", deviceId);
         for (PortStatistics stat : sortByPort(portStats)) {
-            if (portNumber != null && stat.port() != portNumber) {
+            if (isIrrelevant(stat)) {
                 continue;
             }
             if (nonzero && stat.isZero()) {
                 continue;
             }
-            print(FORMAT, stat.port(), stat.packetsReceived(), stat.packetsSent(), stat.bytesReceived(),
-                    stat.bytesSent(), stat.packetsRxDropped(), stat.packetsTxDropped(), stat.durationSec());
+            print(FORMAT, stat.portNumber(), stat.packetsReceived(), stat.packetsSent(), stat.bytesReceived(),
+                    stat.bytesSent(), stat.packetsRxDropped(), stat.packetsTxDropped(), stat.durationSec(),
+                    annotations(stat.annotations()));
         }
+    }
+
+    private boolean isIrrelevant(PortStatistics stat) {
+        // TODO revisit logical port (e.g., ALL) handling
+        return portNumber != null && !portNumber.equals(stat.portNumber());
     }
 
     /**
@@ -128,7 +142,7 @@ public class DevicePortStatsCommand extends AbstractShellCommand {
                 + " rateRx=%s, rateTx=%s, pktRxDrp=%s, pktTxDrp=%s, interval=%s";
         print("deviceId=%s", deviceId);
         for (PortStatistics stat : sortByPort(portStats)) {
-            if (portNumber != null && stat.port() != portNumber) {
+            if (isIrrelevant(stat)) {
                 continue;
             }
             if (nonzero && stat.isZero()) {
@@ -138,7 +152,7 @@ public class DevicePortStatsCommand extends AbstractShellCommand {
                     (((float) stat.durationNano()) / TimeUnit.SECONDS.toNanos(1));
             float rateRx = stat.bytesReceived() * 8 / duration;
             float rateTx = stat.bytesSent() * 8 / duration;
-            print(formatDelta, stat.port(),
+            print(formatDelta, stat.portNumber(),
                     stat.packetsReceived(),
                     stat.packetsSent(),
                     stat.bytesReceived(),
@@ -160,14 +174,14 @@ public class DevicePortStatsCommand extends AbstractShellCommand {
     private void printPortStatsDeltaTable(DeviceId deviceId, Iterable<PortStatistics> portStats) {
         final String formatDeltaTable = "|%5s | %7s | %7s |  %7s | %7s | %7s | %7s |  %7s | %7s |%9s |";
         print("+---------------------------------------------------------------------------------------------------+");
-        print("| DeviceId = %s                                                                    |", deviceId);
+        print("| DeviceId = %-86s |", deviceId);
         print("|---------------------------------------------------------------------------------------------------|");
         print("|      | Receive                                | Transmit                               | Time [s] |");
         print("| Port | Packets |  Bytes  | Rate bps |   Drop  | Packets |  Bytes  | Rate bps |   Drop  | Interval |");
         print("|---------------------------------------------------------------------------------------------------|");
 
         for (PortStatistics stat : sortByPort(portStats)) {
-            if (portNumber != null && stat.port() != portNumber) {
+            if (isIrrelevant(stat)) {
                 continue;
             }
             if (nonzero && stat.isZero()) {
@@ -175,9 +189,9 @@ public class DevicePortStatsCommand extends AbstractShellCommand {
             }
             float duration = ((float) stat.durationSec()) +
                     (((float) stat.durationNano()) / TimeUnit.SECONDS.toNanos(1));
-            float rateRx = stat.bytesReceived() * 8 / duration;
-            float rateTx = stat.bytesSent() * 8 / duration;
-            print(formatDeltaTable, stat.port(),
+            float rateRx = duration > 0 ? stat.bytesReceived() * 8 / duration : 0;
+            float rateTx = duration > 0 ? stat.bytesSent() * 8 / duration : 0;
+            print(formatDeltaTable, stat.portNumber(),
                   humanReadable(stat.packetsReceived()),
                   humanReadable(stat.bytesReceived()),
                   humanReadableBps(rateRx),
@@ -225,8 +239,8 @@ public class DevicePortStatsCommand extends AbstractShellCommand {
 
     private static List<PortStatistics> sortByPort(Iterable<PortStatistics> portStats) {
         List<PortStatistics> portStatsList = Lists.newArrayList(portStats);
-        portStatsList.sort((PortStatistics o1, PortStatistics o2) ->
-                o1.port() - o2.port());
+
+        portStatsList.sort(Comparator.comparing(ps -> ps.portNumber().toLong()));
         return portStatsList;
     }
 }

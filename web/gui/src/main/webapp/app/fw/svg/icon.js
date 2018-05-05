@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 (function () {
     'use strict';
 
-    var $log, fs, gs, sus;
+    var $log, gs, sus;
 
     var vboxSize = 50,
         cornerSize = vboxSize / 10,
@@ -36,7 +36,11 @@
         minus: 'minus',
         play: 'play',
         stop: 'stop',
-        
+
+        upload: 'upload',
+        download: 'download',
+        delta: 'delta',
+        nonzero: 'nonzero',
         close: 'xClose',
 
         topo: 'topo',
@@ -54,11 +58,17 @@
         devIcon_SWITCH: 'switch',
         devIcon_ROADM: 'roadm',
         devIcon_OTN: 'otn',
+
+        portIcon_DEFAULT: 'm_ports',
+
+        meter: 'meterTable', // TODO: m_meter icon?
+
         deviceTable: 'switch',
         flowTable: 'flowTable',
         portTable: 'portTable',
         groupTable: 'groupTable',
         meterTable: 'meterTable',
+        pipeconfTable: 'pipeconfTable',
 
         hostIcon_endstation: 'endstation',
         hostIcon_router: 'router',
@@ -71,11 +81,13 @@
         nav_processors: 'allTraffic',
 
         nav_topo: 'topo',
+        nav_topo2: 'm_cloud',
         nav_devs: 'switch',
         nav_links: 'ports',
         nav_hosts: 'endstation',
         nav_intents: 'relatedIntents',
-        nav_tunnels: 'ports'  // TODO: use tunnel glyph, when available
+        nav_tunnels: 'ports', // TODO: use tunnel glyph, when available
+        nav_yang: 'yang',
     };
 
     function ensureIconLibDefs() {
@@ -110,24 +122,24 @@
             'class': svgCls,
             width: dim,
             height: dim,
-            viewBox: viewBox
+            viewBox: viewBox,
         });
 
         g = svg.append('g').attr({
-            'class': 'icon'
+            'class': 'icon',
         });
 
         g.append('rect').attr({
             width: vboxSize,
             height: vboxSize,
-            rx: cornerSize
+            rx: cornerSize,
         });
 
         g.append('use').attr({
             width: vboxSize,
             height: vboxSize,
             'class': 'glyph',
-            'xlink:href': '#' + gid
+            'xlink:href': '#' + gid,
         });
     }
 
@@ -146,7 +158,7 @@
     function loadEmbeddedIcon(div, iconCls, size) {
         loadIconByClass(div, iconCls, size, true);
     }
-    
+
     // Adds a device glyph to the specified element.
     // Returns the D3 selection of the glyph (use) element.
     function addDeviceIcon(elem, glyphId, iconDim) {
@@ -154,7 +166,7 @@
         return elem.append('use').attr({
             'xlink:href': '#' + gid,
             width: iconDim,
-            height: iconDim
+            height: iconDim,
         });
     }
 
@@ -170,7 +182,7 @@
             'xlink:href': '#' + glyphId,
             width: dim,
             height: dim,
-            transform: sus.translate(xlate,xlate)
+            transform: sus.translate(xlate, xlate),
         });
         return g;
     }
@@ -185,7 +197,7 @@
         return {
             asc: function (div) { _s(div, 'upArrow'); },
             desc: function (div) { _s(div, 'downArrow'); },
-            none: function (div) { div.remove(); }
+            none: function (div) { div.remove(); },
         };
     }
 
@@ -213,16 +225,15 @@
                         div.selectAll('*').remove();
                         is.loadEmbeddedIcon(div, attrs.iconId, attrs.iconSize);
                     });
-                }
+                },
             };
         }])
 
-        .factory('IconService', ['$log', 'FnService', 'GlyphService',
+        .factory('IconService', ['$log', 'GlyphService',
             'SvgUtilService',
 
-        function (_$log_, _fs_, _gs_, _sus_) {
+        function (_$log_, _gs_, _sus_) {
             $log = _$log_;
-            fs = _fs_;
             gs = _gs_;
             sus = _sus_;
 
@@ -233,7 +244,7 @@
                 addDeviceIcon: addDeviceIcon,
                 addHostIcon: addHostIcon,
                 sortIcons: sortIcons,
-                registerIconMapping: registerIconMapping
+                registerIconMapping: registerIconMapping,
             };
         }]);
 

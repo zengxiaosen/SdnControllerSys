@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,25 +18,7 @@
  ONOS GUI -- Device View (theme) -- CSS file
  */
 
-
-.light .dev-icon svg.embeddedIcon .icon .glyph {
-    fill: #0071bd;
-}
-.dark .dev-icon svg.embeddedIcon .icon .glyph {
-    /* TODO: dark theme */
-    fill: #0071bd;
-}
-
-.light #device-details-panel .editable {
-    border-bottom: 1px dashed #ca504b;
-}
-
-
 .light #device-details-panel .bottom th {
-    background-color: #e5e5e6;
-}
-.dark #device-details-panel .bottom th {
-    /* TODO: dark theme */
     background-color: #e5e5e6;
 }
 
@@ -46,11 +28,4 @@
 .light #device-details-panel .bottom tr:nth-child(even) {
     background-color: #f4f4f4;
 }
-.dark #device-details-panel .bottom tr:nth-child(odd) {
-    /* TODO: dark theme */
-    background-color: #fbfbfb;
-}
-.dark #device-details-panel .bottom tr:nth-child(even) {
-    /* TODO: dark theme */
-    background-color: #f4f4f4;
-}
+

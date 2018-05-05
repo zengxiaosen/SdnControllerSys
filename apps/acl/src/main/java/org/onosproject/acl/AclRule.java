@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,8 @@ public final class AclRule {
     private final short dstTpPort;
     private final Action action;
 
-    private static IdGenerator idGenerator;
+    protected static IdGenerator idGenerator;
+    private static final Object ID_GENERATOR_LOCK = new Object();
 
     /**
      * Enum type for ACL rule's action.
@@ -75,8 +76,10 @@ public final class AclRule {
      */
     private AclRule(Ip4Prefix srcIp, Ip4Prefix dstIp, byte ipProto,
                     short dstTpPort, Action action) {
-        checkState(idGenerator != null, "Id generator is not bound.");
-        this.id = RuleId.valueOf(idGenerator.getNewId());
+        synchronized (ID_GENERATOR_LOCK) {
+            checkState(idGenerator != null, "Id generator is not bound.");
+            this.id = RuleId.valueOf(idGenerator.getNewId());
+        }
         this.srcIp = srcIp;
         this.dstIp = dstIp;
         this.ipProto = ipProto;
@@ -225,8 +228,10 @@ public final class AclRule {
      * @param newIdGenerator id generator
      */
     public static void bindIdGenerator(IdGenerator newIdGenerator) {
-        checkState(idGenerator == null, "Id generator is already bound.");
-        idGenerator = checkNotNull(newIdGenerator);
+        synchronized (ID_GENERATOR_LOCK) {
+            checkState(idGenerator == null, "Id generator is already bound.");
+            idGenerator = checkNotNull(newIdGenerator);
+        }
     }
 
     public RuleId id() {

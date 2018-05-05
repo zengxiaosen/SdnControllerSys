@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ public interface Driver extends Annotations {
      * Returns all the parent drivers from which this driver inherits behaviours
      * and properties.
      *
-     * @return list of parent drivers; null if driver has no parent
+     * @return list of parent drivers
      */
     List<Driver> parents();
 
@@ -130,6 +130,16 @@ public interface Driver extends Annotations {
      * @return map of properties
      */
     Map<String, String> properties();
+
+    /**
+     * Gets the value of given property name.
+     * If the driver does not define the property, a BFS will be performed to search its ancestors.
+     *
+     * @param name property name
+     * @return the value of the property,
+     *         or null if the property is not defined in this driver nor in any of its ancestors
+     */
+    String getProperty(String name);
 
     /**
      * Merges the specified driver behaviours and properties into this one,

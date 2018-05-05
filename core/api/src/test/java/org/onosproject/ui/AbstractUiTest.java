@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,11 @@ public abstract class AbstractUiTest {
      * System agnostic end-of-line character.
      */
     protected static final String EOL = String.format("%n");
+
+    /**
+     * Tolerance for Double equality assertions.
+     */
+    protected static final double TOLERANCE = Double.MIN_VALUE * 2;
 
     /**
      * Prints the given string to stdout.

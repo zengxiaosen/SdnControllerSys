@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,10 +82,8 @@ public class CorsaPipelineV3 extends AbstractCorsaPipeline {
                     switch (i.type()) {
                         case L2MODIFICATION:
                             L2ModificationInstruction l2i = (L2ModificationInstruction) i;
-                            if (l2i instanceof L2ModificationInstruction.ModVlanIdInstruction ||
-                                    l2i instanceof L2ModificationInstruction.ModEtherInstruction) {
-                                return true;
-                            }
+                            return l2i instanceof L2ModificationInstruction.ModVlanIdInstruction ||
+                                    l2i instanceof L2ModificationInstruction.ModEtherInstruction;
                         case OUTPUT:
                             return true;
                         default:
@@ -117,8 +115,10 @@ public class CorsaPipelineV3 extends AbstractCorsaPipeline {
                             isPresentModEthDst = true;
                         }
                     }
+                    break;
                 case OUTPUT:
                     isPresentOutpuPort = true;
+                    break;
                 default:
             }
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,6 +62,11 @@ public interface DistributedPrimitive {
         COUNTER,
 
         /**
+         * Numeric ID generator.
+         */
+        ID_GENERATOR,
+
+        /**
          * Atomic counter map.
          */
         COUNTER_MAP,
@@ -94,7 +99,12 @@ public interface DistributedPrimitive {
         /**
          * Transaction Context.
          */
-        TRANSACTION_CONTEXT
+        TRANSACTION_CONTEXT,
+
+        /**
+         * Distributed lock.
+         */
+        LOCK,
     }
 
     /**
@@ -120,7 +130,16 @@ public interface DistributedPrimitive {
         INACTIVE
     }
 
-    static final long DEFAULT_OPERTATION_TIMEOUT_MILLIS = 5000L;
+    /**
+     * Default timeout for primitive operations.
+     */
+    long DEFAULT_OPERATION_TIMEOUT_MILLIS = 15000L;
+
+    /**
+     * Use {@link #DEFAULT_OPERATION_TIMEOUT_MILLIS} instead.
+     */
+    @Deprecated
+    long DEFAULT_OPERTATION_TIMEOUT_MILLIS = DEFAULT_OPERATION_TIMEOUT_MILLIS;
 
     /**
      * Returns the name of this primitive.

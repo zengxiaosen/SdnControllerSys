@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package org.onosproject.store.primitives.impl;
 
-import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
 import org.onosproject.store.service.AsyncAtomicValue;
@@ -35,12 +34,6 @@ public class DefaultAtomicValueBuilder<V> extends AtomicValueBuilder<V> {
 
     public DefaultAtomicValueBuilder(Supplier<ConsistentMapBuilder<String, byte[]>> mapBuilderSupplier) {
         mapBuilder = mapBuilderSupplier.get();
-    }
-
-    @Override
-    public AtomicValueBuilder<V> withExecutorSupplier(Supplier<Executor> executorSupplier) {
-        mapBuilder.withExecutorSupplier(executorSupplier);
-        return this;
     }
 
     @Override

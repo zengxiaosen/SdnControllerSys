@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 package org.onosproject.driver.optical.query;
 
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.onlab.util.GuavaCollectors;
 import org.onosproject.net.ChannelSpacing;
 import org.onosproject.net.OchSignal;
 import org.onosproject.net.PortNumber;
@@ -36,13 +36,13 @@ import org.onosproject.net.driver.AbstractHandlerBehaviour;
 
 public class OplinkRoadmLambdaQuery extends AbstractHandlerBehaviour implements LambdaQuery {
 
-    private static final int LAMBDA_COUNT = 88;
-    private static final int CENTER_OFFSET = 29;
+    private static final int MIN_CHANNEL = -28;
+    private static final int MAX_CHANNEL = 59;
 
     @Override
     public Set<OchSignal> queryLambdas(PortNumber port) {
-        return IntStream.rangeClosed(1, LAMBDA_COUNT)
-                .mapToObj(x -> OchSignal.newDwdmSlot(ChannelSpacing.CHL_50GHZ, x - CENTER_OFFSET))
-                .collect(Collectors.toSet());
+        return IntStream.rangeClosed(MIN_CHANNEL, MAX_CHANNEL)
+                .mapToObj(x -> OchSignal.newDwdmSlot(ChannelSpacing.CHL_50GHZ, x))
+                .collect(GuavaCollectors.toImmutableSet());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ public class LearningSwitchSolution {
         log.info("Started");
         appId = coreService.getAppId("org.onosproject.learningswitch"); //equal to the name shown in pom.xml file
 
-        processor = new SwitchPacketProcesser();
+        processor = new SwitchPacketProcessor();
         packetService.addProcessor(processor, PacketProcessor.director(3));
 
         /*
@@ -106,7 +106,7 @@ public class LearningSwitchSolution {
      * send the packet out the port previously learned for the destination MAC, if it
      * exists. Otherwise flood the packet (to all ports).
      */
-    private class SwitchPacketProcesser implements PacketProcessor {
+    private class SwitchPacketProcessor implements PacketProcessor {
         /**
          * Learns the source port associated with the packet's DeviceId if it has not already been learned.
          * Calls actLikeSwitch to process and send the packet.

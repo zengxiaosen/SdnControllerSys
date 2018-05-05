@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,21 @@
  */
 package org.onosproject.ofagent.impl;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import org.onosproject.ofagent.api.OFController;
 import org.onosproject.ofagent.api.OFSwitch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -33,12 +40,18 @@ public final class OFConnectionHandler implements ChannelFutureListener {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private static final int MAX_RETRY = 10;
+    private static final String MSG_STATE = "Device %s %s to controller %s:%s";
+    private static final String MSG_CONNECTING = "connecting";
+    private static final String MSG_CONNECTED = "connected";
+    private static final String MSG_FAILED = "failed to connect";
 
-    private final AtomicInteger retryCount = new AtomicInteger();
+    private final AtomicInteger retryCount;
     private final OFSwitch ofSwitch;
     private final OFController controller;
-    private final NioEventLoopGroup workGroup;
+    private final EventLoopGroup workGroup;
+
+    // TODO make this value configurable
+    private static final int MAX_RETRY = 3;
 
     /**
      * Default constructor.
@@ -48,28 +61,53 @@ public final class OFConnectionHandler implements ChannelFutureListener {
      * @param workGroup  work group for connection
      */
     public OFConnectionHandler(OFSwitch ofSwitch, OFController controller,
-                               NioEventLoopGroup workGroup) {
+                               EventLoopGroup workGroup) {
         this.ofSwitch = ofSwitch;
         this.controller = controller;
         this.workGroup = workGroup;
+        this.retryCount = new AtomicInteger();
     }
 
     /**
      * Creates a connection to the supplied controller.
      */
     public void connect() {
-        // TODO initiates a connection to the controller
+        SocketAddress remoteAddr = new InetSocketAddress(
+                controller.ip().toInetAddress(), controller.port().toInt());
+        Bootstrap bootstrap = new Bootstrap();
+        bootstrap.group(workGroup)
+                .channel(NioSocketChannel.class)
+                .option(ChannelOption.SO_KEEPALIVE, true)
+                .handler(new OFChannelInitializer(ofSwitch));
+
+        log.debug(String.format(MSG_STATE,
+                ofSwitch.dpid(),
+                MSG_CONNECTING,
+                controller.ip(),
+                controller.port()));
+        bootstrap.connect(remoteAddr).addListener(this);
     }
 
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
-
         if (future.isSuccess()) {
-            log.debug("{} is connected to controller {}", ofSwitch.device().id(), controller);
-            // TODO do something for a new connection if there's any
+            log.info(String.format(MSG_STATE,
+                    ofSwitch.dpid(),
+                    MSG_CONNECTED,
+                    controller.ip(),
+                    controller.port()));
+            // FIXME add close future listener to handle connection lost
         } else {
-            log.debug("{} failed to connect {}, retry..", ofSwitch.device().id(), controller);
-            // TODO retry connect if retry count is less than MAX
+            if (retryCount.getAndIncrement() > MAX_RETRY) {
+                log.warn(String.format(MSG_STATE,
+                        ofSwitch.dpid(),
+                        MSG_FAILED,
+                        controller.ip(),
+                        controller.port()));
+            } else {
+                final EventLoop loop = future.channel().eventLoop();
+                loop.schedule(this::connect, 1L, TimeUnit.SECONDS);
+            }
         }
     }
 }

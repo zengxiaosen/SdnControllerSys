@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -151,7 +151,7 @@ public interface BgpController {
     Set<BgpLinkListener> linkListener();
 
     /**
-     * Stores the exceptions occured during an active session.
+     * Stores the exceptions occurred during an active session.
      *
      * @param peerId BGP peer id
      * @param exception exceptions based on the peer id.
@@ -159,7 +159,7 @@ public interface BgpController {
     void activeSessionExceptionAdd(String peerId, String exception);
 
     /**
-     * Stores the exceptions occured during an closed session.
+     * Stores the exceptions occurred during an closed session.
      *
      * @param peerId BGP peer id
      * @param exception exceptions based on the peer id
@@ -179,5 +179,25 @@ public interface BgpController {
      * @return closedSessionMap
      */
     Map<String, List<String>> closedSessionMap();
+    /**
+     * Register a listener for BGP message events.
+     *
+     * @param listener the listener to notify
+     */
+    void addRouteListener(BgpRouteListener listener);
+
+    /**
+     * Unregister a listener.
+     *
+     * @param listener the listener to unregister
+     */
+    void removeRouteListener(BgpRouteListener listener);
+
+    /**
+     * Return BGP route listener.
+     *
+     * @return route listener
+     */
+    Set<BgpRouteListener> routeListener();
 
 }

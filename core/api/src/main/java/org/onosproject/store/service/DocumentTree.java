@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,12 @@ import javax.annotation.concurrent.NotThreadSafe;
  * @param <V> document tree value type
  */
 @NotThreadSafe
-public interface DocumentTree<V> {
+public interface DocumentTree<V> extends DistributedPrimitive {
+
+    @Override
+    default Type primitiveType() {
+        return Type.DOCUMENT_TREE;
+    }
 
     /**
      * Returns the {@link DocumentPath path} to root of the tree.

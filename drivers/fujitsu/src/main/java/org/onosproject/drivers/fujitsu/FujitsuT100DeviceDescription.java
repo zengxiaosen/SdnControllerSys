@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,11 +33,11 @@ import org.onosproject.net.device.DeviceDescriptionDiscovery;
 import org.onosproject.net.device.PortDescription;
 import org.onosproject.net.driver.AbstractHandlerBehaviour;
 import org.onosproject.netconf.NetconfController;
+import org.onosproject.netconf.NetconfException;
 import org.onosproject.netconf.NetconfSession;
 import org.slf4j.Logger;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -68,7 +68,7 @@ public class FujitsuT100DeviceDescription extends AbstractHandlerBehaviour
         String reply;
         try {
             reply = session.get(requestBuilder());
-        } catch (IOException e) {
+        } catch (NetconfException e) {
             log.error("Failed to retrieve port details for device {}", handler().data().deviceId());
             return ImmutableList.of();
         }
@@ -112,9 +112,9 @@ public class FujitsuT100DeviceDescription extends AbstractHandlerBehaviour
         for (HierarchicalConfiguration portConfig : subtrees) {
             if (!portConfig.getString("name").contains("LCN") &&
                     !portConfig.getString("name").contains("LMP") &&
-                    portConfig.getString("type").equals("ianaift:ethernetCsmacd")) {
+                    "ianaift:ethernetCsmacd".equals(portConfig.getString("type"))) {
                 portDescriptions.add(parseT100OduPort(portConfig, counter.getAndIncrement()));
-            } else if (portConfig.getString("type").equals("ianaift:otnOtu")) {
+            } else if ("ianaift:otnOtu".equals(portConfig.getString("type"))) {
                 portDescriptions.add(parseT100OchPort(portConfig, counter.getAndIncrement()));
             }
         }
@@ -124,9 +124,9 @@ public class FujitsuT100DeviceDescription extends AbstractHandlerBehaviour
     private static PortDescription parseT100OchPort(HierarchicalConfiguration cfg, long count) {
         PortNumber portNumber = PortNumber.portNumber(count);
         HierarchicalConfiguration otuConfig = cfg.configurationAt("otu");
-        boolean enabled = otuConfig.getString("administrative-state").equals("up");
-        OduSignalType signalType = otuConfig.getString("rate").equals("OTU4") ? OduSignalType.ODU4 : null;
-        //Unsure how to retreive, outside knowledge it is tunable.
+        boolean enabled = "up".equals(otuConfig.getString("administrative-state"));
+        OduSignalType signalType = "OTU4".equals(otuConfig.getString("rate")) ? OduSignalType.ODU4 : null;
+        //Unsure how to retrieve, outside knowledge it is tunable.
         boolean isTunable = true;
         OchSignal lambda = new OchSignal(GridType.DWDM, ChannelSpacing.CHL_50GHZ, 0, 4);
         DefaultAnnotations annotations = DefaultAnnotations.builder().
@@ -138,9 +138,9 @@ public class FujitsuT100DeviceDescription extends AbstractHandlerBehaviour
     private static PortDescription parseT100OduPort(HierarchicalConfiguration cfg, long count) {
         PortNumber portNumber = PortNumber.portNumber(count);
         HierarchicalConfiguration ethernetConfig = cfg.configurationAt("ethernet");
-        boolean enabled = ethernetConfig.getString("administrative-state").equals("up");
+        boolean enabled = "up".equals(ethernetConfig.getString("administrative-state"));
         //Rate is in kbps
-        CltSignalType signalType = ethernetConfig.getString("rate").equals("100000000") ?
+        CltSignalType signalType = "100000000".equals(ethernetConfig.getString("rate")) ?
                 CltSignalType.CLT_100GBE : null;
         DefaultAnnotations annotations = DefaultAnnotations.builder().
                 set(AnnotationKeys.PORT_NAME, cfg.getString("name")).

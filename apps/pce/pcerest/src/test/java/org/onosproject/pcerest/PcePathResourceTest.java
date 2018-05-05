@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,12 +44,14 @@ import com.google.common.collect.Lists;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.onlab.graph.ScalarWeight;
+import org.onlab.junit.TestUtils;
 import org.onlab.osgi.ServiceDirectory;
 import org.onlab.osgi.TestServiceDirectory;
 import org.onlab.packet.IpAddress;
 import org.onlab.rest.BaseResource;
 import org.onosproject.codec.CodecService;
-import org.onosproject.core.DefaultGroupId;
+// import org.onosproject.core.DefaultGroupId;
 import org.onosproject.incubator.net.tunnel.DefaultTunnel;
 import org.onosproject.incubator.net.tunnel.IpTunnelEndPoint;
 import org.onosproject.incubator.net.tunnel.Tunnel;
@@ -80,7 +82,7 @@ public class PcePathResourceTest extends PceResourceTest {
     private final TunnelService tunnelService = createMock(TunnelService.class);
     private final TunnelEndPoint src = IpTunnelEndPoint.ipTunnelPoint(IpAddress.valueOf(23423));
     private final TunnelEndPoint dst = IpTunnelEndPoint.ipTunnelPoint(IpAddress.valueOf(32421));
-    private final DefaultGroupId groupId = new DefaultGroupId(92034);
+    // private final DefaultGroupId groupId = new DefaultGroupId(92034);
     private final TunnelName tunnelName = TunnelName.tunnelName("TunnelName");
     private final TunnelId tunnelId = TunnelId.valueOf("41654654");
     private final ProviderId producerName = new ProviderId("producer1", "13");
@@ -109,7 +111,7 @@ public class PcePathResourceTest extends PceResourceTest {
                                                                   .add(TunnelService.class, tunnelService)
                                                                   .add(PceStore.class, pceStore)
                                                                   .add(CodecService.class, context.codecManager());
-       BaseResource.setServiceDirectory(testDirectory);
+       TestUtils.setField(BaseResource.class, "services", testDirectory);
 
        // Tunnel creation
        // Links
@@ -164,7 +166,7 @@ public class PcePathResourceTest extends PceResourceTest {
        linkList.add(l4);
 
        // Path
-       path = new DefaultPath(providerId, linkList, 10);
+       path = new DefaultPath(providerId, linkList, ScalarWeight.toWeight(10));
 
        // Annotations
        DefaultAnnotations.Builder builderAnn = DefaultAnnotations.builder();
@@ -174,7 +176,7 @@ public class PcePathResourceTest extends PceResourceTest {
 
        // Tunnel
        tunnel = new DefaultTunnel(producerName, src, dst, Tunnel.Type.VXLAN,
-                                  Tunnel.State.ACTIVE, groupId, tunnelId,
+                                  Tunnel.State.ACTIVE, null, tunnelId,
                                   tunnelName, path, builderAnn.build());
 
         explicitPathInfoList = Lists.newLinkedList();
@@ -286,7 +288,7 @@ public class PcePathResourceTest extends PceResourceTest {
      */
     @Test
     public void testDelete() {
-        expect(pceService.releasePath(anyObject()))
+        expect(pceService.releasePath(TunnelId.valueOf("1")))
                          .andReturn(true)
                          .anyTimes();
         replay(pceService);

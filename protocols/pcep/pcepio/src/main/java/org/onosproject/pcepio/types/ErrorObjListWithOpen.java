@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ public class ErrorObjListWithOpen {
     private PcepOpenObject openObject;
     // flag to check if open object is set or not
     private boolean isOpenObjectSet;
-    protected static final Logger log = LoggerFactory.getLogger(ErrorObjListWithOpen.class);
+    private static final Logger log = LoggerFactory.getLogger(ErrorObjListWithOpen.class);
 
     /**
      * Constructor to initialize Error and OPEN object.

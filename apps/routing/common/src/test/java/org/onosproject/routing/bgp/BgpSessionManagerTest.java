@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,11 @@ import org.onlab.junit.TestUtils;
 import org.onlab.junit.TestUtils.TestUtilsException;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
-import org.onosproject.incubator.net.routing.RouteAdminService;
+import org.onlab.packet.IpAddress;
+import org.onosproject.cluster.ClusterService;
+import org.onosproject.cluster.DefaultControllerNode;
+import org.onosproject.cluster.NodeId;
+import org.onosproject.routeservice.RouteAdminService;
 import org.osgi.service.component.ComponentContext;
 
 import java.net.InetAddress;
@@ -79,6 +83,9 @@ public class BgpSessionManagerTest {
     private static final long BETTER_LOCAL_PREF = 20;
     private static final long DEFAULT_MULTI_EXIT_DISC = 20;
     private static final long BETTER_MULTI_EXIT_DISC = 30;
+
+    private static final NodeId NODE_ID = new NodeId("local");
+    private static final IpAddress LOCAL = IpAddress.valueOf("127.0.0.1");
 
     BgpRouteEntry.AsPath asPathShort;
     BgpRouteEntry.AsPath asPathLong;
@@ -254,6 +261,12 @@ public class BgpSessionManagerTest {
         routeService = createNiceMock(RouteAdminService.class);
         replay(routeService);
         bgpSessionManager.routeService = routeService;
+
+        ClusterService clusterService = createMock(ClusterService.class);
+        expect(clusterService.getLocalNode())
+                .andReturn(new DefaultControllerNode(NODE_ID, LOCAL)).anyTimes();
+        replay(clusterService);
+        bgpSessionManager.clusterService = clusterService;
 
         // NOTE: We use port 0 to bind on any available port
         ComponentContext componentContext = createMock(ComponentContext.class);

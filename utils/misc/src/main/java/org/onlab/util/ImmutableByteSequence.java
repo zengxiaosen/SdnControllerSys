@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import java.nio.ByteOrder;
 import java.util.Arrays;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.String.format;
 import static org.apache.commons.lang3.ArrayUtils.reverse;
 
 /**
@@ -76,8 +78,8 @@ public final class ImmutableByteSequence {
      * the passed byte array, from/to the given indexes (inclusive).
      *
      * @param original a byte array value
-     * @param fromIdx starting index
-     * @param toIdx ending index
+     * @param fromIdx  starting index
+     * @param toIdx    ending index
      * @return a new immutable byte sequence
      */
     public static ImmutableByteSequence copyFrom(byte[] original, int fromIdx, int toIdx) {
@@ -162,19 +164,18 @@ public final class ImmutableByteSequence {
     }
 
     /**
-     * Creates a new byte sequence of the given size where alla bits are 0.
+     * Creates a new byte sequence of the given size where all bits are 0.
      *
      * @param size number of bytes
      * @return a new immutable byte sequence
      */
     public static ImmutableByteSequence ofZeros(int size) {
-        byte[] bytes = new byte[size];
-        Arrays.fill(bytes, (byte) 0);
-        return new ImmutableByteSequence(ByteBuffer.wrap(bytes));
+        // array is initialized to all 0's by default
+        return new ImmutableByteSequence(ByteBuffer.wrap(new byte[size]));
     }
 
     /**
-     * Creates a new byte sequence of the given size where alla bits are 1.
+     * Creates a new byte sequence of the given size where all bits are 1.
      *
      * @param size number of bytes
      * @return a new immutable byte sequence
@@ -183,6 +184,51 @@ public final class ImmutableByteSequence {
         byte[] bytes = new byte[size];
         Arrays.fill(bytes, (byte) 0xFF);
         return new ImmutableByteSequence(ByteBuffer.wrap(bytes));
+    }
+
+    /**
+     * Creates a new byte sequence that is prefixed with specified number of
+     * zeros if val = 0 or ones if val = 0xff.
+     *
+     * @param size       number of total bytes
+     * @param prefixBits number of bits in prefix
+     * @param val        0 for prefix of zeros; 0xff for prefix of ones
+     * @return new immutable byte sequence
+     */
+    static ImmutableByteSequence prefix(int size, long prefixBits, byte val) {
+        checkArgument(val == 0 || val == (byte) 0xff, "Val must be 0 or 0xff");
+        byte[] bytes = new byte[size];
+        int prefixBytes = (int) (prefixBits / Byte.SIZE);
+        Arrays.fill(bytes, 0, prefixBytes, val);
+        Arrays.fill(bytes, prefixBytes, bytes.length, (byte) ~val);
+        int partialBits = (int) (prefixBits % Byte.SIZE);
+        if (partialBits != 0) {
+            bytes[prefixBytes] = val == 0 ?
+                    (byte) (0xff >> partialBits) : (byte) (0xff << Byte.SIZE - partialBits);
+        }
+        return new ImmutableByteSequence(ByteBuffer.wrap(bytes));
+    }
+
+    /**
+     * Creates a new byte sequence that is prefixed with specified number of zeros.
+     *
+     * @param size       number of total bytes
+     * @param prefixBits number of bits in prefix
+     * @return new immutable byte sequence
+     */
+    public static ImmutableByteSequence prefixZeros(int size, long prefixBits) {
+        return prefix(size, prefixBits, (byte) 0);
+    }
+
+    /**
+     * Creates a new byte sequence that is prefixed with specified number of ones.
+     *
+     * @param size       number of total bytes
+     * @param prefixBits number of bits in prefix
+     * @return new immutable byte sequence
+     */
+    public static ImmutableByteSequence prefixOnes(int size, long prefixBits) {
+        return prefix(size, prefixBits, (byte) 0xff);
     }
 
     /**
@@ -237,8 +283,103 @@ public final class ImmutableByteSequence {
         return Objects.equal(this.value, other.value);
     }
 
+    /**
+     * Returns the index of the most significant bit (MSB), assuming a bit numbering scheme of type "LSB 0", i.e. the
+     * bit numbering starts at zero for the least significant bit (LSB). The MSB index of a byte sequence of zeros will
+     * be -1.
+     * <p>
+     * As an example, the following conditions always hold true:
+     * {@code
+     * ImmutableByteSequence.copyFrom(0).msbIndex() == -1
+     * ImmutableByteSequence.copyFrom(1).msbIndex() == 0
+     * ImmutableByteSequence.copyFrom(2).msbIndex() == 1
+     * ImmutableByteSequence.copyFrom(3).msbIndex() == 1
+     * ImmutableByteSequence.copyFrom(4).msbIndex() == 2
+     * ImmutableByteSequence.copyFrom(512).msbIndex() == 9
+     * }
+     *
+     * @return index of the MSB, -1 if the sequence has all bytes set to 0
+     */
+    public int msbIndex() {
+        int index = (size() * 8) - 1;
+        byteLoop:
+        for (int i = 0; i < size(); i++) {
+            byte b = value.get(i);
+            if (b != 0) {
+                for (int j = 7; j >= 0; j--) {
+                    byte mask = (byte) ((1 << j) - 1);
+                    if ((b & ~mask) != 0) {
+                        break byteLoop;
+                    }
+                    index--;
+                }
+            }
+            index -= 8;
+        }
+        return index;
+    }
+
     @Override
     public String toString() {
         return HexString.toHexString(value.array());
+    }
+
+    /**
+     * Trims or expands the given byte sequence so to fit a given bit-width. When trimming, the operations is deemed to
+     * be safe only if the trimmed bits are zero, i.e. it is safe to trim only when {@code bitWidth > msbIndex()},
+     * otherwise an exception will be thrown. When expanding, the sequence will be padded with zeros. The returned byte
+     * sequence will have minimum size to contain the given bit-width.
+     *
+     * @param original a byte sequence
+     * @param bitWidth a non-zero positive integer
+     * @return a new byte sequence
+     * @throws ByteSequenceTrimException if the byte sequence cannot be fitted
+     */
+    public static ImmutableByteSequence fit(ImmutableByteSequence original, int bitWidth)
+            throws ByteSequenceTrimException {
+
+        checkNotNull(original, "byte sequence cannot be null");
+        checkArgument(bitWidth > 0, "bit-width must be a non-zero positive integer");
+
+        int newByteWidth = (int) Math.ceil((double) bitWidth / 8);
+
+        if (bitWidth == original.size() * 8) {
+            // No need to fit.
+            return original;
+        }
+
+        ByteBuffer newBuffer = ByteBuffer.allocate(newByteWidth);
+
+        if (newByteWidth > original.size()) {
+            // Pad extra bytes with 0's.
+            int numPadBytes = newByteWidth - original.size();
+            for (int i = 0; i < numPadBytes; i++) {
+                newBuffer.put((byte) 0x00);
+            }
+            newBuffer.put(original.asReadOnlyBuffer());
+        } else {
+            // Trim sequence.
+            if (bitWidth > original.msbIndex()) {
+                int diff = original.size() - newByteWidth;
+                ByteBuffer originalBuffer = original.asReadOnlyBuffer();
+                for (int i = diff; i < original.size(); i++) {
+                    newBuffer.put(originalBuffer.get(i));
+                }
+            } else {
+                throw new ByteSequenceTrimException(original, bitWidth);
+            }
+        }
+
+        return new ImmutableByteSequence(newBuffer);
+    }
+
+    /**
+     * Signals that a byte sequence cannot be trimmed.
+     */
+    public static class ByteSequenceTrimException extends Exception {
+        ByteSequenceTrimException(ImmutableByteSequence original, int bitWidth) {
+            super(format("cannot trim %s into a %d bits long value",
+                         original, bitWidth));
+        }
     }
 }

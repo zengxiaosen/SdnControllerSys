@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,8 @@ import org.onosproject.net.NetworkResource;
 import org.onosproject.net.ResourceGroup;
 
 import java.util.Collection;
-import java.util.Objects;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Preconditions.*;
 
 /**
  * Abstraction of an application level intent.
@@ -51,6 +48,7 @@ public abstract class Intent {
     private final ResourceGroup resourceGroup;
 
     private static IdGenerator idGenerator;
+    private static final Object ID_GENERATOR_LOCK = new Object();
 
     /**
      * Constructor for serializer.
@@ -61,29 +59,6 @@ public abstract class Intent {
         this.key = null;
         this.resources = null;
         this.priority = DEFAULT_INTENT_PRIORITY;
-        this.resourceGroup = null;
-    }
-
-    /**
-     * Creates a new intent.
-     * @param appId     application identifier
-     * @param key       optional key
-     * @param resources required network resources (optional)
-     * @param priority  flow rule priority
-     * @deprecated 1.9.1
-     */
-    @Deprecated
-    protected Intent(ApplicationId appId,
-                     Key key,
-                     Collection<NetworkResource> resources,
-                     int priority) {
-        checkState(idGenerator != null, "Id generator is not bound.");
-        checkArgument(priority <= MAX_PRIORITY && priority >= MIN_PRIORITY);
-        this.id = IntentId.valueOf(idGenerator.getNewId());
-        this.appId = checkNotNull(appId, "Application ID cannot be null");
-        this.key = (key != null) ? key : Key.of(id.fingerprint(), appId);
-        this.priority = priority;
-        this.resources = checkNotNull(resources);
         this.resourceGroup = null;
     }
 
@@ -274,8 +249,10 @@ public abstract class Intent {
      * @param newIdGenerator id generator
      */
     public static void bindIdGenerator(IdGenerator newIdGenerator) {
-        checkState(idGenerator == null, "Id generator is already bound.");
-        idGenerator = checkNotNull(newIdGenerator);
+        synchronized (ID_GENERATOR_LOCK) {
+            checkState(idGenerator == null, "Id generator is already bound.");
+            idGenerator = checkNotNull(newIdGenerator);
+        }
     }
 
     /**
@@ -286,8 +263,10 @@ public abstract class Intent {
      * @param oldIdGenerator the current id generator
      */
     public static void unbindIdGenerator(IdGenerator oldIdGenerator) {
-        if (Objects.equals(idGenerator, oldIdGenerator)) {
-            idGenerator = null;
+        synchronized (ID_GENERATOR_LOCK) {
+            if (idGenerator == oldIdGenerator) {
+                idGenerator = null;
+            }
         }
     }
 

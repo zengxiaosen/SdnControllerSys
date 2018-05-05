@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ public final class LispMapResolver {
                                 "No ETR RLOC is found, cannot relay to ETR.";
     private static final String NO_MAP_INFO_MSG  = "Map information is not found.";
 
-    private LispMappingDatabase mapDb = LispMappingDatabase.getInstance();
+    private LispMappingDatabase mapDb = LispExpireMapDatabase.getInstance();
 
     // non-instantiable (except for our Singleton)
     private LispMapResolver() {

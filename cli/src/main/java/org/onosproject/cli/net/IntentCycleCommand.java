@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package org.onosproject.cli.net;
 
 import java.util.EnumSet;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.karaf.shell.commands.Argument;
@@ -27,6 +26,7 @@ import org.onlab.packet.MacAddress;
 import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.FilteredConnectPoint;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -75,8 +75,7 @@ public class IntentCycleCommand extends AbstractShellCommand
     String keyOffsetStr = null;
 
     private IntentService service;
-    private CountDownLatch latch;
-    private volatile long start, end;
+    private volatile long start;
     private int count;
     private int keyOffset;
     private long submitCounter = 0;
@@ -123,7 +122,7 @@ public class IntentCycleCommand extends AbstractShellCommand
         TrafficTreatment treatment = DefaultTrafficTreatment.emptyTreatment();
 
         List<Intent> intents = Lists.newArrayList();
-        for (int i = 0; i < count; i++) {
+        for (long i = 0; i < count; i++) {
             TrafficSelector selector = selectorBldr
                     .matchEthSrc(MacAddress.valueOf(i + keyOffset))
                     .build();
@@ -133,8 +132,8 @@ public class IntentCycleCommand extends AbstractShellCommand
                         .key(Key.of(i + keyOffset, appId()))
                         .selector(selector)
                         .treatment(treatment)
-                        .ingressPoint(ingress)
-                        .egressPoint(egress)
+                        .filteredIngressPoint(new FilteredConnectPoint(ingress))
+                        .filteredEgressPoint(new FilteredConnectPoint(egress))
                         .build());
 
 
@@ -154,10 +153,7 @@ public class IntentCycleCommand extends AbstractShellCommand
     }
 
     private void printResults() {
-        //long delta = end - start;
-        //String text = add ? "install" : "withdraw";
         print("count: %s / %s", eventCounter, Long.valueOf(submitCounter));
-        //print("Time to %s %d intents: %d ms", text, count, delta);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,11 +24,11 @@ import java.util.Map;
 import java.util.concurrent.RejectedExecutionException;
 
 import org.jboss.netty.channel.Channel;
-import org.onosproject.pcep.controller.ClientCapability;
-import org.onosproject.pcep.controller.LspKey;
-import org.onosproject.pcep.controller.PccId;
-import org.onosproject.pcep.controller.PcepClient;
-import org.onosproject.pcep.controller.PcepSyncStatus;
+import org.onosproject.pcep.server.ClientCapability;
+import org.onosproject.pcep.server.LspKey;
+import org.onosproject.pcep.server.PccId;
+import org.onosproject.pcep.server.PcepClient;
+import org.onosproject.pcep.server.PcepSyncStatus;
 import org.onosproject.pcepio.protocol.PcepFactories;
 import org.onosproject.pcepio.protocol.PcepFactory;
 import org.onosproject.pcepio.protocol.PcepMessage;

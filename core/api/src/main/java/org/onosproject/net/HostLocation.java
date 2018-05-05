@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import static org.onosproject.net.PortNumber.P0;
 /**
  * Representation of a network edge location where an end-station host is
  * connected.
+ * 表示终端站主机连接的网络边缘位置。
  */
 public class HostLocation extends ConnectPoint {
 
@@ -64,4 +65,8 @@ public class HostLocation extends ConnectPoint {
         return time;
     }
 
+    @Override
+    public String toString() {
+        return deviceId() + "/" + port();
+    }
 }

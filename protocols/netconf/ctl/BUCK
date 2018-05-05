@@ -1,7 +1,13 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
+    '//lib:JACKSON',
     '//lib:ganymed-ssh2',
-    '//protocols/netconf/api:onos-protocols-netconf-api'
+    '//protocols/netconf/api:onos-protocols-netconf-api',
+    '//cli:onos-cli',
+    '//lib:org.apache.karaf.shell.console',
+    '//lib:sshd-core',
+    '//lib:bcpkix-jdk15on',
+    '//lib:bcprov-jdk15on',
 ]
 
 TEST_DEPS = [

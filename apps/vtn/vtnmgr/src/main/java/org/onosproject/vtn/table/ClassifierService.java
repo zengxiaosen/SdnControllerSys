@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.onosproject.vtnrsc.SegmentationId;
 
 /**
  * Applies classifier flows to the device. Classifier table is Table(0).
+ * 对设备上的流使用分类器，Table(0)是分类表
  */
 public interface ClassifierService {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.FilteredConnectPoint;
 import org.onosproject.net.Host;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -446,8 +447,8 @@ public class VbngManager implements VbngService {
                 .key(key)
                 .selector(selector.build())
                 .treatment(treatment.build())
-                .egressPoint(dstConnectPoint)
-                .ingressPoint(srcConnectPoint)
+                .filteredEgressPoint(new FilteredConnectPoint(dstConnectPoint))
+                .filteredIngressPoint(new FilteredConnectPoint(srcConnectPoint))
                 .build();
 
         log.info("Generated a PointToPointIntent for traffic from local host "
@@ -496,8 +497,8 @@ public class VbngManager implements VbngService {
                 .key(key)
                 .selector(selector.build())
                 .treatment(treatment.build())
-                .egressPoint(dstConnectPoint)
-                .ingressPoint(srcConnectPoint)
+                .filteredEgressPoint(new FilteredConnectPoint(dstConnectPoint))
+                .filteredIngressPoint(new FilteredConnectPoint(srcConnectPoint))
                 .build();
         log.info("Generated a PointToPointIntent for traffic to local host "
                 + ": {}", intent);

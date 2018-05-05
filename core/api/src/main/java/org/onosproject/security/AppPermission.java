@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,7 +82,10 @@ public class AppPermission extends BasicPermission {
         TUNNEL_WRITE,
         TUNNEL_EVENT,
         UI_READ,
-        UI_WRITE
+        UI_WRITE,
+        UPGRADE_READ,
+        UPGRADE_WRITE,
+        UPGRADE_EVENT
     }
 
     protected Type type;

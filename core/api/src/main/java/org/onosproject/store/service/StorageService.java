@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ package org.onosproject.store.service;
  * It is expected that services and applications will leverage the primitives indirectly provided by
  * this service for their distributed state management and coordination.
  */
-public interface StorageService {
+public interface StorageService extends PrimitiveService {
 
     /**
      * Creates a new EventuallyConsistentMapBuilder.
@@ -92,12 +92,26 @@ public interface StorageService {
     AtomicCounterBuilder atomicCounterBuilder();
 
     /**
+     * Creates a new AtomicIdGeneratorBuilder.
+     *
+     * @return atomic ID generator builder
+     */
+    AtomicIdGeneratorBuilder atomicIdGeneratorBuilder();
+
+    /**
      * Creates a new AtomicValueBuilder.
      *
      * @param <V> atomic value type
      * @return atomic value builder
      */
     <V> AtomicValueBuilder<V> atomicValueBuilder();
+
+    /**
+     * Creates a new DistributedLockBuilder.
+     *
+     * @return lock builder
+     */
+    DistributedLockBuilder lockBuilder();
 
     /**
      * Creates a new LeaderElectorBuilder.
@@ -124,6 +138,16 @@ public interface StorageService {
     }
 
     /**
+     * Returns an instance of {@code AsyncAtomicIdGenerator} with specified name.
+     *
+     * @param name ID generator name
+     * @return AsyncAtomicIdGenerator instance
+     */
+    default AsyncAtomicIdGenerator getAsyncAtomicIdGenerator(String name) {
+        return atomicIdGeneratorBuilder().withName(name).build();
+    }
+
+    /**
      * Returns an instance of {@code AtomicCounter} with specified name.
      * @param name counter name
      *
@@ -131,6 +155,16 @@ public interface StorageService {
      */
     default AtomicCounter getAtomicCounter(String name) {
         return getAsyncAtomicCounter(name).asAtomicCounter();
+    }
+
+    /**
+     * Returns an instance of {@code AtomicIdGenerator} with specified name.
+     *
+     * @param name ID generator name
+     * @return AtomicIdGenerator instance
+     */
+    default AtomicIdGenerator getAtomicIdGenerator(String name) {
+        return getAsyncAtomicIdGenerator(name).asAtomicIdGenerator();
     }
 
     /**

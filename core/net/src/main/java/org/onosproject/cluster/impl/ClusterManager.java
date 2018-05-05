@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,16 @@
  */
 package org.onosproject.cluster.impl;
 
-import com.google.common.collect.Sets;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
+import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -24,7 +32,6 @@ import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.karaf.system.SystemService;
-import org.joda.time.DateTime;
 import org.onlab.packet.IpAddress;
 import org.onlab.util.Tools;
 import org.onosproject.cluster.ClusterAdminService;
@@ -44,16 +51,10 @@ import org.onosproject.cluster.DefaultPartition;
 import org.onosproject.cluster.NodeId;
 import org.onosproject.cluster.Partition;
 import org.onosproject.cluster.PartitionId;
+import org.onosproject.core.Version;
+import org.onosproject.core.VersionService;
 import org.onosproject.event.AbstractListenerManager;
 import org.slf4j.Logger;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -87,6 +88,9 @@ public class ClusterManager
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected SystemService systemService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected VersionService versionService;
 
     private final AtomicReference<ClusterMetadata> currentMetadata = new AtomicReference<>();
     private final InternalClusterMetadataListener metadataListener = new InternalClusterMetadataListener();
@@ -135,14 +139,21 @@ public class ClusterManager
     }
 
     @Override
+    public Version getVersion(NodeId nodeId) {
+        checkPermission(CLUSTER_READ);
+        checkNotNull(nodeId, INSTANCE_ID_NULL);
+        return store.getVersion(nodeId);
+    }
+
+    @Override
     public void markFullyStarted(boolean started) {
         store.markFullyStarted(started);
     }
 
     @Override
-    public DateTime getLastUpdated(NodeId nodeId) {
+    public Instant getLastUpdatedInstant(NodeId nodeId) {
         checkPermission(CLUSTER_READ);
-        return store.getLastUpdated(nodeId);
+        return store.getLastUpdatedInstant(nodeId);
     }
 
     @Override
@@ -160,7 +171,7 @@ public class ClusterManager
         try {
             log.warn("Shutting down container for cluster reconfiguration!");
             // Clean up persistent state associated with previous cluster configuration.
-            Tools.removeDirectory(System.getProperty("karaf.data") + "/partitions");
+            Tools.removeDirectory(System.getProperty("karaf.data") + "/db/partitions/");
             systemService.reboot("now", SystemService.Swipe.NONE);
         } catch (Exception e) {
             log.error("Unable to reboot container", e);
@@ -189,7 +200,7 @@ public class ClusterManager
         }
     }
 
-    private static Set<Partition> buildDefaultPartitions(Collection<ControllerNode> nodes, int partitionSize) {
+    private Set<Partition> buildDefaultPartitions(Collection<ControllerNode> nodes, int partitionSize) {
         List<ControllerNode> sorted = new ArrayList<>(nodes);
         Collections.sort(sorted, (o1, o2) -> o1.id().toString().compareTo(o2.id().toString()));
         Set<Partition> partitions = Sets.newHashSet();
@@ -202,7 +213,7 @@ public class ClusterManager
             for (int j = 0; j < count; j++) {
                 set.add(sorted.get((i + j) % length).id());
             }
-            partitions.add(new DefaultPartition(PartitionId.from((index + 1)), set));
+            partitions.add(new DefaultPartition(PartitionId.from((index + 1)), versionService.version(), set));
         }
         return partitions;
     }

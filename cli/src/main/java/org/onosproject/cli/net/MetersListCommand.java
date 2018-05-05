@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,12 @@ import org.apache.karaf.shell.commands.Command;
 import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.meter.Meter;
+import org.onosproject.net.meter.MeterId;
 import org.onosproject.net.meter.MeterService;
 
 import java.util.Collection;
+
+import static com.google.common.base.Strings.isNullOrEmpty;
 
 /**
  * Lists all meters.
@@ -36,19 +39,36 @@ public class MetersListCommand extends AbstractShellCommand {
             required = false, multiValued = false)
     String uri = null;
 
+    @Argument(index = 1, name = "meter", description = "Meter ID",
+            required = false, multiValued = false)
+    String meterstr = null;
+
+    MeterId meterId = null;
 
     @Override
     protected void execute() {
+
+        if (!isNullOrEmpty(meterstr)) {
+            meterId = MeterId.meterId(Long.parseLong(meterstr));
+        }
+
         MeterService service = get(MeterService.class);
 
-        Collection<Meter> meters = service.getAllMeters();
-        if (uri != null) {
-            DeviceId deviceId = DeviceId.deviceId(uri);
-            Collection<Meter> devMeters = Collections2.filter(meters,
-                                                              m -> m.deviceId().equals(deviceId));
-            printMeters(devMeters);
+        if (meterId != null && uri != null) {
+            Meter m = service.getMeter(DeviceId.deviceId(uri), meterId);
+            if (m != null) {
+                print("%s", m);
+            } else {
+                error("Meter %s not found for device %s", meterId, uri);
+            }
         } else {
-            printMeters(meters);
+            Collection<Meter> meters = service.getAllMeters();
+            if (uri == null) {
+                printMeters(meters);
+            } else {
+                printMeters(Collections2.filter(meters,
+                        m -> m.deviceId().equals(DeviceId.deviceId(uri))));
+            }
         }
     }
 

@@ -1,5 +1,6 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
+    '//lib:NETTY',
     '//protocols/lisp/api:onos-protocols-lisp-api',
     '//protocols/lisp/msg:onos-protocols-lisp-msg',
     '//lib:netty-buffer',
@@ -8,6 +9,7 @@ COMPILE_DEPS = [
     '//lib:netty-transport-native-epoll',
     '//lib:netty-handler',
     '//lib:netty-resolver',
+    '//lib:concurrent-trees',
 ]
 
 TEST_DEPS = [

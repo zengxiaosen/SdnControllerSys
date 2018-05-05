@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import org.onosproject.incubator.net.virtual.provider.VirtualProviderRegistrySer
 import org.onosproject.incubator.net.virtual.provider.VirtualProviderService;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.provider.ProviderId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,6 +49,7 @@ public class VirtualProviderManager
     private final Map<ProviderId, VirtualProviderService> servicesWithProvider = new HashMap<>();
     private final Map<String, VirtualProvider> providersByScheme = new HashMap<>();
     private final Map<NetworkId, Set<VirtualProviderService>> servicesByNetwork = new HashMap<>();
+    private static Logger log = LoggerFactory.getLogger(VirtualProviderManager.class);
 
     @Override
     public synchronized void registerProvider(VirtualProvider virtualProvider) {
@@ -72,7 +75,7 @@ public class VirtualProviderManager
     public synchronized void unregisterProvider(VirtualProvider virtualProvider) {
         checkNotNull(virtualProvider, "Provider cannot be null");
 
-        //TODO: invalidate provider services witch subscribe the provider
+        //TODO: invalidate provider services which subscribe the provider
         providers.remove(virtualProvider.id());
 
         if (!virtualProvider.id().isAncillary()) {
@@ -84,12 +87,9 @@ public class VirtualProviderManager
     public synchronized void
     registerProviderService(NetworkId networkId,
                             VirtualProviderService virtualProviderService) {
-        Set<VirtualProviderService> services = servicesByNetwork.get(networkId);
+        Set<VirtualProviderService> services =
+                servicesByNetwork.computeIfAbsent(networkId, k -> new HashSet<>());
 
-        if (services == null) {
-            services = new HashSet<>();
-            servicesByNetwork.put(networkId, services);
-        }
         services.add(virtualProviderService);
     }
 
@@ -146,7 +146,7 @@ public class VirtualProviderManager
 
         return services.stream()
                 .filter(s -> getProviderClass(s).equals(providerClass))
-                .findFirst().get();
+                .findFirst().orElse(null);
     }
 
     /**
@@ -163,7 +163,7 @@ public class VirtualProviderManager
         try {
             return Class.forName(pramType);
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            log.warn("getProviderClass()", e);
         }
 
         return null;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,11 +86,24 @@ public final class DefaultYdtAppContext<T extends AppData>
         YdtAppNodeOperationType opType = getAppOpTypeFromYdtOpType(ydtOpType);
         YdtAppContext curNode = this;
         YdtAppNodeOperationType parentOpType = operationType;
-        if (parentOpType != null && opType != parentOpType) {
-            while (curNode.getOperationType() != BOTH &&
-                    curNode.getParent() != null) {
-                curNode.setOperationType(BOTH);
-                curNode = curNode.getParent();
+        if (opType != parentOpType) {
+            if (parentOpType != null) {
+                while (curNode.getOperationType() != BOTH &&
+                        curNode.getParent() != null) {
+                    curNode.setOperationType(BOTH);
+                    curNode = curNode.getParent();
+                }
+            } else {
+                // If operation type for ydt node is "NONE" then in that
+                // case operation type for module node in app tree set as null.
+                // Once the target node operation type received by ydt then
+                // operation type for module node will be updated with the
+                // same target node operation type in app tree.
+                while (curNode.getParent() != null && curNode
+                        .getOperationType() == null) {
+                    curNode.setOperationType(opType);
+                    curNode = curNode.getParent();
+                }
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,9 +63,7 @@ public final class ContinuousResourceId extends ResourceId {
         String typeName = (String) lastComponent();
         boolean foundInLeaf = typeName.equals(ancestor.getCanonicalName());
         boolean foundInAncestor = components.subList(0, components.size()).stream()
-                .filter(x -> ancestor.isAssignableFrom(x.getClass()))
-                .findAny()
-                .isPresent();
+                .anyMatch(x -> ancestor.isAssignableFrom(x.getClass()));
         return foundInAncestor || foundInLeaf;
     }
 

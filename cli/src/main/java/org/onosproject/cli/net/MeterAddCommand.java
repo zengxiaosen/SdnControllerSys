@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import org.onosproject.net.meter.MeterRequest;
 import org.onosproject.net.meter.MeterService;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -160,7 +161,8 @@ public class MeterAddCommand extends AbstractShellCommand {
 
         MeterRequest request = builder.add();
 
-        service.submit(request);
-
+        Meter m = service.submit(request);
+        log.info("Requested meter with id {}: {}", m.id().toString(), m.toString());
+        print("Requested meter with id %s: %s", m.id().toString(), m.toString());
     }
 }

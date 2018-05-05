@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class BgpPeerChannelHandlerTest extends SimpleChannelHandler {
-    protected static final Logger log = LoggerFactory.getLogger(BgpPeerChannelHandlerTest.class);
+    private static final Logger log = LoggerFactory.getLogger(BgpPeerChannelHandlerTest.class);
     public static final int OPEN_MSG_MINIMUM_LENGTH = 29;
     public static final byte[] MARKER = new byte[] {(byte) 0xff, (byte) 0xff,
         (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,

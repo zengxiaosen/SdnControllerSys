@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Open Networking Laboratory
+ * Copyright 2016 Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,16 @@ package org.onosproject.drivers.juniper;
 
 import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableList;
-import org.onosproject.drivers.utilities.XmlConfigParser;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.device.DeviceDescription;
 import org.onosproject.net.device.DeviceDescriptionDiscovery;
 import org.onosproject.net.device.PortDescription;
 import org.onosproject.net.driver.AbstractHandlerBehaviour;
 import org.onosproject.netconf.NetconfController;
+import org.onosproject.netconf.NetconfException;
 import org.onosproject.netconf.NetconfSession;
+import org.slf4j.Logger;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -37,6 +36,7 @@ import static org.onosproject.drivers.juniper.JuniperUtils.REQ_IF_INFO;
 import static org.onosproject.drivers.juniper.JuniperUtils.REQ_MAC_ADD_INFO;
 import static org.onosproject.drivers.juniper.JuniperUtils.REQ_SYS_INFO;
 import static org.onosproject.drivers.juniper.JuniperUtils.requestBuilder;
+import static org.onosproject.drivers.utilities.XmlConfigParser.loadXmlString;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
@@ -47,7 +47,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 public class DeviceDiscoveryJuniperImpl extends AbstractHandlerBehaviour
         implements DeviceDescriptionDiscovery {
 
-    public final org.slf4j.Logger log = getLogger(getClass());
+    private final Logger log = getLogger(getClass());
 
     @Override
     public DeviceDescription discoverDeviceDetails() {
@@ -59,14 +59,16 @@ public class DeviceDiscoveryJuniperImpl extends AbstractHandlerBehaviour
         try {
             sysInfo = session.get(requestBuilder(REQ_SYS_INFO));
             chassis = session.get(requestBuilder(REQ_MAC_ADD_INFO));
-        } catch (IOException e) {
+        } catch (NetconfException e) {
             log.warn("Failed to retrieve device details for {}", devId);
             return null;
         }
+        log.trace("Device {} system-information {}", devId, sysInfo);
         DeviceDescription description =
-                JuniperUtils.parseJuniperDescription(devId, XmlConfigParser.
-                        loadXml(new ByteArrayInputStream(sysInfo.getBytes())), chassis);
-        log.debug("Device  description {}", description);
+                JuniperUtils.parseJuniperDescription(devId,
+                                                     loadXmlString(sysInfo),
+                                                     chassis);
+        log.debug("Device {} description {}", devId, description);
         return description;
     }
 
@@ -78,14 +80,14 @@ public class DeviceDiscoveryJuniperImpl extends AbstractHandlerBehaviour
         String reply;
         try {
             reply = session.get(requestBuilder(REQ_IF_INFO));
-        } catch (IOException e) {
+        } catch (NetconfException e) {
             log.warn("Failed to retrieve ports for device {}", devId);
             return ImmutableList.of();
         }
+        log.trace("Device {} interface-information {}", devId, reply);
         List<PortDescription> descriptions =
-                JuniperUtils.parseJuniperPorts(XmlConfigParser.
-                        loadXml(new ByteArrayInputStream(reply.getBytes())));
-        log.debug("Discovered ports {}", descriptions);
+                JuniperUtils.parseJuniperPorts(loadXmlString(reply));
+        log.debug("Device {} Discovered ports {}", devId, descriptions);
         return descriptions;
     }
 }

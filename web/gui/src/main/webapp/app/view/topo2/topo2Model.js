@@ -1,5 +1,5 @@
 /*
-* Copyright 2016-present Open Networking Laboratory
+* Copyright 2016-present Open Networking Foundation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -22,13 +22,10 @@ Visualization of the topology in an SVG layer, using a D3 Force Layout.
 (function () {
     'use strict';
 
-    function Model(attributes) {
-
-        var attrs = attributes || {};
+    function Model(attributes, collection) {
         this.attributes = {};
-
-        attrs = angular.extend({}, attrs);
-        this.set(attrs, { silent: true });
+        this.set(angular.extend({}, attributes || {}), { silent: true });
+        this.collection = collection;
         this.initialize.apply(this, arguments);
     }
 
@@ -82,11 +79,11 @@ Visualization of the topology in an SVG layer, using a D3 Force Layout.
 
                 val = attribute;
 
-                if (!angular.equals(current[index], val)) {
+                if (!_.isEqual(current[index], val)) {
                     changes.push(index);
                 }
 
-                if (angular.equals(previous[index], val)) {
+                if (!_.isEqual(previous[index], val)) {
                     delete changed[index];
                 } else {
                     changed[index] = val;
@@ -115,7 +112,12 @@ Visualization of the topology in an SVG layer, using a D3 Force Layout.
         },
         toJSON: function (options) {
             return angular.copy(this.attributes);
-        }
+        },
+        remove: function () {
+            if (this.collection) {
+                this.collection.remove(this);
+            }
+        },
     };
 
     angular.module('ovTopo2')
@@ -125,6 +127,6 @@ Visualization of the topology in an SVG layer, using a D3 Force Layout.
             Model.extend = fn.extend;
 
             return Model;
-        }
+        },
     ]);
 })();

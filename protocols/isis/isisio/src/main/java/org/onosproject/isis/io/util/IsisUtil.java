@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,9 +144,9 @@ public final class IsisUtil {
      * Parse byte array to area address.
      *
      * @param bytes area address
-     * @return areaAddres area address
+     * @return areaAddress area address
      */
-    public static String areaAddres(byte[] bytes) {
+    public static String areaAddress(byte[] bytes) {
         String areaAddres = "";
         for (Byte byt : bytes) {
             String hexa = Integer.toHexString(Byte.toUnsignedInt(byt));

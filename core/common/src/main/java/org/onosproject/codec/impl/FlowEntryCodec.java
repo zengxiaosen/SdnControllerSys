@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ public final class FlowEntryCodec extends JsonCodec<FlowEntry> {
                 .put("life", flowEntry.life()) //FIXME life is destroying precision (seconds granularity is default)
                 .put("packets", flowEntry.packets())
                 .put("bytes", flowEntry.bytes())
+                .put("liveType", flowEntry.liveType().toString())
                 .put("lastSeen", flowEntry.lastSeen());
 
         if (flowEntry.treatment() != null) {

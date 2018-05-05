@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Open Networking Laboratory
+ * Copyright 2016 Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ public class DefaultConsistentMultimapBuilder<K, V>
 
     @Override
     public AsyncConsistentMultimap<K, V> buildMultimap() {
-        return primitiveCreator.newAsyncConsistentSetMultimap(name(), serializer(), executorSupplier());
+        return primitiveCreator.newAsyncConsistentSetMultimap(name(), serializer());
     }
 
     @Override

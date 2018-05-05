@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  ~ Copyright 2014-present Open Networking Laboratory
+  ~ Copyright 2014-present Open Networking Foundation
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -108,6 +108,7 @@
 
     <module name="RegexpHeader">
         <property name="headerFile" value="tools/build/conf/src/main/resources/onos/onos-java.header"/>
+        <property name="fileExtensions" value="java"/>
     </module>
 
 
@@ -138,9 +139,9 @@
         <!-- See http://checkstyle.sf.net/config_javadoc.html -->
         <module name="JavadocMethod">
             <property name="scope" value="package"/>
-	    <property name="allowMissingJavadoc" value="true"/>
+            <property name="allowMissingJavadoc" value="true"/>
             <property name="allowUndeclaredRTE" value="true"/>
-	    <property name="suppressLoadErrors" value="true"/>
+            <property name="suppressLoadErrors" value="true"/>
         </module>
         <module name="JavadocType">
             <property name="severity" value="warning"/>

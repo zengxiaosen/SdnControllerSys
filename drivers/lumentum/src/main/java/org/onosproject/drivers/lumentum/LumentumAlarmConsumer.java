@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,11 +68,11 @@ public class LumentumAlarmConsumer extends AbstractHandlerBehaviour implements A
         snmp.get(ALARMS_TABLE_OID)
                 .forEach(alarm -> snmp.get(ALARMS_ID_OID).forEach(alarmIdEvent -> {
                     int alarmId = getAlarmId(alarmIdEvent);
-                    alarms.add(new DefaultAlarm.Builder(deviceId, getMessage(alarmId),
+                    alarms.add(new DefaultAlarm.Builder(AlarmId.alarmId(deviceId, String.valueOf(alarmId)),
+                                                        deviceId, getMessage(alarmId),
                                                         getSeverity(alarmId),
                                                         System.currentTimeMillis())
-                                       .withId(AlarmId.alarmId(alarmId))
-                                       .build());
+                                                    .build());
                 }));
         return ImmutableList.copyOf(alarms);
     }

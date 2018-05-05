@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,10 @@
     'use strict';
 
     // injected refs
-    var $log, fs, wss;
+    var fs, wss;
 
     // internal state
-    var cache = {}, 
+    var cache = {},
         listeners = [];
 
     // returns the preference settings for the specified key
@@ -77,7 +77,17 @@
         cache[name] = obj;
         wss.sendEvent('updatePrefReq', { key: name, value: obj });
     }
-    
+
+    // merge preferences:
+    // The assumption here is that obj is a sparse object, and that the
+    //  defined keys should overwrite the corresponding values, but any
+    //  existing keys that are NOT explicitly defined here should be left
+    //  alone (not deleted).
+    function mergePrefs(name, obj) {
+        var merged = cache[name] || {};
+        setPrefs(name, angular.extend(merged, obj));
+    }
+
     function updatePrefs(data) {
         cache = data;
         listeners.forEach(function (lsnr) { lsnr(); });
@@ -88,34 +98,34 @@
     }
 
     function removeListener(listener) {
-        listeners = listeners.filter(function(obj) { return obj === listener; });
+        listeners = listeners.filter(function (obj) { return obj === listener; });
     }
 
     angular.module('onosUtil')
-    .factory('PrefsService', ['$log', 'FnService', 'WebSocketService',
-        function (_$log_, _fs_, _wss_) {
-            $log = _$log_;
+    .factory('PrefsService', ['FnService', 'WebSocketService',
+        function (_fs_, _wss_) {
             fs = _fs_;
             wss = _wss_;
 
             try {
                 cache = angular.isDefined(userPrefs) ? userPrefs : {};
             }
-            catch(e){
+            catch (e) {
                 // browser throws error for non-existing globals
-                cache = {}
+                cache = {};
             }
 
             wss.bindHandlers({
-                updatePrefs: updatePrefs
+                updatePrefs: updatePrefs,
             });
 
             return {
                 getPrefs: getPrefs,
                 asNumbers: asNumbers,
                 setPrefs: setPrefs,
+                mergePrefs: mergePrefs,
                 addListener: addListener,
-                removeListener: removeListener
+                removeListener: removeListener,
             };
         }]);
 

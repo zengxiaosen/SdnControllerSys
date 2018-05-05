@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@ import org.onosproject.drivers.fujitsu.behaviour.VoltPonLinkConfig;
 import org.onosproject.net.driver.AbstractHandlerBehaviour;
 import org.onosproject.net.driver.DriverHandler;
 import org.onosproject.netconf.NetconfController;
+import org.onosproject.netconf.NetconfException;
 import org.slf4j.Logger;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.HashMap;
@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableSet;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onosproject.drivers.fujitsu.FujitsuVoltXmlUtility.*;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.onosproject.netconf.DatastoreId.RUNNING;
 
 /**
  * Implementation to get and set parameters available in vOLT
@@ -137,7 +138,7 @@ public class FujitsuVoltPonLinkConfig extends AbstractHandlerBehaviour
                         .get(ncDeviceId)
                         .getSession()
                         .get(request.toString(), REPORT_ALL);
-        } catch (IOException e) {
+        } catch (NetconfException e) {
             log.error("Cannot communicate to device {} exception {}", ncDeviceId, e);
         }
         return reply;
@@ -185,7 +186,7 @@ public class FujitsuVoltPonLinkConfig extends AbstractHandlerBehaviour
 
             result = controller.getDevicesMap().get(ncDeviceId).getSession().
                     editConfig(RUNNING, null, request.toString());
-        } catch (IOException e) {
+        } catch (NetconfException e) {
             log.error("Cannot communicate to device {} exception {}", ncDeviceId, e);
         }
         return result;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@
         idIns = 'topo-p-instance',
         instOpts = {
             edge: 'left',
-            width: 20
+            width: 20,
         };
 
     // internal state
@@ -44,6 +44,11 @@
         onosOrder,
         oiShowMaster,
         oiBox;
+
+    // function to be replaced by the localization bundle function
+    var topoLion = function (x) {
+        return '#tis#' + x + '#';
+    };
 
 
     function addInstance(data) {
@@ -141,31 +146,31 @@
             instSvg = {
                 width: 170,
                 height: 85,
-                viewBox: '0 0 170 85'
+                viewBox: '0 0 170 85',
             },
             headRect = {
                 x: rox,
                 y: roy,
                 width: rw,
-                height: rhh
+                height: rhh,
             },
             bodyRect = {
                 x: rox,
                 y: roy + rhh,
                 width: rw,
-                height: rbh
+                height: rbh,
             },
             titleAttr = {
                 class: 'instTitle',
                 x: tx,
-                y: 27
+                y: 27,
             };
 
         var onoses = oiBox.el().selectAll('.onosInst')
                 .data(onosOrder, function (d) { return d.id; });
 
         function nSw(n) {
-            return 'Devices: ' + n;
+            return topoLion('devices') + ': ' + n;
         }
 
         // operate on existing onos instances if necessary
@@ -225,7 +230,7 @@
                 svg.append('text').attr({
                     class: 'instLabel ' + id,
                     x: tx,
-                    y: ty
+                    y: ty,
                 }).text(label);
                 ty += 18;
             }
@@ -307,8 +312,8 @@
                 hideInsts();
             }
         }
-        verb = on ? 'Show' : 'Hide';
-        flash.flash(verb + ' instances panel');
+        verb = on ? topoLion('show') : topoLion('hide');
+        flash.flash(verb + ' ' + topoLion('fl_panel_instances'));
         return on;
     }
 
@@ -342,7 +347,8 @@
                 show: showInsts,
                 hide: hideInsts,
                 toggle: toggleInsts,
-                showMaster: function () { return oiShowMaster; }
+                showMaster: function () { return oiShowMaster; },
+                setLionBundle: function (bundle) { topoLion = bundle; },
             };
         }]);
 }());

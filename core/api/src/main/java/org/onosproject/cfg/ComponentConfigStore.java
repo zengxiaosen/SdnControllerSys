@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,10 @@
  */
 package org.onosproject.cfg;
 
+import com.google.common.collect.ImmutableSet;
 import org.onosproject.store.Store;
+
+import java.util.Set;
 
 /**
  * Service for storing and distributing system-wide configurations for various
@@ -41,5 +44,30 @@ public interface ComponentConfigStore
      * @param name          property name
      */
     void unsetProperty(String componentName, String name);
+
+
+    /**
+     * Returns set of component configuration property names. This includes
+     * only the names of properties whose values depart from their default.
+     *
+     * @param component component name
+     * @return set of property names whose values are set to non-default values
+     */
+    default Set<String> getProperties(String component) {
+        return ImmutableSet.of();
+    }
+
+    /**
+     * Returns the string value of the given component configuration property.
+     * For properties whose values are set to their default this may return null.
+     *
+     * @param component component name
+     * @param name      property name; null if no property found or if value
+     *                  is default
+     * @return set of property names
+     */
+    default String getProperty(String component, String name) {
+        return null;
+    }
 
 }

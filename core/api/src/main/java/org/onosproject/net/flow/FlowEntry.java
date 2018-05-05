@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Represents a generalized match &amp; action pair to be applied to
  * an infrastructure device.
+ * 表示要应用于基础架构设备的广义匹配操作对。
  */
 public interface FlowEntry extends FlowRule {
 
@@ -73,30 +74,39 @@ public interface FlowEntry extends FlowRule {
         /**
          * Indicates that this rule has been submitted for addition immediately.
          * Not necessarily collecting flow stats.
+         * 表示此规则已立即提交添加。 不一定收集流量统计。
          */
         IMMEDIATE,
 
         /**
          * Indicates that this rule has been submitted for a short time.
          * Collecting flow stats every SHORT interval, defined by the implementation.
+         * 表示此规则已提交很短时间。
+         * 每个SHORT间隔收集流量统计信息，由实施定义。
          */
         SHORT,
 
         /**
          * Indicates that this rule has been submitted for a mid time.
          * Collecting flow stats every MID interval, defined by the implementation.
+         * 表示此规则已在中间时间提交。
+         * 每个MID间隔收集流量统计数据，由实施定义。
          */
         MID,
 
         /**
          * Indicates that this rule has been submitted for a long time.
          * Collecting flow stats every LONG interval, defined by the implementation.
+         * 表示此规则已提交很长时间。
+         * 每个LONG间隔收集流量统计信息，由实施定义。
          */
         LONG,
 
         /**
          * Indicates that this rule has been submitted for UNKNOWN or ERROR.
          * Not necessarily collecting flow stats.
+         * 表示此规则已提交给UNKNOWN或ERROR。
+         * 不一定收集流量统计。
          */
         UNKNOWN
     }

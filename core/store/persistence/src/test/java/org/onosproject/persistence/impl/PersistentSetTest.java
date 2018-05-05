@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,6 +71,11 @@ public class PersistentSetTest extends MapDBTest {
                 num = num | bytes[3];
 
                 return (T) Integer.valueOf(num);
+            }
+
+            @Override
+            public <T> T copy(T object) {
+                return decode(encode(object));
             }
         }, fakeDB, "set");
 

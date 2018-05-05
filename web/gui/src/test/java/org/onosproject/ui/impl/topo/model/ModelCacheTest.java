@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,23 +25,19 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.HostId;
 import org.onosproject.net.Link;
-import org.onosproject.net.region.Region;
-import org.onosproject.ui.impl.topo.model.UiModelEvent.Type;
 import org.onosproject.ui.model.topo.UiClusterMember;
 import org.onosproject.ui.model.topo.UiDevice;
 import org.onosproject.ui.model.topo.UiDeviceLink;
 import org.onosproject.ui.model.topo.UiElement;
 import org.onosproject.ui.model.topo.UiHost;
 import org.onosproject.ui.model.topo.UiLinkId;
+import org.onosproject.ui.model.topo.UiModelEvent.Type;
 import org.onosproject.ui.model.topo.UiRegion;
 
 import java.util.Collection;
 import java.util.Iterator;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.onosproject.cluster.NodeId.nodeId;
 import static org.onosproject.net.PortNumber.portNumber;
 import static org.onosproject.ui.model.topo.UiLinkId.uiLinkId;
@@ -156,8 +152,11 @@ public class ModelCacheTest extends AbstractTopoModelTest {
         // see AbstractUiImplTest Mock Environment for expected values...
         assertEquals("wrong id str", C1, member.idAsString());
         assertEquals("wrong id", nodeId(C1), member.id());
-        assertEquals("not online", true, member.isOnline());
-        assertEquals("not ready", true, member.isReady());
+
+        // TODO make assertions through the cluster service; state no longer
+        //   cached in the UiModel...
+//        assertEquals("not online", true, member.isOnline());
+//        assertEquals("not ready", true, member.isReady());
     }
 
 
@@ -223,9 +222,6 @@ public class ModelCacheTest extends AbstractTopoModelTest {
         assertEquals("wrong id", REGION_2.id(), region.id());
         assertEquals("unex # device IDs", 3, region.deviceIds().size());
         assertContains("missing ID", region.deviceIds(), DEVID_4, DEVID_5, DEVID_6);
-        Region r = region.backingRegion();
-        print(r);
-        assertEquals("wrong region name", "Region-R2", r.name());
     }
 
     private static final String[] LINKS_2_7 = {D2, "27", D7, "72"};

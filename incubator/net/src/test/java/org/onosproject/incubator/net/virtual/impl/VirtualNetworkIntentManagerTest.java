@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import org.junit.Test;
 import org.onlab.junit.TestUtils;
 import org.onlab.osgi.ServiceDirectory;
 import org.onlab.osgi.TestServiceDirectory;
-import org.onlab.rest.BaseResource;
 import org.onosproject.TestApplicationId;
 import org.onosproject.common.event.impl.TestEventDispatcher;
 import org.onosproject.core.ApplicationId;
@@ -37,8 +36,10 @@ import org.onosproject.incubator.net.virtual.VirtualDevice;
 import org.onosproject.incubator.net.virtual.VirtualLink;
 import org.onosproject.incubator.net.virtual.VirtualNetwork;
 import org.onosproject.incubator.net.virtual.VirtualNetworkIntent;
+import org.onosproject.incubator.net.virtual.VirtualNetworkIntentStore;
 import org.onosproject.incubator.net.virtual.VirtualNetworkStore;
 import org.onosproject.incubator.store.virtual.impl.DistributedVirtualNetworkStore;
+import org.onosproject.incubator.store.virtual.impl.SimpleVirtualIntentStore;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DefaultPort;
 import org.onosproject.net.EncapsulationType;
@@ -55,14 +56,15 @@ import org.onosproject.net.intent.IntentCompiler;
 import org.onosproject.net.intent.IntentEvent;
 import org.onosproject.net.intent.IntentExtensionService;
 import org.onosproject.net.intent.IntentListener;
-import org.onosproject.net.intent.WorkPartitionService;
-import org.onosproject.net.intent.WorkPartitionServiceAdapter;
 import org.onosproject.net.intent.IntentService;
 import org.onosproject.net.intent.IntentState;
 import org.onosproject.net.intent.IntentTestsMocks;
 import org.onosproject.net.intent.Key;
 import org.onosproject.net.intent.MockIdGenerator;
+import org.onosproject.net.intent.PathIntent;
 import org.onosproject.net.intent.TestableIntentService;
+import org.onosproject.net.intent.WorkPartitionService;
+import org.onosproject.net.intent.WorkPartitionServiceAdapter;
 import org.onosproject.net.intent.constraint.EncapsulationConstraint;
 import org.onosproject.store.service.TestStorageService;
 
@@ -73,7 +75,10 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Junit tests for VirtualNetworkIntentService.
@@ -100,6 +105,7 @@ public class VirtualNetworkIntentManagerTest extends TestDeviceParams {
 
     private VirtualNetworkManager manager;
     private static DistributedVirtualNetworkStore virtualNetworkManagerStore;
+    private VirtualNetworkIntentStore intentStore;
     private CoreService coreService;
     private TestableIntentService intentService = new FakeIntentManager();
     private VirtualNetworkIntentManager vnetIntentService;
@@ -108,7 +114,6 @@ public class VirtualNetworkIntentManagerTest extends TestDeviceParams {
     private WorkPartitionService workPartitionService;
     private ServiceDirectory testDirectory;
     private TestListener listener = new TestListener();
-    private IdGenerator idGenerator = new MockIdGenerator();
     private static final int MAX_WAIT_TIME = 5;
     private static final int MAX_PERMITS = 1;
     private static Semaphore created;
@@ -118,11 +123,11 @@ public class VirtualNetworkIntentManagerTest extends TestDeviceParams {
     @Before
     public void setUp() throws Exception {
         virtualNetworkManagerStore = new DistributedVirtualNetworkStore();
+        intentStore = new SimpleVirtualIntentStore();
 
         coreService = new VirtualNetworkIntentManagerTest.TestCoreService();
 
-        Intent.unbindIdGenerator(idGenerator);
-        Intent.bindIdGenerator(idGenerator);
+        MockIdGenerator.cleanBind();
 
         TestUtils.setField(virtualNetworkManagerStore, "coreService", coreService);
         TestUtils.setField(virtualNetworkManagerStore, "storageService", new TestStorageService());
@@ -131,7 +136,6 @@ public class VirtualNetworkIntentManagerTest extends TestDeviceParams {
         manager = new VirtualNetworkManager();
         manager.store = virtualNetworkManagerStore;
         NetTestTools.injectEventDispatcher(manager, new TestEventDispatcher());
-        manager.intentService = intentService;
         intentService.addListener(listener);
 
         // Register a compiler and an installer both setup for success.
@@ -147,7 +151,6 @@ public class VirtualNetworkIntentManagerTest extends TestDeviceParams {
                 .add(VirtualNetworkStore.class, virtualNetworkManagerStore)
                 .add(IntentService.class, intentService)
                 .add(WorkPartitionService.class, workPartitionService);
-        BaseResource.setServiceDirectory(testDirectory);
         TestUtils.setField(manager, "serviceDirectory", testDirectory);
 
         manager.activate();
@@ -158,7 +161,7 @@ public class VirtualNetworkIntentManagerTest extends TestDeviceParams {
         virtualNetworkManagerStore.deactivate();
         manager.deactivate();
         NetTestTools.injectEventDispatcher(manager, null);
-        Intent.unbindIdGenerator(idGenerator);
+        MockIdGenerator.unbind();
         intentService.removeListener(listener);
         created = null;
         withdrawn = null;
@@ -216,9 +219,7 @@ public class VirtualNetworkIntentManagerTest extends TestDeviceParams {
         virtualNetworkManagerStore.updateLink(link4, link4.tunnelId(), Link.State.ACTIVE);
 
         vnetIntentService = new VirtualNetworkIntentManager(manager, virtualNetwork.id());
-        vnetIntentService.intentService = intentService;
-        vnetIntentService.store = virtualNetworkManagerStore;
-        vnetIntentService.partitionService = workPartitionService;
+        vnetIntentService.intentStore = intentStore;
         return virtualNetwork;
     }
 
@@ -349,12 +350,12 @@ public class VirtualNetworkIntentManagerTest extends TestDeviceParams {
             switch (event.type()) {
                 case INSTALLED:
                     // Release one permit on the created semaphore since the Intent event was received.
-                    virtualNetworkManagerStore.addOrUpdateIntent(event.subject(), IntentState.INSTALLED);
+//                    virtualNetworkManagerStore.addOrUpdateIntent(event.subject(), IntentState.INSTALLED);
                     created.release();
                     break;
                 case WITHDRAWN:
                     // Release one permit on the removed semaphore since the Intent event was received.
-                    virtualNetworkManagerStore.addOrUpdateIntent(event.subject(), IntentState.WITHDRAWN);
+//                    virtualNetworkManagerStore.addOrUpdateIntent(event.subject(), IntentState.WITHDRAWN);
                     withdrawn.release();
                     break;
                 case PURGED:
@@ -395,7 +396,19 @@ public class VirtualNetworkIntentManagerTest extends TestDeviceParams {
     private static class MockInstallableIntent extends FlowRuleIntent {
 
         public MockInstallableIntent() {
-            super(APP_ID, Collections.singletonList(new IntentTestsMocks.MockFlowRule(100)), Collections.emptyList());
+            super(APP_ID, null, Collections.singletonList(new IntentTestsMocks.MockFlowRule(100)),
+                    Collections.emptyList(), PathIntent.ProtectionType.PRIMARY, null);
         }
     }
+
+//    private void addOrUpdateIntent(Intent intent, IntentState state) {
+//        checkNotNull(intent, "Intent cannot be null");
+//        IntentData intentData = intentStore.(intent.key());
+//        if (intentData == null) {
+//            intentData = new IntentData(intent, state, new WallClockTimestamp(System.currentTimeMillis()));
+//        } else {
+//            intentData = new IntentData(intent, state, intentData.version());
+//        }
+//        intentKeyIntentDataMap.put(intent.key(), intentData);
+//    }
 }

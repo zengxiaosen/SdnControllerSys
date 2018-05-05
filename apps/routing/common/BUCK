@@ -1,11 +1,15 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
+    '//lib:NETTY',
+    '//lib:JACKSON',
     '//lib:org.apache.karaf.shell.console',
     '//lib:concurrent-trees',
     '//cli:onos-cli',
     '//incubator/api:onos-incubator-api',
     '//apps/routing-api:onos-apps-routing-api',
+    '//apps/route-service/api:onos-apps-route-service-api',
     '//core/common:onos-core-common',
+    '//lib:netty',
 ]
 
 TEST_DEPS = [

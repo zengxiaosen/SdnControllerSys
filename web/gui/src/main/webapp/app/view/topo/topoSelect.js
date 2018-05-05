@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
     'use strict';
 
     // injected refs
-    var $log, fs, wss, tov, tps, tts, ns, sus;
+    var $log, fs, wss, tov, tps, tts, sus;
 
     // api to topoForce
     var api;
@@ -37,11 +37,16 @@
     // internal state
     var hovered, selections, selectOrder, consumeClick;
 
-    function setInitialState () {
-        hovered = null;         // the node over which the mouse is hovering
-        selections = {};        // currently selected nodes (by id)
-        selectOrder = [];       // the order in which we made selections
-        consumeClick = false;   // used to coordinate with SVG click handler
+    // function to be replaced by the localization bundle function
+    var topoLion = function (x) {
+        return '#tsel#' + x + '#';
+    };
+
+    function setInitialState() {
+        hovered = null; // the node over which the mouse is hovering
+        selections = {}; // currently selected nodes (by id)
+        selectOrder = []; // the order in which we made selections
+        consumeClick = false; // used to coordinate with SVG click handler
     }
 
     // ==========================
@@ -65,12 +70,12 @@
 
     function nodeMouseOver(m) {
         if (!m.dragStarted) {
-            if (hovered != m) {
+            if (hovered !== m) {
                 hovered = m;
                 tov.hooks.mouseOver({
                     id: m.id,
                     class: m.class,
-                    type: m.type
+                    type: m.type,
                 });
             }
         }
@@ -101,7 +106,7 @@
             n = d3.select(el);
         } else {
             api.node().each(function (d) {
-                if (d == obj) {
+                if (d === obj) {
                     n = d3.select(el = this);
                 }
             });
@@ -183,10 +188,28 @@
     // === -----------------------------------------------------
 
     function requestDetails(data) {
-        wss.sendEvent('requestDetails', {
-            id: data.id,
-            class: data.class
-        });
+        var itemClass = data.class,
+            payload = {
+                class: itemClass,
+                id: data.id,
+            };
+
+        // special handling for links...
+        if (itemClass === 'link') {
+            payload.key = data.key;
+            payload.sourceId = data.source.id;
+            payload.targetId = data.target.id;
+            payload.targetPort = data.tgtPort;
+
+            if (data.source.class === 'host') {
+                payload.isEdgeLink = true;
+            } else {
+                payload.isEdgeLink = false;
+                payload.sourcePort = data.srcPort;
+            }
+        }
+
+        wss.sendEvent('requestDetails', payload);
     }
 
     // === -----------------------------------------------------
@@ -210,10 +233,7 @@
     function singleSelect() {
         var data = getSel(0).obj;
 
-        //the link details are already taken care of in topoLink.js
-        if (data.class === 'link') {
-            return;
-        }
+        $log.debug('Requesting details from server for', data);
         requestDetails(data);
         // NOTE: detail panel is shown as a response to receiving
         //       a 'showDetails' event from the server. See 'showDetails'
@@ -233,16 +253,16 @@
             if (nSel() === 2) {
                 tps.addAction({
                     id: 'host-flow-btn',
-                    gid: 'endstation',
+                    gid: 'm_endstation',
                     cb: tts.addHostIntent,
-                    tt: 'Create Host-to-Host Flow'
+                    tt: function () { return topoLion('tr_btn_create_h2h_flow'); },
                 });
             } else if (nSel() >= 2) {
                 tps.addAction({
                     id: 'mult-src-flow-btn',
                     gid: 'flows',
                     cb: tts.addMultiSourceIntent,
-                    tt: 'Create Multi-Source Flow'
+                    tt: function () { return topoLion('tr_btn_create_msrc_flow'); },
                 });
             }
         }
@@ -256,7 +276,7 @@
     function showDetails(data) {
         var buttons = fs.isA(data.buttons) || [];
         tps.displaySingle(data);
-        tov.installButtons(buttons, data, data.props['URI']);
+        tov.installButtons(buttons, data, data.propValues['uri']);
         tov.hooks.singleSelect(data);
         tps.displaySomething();
     }
@@ -295,7 +315,7 @@
         return {
             devices: devices,
             hosts: hosts,
-            types: types
+            types: types,
         };
     }
 
@@ -305,17 +325,15 @@
     angular.module('ovTopo')
     .factory('TopoSelectService',
         ['$log', 'FnService', 'WebSocketService', 'TopoOverlayService',
-            'TopoPanelService', 'TopoTrafficService', 'NavService',
-            'SvgUtilService',
+        'TopoPanelService', 'TopoTrafficService', 'SvgUtilService',
 
-        function (_$log_, _fs_, _wss_, _tov_, _tps_, _tts_, _ns_, _sus_) {
+        function (_$log_, _fs_, _wss_, _tov_, _tps_, _tts_, _sus_) {
             $log = _$log_;
             fs = _fs_;
             wss = _wss_;
             tov = _tov_;
             tps = _tps_;
             tts = _tts_;
-            ns = _ns_;
             sus = _sus_;
 
             function initSelect(_api_) {
@@ -346,7 +364,8 @@
 
                 clickConsumed: clickConsumed,
                 selectionContext: selectionContext,
-                reselect: reselect
+                reselect: reselect,
+                setLionBundle: function (bundle) { topoLion = bundle; },
             };
         }]);
 }());

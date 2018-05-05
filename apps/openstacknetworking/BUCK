@@ -1,13 +1,15 @@
 BUNDLES = [
     '//apps/openstacknetworking/api:onos-apps-openstacknetworking-api',
-    '//apps/openstacknetworking/web:onos-apps-openstacknetworking-web',
-    '//apps/openstacknetworking/cli:onos-apps-openstacknetworking-cli',
+    '//apps/openstacknetworking/app:onos-apps-openstacknetworking-app',
 ]
 
 onos_app (
-  title = 'OpenStack Networking App',
-  category = 'Utility',
-  url = 'http://onosproject.org',
-  included_bundles = BUNDLES,
-  required_apps = [ 'org.onosproject.openstackrouting', 'org.onosproject.openstackswitching' ]
+    title = 'OpenStack Networking Application',
+    category = 'Utility',
+    url = 'https://wiki.onosproject.org/display/ONOS/SONA%3A+DC+Network+Virtualization',
+    included_bundles = BUNDLES,
+    description = 'SONA Openstack Networking Application.',
+    required_apps = [
+        'org.onosproject.openstacknode'
+    ]
 )

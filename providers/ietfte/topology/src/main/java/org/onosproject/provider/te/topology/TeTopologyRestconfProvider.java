@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -262,8 +262,8 @@ public class TeTopologyRestconfProvider extends AbstractProvider
                                         YangProtocolEncodingFormat.JSON,
                                         YmsOperationType.QUERY_REPLY);
 
-        if ((yo == null)) {
-            log.error("YMS decoder returns {} for restconf {}", yo, deviceId);
+        if (yo == null) {
+            log.error("YMS decoder returns null for restconf {}", deviceId);
             return;
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ public class SharedRiskLinkGroupSubTlv implements PcepValueType {
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      */
 
-    protected static final Logger log = LoggerFactory.getLogger(SharedRiskLinkGroupSubTlv.class);
+    private static final Logger log = LoggerFactory.getLogger(SharedRiskLinkGroupSubTlv.class);
 
     public static final short TYPE = 30;
 

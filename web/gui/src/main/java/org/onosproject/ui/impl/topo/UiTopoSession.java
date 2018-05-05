@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Laboratory
+ *  Copyright 2016-present Open Networking Foundation
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package org.onosproject.ui.impl.topo;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.onosproject.net.region.RegionId;
 import org.onosproject.ui.UiTopoLayoutService;
 import org.onosproject.ui.impl.UiWebSocket;
-import org.onosproject.ui.impl.topo.model.UiModelEvent;
+import org.onosproject.ui.model.topo.UiLinkId;
+import org.onosproject.ui.model.topo.UiModelEvent;
 import org.onosproject.ui.impl.topo.model.UiModelListener;
 import org.onosproject.ui.impl.topo.model.UiSharedTopologyModel;
 import org.onosproject.ui.model.topo.UiClusterMember;
@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -129,23 +130,17 @@ public class UiTopoSession implements UiModelListener {
     }
 
     @Override
-    public void event(UiModelEvent event) {
-        String msg = messagesEnabled
-                ? "Event received: {}"
-                : "Event received: {}, but not transmitted";
-        log.debug(msg, event);
-
-        if (messagesEnabled) {
-            ObjectNode payload = t2json.jsonEvent(event);
-
-            // TODO: add filtering for relevant objects only...
-            // TO Decide: Since the session holds the state of what is being
-            //   displayed on the client, we should filter out any model events
-            //   that are not relevant, and only send up events for objects that
-            //   are currently being viewed by the user.
-
-            webSocket.sendMessage(TOPO2_UI_MODEL_EVENT, payload);
+    public boolean isRelevant(UiModelEvent event) {
+        if (!messagesEnabled) {
+            return false;
         }
+        UiRegion uiRegion = sharedModel.getRegion(currentLayout.regionId());
+        return uiRegion.isRelevant(event);
+    }
+
+    @Override
+    public void event(UiModelEvent event) {
+        webSocket.sendMessage(TOPO2_UI_MODEL_EVENT, t2json.jsonEvent(event));
     }
 
     /**
@@ -236,7 +231,7 @@ public class UiTopoSession implements UiModelListener {
         // now add the devices that reside in the parent region
         if (!layout.isRoot()) {
             UiTopoLayout parentLayout = layoutService.getLayout(layout.parent());
-            getRegion(parentLayout).devices().forEach(peers::add);
+            peers.addAll(getRegion(parentLayout).devices());
         }
 
         // TODO: Finally, filter out regions / devices that are not connected
@@ -286,5 +281,15 @@ public class UiTopoSession implements UiModelListener {
         RegionId r = RegionId.regionId(regionId);
         UiTopoLayout layout = layoutService.getLayout(r);
         setCurrentLayout(layout);
+    }
+
+    /**
+     * Returns synthetic links that are in the current region, mapped by
+     * original link ID.
+     *
+     * @return map of synth links
+     */
+    public Map<UiLinkId, UiSynthLink> relevantSynthLinks() {
+        return sharedModel.relevantSynthLinks(currentLayout.regionId());
     }
 }

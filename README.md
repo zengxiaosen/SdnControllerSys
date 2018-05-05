@@ -1,11 +1,10 @@
 ONOS : Open Network Operating System
 ====================================
 
-本系统的初衷是根据流量工程的业务需求修改sdn的源码相关模块，提升网络服务质量
 ### What is ONOS?
 ONOS is a new SDN network operating system designed for high availability,
 performance, scale-out.
-本系统的初衷是根据流量工程的业务需求修改sdn的源码相关模块，提升网络服务质量
+
 ### Top-Level Features
 
 * High availability through clustering and distributed state management.
@@ -23,5 +22,6 @@ performance, scale-out.
 * SDN-IP application to support interworking with traditional IP networks
   controlled by distributed routing protocols such as BGP.
 * IP-Optical use case demonstration.
+
 Checkout our [website](http://www.onosproject.org) and our
 [tools](http://www.onosproject.org/software/#tools)

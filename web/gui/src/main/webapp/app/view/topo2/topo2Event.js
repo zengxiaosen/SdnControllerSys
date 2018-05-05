@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,13 +27,12 @@
     'use strict';
 
     // injected refs
-    var $log, wss, t2fs;
+    var $log, wss, t2fs, t2ovs;
 
     // internal state
     var handlerMap,
         openListener;
 
-    // TODO: only add heartbeat timer etc. if we really need to be doing that..
     // ========================== Helper Functions
 
     function createHandlerMap() {
@@ -42,9 +41,9 @@
             topo2CurrentLayout: t2fs,
             topo2CurrentRegion: t2fs,
             topo2PeerRegions: t2fs,
-            topo2StartDone: t2fs,
 
-            topo2UiModelEvent: t2fs
+            topo2UiModelEvent: t2fs,
+            topo2Highlights: t2ovs.showHighlights,
 
             // Add further event names / module references as needed
         };
@@ -85,12 +84,13 @@
 
     angular.module('ovTopo2')
     .factory('Topo2EventService', [
-        '$log', 'WebSocketService', 'Topo2ForceService',
+        '$log', 'WebSocketService', 'Topo2ForceService', 'Topo2OverlayService',
 
-        function (_$log_, _wss_, _t2fs_) {
+        function (_$log_, _wss_, _t2fs_, _t2ovs_) {
             $log = _$log_;
             wss = _wss_;
             t2fs = _t2fs_;
+            t2ovs = _t2ovs_;
 
             // deferred creation of handler map, so module references are good
             createHandlerMap();
@@ -98,7 +98,7 @@
             return {
                 bindHandlers: bindHandlers,
                 start: start,
-                stop: stop
+                stop: stop,
             };
         }]);
 })();

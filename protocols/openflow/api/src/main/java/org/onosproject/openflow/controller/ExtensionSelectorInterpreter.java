@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package org.onosproject.openflow.controller;
 
 import com.google.common.annotations.Beta;
-import org.onosproject.codec.ExtensionSelectorCodec;
+import org.onosproject.net.flow.ExtensionSelectorCodec;
 import org.onosproject.net.flow.criteria.ExtensionSelector;
 import org.onosproject.net.flow.criteria.ExtensionSelectorType;
 import org.projectfloodlight.openflow.protocol.OFFactory;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,29 +36,6 @@ public class OpticalCircuitIntent extends Intent {
     private final ConnectPoint dst;
     private final CltSignalType signalType;
     private final boolean isBidirectional;
-
-    /**
-     * Creates an optical circuit intent between the specified
-     * connection points.
-     *
-     * @param appId application identification
-     * @param key intent key
-     * @param src the source transponder port
-     * @param dst the destination transponder port
-     * @param signalType ODU signal type
-     * @param isBidirectional indicate if intent is bidirectional
-     * @param priority priority to use for flows from this intent
-     * @deprecated 1.9.1
-     */
-    @Deprecated
-    protected OpticalCircuitIntent(ApplicationId appId, Key key, ConnectPoint src, ConnectPoint dst,
-                                   CltSignalType signalType, boolean isBidirectional, int priority) {
-        super(appId, key, Collections.emptyList(), priority, null);
-        this.src = checkNotNull(src);
-        this.dst = checkNotNull(dst);
-        this.signalType = checkNotNull(signalType);
-        this.isBidirectional = isBidirectional;
-    }
 
     /**
      * Creates an optical circuit intent between the specified

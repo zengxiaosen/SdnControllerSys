@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -185,6 +185,19 @@ final class YdtNodeFactory {
                     default:
                         throw new YdtException(E_MULTI_INS);
                 }
+
+            case EMPTY_CONTAINER:
+                switch (nodeType) {
+
+                case YANG_SINGLE_INSTANCE_NODE:
+                    return new YdtSingleInstanceNode(node);
+
+                case YANG_SINGLE_INSTANCE_LEAF_NODE:
+                    return new YdtSingleInstanceLeafNode(node);
+
+                default:
+                    return null;
+            }
 
             default:
                 return null;

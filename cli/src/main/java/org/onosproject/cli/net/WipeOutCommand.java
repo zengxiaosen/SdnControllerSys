@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,36 @@
  */
 package org.onosproject.cli.net;
 
+import com.google.common.collect.Sets;
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
+import org.onlab.util.Tools;
+import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.net.Device;
 import org.onosproject.net.Host;
 import org.onosproject.net.Link;
+import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.device.DeviceAdminService;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.host.HostAdminService;
 import org.onosproject.net.intent.Intent;
+import org.onosproject.net.intent.IntentEvent;
+import org.onosproject.net.intent.IntentListener;
 import org.onosproject.net.intent.IntentService;
-import org.onosproject.net.intent.IntentState;
+import org.onosproject.net.intent.Key;
 import org.onosproject.net.link.LinkAdminService;
 import org.onosproject.net.region.RegionAdminService;
+import org.onosproject.ui.UiExtensionService;
 import org.onosproject.ui.UiTopoLayoutService;
-import java.util.EnumSet;
-import java.util.concurrent.CountDownLatch;
+
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import static org.onosproject.net.intent.IntentState.FAILED;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+
 import static org.onosproject.net.intent.IntentState.WITHDRAWN;
 
 /**
@@ -41,12 +52,10 @@ import static org.onosproject.net.intent.IntentState.WITHDRAWN;
  */
 @Command(scope = "onos", name = "wipe-out",
         description = "Wipes-out the entire network information base, i.e. devices, links, hosts")
-public class WipeOutCommand extends ClustersListCommand {
+public class WipeOutCommand extends AbstractShellCommand {
 
     private static final String PLEASE = "please";
-    private static final EnumSet<IntentState> CAN_PURGE = EnumSet.of(WITHDRAWN, FAILED);
-    @Argument(index = 0, name = "please", description = "Confirmation phrase",
-            required = false, multiValued = false)
+    @Argument(name = "please", description = "Confirmation phrase")
     String please = null;
 
     @Override
@@ -62,29 +71,45 @@ public class WipeOutCommand extends ClustersListCommand {
         wipeOutGroups();
         wipeOutDevices();
         wipeOutLinks();
+        wipeOutNetworkConfig();
 
         wipeOutLayouts();
         wipeOutRegions();
+        wipeOutUiCache();
     }
 
     private void wipeOutIntents() {
         print("Wiping intents");
         IntentService intentService = get(IntentService.class);
-        final CountDownLatch withdrawLatch;
-        withdrawLatch = new CountDownLatch(1);
-        for (Intent intent : intentService.getIntents()) {
-            if (intentService.getIntentState(intent.key()) != IntentState.WITHDRAWN) {
-                intentService.withdraw(intent);
-                try { // wait for withdraw event
-                    withdrawLatch.await(5, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                    print("Timed out waiting for intent {} withdraw");
-                }
+        Set<Key> keysToWithdrawn = Sets.newConcurrentHashSet();
+        Set<Intent> intentsToWithdrawn = Tools.stream(intentService.getIntents())
+                .filter(intent -> intentService.getIntentState(intent.key()) != WITHDRAWN)
+                .collect(Collectors.toSet());
+        intentsToWithdrawn.stream()
+                .map(Intent::key)
+                .forEach(keysToWithdrawn::add);
+        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        IntentListener listener = e -> {
+            if (e.type() == IntentEvent.Type.WITHDRAWN) {
+                keysToWithdrawn.remove(e.subject().key());
             }
-            if (CAN_PURGE.contains(intentService.getIntentState(intent.key()))) {
-                intentService.purge(intent);
+            if (keysToWithdrawn.isEmpty()) {
+                completableFuture.complete(null);
             }
+        };
+        intentService.addListener(listener);
+        intentsToWithdrawn.forEach(intentService::withdraw);
+        try {
+            if (!intentsToWithdrawn.isEmpty()) {
+                // Wait 1.5 seconds for each Intent
+                completableFuture.get(intentsToWithdrawn.size() * 1500L, TimeUnit.MILLISECONDS);
+            }
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            print("Encountered exception while withdrawing intents: " + e.toString());
+        } finally {
+            intentService.removeListener(listener);
         }
+        intentsToWithdrawn.forEach(intentService::purge);
     }
 
     private void wipeOutFlows() {
@@ -164,4 +189,15 @@ public class WipeOutCommand extends ClustersListCommand {
         RegionAdminService service = get(RegionAdminService.class);
         service.getRegions().forEach(r -> service.removeRegion(r.id()));
     }
+
+    private void wipeOutNetworkConfig() {
+        print("Wiping network configs");
+        get(NetworkConfigService.class).removeConfig();
+    }
+
+    private void wipeOutUiCache() {
+        print("Wiping ui model cache");
+        get(UiExtensionService.class).refreshModel();
+    }
+
 }

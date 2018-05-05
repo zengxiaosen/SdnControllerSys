@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -140,7 +140,7 @@ public class VirtualNetworkIntentRemoveCommand extends AbstractShellCommand {
                     if (event.type() == IntentEvent.Type.WITHDRAWN ||
                             event.type() == IntentEvent.Type.FAILED) {
                         withdrawLatch.countDown();
-                    } else if (purgeAfterRemove &&
+                    } else if (purgeLatch != null && purgeAfterRemove &&
                             event.type() == IntentEvent.Type.PURGED) {
                         purgeLatch.countDown();
                     }
@@ -155,7 +155,7 @@ public class VirtualNetworkIntentRemoveCommand extends AbstractShellCommand {
         // request the withdraw
         intentService.withdraw(intent);
 
-        if (purgeAfterRemove || sync) {
+        if ((purgeAfterRemove || sync) && purgeLatch != null) {
             try { // wait for withdraw event
                 withdrawLatch.await(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {

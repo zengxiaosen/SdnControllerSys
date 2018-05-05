@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package org.onosproject.faultmanagement.impl;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -37,8 +36,12 @@ import org.onosproject.incubator.net.faultmanagement.alarm.AlarmProviderRegistry
 import org.onosproject.incubator.net.faultmanagement.alarm.AlarmProviderService;
 import org.onosproject.incubator.net.faultmanagement.alarm.AlarmService;
 import org.onosproject.incubator.net.faultmanagement.alarm.DefaultAlarm;
+import org.onosproject.mastership.MastershipService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.device.DeviceEvent;
+import org.onosproject.net.device.DeviceListener;
+import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.provider.AbstractListenerProviderRegistry;
 import org.onosproject.net.provider.AbstractProviderService;
 import org.slf4j.Logger;
@@ -64,11 +67,18 @@ public class AlarmManager
 
     private final Logger log = getLogger(getClass());
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DeviceService deviceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected MastershipService mastershipService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected AlarmStore store;
 
     protected AlarmStoreDelegate delegate = this::post;
+
+    private InternalDeviceListener deviceListener = new InternalDeviceListener();
 
     //TODO improve implementation of AlarmId
     private final AtomicLong alarmIdGenerator = new AtomicLong(0);
@@ -79,11 +89,13 @@ public class AlarmManager
     public void activate() {
         store.setDelegate(delegate);
         eventDispatcher.addSink(AlarmEvent.class, listenerRegistry);
+        deviceService.addListener(deviceListener);
         log.info("Started");
     }
 
     @Deactivate
     public void deactivate() {
+        deviceService.removeListener(deviceListener);
         store.unsetDelegate(delegate);
         eventDispatcher.removeSink(AlarmEvent.class);
         log.info("Stopped");
@@ -96,30 +108,34 @@ public class AlarmManager
     }
 
     @Override
-    public Alarm updateBookkeepingFields(AlarmId id, boolean isAcknowledged, String assignedUser) {
-
+    public Alarm updateBookkeepingFields(AlarmId id, boolean clear, boolean isAcknowledged,
+                                         String assignedUser) {
+        checkNotNull(id, "Alarm id is null");
         Alarm found = store.getAlarm(id);
         if (found == null) {
             throw new ItemNotFoundException("Alarm with id " + id + " found");
         }
-
-        Alarm updated = new DefaultAlarm.Builder(found)
-                .withId(found.id())
-                .withAcknowledged(isAcknowledged)
-                .withAssignedUser(assignedUser).build();
-        store.setAlarm(updated);
+        long now = System.currentTimeMillis();
+        DefaultAlarm.Builder alarmBuilder = new DefaultAlarm.Builder(found).withTimeUpdated(now);
+        if (found.cleared() != clear) {
+            alarmBuilder.clear().withTimeCleared(now);
+        }
+        if (found.acknowledged() != isAcknowledged) {
+            alarmBuilder.withAcknowledged(isAcknowledged);
+        }
+        if (assignedUser != null && !found.assignedUser().equals(assignedUser)) {
+            alarmBuilder.withAssignedUser(assignedUser);
+        }
+        DefaultAlarm updated = alarmBuilder.build();
+        store.createOrUpdateAlarm(updated);
         return updated;
     }
 
-    public Alarm clear(AlarmId id) {
-        Alarm found = store.getAlarm(id);
-        if (found == null) {
-            log.warn("Alarm {} is not present", id);
-            return null;
-        }
-        Alarm updated = new DefaultAlarm.Builder(found).withId(id).clear().build();
-        store.setAlarm(updated);
-        return updated;
+    //TODO move to AlarmAdminService
+    @Override
+    public void remove(AlarmId id) {
+        checkNotNull(id, "Alarm id is null");
+        store.removeAlarm(id);
     }
 
     @Override
@@ -185,35 +201,6 @@ public class AlarmManager
         return new InternalAlarmProviderService(provider);
     }
 
-    // Synchronised to prevent duplicate NE alarms being raised
-    protected synchronized void updateAlarms(DeviceId deviceId, Set<Alarm> discoveredSet) {
-        Set<Alarm> storedSet = getActiveAlarms(deviceId);
-        log.debug("CurrentNeAlarms={}. DiscoveredAlarms={}", storedSet, discoveredSet);
-
-        if (CollectionUtils.isEqualCollection(storedSet, discoveredSet)) {
-            log.debug("No update for {}.", deviceId);
-            return;
-        }
-        //TODO implement distinction between UPDATED and CLEARED ALARMS
-        storedSet.stream().filter(
-                (stored) -> (!discoveredSet.contains(stored))).forEach((stored) -> {
-            log.debug("Alarm will be Cleared as it is not on the device. Cleared alarm: {}.", stored);
-            clear(stored.id());
-        });
-
-        discoveredSet.stream().filter(
-                (discovered) -> (!storedSet.contains(discovered))).forEach((discovered) -> {
-            log.info("New alarm raised {}", discovered);
-            AlarmId id = generateAlarmId();
-            store.setAlarm(new DefaultAlarm.Builder(discovered).withId(id).build());
-        });
-    }
-
-    //TODO improve implementation of AlarmId
-    private AlarmId generateAlarmId() {
-        return AlarmId.alarmId(alarmIdGenerator.incrementAndGet());
-    }
-
     private class InternalAlarmProviderService extends AbstractProviderService<AlarmProvider>
             implements AlarmProviderService {
 
@@ -223,7 +210,30 @@ public class AlarmManager
 
         @Override
         public void updateAlarmList(DeviceId deviceId, Collection<Alarm> alarms) {
-            updateAlarms(deviceId, ImmutableSet.copyOf(alarms));
+            alarms.forEach(alarm -> store.createOrUpdateAlarm(alarm));
         }
+    }
+
+    /**
+     * Internal listener for device events.
+     */
+    private class InternalDeviceListener implements DeviceListener {
+
+        @Override
+        public boolean isRelevant(DeviceEvent event) {
+            return event.type().equals(DeviceEvent.Type.DEVICE_REMOVED);
+        }
+
+        @Override
+        public void event(DeviceEvent event) {
+            if (mastershipService.isLocalMaster(event.subject().id())) {
+                log.info("Device {} removed from ONOS, removing all related alarms", event.subject().id());
+                //TODO this can be improved when core supports multiple keys map and gets implemented in AlarmStore
+                store.getAlarms(event.subject().id()).forEach(alarm -> store.removeAlarm(alarm.id()));
+            } else {
+                log.info("This Node is not Master for device {}", event.subject().id());
+            }
+        }
+
     }
 }

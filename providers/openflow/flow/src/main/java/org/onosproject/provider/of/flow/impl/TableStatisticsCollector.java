@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ class TableStatisticsCollector implements SwitchDataCollector {
 
     private final Logger log = getLogger(getClass());
 
-    public static final int SECONDS = 1000;
+    public static final long SECONDS = 1000L;
 
     private final OpenFlowSwitch sw;
     private Timer timer;
@@ -63,7 +63,7 @@ class TableStatisticsCollector implements SwitchDataCollector {
         this.pollInterval = pollInterval;
         task.cancel();
         task = new InternalTimerTask();
-        timer.scheduleAtFixedRate(task, pollInterval * SECONDS, pollInterval * 1000);
+        timer.scheduleAtFixedRate(task, pollInterval * SECONDS, pollInterval * 1000L);
     }
 
     private class InternalTimerTask extends TimerTask {

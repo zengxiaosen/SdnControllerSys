@@ -1,5 +1,5 @@
 /*
-* Copyright 2016-present Open Networking Laboratory
+* Copyright 2016-present Open Networking Foundation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,39 +17,83 @@
 (function () {
 
     // Injected Services
-    var ks, flash, wss, t2ps, t2ms, ps, t2is, t2sp, t2vs, t2rs, t2fs;
+    var $log, fs, ks, flash, wss, t2ps, t2bgs, ps, t2is, t2sp, t2vs, t2rs,
+        t2fs, t2tbs, t2dp, svg, sus;
 
     // Commmands
-    var actionMap = {
-        L: [cycleDeviceLabels, 'Cycle device labels'],
-        G: [openMapSelection, 'Select background geo map'],
-        B: [toggleMap, 'Toggle background geo map'],
-        I: [toggleInstancePanel, 'Toggle ONOS Instance Panel'],
-        O: [toggleSummary, 'Toggle the Summary Panel'],
-        R: [resetZoom, 'Reset pan / zoom'],
-        P: [togglePorts, 'Toggle Port Highlighting'],
-        E: [equalizeMasters, 'Equalize mastership roles'],
-        X: [resetAllNodeLocations, 'Reset Node Location'],
-        U: [unpinNode, 'Unpin node (mouse over)'],
+    function actionMap() {
+        return {
+            L: [cycleDeviceLabels, 'Cycle device labels'],
+            B: [toggleBackground, 'Toggle background'],
+            D: [toggleDetails, 'Toggle details panel'],
+            I: [toggleInstancePanel, 'Toggle ONOS Instance Panel'],
+            O: [toggleSummary, 'Toggle the Summary Panel'],
+            R: [resetZoom, 'Reset pan / zoom'],
+            P: [togglePorts, 'Toggle Port Highlighting'],
+            E: [equalizeMasters, 'Equalize mastership roles'],
+            X: [resetNodeLocation, 'Reset Node Location'],
+            U: [unpinNode, 'Unpin node (mouse over)'],
+            H: [toggleHosts, 'Toggle host visibility'],
+            M: [toggleOfflineDevices, 'Toggle offline visibility'],
+            dot: [toggleToolbar, 'Toggle Toolbar'],
+            'shift-L': [cycleHostLabels, 'Cycle host labels'],
 
-        esc: handleEscape
-    };
+            // -- instance color palette debug
+            9: function () { sus.cat7().testCard(svg); },
 
-    function init(_t2fs_) {
+            esc: handleEscape,
+
+            // topology overlay selections
+            F1: function () { t2tbs.fnKey(0); },
+            F2: function () { t2tbs.fnKey(1); },
+            F3: function () { t2tbs.fnKey(2); },
+            F4: function () { t2tbs.fnKey(3); },
+            F5: function () { t2tbs.fnKey(4); },
+
+            _keyListener: t2tbs.keyListener.bind(t2tbs),
+
+            _helpFormat: [
+                ['I', 'O', 'D', 'H', 'M', 'P', 'dash', 'B'],
+                ['X', 'Z', 'N', 'L', 'shift-L', 'U', 'R', 'E', 'dot'],
+                [], // this column reserved for overlay actions
+            ],
+        };
+    }
+
+    function init(_t2fs_, _t2tbs_, _svg_) {
         t2fs = _t2fs_;
+        t2tbs = _t2tbs_;
+        svg = _svg_;
         bindCommands();
     }
 
-    function bindCommands() {
+    function bindCommands(additional) {
 
-        ks.keyBindings(actionMap);
+        var am = actionMap(),
+            add = fs.isO(additional);
+
+        if (add) {
+            _.each(add, function (value, key) {
+                // filter out meta properties (e.g. _keyOrder)
+                if (!(_.startsWith(key, '_'))) {
+                    // don't allow re-definition of existing key bindings
+                    if (am[key]) {
+                        $log.warn('keybind: ' + key + ' already exists');
+                    } else {
+                        am[key] = [value.cb, value.tt];
+                    }
+                }
+            });
+        }
+
+        ks.keyBindings(am);
 
         ks.gestureNotes([
             ['click', 'Select the item and show details'],
             ['shift-click', 'Toggle selection state'],
             ['drag', 'Reposition (and pin) device / host'],
             ['cmd-scroll', 'Zoom in / out'],
-            ['cmd-drag', 'Pan']
+            ['cmd-drag', 'Pan'],
         ]);
     }
 
@@ -78,7 +122,7 @@
 
     function updatePrefsState(what, b) {
         prefsState[what] = b ? 1 : 0;
-        ps.setPrefs('topo_prefs', prefsState);
+        ps.setPrefs('topo2_prefs', prefsState);
     }
 
     function deviceLabelFlashMessage(index) {
@@ -86,6 +130,15 @@
             case 0: return 'Hide device labels';
             case 1: return 'Show friendly device labels';
             case 2: return 'Show device ID labels';
+        }
+    }
+
+    function hostLabelFlashMessage(index) {
+        switch (index) {
+            case 0: return 'Hide host labels';
+            case 1: return 'Show friendly host labels';
+            case 2: return 'Show host IP labels';
+            case 3: return 'Show host MAC Address labels';
         }
     }
 
@@ -98,12 +151,21 @@
         flash.flash(deviceLabelFlashMessage(newDeviceLabelIndex));
     }
 
-    function openMapSelection() {
-        t2ms.openMapSelection();
+    function cycleHostLabels() {
+        var hostLabelIndex = t2ps.get('hlbls') + 1,
+            newHostLabelIndex = hostLabelIndex % 4;
+
+        t2ps.set('hlbls', newHostLabelIndex);
+        t2fs.updateNodes();
+        flash.flash(hostLabelFlashMessage(newHostLabelIndex));
     }
 
-    function toggleMap(x) {
-        t2ms.toggle(x);
+    function toggleBackground(x) {
+        t2bgs.toggle(x);
+    }
+
+    function toggleDetails(x) {
+        t2dp().toggleUseDetailsFlag(x);
     }
 
     function toggleInstancePanel(x) {
@@ -115,7 +177,7 @@
     }
 
     function resetZoom() {
-        t2ms.resetZoom();
+        t2bgs.resetZoom();
         flash.flash('Pan and zoom reset');
     }
 
@@ -129,8 +191,8 @@
         flash.flash('Equalizing master roles');
     }
 
-    function resetAllNodeLocations() {
-        t2fs.resetAllLocations();
+    function resetNodeLocation() {
+        t2fs.resetNodeLocation();
         flash.flash('Reset node locations');
     }
 
@@ -139,29 +201,75 @@
         flash.flash('Unpin node');
     }
 
+    function toggleToolbar() {
+        t2tbs.toggle();
+    }
+
+    function actionedFlashed(action, message) {
+        flash.flash(action + ' ' + message);
+    }
+
+    function toggleHosts() {
+        var on = t2rs.toggleHosts();
+        actionedFlashed(on ? 'Show': 'Hide', 'Hosts');
+    }
+
+    function toggleOfflineDevices() {
+        var on = t2rs.toggleOfflineDevices();
+        actionedFlashed(on ? 'Show': 'Hide', 'offline devices');
+    }
+
+    function notValid(what) {
+        $log.warn('topo.js getActionEntry(): Not a valid ' + what);
+    }
+
+    function getActionEntry(key) {
+        var entry;
+
+        if (!key) {
+            notValid('key');
+            return null;
+        }
+
+        entry = actionMap()[key];
+
+        if (!entry) {
+            notValid('actionMap (' + key + ') entry');
+            return null;
+        }
+        return fs.isA(entry) || [entry, ''];
+    }
+
     angular.module('ovTopo2')
     .factory('Topo2KeyCommandService', [
-        'KeyService', 'FlashService', 'WebSocketService', 'Topo2PrefsService',
-        'Topo2MapService', 'PrefsService', 'Topo2InstanceService',
-        'Topo2SummaryPanelService', 'Topo2ViewService', 'Topo2RegionService',
-        function (_ks_, _flash_, _wss_, _t2ps_, _t2ms_, _ps_, _t2is_, _t2sp_,
-                  _t2vs_, _t2rs_) {
+        '$log', 'FnService', 'KeyService', 'FlashService', 'WebSocketService',
+        'Topo2PrefsService', 'Topo2BackgroundService', 'PrefsService',
+        'Topo2InstanceService', 'Topo2SummaryPanelService', 'Topo2ViewService',
+        'Topo2RegionService', 'Topo2DetailsPanelService', 'SvgUtilService',
 
+        function (_$log_, _fs_, _ks_, _flash_, _wss_, _t2ps_, _t2bgs_, _ps_,
+                  _t2is_, _t2sp_, _t2vs_, _t2rs_, _t2dp_, _t2tbs_, _sus_) {
+
+            $log = _$log_;
+            fs = _fs_;
             ks = _ks_;
             flash = _flash_;
             wss = _wss_;
             t2ps = _t2ps_;
-            t2ms = _t2ms_;
+            t2bgs = _t2bgs_;
             t2is = _t2is_;
             ps = _ps_;
             t2sp = _t2sp_;
             t2vs = _t2vs_;
             t2rs = _t2rs_;
+            t2dp = _t2dp_;
+            sus = _sus_;
 
             return {
                 init: init,
-                bindCommands: bindCommands
+                bindCommands: bindCommands,
+                getActionEntry: getActionEntry,
             };
-        }
+        },
     ]);
 })();

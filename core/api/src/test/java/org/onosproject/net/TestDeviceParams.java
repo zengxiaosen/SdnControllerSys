@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,8 @@ public abstract class TestDeviceParams {
     protected static final HostId HID1 = HostId.hostId(MAC1, VLAN1);
     protected static final HostId HID2 = HostId.hostId(MAC2, VLAN2);
     protected static final HostLocation LOC1 = new HostLocation(DID1, P1, 123L);
-    protected static final HostLocation LOC2 = new HostLocation(DID2, P2, 123L);
+    protected static final HostLocation LOC2 = new HostLocation(DID2, P2, 456L);
+    protected static final HostLocation LOC3 = new HostLocation(DID3, P1, 789L);
     protected static final Set<IpAddress> IPSET1 = Sets.newHashSet(IP1, IP2);
     protected static final Set<IpAddress> IPSET2 = Sets.newHashSet(IP1, IP3);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,14 @@
 
 package org.onosproject.store.service;
 
+import org.onosproject.store.primitives.NodeUpdate;
+
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
+import org.onosproject.store.primitives.DefaultDocumentTree;
 
 /**
  * A hierarchical <a href="https://en.wikipedia.org/wiki/Document_Object_Model">document tree</a> data structure.
@@ -27,7 +31,12 @@ import javax.annotation.concurrent.NotThreadSafe;
  * @param <V> document tree value type
  */
 @NotThreadSafe
-public interface AsyncDocumentTree<V> extends DistributedPrimitive {
+public interface AsyncDocumentTree<V> extends DistributedPrimitive, Transactional<NodeUpdate<V>> {
+
+    @Override
+    default Type primitiveType() {
+        return Type.DOCUMENT_TREE;
+    }
 
     /**
      * Returns the {@link DocumentPath path} to root of the tree.
@@ -147,5 +156,24 @@ public interface AsyncDocumentTree<V> extends DistributedPrimitive {
      */
     default CompletableFuture<Void> addListener(DocumentTreeListener<V> listener) {
         return addListener(root(), listener);
+    }
+
+    /**
+     * Returns a new {@link DocumentTree} that is backed by this instance.
+     *
+     * @return new {@code DocumentTree} instance
+     */
+    default DocumentTree<V> asDocumentTree() {
+        return asDocumentTree(DistributedPrimitive.DEFAULT_OPERATION_TIMEOUT_MILLIS);
+    }
+
+    /**
+     * Returns a new {@link DocumentTree} that is backed by this instance.
+     *
+     * @param timeoutMillis timeout duration for the returned DocumentTree operations
+     * @return new {@code DocumentTree} instance
+     */
+    default DocumentTree<V> asDocumentTree(long timeoutMillis) {
+        return new DefaultDocumentTree<V>(this, timeoutMillis);
     }
 }

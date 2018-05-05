@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package org.onosproject.openflow.controller.impl;
 
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
@@ -31,7 +31,6 @@ import org.onosproject.core.CoreService;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceListener;
 import org.onosproject.net.device.DeviceService;
-import org.onosproject.net.driver.DefaultDriverProviderService;
 import org.onosproject.net.driver.DriverService;
 import org.onosproject.openflow.controller.DefaultOpenFlowPacketContext;
 import org.onosproject.openflow.controller.Dpid;
@@ -50,6 +49,8 @@ import org.projectfloodlight.openflow.protocol.OFCalientFlowStatsReply;
 import org.projectfloodlight.openflow.protocol.OFCircuitPortStatus;
 import org.projectfloodlight.openflow.protocol.OFExperimenter;
 import org.projectfloodlight.openflow.protocol.OFFactories;
+import org.projectfloodlight.openflow.protocol.OFFlowLightweightStatsEntry;
+import org.projectfloodlight.openflow.protocol.OFFlowLightweightStatsReply;
 import org.projectfloodlight.openflow.protocol.OFFlowStatsEntry;
 import org.projectfloodlight.openflow.protocol.OFFlowStatsReply;
 import org.projectfloodlight.openflow.protocol.OFGroupDescStatsEntry;
@@ -60,8 +61,9 @@ import org.projectfloodlight.openflow.protocol.OFMessage;
 import org.projectfloodlight.openflow.protocol.OFPacketIn;
 import org.projectfloodlight.openflow.protocol.OFPortDesc;
 import org.projectfloodlight.openflow.protocol.OFPortStatsEntry;
-import org.projectfloodlight.openflow.protocol.OFPortStatsReply;
 import org.projectfloodlight.openflow.protocol.OFPortStatus;
+import org.projectfloodlight.openflow.protocol.OFQueueStatsEntry;
+import org.projectfloodlight.openflow.protocol.OFQueueStatsReply;
 import org.projectfloodlight.openflow.protocol.OFStatsReply;
 import org.projectfloodlight.openflow.protocol.OFStatsReplyFlags;
 import org.projectfloodlight.openflow.protocol.OFTableStatsEntry;
@@ -71,12 +73,13 @@ import org.projectfloodlight.openflow.protocol.instruction.OFInstruction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -90,12 +93,14 @@ import static org.onosproject.net.Device.Type.CONTROLLER;
 import static org.onosproject.net.device.DeviceEvent.Type.DEVICE_REMOVED;
 import static org.onosproject.openflow.controller.Dpid.dpid;
 
+
 @Component(immediate = true)
 @Service
 public class OpenFlowControllerImpl implements OpenFlowController {
     private static final String APP_ID = "org.onosproject.openflow-base";
     private static final String DEFAULT_OFPORT = "6633,6653";
     private static final int DEFAULT_WORKER_THREADS = 0;
+    protected static final String SCHEME = "of";
 
     private static final Logger log =
             LoggerFactory.getLogger(OpenFlowControllerImpl.class);
@@ -105,10 +110,6 @@ public class OpenFlowControllerImpl implements OpenFlowController {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected DriverService driverService;
-
-    // References exists merely for sequencing purpose to assure drivers are loaded
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected DefaultDriverProviderService defaultDriverProviderService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ComponentConfigService cfgService;
@@ -146,6 +147,10 @@ public class OpenFlowControllerImpl implements OpenFlowController {
     protected ConcurrentMap<Dpid, OpenFlowSwitch> activeEqualSwitches =
             new ConcurrentHashMap<>();
 
+    // Key: dpid, value: map with key: long (XID), value: completable future
+    protected ConcurrentMap<Dpid, ConcurrentMap<Long, CompletableFuture<OFMessage>>> responses =
+            new ConcurrentHashMap<>();
+
     protected OpenFlowSwitchAgent agent = new OpenFlowSwitchAgent();
     protected Set<OpenFlowSwitchListener> ofSwitchListener = new CopyOnWriteArraySet<>();
 
@@ -159,6 +164,9 @@ public class OpenFlowControllerImpl implements OpenFlowController {
     protected Multimap<Dpid, OFFlowStatsEntry> fullFlowStats =
             ArrayListMultimap.create();
 
+    protected Multimap<Dpid, OFFlowLightweightStatsEntry> fullFlowLightweightStats =
+            ArrayListMultimap.create();
+
     protected Multimap<Dpid, OFTableStatsEntry> fullTableStats =
             ArrayListMultimap.create();
 
@@ -168,7 +176,12 @@ public class OpenFlowControllerImpl implements OpenFlowController {
     protected Multimap<Dpid, OFGroupDescStatsEntry> fullGroupDescStats =
             ArrayListMultimap.create();
 
+    // deprecated in 1.11.0, no longer referenced from anywhere
+    @Deprecated
     protected Multimap<Dpid, OFPortStatsEntry> fullPortStats =
+            ArrayListMultimap.create();
+
+    protected Multimap<Dpid, OFQueueStatsEntry> fullQueueStats =
             ArrayListMultimap.create();
 
     private final Controller ctrl = new Controller();
@@ -285,14 +298,33 @@ public class OpenFlowControllerImpl implements OpenFlowController {
     }
 
     @Override
-    public void processPacket(Dpid dpid, OFMessage msg) {
-        Collection<OFFlowStatsEntry> flowStats;
-        Collection<OFTableStatsEntry> tableStats;
-        Collection<OFGroupStatsEntry> groupStats;
-        Collection<OFGroupDescStatsEntry> groupDescStats;
-        Collection<OFPortStatsEntry> portStats;
+    public CompletableFuture<OFMessage> writeResponse(Dpid dpid, OFMessage msg) {
+        write(dpid, msg);
 
+        ConcurrentMap<Long, CompletableFuture<OFMessage>> xids =
+                responses.computeIfAbsent(dpid, k -> new ConcurrentHashMap<>());
+
+        CompletableFuture<OFMessage> future = new CompletableFuture<>();
+        xids.put(msg.getXid(), future);
+
+        return future;
+    }
+
+    @Override
+    public void processPacket(Dpid dpid, OFMessage msg) {
         OpenFlowSwitch sw = this.getSwitch(dpid);
+        if (log.isTraceEnabled()) {
+            log.trace("Processing message from switch {} via openflow: {}", dpid, msg);
+        }
+
+        // Check if someone is waiting for this message
+        ConcurrentMap<Long, CompletableFuture<OFMessage>> xids = responses.get(dpid);
+        if (xids != null) {
+            CompletableFuture<OFMessage> future = xids.remove(msg.getXid());
+            if (future != null) {
+                future.complete(msg);
+            }
+        }
 
         switch (msg.getType()) {
         case PORT_STATUS:
@@ -307,11 +339,11 @@ public class OpenFlowControllerImpl implements OpenFlowController {
             break;
         case PACKET_IN:
             if (sw == null) {
-                log.error("Switch {} is not found", dpid);
+                log.error("Ignoring PACKET_IN, switch {} is not found", dpid);
                 break;
             }
             OpenFlowPacketContext pktCtx = DefaultOpenFlowPacketContext
-            .packetContextFromPacketIn(sw, (OFPacketIn) msg);
+                .packetContextFromPacketIn(sw, (OFPacketIn) msg);
             for (PacketListener p : ofPacketListener.values()) {
                 p.handlePacket(pktCtx);
             }
@@ -327,113 +359,7 @@ public class OpenFlowControllerImpl implements OpenFlowController {
             executorErrorMsgs.execute(new OFMessageHandler(dpid, msg));
             break;
         case STATS_REPLY:
-            OFStatsReply reply = (OFStatsReply) msg;
-            switch (reply.getStatsType()) {
-                case PORT_DESC:
-                    for (OpenFlowSwitchListener l : ofSwitchListener) {
-                        l.switchChanged(dpid);
-                    }
-                    break;
-                case FLOW:
-                    flowStats = publishFlowStats(dpid, (OFFlowStatsReply) reply);
-                    if (flowStats != null) {
-                        OFFlowStatsReply.Builder rep =
-                                OFFactories.getFactory(msg.getVersion()).buildFlowStatsReply();
-                        rep.setEntries(Lists.newLinkedList(flowStats));
-                        rep.setXid(reply.getXid());
-                        executorMsgs.execute(new OFMessageHandler(dpid, rep.build()));
-                    }
-                    break;
-                case TABLE:
-                    tableStats = publishTableStats(dpid, (OFTableStatsReply) reply);
-                    if (tableStats != null) {
-                        OFTableStatsReply.Builder rep =
-                                OFFactories.getFactory(msg.getVersion()).buildTableStatsReply();
-                        rep.setEntries(Lists.newLinkedList(tableStats));
-                        executorMsgs.execute(new OFMessageHandler(dpid, rep.build()));
-                    }
-                    break;
-                case GROUP:
-                    groupStats = publishGroupStats(dpid, (OFGroupStatsReply) reply);
-                    if (groupStats != null) {
-                        OFGroupStatsReply.Builder rep =
-                                OFFactories.getFactory(msg.getVersion()).buildGroupStatsReply();
-                        rep.setEntries(Lists.newLinkedList(groupStats));
-                        rep.setXid(reply.getXid());
-                        executorMsgs.execute(new OFMessageHandler(dpid, rep.build()));
-                    }
-                    break;
-                case GROUP_DESC:
-                    groupDescStats = publishGroupDescStats(dpid,
-                            (OFGroupDescStatsReply) reply);
-                    if (groupDescStats != null) {
-                        OFGroupDescStatsReply.Builder rep =
-                                OFFactories.getFactory(msg.getVersion()).buildGroupDescStatsReply();
-                        rep.setEntries(Lists.newLinkedList(groupDescStats));
-                        rep.setXid(reply.getXid());
-                        executorMsgs.execute(new OFMessageHandler(dpid, rep.build()));
-                    }
-                    break;
-                case PORT:
-                    executorMsgs.execute(new OFMessageHandler(dpid, reply));
-                    break;
-                case METER:
-                    executorMsgs.execute(new OFMessageHandler(dpid, reply));
-                    break;
-                case EXPERIMENTER:
-                    if (reply instanceof OFCalientFlowStatsReply) {
-                        // Convert Calient flow statistics to regular flow stats
-                        // TODO: parse remaining fields such as power levels etc. when we have proper monitoring API
-                        if (sw == null) {
-                            log.error("Switch {} is not found", dpid);
-                            break;
-                        }
-                        OFFlowStatsReply.Builder fsr = sw.factory().buildFlowStatsReply();
-                        List<OFFlowStatsEntry> entries = new LinkedList<>();
-                        for (OFCalientFlowStatsEntry entry : ((OFCalientFlowStatsReply) msg).getEntries()) {
-
-                            // Single instruction, i.e., output to port
-                            OFActionOutput action = OFFactories
-                                    .getFactory(msg.getVersion())
-                                    .actions()
-                                    .buildOutput()
-                                    .setPort(entry.getOutPort())
-                                    .build();
-                            OFInstruction instruction = OFFactories
-                                    .getFactory(msg.getVersion())
-                                    .instructions()
-                                    .applyActions(Collections.singletonList(action));
-                            OFFlowStatsEntry fs = sw.factory().buildFlowStatsEntry()
-                                    .setMatch(entry.getMatch())
-                                    .setTableId(entry.getTableId())
-                                    .setDurationSec(entry.getDurationSec())
-                                    .setDurationNsec(entry.getDurationNsec())
-                                    .setPriority(entry.getPriority())
-                                    .setIdleTimeout(entry.getIdleTimeout())
-                                    .setHardTimeout(entry.getHardTimeout())
-                                    .setFlags(entry.getFlags())
-                                    .setCookie(entry.getCookie())
-                                    .setInstructions(Collections.singletonList(instruction))
-                                    .build();
-                            entries.add(fs);
-                        }
-                        fsr.setEntries(entries);
-
-                        flowStats = publishFlowStats(dpid, fsr.build());
-                        if (flowStats != null) {
-                            OFFlowStatsReply.Builder rep =
-                                    OFFactories.getFactory(msg.getVersion()).buildFlowStatsReply();
-                            rep.setEntries(Lists.newLinkedList(flowStats));
-                            executorMsgs.execute(new OFMessageHandler(dpid, rep.build()));
-                        }
-                    } else {
-                        executorMsgs.execute(new OFMessageHandler(dpid, reply));
-                    }
-                    break;
-                default:
-                    log.warn("Discarding unknown stats reply type {}", reply.getStatsType());
-                    break;
-            }
+            processStatsReply(dpid, (OFStatsReply) msg);
             break;
         case BARRIER_REPLY:
             if (errorMsgs.containsKey(msg.getXid())) {
@@ -476,12 +402,159 @@ public class OpenFlowControllerImpl implements OpenFlowController {
         }
     }
 
+    private void processStatsReply(Dpid dpid, OFStatsReply reply) {
+        switch (reply.getStatsType()) {
+            case QUEUE:
+                Collection<OFQueueStatsEntry> queueStatsEntries = publishQueueStats(dpid, (OFQueueStatsReply) reply);
+                if (queueStatsEntries != null) {
+                    OFQueueStatsReply.Builder rep =
+                            OFFactories.getFactory(reply.getVersion()).buildQueueStatsReply();
+                    rep.setEntries(ImmutableList.copyOf(queueStatsEntries));
+                    rep.setXid(reply.getXid());
+                    executorMsgs.execute(new OFMessageHandler(dpid, rep.build()));
+                }
+                break;
+
+            case PORT_DESC:
+                for (OpenFlowSwitchListener l : ofSwitchListener) {
+                    l.switchChanged(dpid);
+                }
+                break;
+
+            case FLOW:
+                Collection<OFFlowStatsEntry> flowStats = publishFlowStats(dpid, (OFFlowStatsReply) reply);
+                if (flowStats != null) {
+                    OFFlowStatsReply.Builder rep =
+                            OFFactories.getFactory(reply.getVersion()).buildFlowStatsReply();
+                    rep.setEntries(ImmutableList.copyOf(flowStats));
+                    rep.setXid(reply.getXid());
+                    executorMsgs.execute(new OFMessageHandler(dpid, rep.build()));
+                }
+                break;
+            case FLOW_LIGHTWEIGHT:
+                Collection<OFFlowLightweightStatsEntry> flowLightweightStats =
+                        publishFlowStatsLightweight(dpid, (OFFlowLightweightStatsReply) reply);
+                if (flowLightweightStats != null) {
+                    OFFlowLightweightStatsReply.Builder rep =
+                            OFFactories.getFactory(reply.getVersion()).buildFlowLightweightStatsReply();
+                    rep.setEntries(ImmutableList.copyOf(flowLightweightStats));
+                    rep.setXid(reply.getXid());
+                    executorMsgs.execute(new OFMessageHandler(dpid, rep.build()));
+                }
+                break;
+            case TABLE:
+                Collection<OFTableStatsEntry> tableStats = publishTableStats(dpid, (OFTableStatsReply) reply);
+                if (tableStats != null) {
+                    OFTableStatsReply.Builder rep =
+                            OFFactories.getFactory(reply.getVersion()).buildTableStatsReply();
+                    rep.setEntries(ImmutableList.copyOf(tableStats));
+                    executorMsgs.execute(new OFMessageHandler(dpid, rep.build()));
+                }
+                break;
+
+            case GROUP:
+                Collection<OFGroupStatsEntry> groupStats = publishGroupStats(dpid, (OFGroupStatsReply) reply);
+                if (groupStats != null) {
+                    OFGroupStatsReply.Builder rep =
+                            OFFactories.getFactory(reply.getVersion()).buildGroupStatsReply();
+                    rep.setEntries(ImmutableList.copyOf(groupStats));
+                    rep.setXid(reply.getXid());
+                    executorMsgs.execute(new OFMessageHandler(dpid, rep.build()));
+                }
+                break;
+
+            case GROUP_DESC:
+                Collection<OFGroupDescStatsEntry> groupDescStats = publishGroupDescStats(dpid,
+                        (OFGroupDescStatsReply) reply);
+                if (groupDescStats != null) {
+                    OFGroupDescStatsReply.Builder rep =
+                            OFFactories.getFactory(reply.getVersion()).buildGroupDescStatsReply();
+                    rep.setEntries(ImmutableList.copyOf(groupDescStats));
+                    rep.setXid(reply.getXid());
+                    executorMsgs.execute(new OFMessageHandler(dpid, rep.build()));
+                }
+                break;
+
+            case PORT:
+                executorMsgs.execute(new OFMessageHandler(dpid, reply));
+                break;
+
+            case METER:
+                executorMsgs.execute(new OFMessageHandler(dpid, reply));
+                break;
+
+            case EXPERIMENTER:
+                if (reply instanceof OFCalientFlowStatsReply) {
+                    OpenFlowSwitch sw = this.getSwitch(dpid);
+                    // Convert Calient flow statistics to regular flow stats
+                    // TODO: parse remaining fields such as power levels etc. when we have proper monitoring API
+                    if (sw == null) {
+                        log.error("Switch {} is not found", dpid);
+                        break;
+                    }
+                    OFFlowStatsReply.Builder fsr = sw.factory().buildFlowStatsReply();
+                    List<OFFlowStatsEntry> entries = new ArrayList<>();
+                    for (OFCalientFlowStatsEntry entry : ((OFCalientFlowStatsReply) reply).getEntries()) {
+
+                        // Single instruction, i.e., output to port
+                        OFActionOutput action = sw.factory()
+                                .actions()
+                                .buildOutput()
+                                .setPort(entry.getOutPort())
+                                .build();
+                        OFInstruction instruction = sw.factory()
+                                .instructions()
+                                .applyActions(Collections.singletonList(action));
+                        OFFlowStatsEntry fs = sw.factory().buildFlowStatsEntry()
+                                .setMatch(entry.getMatch())
+                                .setTableId(entry.getTableId())
+                                .setDurationSec(entry.getDurationSec())
+                                .setDurationNsec(entry.getDurationNsec())
+                                .setPriority(entry.getPriority())
+                                .setIdleTimeout(entry.getIdleTimeout())
+                                .setHardTimeout(entry.getHardTimeout())
+                                .setFlags(entry.getFlags())
+                                .setCookie(entry.getCookie())
+                                .setInstructions(Collections.singletonList(instruction))
+                                .build();
+                        entries.add(fs);
+                    }
+                    fsr.setEntries(entries);
+
+                    flowStats = publishFlowStats(dpid, fsr.build());
+                    if (flowStats != null) {
+                        OFFlowStatsReply.Builder rep =
+                                sw.factory().buildFlowStatsReply();
+                        rep.setEntries(ImmutableList.copyOf(flowStats));
+                        executorMsgs.execute(new OFMessageHandler(dpid, rep.build()));
+                    }
+                } else {
+                    executorMsgs.execute(new OFMessageHandler(dpid, reply));
+                }
+                break;
+            default:
+                log.warn("Discarding unknown stats reply type {}", reply.getStatsType());
+                break;
+        }
+    }
+
     private synchronized Collection<OFFlowStatsEntry> publishFlowStats(Dpid dpid,
                                                                        OFFlowStatsReply reply) {
         //TODO: Get rid of synchronized
         fullFlowStats.putAll(dpid, reply.getEntries());
         if (!reply.getFlags().contains(OFStatsReplyFlags.REPLY_MORE)) {
             return fullFlowStats.removeAll(dpid);
+        }
+        return null;
+    }
+
+    private synchronized Collection<OFFlowLightweightStatsEntry> publishFlowStatsLightweight(
+            Dpid dpid,
+            OFFlowLightweightStatsReply reply) {
+        //TODO: Get rid of synchronized
+        fullFlowLightweightStats.putAll(dpid, reply.getEntries());
+        if (!reply.getFlags().contains(OFStatsReplyFlags.REPLY_MORE)) {
+            return fullFlowLightweightStats.removeAll(dpid);
         }
         return null;
     }
@@ -516,11 +589,10 @@ public class OpenFlowControllerImpl implements OpenFlowController {
         return null;
     }
 
-    private synchronized Collection<OFPortStatsEntry> publishPortStats(Dpid dpid,
-                                                                 OFPortStatsReply reply) {
-        fullPortStats.putAll(dpid, reply.getEntries());
+    private synchronized Collection<OFQueueStatsEntry> publishQueueStats(Dpid dpid, OFQueueStatsReply reply) {
+        fullQueueStats.putAll(dpid, reply.getEntries());
         if (!reply.getFlags().contains(OFStatsReplyFlags.REPLY_MORE)) {
-            return fullPortStats.removeAll(dpid);
+            return fullQueueStats.removeAll(dpid);
         }
         return null;
     }
@@ -539,7 +611,8 @@ public class OpenFlowControllerImpl implements OpenFlowController {
 
         @Override
         public boolean isRelevant(DeviceEvent event) {
-            return event.subject().type() != CONTROLLER && event.type() == DEVICE_REMOVED;
+            return event.subject().type() != CONTROLLER && event.type() == DEVICE_REMOVED
+                    && event.subject().id().uri().getScheme().equals(SCHEME);
         }
 
         @Override
@@ -744,8 +817,8 @@ public class OpenFlowControllerImpl implements OpenFlowController {
      */
     protected final class OFMessageHandler implements Runnable {
 
-        protected final OFMessage msg;
-        protected final Dpid dpid;
+        final OFMessage msg;
+        final Dpid dpid;
 
         public OFMessageHandler(Dpid dpid, OFMessage msg) {
             this.msg = msg;

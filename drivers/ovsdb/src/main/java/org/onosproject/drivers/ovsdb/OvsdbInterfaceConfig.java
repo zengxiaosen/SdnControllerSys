@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,32 +116,6 @@ public class OvsdbInterfaceConfig extends AbstractHandlerBehaviour implements In
     @Override
     public List<DeviceInterfaceDescription> getInterfaces() {
         // TODO implement
-        throw new UnsupportedOperationException("Not implemented yet");
-    }
-
-    // deprecated interfaces
-    @Override
-    public boolean addAccessInterface(DeviceId deviceId, String ifaceName, VlanId vlanId) {
-        throw new UnsupportedOperationException("Not implemented yet");
-    }
-
-    @Override
-    public boolean removeAccessInterface(DeviceId deviceId, String ifaceName) {
-        throw new UnsupportedOperationException("Not implemented yet");
-    }
-
-    @Override
-    public boolean addTrunkInterface(DeviceId deviceId, String ifaceName, List<VlanId> vlanIds) {
-        throw new UnsupportedOperationException("Not implemented yet");
-    }
-
-    @Override
-    public List<DeviceInterfaceDescription> getInterfaces(DeviceId deviceId) {
-        return null;
-    }
-
-    @Override
-    public boolean removeTrunkInterface(DeviceId deviceId, String ifaceName) {
         throw new UnsupportedOperationException("Not implemented yet");
     }
 

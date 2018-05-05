@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,9 @@ import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
 import org.onosproject.core.CoreService;
-import org.onosproject.incubator.net.config.basics.InterfaceConfig;
+import org.onosproject.net.config.basics.DeviceAnnotationConfig;
+import org.onosproject.net.config.basics.InterfaceConfig;
+import org.onosproject.incubator.net.config.basics.PortDescriptionsConfig;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.HostId;
@@ -36,6 +38,7 @@ import org.onosproject.net.config.basics.BasicHostConfig;
 import org.onosproject.net.config.basics.BasicLinkConfig;
 import org.onosproject.net.config.basics.BasicRegionConfig;
 import org.onosproject.net.config.basics.BasicUiTopoLayoutConfig;
+import org.onosproject.net.config.basics.PortAnnotationConfig;
 import org.onosproject.net.config.basics.SubjectFactories;
 import org.onosproject.net.region.RegionId;
 import org.onosproject.ui.model.topo.UiTopoLayoutId;
@@ -60,59 +63,85 @@ public class BasicNetworkConfigs implements BasicNetworkConfigService {
 
     private static final String BASIC = "basic";
     private static final String INTERFACES = "interfaces";
+    private static final String PORTS = "ports";
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     private final Set<ConfigFactory> factories = ImmutableSet.of(
             new ConfigFactory<DeviceId, BasicDeviceConfig>(DEVICE_SUBJECT_FACTORY,
-                    BasicDeviceConfig.class,
-                    BASIC) {
+                                                           BasicDeviceConfig.class,
+                                                           BASIC) {
                 @Override
                 public BasicDeviceConfig createConfig() {
                     return new BasicDeviceConfig();
                 }
             },
             new ConfigFactory<ConnectPoint, InterfaceConfig>(CONNECT_POINT_SUBJECT_FACTORY,
-                    InterfaceConfig.class,
-                    INTERFACES,
-                    true) {
+                                                             InterfaceConfig.class,
+                                                             INTERFACES,
+                                                             true) {
                 @Override
                 public InterfaceConfig createConfig() {
                     return new InterfaceConfig();
                 }
             },
             new ConfigFactory<HostId, BasicHostConfig>(HOST_SUBJECT_FACTORY,
-                    BasicHostConfig.class,
-                    BASIC) {
+                                                       BasicHostConfig.class,
+                                                       BASIC) {
                 @Override
                 public BasicHostConfig createConfig() {
                     return new BasicHostConfig();
                 }
             },
             new ConfigFactory<LinkKey, BasicLinkConfig>(LINK_SUBJECT_FACTORY,
-                    BasicLinkConfig.class,
-                    BASIC) {
+                                                        BasicLinkConfig.class,
+                                                        BasicLinkConfig.CONFIG_KEY) {
                 @Override
                 public BasicLinkConfig createConfig() {
                     return new BasicLinkConfig();
                 }
             },
             new ConfigFactory<RegionId, BasicRegionConfig>(REGION_SUBJECT_FACTORY,
-                    BasicRegionConfig.class,
-                    BASIC) {
+                                                           BasicRegionConfig.class,
+                                                           BASIC) {
                 @Override
                 public BasicRegionConfig createConfig() {
                     return new BasicRegionConfig();
                 }
             },
             new ConfigFactory<UiTopoLayoutId, BasicUiTopoLayoutConfig>(LAYOUT_SUBJECT_FACTORY,
-                    BasicUiTopoLayoutConfig.class,
-                    BASIC) {
+                                                                       BasicUiTopoLayoutConfig.class,
+                                                                       BASIC) {
                 @Override
                 public BasicUiTopoLayoutConfig createConfig() {
                     return new BasicUiTopoLayoutConfig();
                 }
+            },
+            new ConfigFactory<ConnectPoint, PortAnnotationConfig>(CONNECT_POINT_SUBJECT_FACTORY,
+                                                                  PortAnnotationConfig.class,
+                                                                  PortAnnotationConfig.CONFIG_KEY) {
+                @Override
+                public PortAnnotationConfig createConfig() {
+                    return new PortAnnotationConfig();
+                }
+            },
+            new ConfigFactory<DeviceId, PortDescriptionsConfig>(DEVICE_SUBJECT_FACTORY,
+                                                                PortDescriptionsConfig.class,
+                                                                PORTS) {
+                @Override
+                public PortDescriptionsConfig createConfig() {
+                    return new PortDescriptionsConfig();
+                }
+            },
+            new ConfigFactory<DeviceId, DeviceAnnotationConfig>(DEVICE_SUBJECT_FACTORY,
+                                                                DeviceAnnotationConfig.class,
+                                                                DeviceAnnotationConfig.CONFIG_KEY) {
+                @Override
+                public DeviceAnnotationConfig createConfig() {
+                    return new DeviceAnnotationConfig();
+                }
             }
+
     );
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)

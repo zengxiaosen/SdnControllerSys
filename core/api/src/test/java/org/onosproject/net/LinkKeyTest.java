@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,5 +125,11 @@ public class LinkKeyTest {
         assertThat(k1String, allOf(containsString("LinkKey{"),
                                    containsString("src=1/1"),
                                    containsString("dst=2/1}")));
+    }
+
+    @Test
+    public void asId() {
+        LinkKey k1 = LinkKey.linkKey(SRC1, DST2);
+        assertThat(k1.asId(), is(equalTo("1/1-2/2")));
     }
 }

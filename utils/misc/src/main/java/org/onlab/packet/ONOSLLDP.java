@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import org.apache.commons.lang.ArrayUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 
 import static org.onlab.packet.LLDPOrganizationalTLV.OUI_LENGTH;
@@ -31,14 +32,9 @@ import static org.onlab.packet.LLDPOrganizationalTLV.SUBTYPE_LENGTH;
  */
 public class ONOSLLDP extends LLDP {
 
-    public static final byte[] ONLAB_OUI = {(byte) 0xa4, 0x23, 0x05};
     public static final String DEFAULT_DEVICE = "INVALID";
     public static final String DEFAULT_NAME = "ONOS Discovery";
 
-    // ON.Lab OUI (a42305) with multicast bit set
-    public static final byte[] LLDP_ONLAB = {(byte) 0xa5, 0x23, 0x05, 0x00, 0x00, 0x01};
-    public static final byte[] BDDP_MULTICAST = {(byte) 0xff, (byte) 0xff,
-            (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff};
 
     protected static final byte NAME_SUBTYPE = 1;
     protected static final byte DEVICE_SUBTYPE = 2;
@@ -63,10 +59,12 @@ public class ONOSLLDP extends LLDP {
 
     private static final byte TTL_TLV_TYPE = 3;
 
+    private static final byte PORT_DESC_TLV_TYPE = 4;
+
     private final byte[] ttlValue = new byte[] {0, 0x78};
 
     // Only needs to be accessed from LinkProbeFactory.
-    public ONOSLLDP(byte ... subtype) {
+    public ONOSLLDP(byte... subtype) {
         super();
         for (byte st : subtype) {
             opttlvs.put(st, new LLDPOrganizationalTLV());
@@ -95,7 +93,7 @@ public class ONOSLLDP extends LLDP {
         nametlv.setLength((short) (name.length() + NAME_LENGTH));
         nametlv.setInfoString(name);
         nametlv.setSubType(NAME_SUBTYPE);
-        nametlv.setOUI(ONLAB_OUI);
+        nametlv.setOUI(MacAddress.ONOS.oui());
     }
 
     public void setDevice(String device) {
@@ -103,7 +101,7 @@ public class ONOSLLDP extends LLDP {
         devicetlv.setInfoString(device);
         devicetlv.setLength((short) (device.length() + DEVICE_LENGTH));
         devicetlv.setSubType(DEVICE_SUBTYPE);
-        devicetlv.setOUI(ONLAB_OUI);
+        devicetlv.setOUI(MacAddress.ONOS.oui());
     }
 
     public void setDomainInfo(String domainId) {
@@ -115,7 +113,7 @@ public class ONOSLLDP extends LLDP {
         domaintlv.setInfoString(domainId);
         domaintlv.setLength((short) (domainId.length() + DOMAIN_LENGTH));
         domaintlv.setSubType(DOMAIN_SUBTYPE);
-        domaintlv.setOUI(ONLAB_OUI);
+        domaintlv.setOUI(MacAddress.ONOS.oui());
     }
 
     public void setChassisId(final ChassisId chassisId) {
@@ -245,4 +243,33 @@ public class ONOSLLDP extends LLDP {
         probe.setChassisId(chassisId);
         return probe;
     }
+
+    /**
+     * Creates a link probe for link discovery/verification.
+     *
+     * @param deviceId The device ID as a String
+     * @param chassisId The chassis ID of the device
+     * @param portNum Port number of port to send probe out of
+     * @param portDesc Port description of port to send probe out of
+     * @return ONOSLLDP probe message
+     */
+    public static ONOSLLDP onosLLDP(String deviceId, ChassisId chassisId, int portNum, String portDesc) {
+
+        ONOSLLDP probe = onosLLDP(deviceId, chassisId, portNum);
+
+        if (portDesc != null && !portDesc.isEmpty()) {
+            byte[] bPortDesc = portDesc.getBytes(StandardCharsets.UTF_8);
+
+            if (bPortDesc.length > LLDPTLV.MAX_LENGTH) {
+                bPortDesc = Arrays.copyOf(bPortDesc, LLDPTLV.MAX_LENGTH);
+            }
+            LLDPTLV portDescTlv = new LLDPTLV()
+                    .setType(PORT_DESC_TLV_TYPE)
+                    .setLength((short) bPortDesc.length)
+                    .setValue(bPortDesc);
+            probe.addOptionalTLV(portDescTlv);
+        }
+        return probe;
+    }
+
 }

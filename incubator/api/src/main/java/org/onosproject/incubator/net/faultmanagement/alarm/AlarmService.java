@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,11 +33,19 @@ public interface AlarmService extends ListenerService<AlarmEvent, AlarmListener>
      * Update book-keeping (ie administrative) fields for the alarm matching the specified identifier.
      *
      * @param id             alarm identifier
+     * @param clear          ture if the alarm has to be cleared
      * @param isAcknowledged new acknowledged state
      * @param assignedUser   new assigned user, null clear
      * @return updated alarm (including any recent device-derived changes)
      */
-    Alarm updateBookkeepingFields(AlarmId id, boolean isAcknowledged, String assignedUser);
+    Alarm updateBookkeepingFields(AlarmId id, boolean clear, boolean isAcknowledged, String assignedUser);
+
+    /**
+     * Remove an alarm from ONOS.
+     *
+     * @param id alarm
+     */
+    void remove(AlarmId id);
 
     /**
      * Returns summary of alarms on a given device.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@
 package org.onosproject.security;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-
 import org.junit.Test;
 
 /**
@@ -70,7 +68,7 @@ public class PermissionTest {
     public void testEqualsObject() {
         Permission permissionA = new Permission("classname", "name", "actions");
         Permission permissionB = new Permission("classname", "name", "actions");
-        assertSame(permissionA, permissionA);
+        assertEquals(permissionA, permissionB);
         assertEquals(permissionA.getClassName(), permissionB.getClassName());
         assertEquals(permissionA.getName(), permissionB.getName());
         assertEquals(permissionA.getActions(), permissionB.getActions());

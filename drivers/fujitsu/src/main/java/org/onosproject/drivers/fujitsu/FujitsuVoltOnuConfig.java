@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,9 +23,9 @@ import org.onosproject.drivers.fujitsu.behaviour.VoltOnuConfig;
 import org.onosproject.net.driver.AbstractHandlerBehaviour;
 import org.onosproject.net.driver.DriverHandler;
 import org.onosproject.netconf.NetconfController;
+import org.onosproject.netconf.NetconfException;
 import org.slf4j.Logger;
 
-import java.io.IOException;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -118,7 +118,7 @@ public class FujitsuVoltOnuConfig extends AbstractHandlerBehaviour
                         .get(ncDeviceId)
                         .getSession()
                         .get(request.toString(), REPORT_ALL);
-        } catch (IOException e) {
+        } catch (NetconfException e) {
             log.error("Cannot communicate to device {} exception {}", ncDeviceId, e);
         }
         return reply;
@@ -180,7 +180,7 @@ public class FujitsuVoltOnuConfig extends AbstractHandlerBehaviour
                         .get(ncDeviceId)
                         .getSession()
                         .doWrappedRpc(request.toString());
-        } catch (IOException e) {
+        } catch (NetconfException e) {
             log.error("Cannot communicate to device {} exception {}", ncDeviceId, e);
         }
         return reply;
@@ -255,7 +255,7 @@ public class FujitsuVoltOnuConfig extends AbstractHandlerBehaviour
                         .get(ncDeviceId)
                         .getSession()
                         .get(request.toString(), REPORT_ALL);
-        } catch (IOException e) {
+        } catch (NetconfException e) {
             log.error("Cannot communicate to device {} exception {}", ncDeviceId, e);
         }
         return reply;

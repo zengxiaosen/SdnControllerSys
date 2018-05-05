@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright 2016-present Open Networking Laboratory
+  ~ Copyright 2016-present Open Networking Foundation
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
     <group name="Distributed-Primitive-WorkQueue">
 
         <step name="Distributed-Primitive-WorkQueue.Test-Queue-AddOne"
-              requires="Distributed-Primitives-Setup"
               exec="onos-execute-expect ${OCI} work-queue-test stc-test-work-queue add foo --expect Done"/>
 
         <step name="Distributed-Primitive-WorkQueue.Test-Queue-Check-Pending-1"

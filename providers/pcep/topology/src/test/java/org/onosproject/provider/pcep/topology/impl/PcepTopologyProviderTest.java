@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -50,10 +50,10 @@ import org.onosproject.net.link.LinkProviderRegistry;
 import org.onosproject.net.link.LinkProviderService;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.pcep.api.DeviceCapability;
-import org.onosproject.pcep.controller.ClientCapability;
-import org.onosproject.pcep.controller.PccId;
-import org.onosproject.pcep.controller.PcepClient;
-import org.onosproject.pcep.controller.PcepNodeListener;
+import org.onosproject.pcep.server.ClientCapability;
+import org.onosproject.pcep.server.PccId;
+import org.onosproject.pcep.server.PcepClient;
+import org.onosproject.pcep.server.PcepNodeListener;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;

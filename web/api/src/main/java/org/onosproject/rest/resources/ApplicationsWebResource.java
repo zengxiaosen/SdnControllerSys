@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -149,7 +149,9 @@ public class ApplicationsWebResource extends AbstractWebResource {
     public Response uninstallApp(@PathParam("name") String name) {
         ApplicationAdminService service = get(ApplicationAdminService.class);
         ApplicationId appId = service.getId(name);
-        service.uninstall(appId);
+        if (appId != null) {
+            service.uninstall(appId);
+        }
         return Response.noContent().build();
     }
 
@@ -175,7 +177,7 @@ public class ApplicationsWebResource extends AbstractWebResource {
      * De-activates the specified application.
      *
      * @param name application name
-     * @return 200 OK; 404; 401
+     * @return 204 NO CONTENT
      */
     @DELETE
     @Produces(MediaType.APPLICATION_JSON)
@@ -183,8 +185,10 @@ public class ApplicationsWebResource extends AbstractWebResource {
     public Response deactivateApp(@PathParam("name") String name) {
         ApplicationAdminService service = get(ApplicationAdminService.class);
         ApplicationId appId = service.getId(name);
-        service.deactivate(appId);
-        return response(service, appId);
+        if (appId != null) {
+            service.deactivate(appId);
+        }
+        return Response.noContent().build();
     }
 
     /**
@@ -201,6 +205,23 @@ public class ApplicationsWebResource extends AbstractWebResource {
         CoreService service = get(CoreService.class);
         ApplicationId appId = service.registerApplication(name);
         return response(appId);
+    }
+
+    /**
+     * Get application OAR/JAR file.
+     * Returns the OAR/JAR file used to install the specified application.
+     *
+     * @param name application name
+     * @return 200 OK; 404; 401
+     */
+    @GET
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    @Path("{name}/bits")
+    public Response getAppBits(@PathParam("name") String name) {
+        ApplicationAdminService service = get(ApplicationAdminService.class);
+        ApplicationId appId = nullIsNotFound(service.getId(name), APP_ID_NOT_FOUND);
+        InputStream bits = service.getApplicationArchive(appId);
+        return ok(bits).build();
     }
 
     /**

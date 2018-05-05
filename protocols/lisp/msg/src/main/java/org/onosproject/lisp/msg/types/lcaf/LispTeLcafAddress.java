@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import static com.google.common.base.MoreObjects.toStringHelper;
  * Traffic Engineering (TE) type LCAF address class.
  * <p>
  * Traffic Engineering type is defined in draft-ietf-lisp-lcaf-22
- * https://tools.ietf.org/html/draft-ietf-lisp-lcaf-22#page-16
+ * https://tools.ietf.org/html/draft-ietf-lisp-lcaf-22#page-17
  *
  * <pre>
  * {@literal
@@ -164,8 +164,8 @@ public final class LispTeLcafAddress extends LispLcafAddress {
             LispTeRecord.TeRecordWriter writer = new LispTeRecord.TeRecordWriter();
 
             List<LispTeRecord> teRecords = address.getTeRecords();
-            for (int i = 0; i < teRecords.size(); i++) {
-                writer.writeTo(byteBuf, teRecords.get(i));
+            for (LispTeRecord teRecord : teRecords) {
+                writer.writeTo(byteBuf, teRecord);
             }
 
             LispLcafAddress.updateLength(lcafIndex, byteBuf);

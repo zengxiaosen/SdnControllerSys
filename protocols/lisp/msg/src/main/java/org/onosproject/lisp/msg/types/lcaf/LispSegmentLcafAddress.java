@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Instance ID type LCAF address class.
  * <p>
  * Instance ID type is defined in draft-ietf-lisp-lcaf-22
- * https://tools.ietf.org/html/draft-ietf-lisp-lcaf-22#page-7
+ * https://tools.ietf.org/html/draft-ietf-lisp-lcaf-22#page-8
  *
  * <pre>
  * {@literal

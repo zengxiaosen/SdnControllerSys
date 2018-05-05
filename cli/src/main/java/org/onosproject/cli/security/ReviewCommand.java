@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ public class ReviewCommand extends AbstractShellCommand {
         if (accept == null) {
             smService.review(appId);
             printPolicy(smService, app);
-        } else if (accept.trim().equals("accept")) {
+        } else if ("accept".equals(accept.trim())) {
             smService.acceptPolicy(appId);
             printPolicy(smService, app);
         } else {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,8 @@ import java.util.Objects;
 @Path("applications")
 public class ApplicationResource extends BaseResource {
 
-    static String lastInstalledAppName = null;
+    private static String lastInstalledAppName = null;
+    private static final Object LAST_INSTALLED_APP_NAME_LOCK = new Object();
 
 
     @Path("upload")
@@ -51,11 +52,33 @@ public class ApplicationResource extends BaseResource {
                            @FormDataParam("file") InputStream stream) throws IOException {
         ApplicationAdminService service = get(ApplicationAdminService.class);
         Application app = service.install(stream);
-        lastInstalledAppName = app.id().name();
+        synchronized (LAST_INSTALLED_APP_NAME_LOCK) {
+            lastInstalledAppName = app.id().name();
+        }
         if (Objects.equals(activate, "true")) {
             service.activate(app.id());
         }
         return Response.ok().build();
+    }
+
+    /**
+     * Get application OAR/JAR file.
+     * Returns the OAR/JAR file used to install the specified application.
+     *
+     * @param name application name
+     * @return 200 OK; 404; 401
+     */
+    @GET
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    @Path("{name}/download")
+    public Response download(@PathParam("name") String name) {
+        ApplicationAdminService service = get(ApplicationAdminService.class);
+        ApplicationId appId = service.getId(name);
+        InputStream bits = service.getApplicationArchive(appId);
+        String fileName = appId.name() + ".oar";
+        return Response.ok(bits)
+                .header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
+                .build();
     }
 
     @Path("{name}/icon")
@@ -66,5 +89,11 @@ public class ApplicationResource extends BaseResource {
         ApplicationId appId = service.getId(name);
         Application app = service.getApplication(appId);
         return Response.ok(app.icon()).build();
+    }
+
+    static String getLastInstalledAppName() {
+        synchronized (LAST_INSTALLED_APP_NAME_LOCK) {
+            return lastInstalledAppName;
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,15 +82,9 @@ public class DefaultTributarySlotQuery extends AbstractHandlerBehaviour implemen
 
     private Set<TributarySlot> queryOchTributarySlots(Port ochPort) {
         OduSignalType signalType = null;
-        if (ochPort instanceof org.onosproject.net.OchPort) {
-            // remove once deprecation of old OchPort model is done
-            signalType = ((org.onosproject.net.OchPort) ochPort).signalType();
-        }
         if (ochPort instanceof OchPort) {
             signalType = ((OchPort) ochPort).signalType();
-        }
-
-        if (signalType == null) {
+        } else {
             log.warn("{} was not an OchPort", ochPort);
             return Collections.emptySet();
         }
@@ -108,15 +102,9 @@ public class DefaultTributarySlotQuery extends AbstractHandlerBehaviour implemen
 
     private Set<TributarySlot> queryOtuTributarySlots(Port otuPort) {
         OtuSignalType signalType = null;
-        if (otuPort instanceof org.onosproject.net.OtuPort) {
-            // remove once deprecation of old OtuPort model is done
-            signalType = ((org.onosproject.net.OtuPort) otuPort).signalType();
-        }
         if (otuPort instanceof OtuPort) {
             signalType = ((OtuPort) otuPort).signalType();
-        }
-
-        if (signalType == null) {
+        } else {
             log.warn("{} was not an OtuPort", otuPort);
             return Collections.emptySet();
         }

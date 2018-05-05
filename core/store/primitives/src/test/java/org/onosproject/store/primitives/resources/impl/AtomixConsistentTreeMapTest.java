@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +15,21 @@
  */
 package org.onosproject.store.primitives.resources.impl;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.stream.Collectors;
+
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import io.atomix.resource.ResourceType;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import io.atomix.protocols.raft.proxy.RaftProxy;
+import io.atomix.protocols.raft.service.RaftService;
 import org.junit.Test;
 import org.onlab.util.Tools;
 import org.onosproject.store.service.MapEvent;
 import org.onosproject.store.service.MapEventListener;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -44,7 +42,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Unit tests for {@link AtomixConsistentTreeMap}.
  */
-public class AtomixConsistentTreeMapTest extends AtomixTestBase {
+public class AtomixConsistentTreeMapTest extends AtomixTestBase<AtomixConsistentTreeMap> {
     private final String keyFour = "hello";
     private final String keyThree = "goodbye";
     private final String keyTwo = "foo";
@@ -60,19 +58,15 @@ public class AtomixConsistentTreeMapTest extends AtomixTestBase {
                                                               valueTwo,
                                                               valueThree,
                                                               valueFour);
-    @BeforeClass
-    public static void preTestSetup() throws Throwable {
-        createCopycatServers(3);
-    }
 
-    @AfterClass
-    public static void postTestCleanup() throws Throwable {
-        clearTests();
+    @Override
+    protected RaftService createService() {
+        return new AtomixConsistentTreeMapService();
     }
 
     @Override
-    protected ResourceType resourceType() {
-        return new ResourceType(AtomixConsistentTreeMap.class);
+    protected AtomixConsistentTreeMap createPrimitive(RaftProxy proxy) {
+        return new AtomixConsistentTreeMap(proxy);
     }
 
     /**
@@ -185,7 +179,6 @@ public class AtomixConsistentTreeMapTest extends AtomixTestBase {
             map.putAndGet(key, allValues.get(allKeys.indexOf(key))).thenAccept(secondResult -> {
                 assertArrayEquals(allValues.get(allKeys.indexOf(key)), firstResult.value());
                 assertArrayEquals(allValues.get(allKeys.indexOf(key)), secondResult.value());
-                assertTrue((firstResult.version() + 1) == secondResult.version());
             });
         }).join());
 
@@ -359,7 +352,9 @@ public class AtomixConsistentTreeMapTest extends AtomixTestBase {
         map.ceilingKey(keyOne).thenAccept(result -> assertNull(result))
                 .join();
         map.higherKey(keyOne).thenAccept(result -> assertNull(result)).join();
-        map.delete().join();
+
+        // TODO: delete() is not supported
+        //map.delete().join();
 
         allKeys.forEach(key -> map.put(
                 key, allValues.get(allKeys.indexOf(key)))
@@ -481,15 +476,14 @@ public class AtomixConsistentTreeMapTest extends AtomixTestBase {
         map.higherKey(keyFour).thenAccept(
                 result -> assertNull(result))
                 .join();
-        map.delete().join();
 
+        // TODO: delete() is not supported
+        //map.delete().join();
     }
 
     private AtomixConsistentTreeMap createResource(String mapName) {
         try {
-            AtomixConsistentTreeMap map = createAtomixClient().
-                    getResource(mapName, AtomixConsistentTreeMap.class)
-                    .join();
+            AtomixConsistentTreeMap map = newPrimitive(mapName);
             return map;
         } catch (Throwable e) {
             throw new RuntimeException(e.toString());
@@ -571,75 +565,5 @@ public class AtomixConsistentTreeMapTest extends AtomixTestBase {
             }
         }
         return true;
-    }
-
-    /**
-     * Inner entry type for testing.
-     * @param <K>
-     * @param <V>
-     */
-    private class InnerEntry<K, V> implements Map.Entry<K, V> {
-        private K key;
-        private V value;
-        public InnerEntry(K key, V value) {
-            this.key = key;
-            this.value = value;
-        }
-
-        @Override
-        public K getKey() {
-            return key;
-        }
-
-        @Override
-        public V getValue() {
-            return value;
-        }
-
-        @Override
-        public V setValue(V value) {
-            V temp = this.value;
-            this.value = value;
-            return temp;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (!(o instanceof InnerEntry)) {
-                return false;
-            }
-            InnerEntry other = (InnerEntry) o;
-            boolean keysEqual = false;
-            boolean valuesEqual = false;
-            if (this.key instanceof byte[]) {
-                if (other.getKey() instanceof byte[]) {
-                    keysEqual =  Arrays.equals((byte[]) this.key,
-                                               (byte[]) other.getKey());
-                } else {
-                    return false;
-                }
-            } else {
-                keysEqual = this.getKey().equals(other.getKey());
-            }
-
-            if (keysEqual) {
-                if (this.value instanceof byte[]) {
-                    if (other.getValue() instanceof byte[]) {
-                        return Arrays.equals((byte[]) this.value,
-                                             (byte[]) other.getValue());
-                    } else {
-                        return false;
-                    }
-                } else {
-                    return this.key.equals(other.getKey());
-                }
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            return 0;
-        }
     }
 }

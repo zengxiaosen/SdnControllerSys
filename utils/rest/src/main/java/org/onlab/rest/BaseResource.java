@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,18 +26,6 @@ import javax.ws.rs.core.Response;
 public abstract class BaseResource {
 
     private static ServiceDirectory services = new DefaultServiceDirectory();
-
-    /**
-     * Sets alternate service directory to be used for lookups.
-     * <p>
-     * Intended to ease unit testing and not intended for use in production.
-     * </p>
-     *
-     * @param serviceDirectory alternate service directory
-     */
-    public static void setServiceDirectory(ServiceDirectory serviceDirectory) {
-        services = serviceDirectory;
-    }
 
     /**
      * Returns reference to the specified service implementation.

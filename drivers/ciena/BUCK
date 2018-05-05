@@ -1,10 +1,13 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
+    '//lib:JACKSON',
+    '//lib:javax.ws.rs-api',
     '//incubator/api:onos-incubator-api',
     '//utils/rest:onlab-rest',
     '//drivers/utilities:onos-drivers-utilities',
     '//protocols/rest/api:onos-protocols-rest-api',
     '//apps/optical-model:onos-apps-optical-model',
+    '//drivers/optical:onos-drivers-optical',
 ]
 
 TEST_DEPS = [
@@ -17,6 +20,12 @@ BUNDLES = [
     '//drivers/utilities:onos-drivers-utilities',
 ]
 
+REQUIRED_APPS = [
+    'org.onosproject.restsb',
+    'org.onosproject.optical-model',
+    'org.onosproject.drivers.optical',
+]
+
 osgi_jar_with_tests (
     deps = COMPILE_DEPS,
     test_deps = TEST_DEPS,
@@ -26,10 +35,10 @@ osgi_jar_with_tests (
 
 onos_app (
     app_name = 'org.onosproject.drivers.ciena',
-    title = 'Ciena Device Drivers',
+    title = 'Ciena Drivers',
     category = 'Drivers',
     url = 'http://onosproject.org',
-    description = 'ONOS Ciena Device Drivers application.',
+    description = 'Adds support for Ciena devices.',
     included_bundles = BUNDLES,
-    required_apps = [ 'org.onosproject.restsb', 'org.onosproject.optical-model' ],
+    required_apps = REQUIRED_APPS,
 )

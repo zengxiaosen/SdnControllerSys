@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Laboratory
+ *  Copyright 2016-present Open Networking Foundation
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -67,12 +67,15 @@ import org.onosproject.ui.model.topo.UiClusterMember;
 import org.onosproject.ui.model.topo.UiDevice;
 import org.onosproject.ui.model.topo.UiDeviceLink;
 import org.onosproject.ui.model.topo.UiHost;
+import org.onosproject.ui.model.topo.UiLinkId;
+import org.onosproject.ui.model.topo.UiModelEvent;
 import org.onosproject.ui.model.topo.UiRegion;
 import org.onosproject.ui.model.topo.UiSynthLink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
@@ -143,7 +146,7 @@ public final class UiSharedTopologyModel
 
 
     @Activate
-    protected void activate() {
+    void activate() {
         cache = new ModelCache(new DefaultServiceBundle(), eventDispatcher);
         eventHandler = newSingleThreadExecutor(groupedThreads("onos/ui/topo", "event-handler", log));
 
@@ -164,7 +167,7 @@ public final class UiSharedTopologyModel
     }
 
     @Deactivate
-    protected void deactivate() {
+    void deactivate() {
         eventDispatcher.removeSink(UiModelEvent.class);
 
         clusterService.removeListener(clusterListener);
@@ -219,6 +222,14 @@ public final class UiSharedTopologyModel
 
     // =======================================================================
     //  Methods for topo session (or CLI) to use to get information from us
+
+    /**
+     * Reloads the cache's internal state.
+     */
+    public void reload() {
+        cache.clear();
+        cache.load();
+    }
 
     /**
      * Refreshes the cache's internal state.
@@ -299,6 +310,17 @@ public final class UiSharedTopologyModel
      */
     public List<UiSynthLink> getSynthLinks(RegionId regionId) {
         return cache.getSynthLinks(regionId);
+    }
+
+    /**
+     * Returns the synthetic links associated with the specified region,
+     * mapped by original link id.
+     *
+     * @param regionId region ID
+     * @return map of synthetic links for that region
+     */
+    public Map<UiLinkId, UiSynthLink> relevantSynthLinks(RegionId regionId) {
+        return cache.relevantSynthLinks(regionId);
     }
 
     // =====================================================================

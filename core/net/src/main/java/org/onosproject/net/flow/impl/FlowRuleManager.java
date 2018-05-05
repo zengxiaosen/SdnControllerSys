@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,18 +40,20 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceListener;
 import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.driver.DriverService;
 import org.onosproject.net.flow.CompletedBatchOperation;
 import org.onosproject.net.flow.DefaultFlowEntry;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.FlowRuleBatchEntry;
-import org.onosproject.net.flow.FlowRuleBatchEvent;
-import org.onosproject.net.flow.FlowRuleBatchOperation;
-import org.onosproject.net.flow.FlowRuleBatchRequest;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchEntry;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchEvent;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchOperation;
+import org.onosproject.net.flow.oldbatch.FlowRuleBatchRequest;
 import org.onosproject.net.flow.FlowRuleEvent;
 import org.onosproject.net.flow.FlowRuleListener;
 import org.onosproject.net.flow.FlowRuleOperation;
 import org.onosproject.net.flow.FlowRuleOperations;
+import org.onosproject.net.flow.FlowRuleProgrammable;
 import org.onosproject.net.flow.FlowRuleProvider;
 import org.onosproject.net.flow.FlowRuleProviderRegistry;
 import org.onosproject.net.flow.FlowRuleProviderService;
@@ -61,6 +63,7 @@ import org.onosproject.net.flow.FlowRuleStoreDelegate;
 import org.onosproject.net.flow.TableStatisticsEntry;
 import org.onosproject.net.provider.AbstractListenerProviderRegistry;
 import org.onosproject.net.provider.AbstractProviderService;
+import org.onosproject.net.provider.ProviderId;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 
@@ -69,6 +72,7 @@ import java.util.Dictionary;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -97,6 +101,7 @@ public class FlowRuleManager
                                                  FlowRuleProvider, FlowRuleProviderService>
         implements FlowRuleService, FlowRuleProviderRegistry {
 
+    public static final String DEVICE_ID_NULL = "Device ID cannot be null";
     private final Logger log = getLogger(getClass());
 
     public static final String FLOW_RULE_NULL = "FlowRule cannot be null";
@@ -118,7 +123,7 @@ public class FlowRuleManager
     private final FlowRuleStoreDelegate delegate = new InternalStoreDelegate();
     private final DeviceListener deviceListener = new InternalDeviceListener();
 
-    private final FlowRuleDriverProvider defaultProvider = new FlowRuleDriverProvider();
+    private final FlowRuleDriverProvider driverProvider = new FlowRuleDriverProvider();
 
     protected ExecutorService deviceInstallers =
             Executors.newFixedThreadPool(32, groupedThreads("onos/flowservice", "device-installer-%d", log));
@@ -145,6 +150,9 @@ public class FlowRuleManager
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected ComponentConfigService cfgService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DriverService driverService;
+
     @Activate
     public void activate(ComponentContext context) {
         modified(context);
@@ -158,6 +166,7 @@ public class FlowRuleManager
 
     @Deactivate
     public void deactivate() {
+        driverProvider.terminate();
         deviceService.removeListener(deviceListener);
         cfgService.unregisterProperties(getClass(), false);
         deviceInstallers.shutdownNow();
@@ -172,13 +181,13 @@ public class FlowRuleManager
         if (context != null) {
             readComponentConfiguration(context);
         }
-        defaultProvider.init(new InternalFlowRuleProviderService(defaultProvider),
+        driverProvider.init(new InternalFlowRuleProviderService(driverProvider),
                              deviceService, mastershipService, fallbackFlowPollFrequency);
     }
 
     @Override
     protected FlowRuleProvider defaultProvider() {
-        return defaultProvider;
+        return driverProvider;
     }
 
     /**
@@ -225,8 +234,16 @@ public class FlowRuleManager
     }
 
     @Override
+    public int getFlowRuleCount(DeviceId deviceId) {
+        checkPermission(FLOWRULE_READ);
+        checkNotNull(deviceId, "Device ID cannot be null");
+        return store.getFlowRuleCount(deviceId);
+    }
+
+    @Override
     public Iterable<FlowEntry> getFlowEntries(DeviceId deviceId) {
         checkPermission(FLOWRULE_READ);
+        checkNotNull(deviceId, DEVICE_ID_NULL);
         return store.getFlowEntries(deviceId);
     }
 
@@ -244,6 +261,7 @@ public class FlowRuleManager
     @Override
     public void purgeFlowRules(DeviceId deviceId) {
         checkPermission(FLOWRULE_WRITE);
+        checkNotNull(deviceId, DEVICE_ID_NULL);
         store.purgeFlowRule(deviceId);
     }
 
@@ -323,6 +341,27 @@ public class FlowRuleManager
         return new InternalFlowRuleProviderService(provider);
     }
 
+    @Override
+    protected synchronized FlowRuleProvider getProvider(ProviderId pid) {
+        log.warn("should not be calling getProvider(ProviderId)");
+        return super.getProvider(pid);
+    }
+
+    /**
+     * {@inheritDoc}
+     * if the Device does not support {@link FlowRuleProgrammable}.
+     */
+    @Override
+    protected synchronized FlowRuleProvider getProvider(DeviceId deviceId) {
+        checkNotNull(deviceId, DEVICE_ID_NULL);
+        // if device supports FlowRuleProgrammable,
+        // use FlowRuleProgrammable via FlowRuleDriverProvider
+        return Optional.ofNullable(deviceService.getDevice(deviceId))
+                        .filter(dev -> dev.is(FlowRuleProgrammable.class))
+                        .<FlowRuleProvider>map(x -> driverProvider)
+                        .orElseGet(() -> super.getProvider(deviceId));
+    }
+
     private class InternalFlowRuleProviderService
             extends AbstractProviderService<FlowRuleProvider>
             implements FlowRuleProviderService {
@@ -349,8 +388,7 @@ public class FlowRuleManager
             if (flowEntry.reason() == FlowEntry.FlowRemoveReason.HARD_TIMEOUT) {
                 ((DefaultFlowEntry) stored).setState(FlowEntry.FlowEntryState.REMOVED);
             }
-            Device device = deviceService.getDevice(flowEntry.deviceId());
-            FlowRuleProvider frp = getProvider(device.providerId());
+            FlowRuleProvider frp = getProvider(flowEntry.deviceId());
             FlowRuleEvent event = null;
             switch (stored.state()) {
                 case ADDED:
@@ -372,24 +410,31 @@ public class FlowRuleManager
         }
 
 
-        private void flowMissing(FlowEntry flowRule) {
+        private void flowMissing(FlowEntry flowRule, boolean isFlowOnlyInStore) {
             checkNotNull(flowRule, FLOW_RULE_NULL);
             checkValidity();
-            Device device = deviceService.getDevice(flowRule.deviceId());
-            FlowRuleProvider frp = getProvider(device.providerId());
+            FlowRuleProvider frp = getProvider(flowRule.deviceId());
             FlowRuleEvent event = null;
             switch (flowRule.state()) {
                 case PENDING_REMOVE:
                 case REMOVED:
                     event = store.removeFlowRule(flowRule);
+                    log.debug("Flow {} removed", flowRule);
                     break;
                 case ADDED:
                 case PENDING_ADD:
                     event = store.pendingFlowRule(flowRule);
+                    if (isFlowOnlyInStore) {
+                        // Publishing RULE_ADD_REQUESTED event facilitates
+                        // preparation of statistics for the concerned rule
+                        if (event == null) {
+                            event = new FlowRuleEvent(FlowRuleEvent.Type.RULE_ADD_REQUESTED, flowRule);
+                        }
+                    }
                     try {
                         frp.applyFlowRule(flowRule);
                     } catch (UnsupportedOperationException e) {
-                        log.warn(e.getMessage());
+                        log.warn("Unsupported operation", e);
                         if (flowRule instanceof DefaultFlowEntry) {
                             //FIXME modification of "stored" flow entry outside of store
                             ((DefaultFlowEntry) flowRule).setState(FlowEntry.FlowEntryState.FAILED);
@@ -401,7 +446,6 @@ public class FlowRuleManager
             }
 
             if (event != null) {
-                log.debug("Flow {} removed", flowRule);
                 post(event);
             }
         }
@@ -409,6 +453,7 @@ public class FlowRuleManager
         private void extraneousFlow(FlowRule flowRule) {
             checkNotNull(flowRule, FLOW_RULE_NULL);
             checkValidity();
+            // getProvider is customized to favor driverProvider
             FlowRuleProvider frp = getProvider(flowRule.deviceId());
             frp.removeFlowRule(flowRule);
             log.debug("Flow {} is on switch but not in store.", flowRule);
@@ -440,7 +485,7 @@ public class FlowRuleManager
                 return true;
             }
 
-            final long timeout = storedRule.timeout() * 1000;
+            final long timeout = storedRule.timeout() * 1000L;
             final long currentTime = System.currentTimeMillis();
 
             // Checking flow with hardTimeout
@@ -450,14 +495,14 @@ public class FlowRuleManager
                     firstSeen.put(storedRule, currentTime);
                 } else {
                     Long first = firstSeen.get(storedRule);
-                    final long hardTimeout = storedRule.hardTimeout() * 1000;
+                    final long hardTimeout = storedRule.hardTimeout() * 1000L;
                     if ((currentTime - first) > hardTimeout) {
                         return false;
                     }
                 }
             }
 
-            if (storedRule.packets() != swRule.packets()) {
+            if (storedRule.packets() != swRule.packets() || storedRule.bytes() != swRule.bytes()) {
                 lastSeen.put(storedRule, currentTime);
                 return true;
             }
@@ -499,7 +544,7 @@ public class FlowRuleManager
                             // the two rules are not an exact match - remove the
                             // switch's rule and install our rule
                             extraneousFlow(rule);
-                            flowMissing(storedRule);
+                            flowMissing(storedRule, false);
                         }
                     } else {
                         // the device has a rule the store does not have
@@ -508,7 +553,8 @@ public class FlowRuleManager
                         }
                     }
                 } catch (Exception e) {
-                    log.debug("Can't process added or extra rule {}", e.getMessage());
+                    log.warn("Can't process added or extra rule {} for device {}:{}",
+                             rule, deviceId, e);
                 }
             }
 
@@ -517,10 +563,10 @@ public class FlowRuleManager
                 for (FlowEntry rule : storedRules.keySet()) {
                     try {
                         // there are rules in the store that aren't on the switch
-                        log.debug("Adding rule in store, but not on switch {}", rule);
-                        flowMissing(rule);
+                        log.debug("Adding the rule that is present in store but not on switch : {}", rule);
+                        flowMissing(rule, true);
                     } catch (Exception e) {
-                        log.debug("Can't add missing flow rule:", e);
+                        log.warn("Can't add missing flow rule:", e);
                     }
                 }
             }
@@ -573,6 +619,7 @@ public class FlowRuleManager
 
                 DeviceId deviceId = event.deviceId();
                 FlowRuleBatchOperation batchOperation = request.asBatchOperation(deviceId);
+                // getProvider is customized to favor driverProvider
                 FlowRuleProvider flowRuleProvider = getProvider(deviceId);
                 if (flowRuleProvider != null) {
                     flowRuleProvider.executeBatch(batchOperation);
@@ -678,7 +725,14 @@ public class FlowRuleManager
     @Override
     public Iterable<TableStatisticsEntry> getFlowTableStatistics(DeviceId deviceId) {
         checkPermission(FLOWRULE_READ);
+        checkNotNull(deviceId, DEVICE_ID_NULL);
         return store.getTableStatistics(deviceId);
+    }
+
+    @Override
+    public long getActiveFlowRuleCount(DeviceId deviceId) {
+        checkNotNull(deviceId, DEVICE_ID_NULL);
+        return store.getActiveFlowRuleCount(deviceId);
     }
 
     private class InternalDeviceListener implements DeviceListener {

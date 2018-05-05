@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,6 +93,14 @@ public interface NextObjective extends Objective {
      *         Value may be null if no meta information is provided.
      */
     TrafficSelector meta();
+
+    /**
+     * Returns a new builder set to create a copy of this objective.
+     *
+     * @return new builder
+     */
+    @Override
+    Builder copy();
 
     /**
      * A next step builder.
@@ -218,6 +226,39 @@ public interface NextObjective extends Objective {
          * @return a next objective
          */
         NextObjective removeFromExisting(ObjectiveContext context);
+
+        /**
+         * Build the next objective that will be modified with {@link Operation}
+         * MODIFY.
+         *
+         * @return a next objective
+         */
+
+        NextObjective modify();
+        /**
+         * Build the next objective that will be modified, with {@link Operation}
+         * MODIFY. The context will be used to notify the calling application.
+         *
+         * @param context an objective context
+         * @return a next objective
+         */
+        NextObjective modify(ObjectiveContext context);
+
+        /**
+         * Builds the next objective that needs to be verified.
+         *
+         * @return a next objective with {@link Operation} VERIFY
+         */
+        NextObjective verify();
+
+        /**
+         * Builds the next objective that needs to be verified. The context will
+         * be used to notify the calling application.
+         *
+         * @param context an objective context
+         * @return a next objective with {@link Operation} VERIFY
+         */
+        NextObjective verify(ObjectiveContext context);
 
     }
 

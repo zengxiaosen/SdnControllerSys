@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,10 +25,12 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
+import org.glassfish.jersey.client.oauth2.OAuth2ClientSupport;
 import org.onlab.packet.IpAddress;
 import org.onosproject.net.DeviceId;
 import org.onosproject.protocol.http.HttpSBController;
 import org.onosproject.protocol.rest.RestSBDevice;
+import org.onosproject.protocol.rest.RestSBDevice.AuthenticationScheme;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +43,7 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,13 +57,14 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /**
  * The implementation of HttpSBController.
  */
 public class HttpSBControllerImpl implements HttpSBController {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(HttpSBControllerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(HttpSBControllerImpl.class);
     private static final String XML = "xml";
     private static final String JSON = "json";
     protected static final String DOUBLESLASH = "//";
@@ -71,6 +75,7 @@ public class HttpSBControllerImpl implements HttpSBController {
     private static final String HTTPS = "https";
     private static final String AUTHORIZATION_PROPERTY = "authorization";
     private static final String BASIC_AUTH_PREFIX = "Basic ";
+    private static final String OAUTH2_BEARER_AUTH_PREFIX = "Bearer ";
 
     private final Map<DeviceId, RestSBDevice> deviceMap = new ConcurrentHashMap<>();
     private final Map<DeviceId, Client> clientMap = new ConcurrentHashMap<>();
@@ -95,19 +100,14 @@ public class HttpSBControllerImpl implements HttpSBController {
 
     @Override
     public RestSBDevice getDevice(IpAddress ip, int port) {
-        return deviceMap.values().stream().filter(v -> v.ip().equals(ip)
-                && v.port() == port).findFirst().get();
+        return deviceMap.values().stream().filter(v -> v.ip().equals(ip) && v.port() == port).findFirst().get();
     }
 
     @Override
     public void addDevice(RestSBDevice device) {
         if (!deviceMap.containsKey(device.deviceId())) {
             Client client = ignoreSslClient();
-            if (device.username() != null) {
-                String username = device.username();
-                String password = device.password() == null ? "" : device.password();
-                authenticate(client, username, password);
-            }
+            authenticate(client, device);
             clientMap.put(device.deviceId(), client);
             deviceMap.put(device.deviceId(), device);
         } else {
@@ -123,94 +123,99 @@ public class HttpSBControllerImpl implements HttpSBController {
     }
 
     @Override
-    public boolean post(DeviceId device, String request, InputStream payload, String mediaType) {
+    public int post(DeviceId device, String request, InputStream payload, MediaType mediaType) {
         Response response = getResponse(device, request, payload, mediaType);
-        return checkReply(response);
+        if (response == null) {
+            return Status.NO_CONTENT.getStatusCode();
+        }
+        return response.getStatus();
     }
 
     @Override
-    public <T> T post(DeviceId device, String request, InputStream payload,
-                      String mediaType, Class<T> responseClass) {
+    public <T> T post(DeviceId device, String request, InputStream payload, MediaType mediaType,
+                      Class<T> responseClass) {
         Response response = getResponse(device, request, payload, mediaType);
-        if (response.hasEntity()) {
-            return response.readEntity(responseClass);
+        if (response != null && response.hasEntity()) {
+            // Do not read the entity if the responseClass is of type Response. This would allow the
+            // caller to receive the Response directly and try to read its appropriate entity locally.
+            return responseClass == Response.class ? (T) response : response.readEntity(responseClass);
         }
         log.error("Response from device {} for request {} contains no entity", device, request);
         return null;
     }
 
-    private Response getResponse(DeviceId device, String request, InputStream payload, String mediaType) {
-        String type = typeOfMediaType(mediaType);
+    private Response getResponse(DeviceId device, String request, InputStream payload, MediaType mediaType) {
 
         WebTarget wt = getWebTarget(device, request);
 
         Response response = null;
         if (payload != null) {
             try {
-                response = wt.request(type)
-                        .post(Entity.entity(IOUtils.toString(payload, StandardCharsets.UTF_8), type));
+                response = wt.request(mediaType)
+                        .post(Entity.entity(IOUtils.toString(payload, StandardCharsets.UTF_8), mediaType));
             } catch (IOException e) {
-                log.error("Cannot do POST {} request on device {} because can't read payload",
-                          request, device);
+                log.error("Cannot do POST {} request on device {} because can't read payload", request, device);
             }
         } else {
-            response = wt.request(type).post(Entity.entity(null, type));
+            response = wt.request(mediaType).post(Entity.entity(null, mediaType));
         }
         return response;
     }
 
     @Override
-    public boolean put(DeviceId device, String request, InputStream payload, String mediaType) {
-        String type = typeOfMediaType(mediaType);
+    public int put(DeviceId device, String request, InputStream payload, MediaType mediaType) {
 
         WebTarget wt = getWebTarget(device, request);
 
         Response response = null;
         if (payload != null) {
             try {
-                response = wt.request(type)
-                        .put(Entity.entity(IOUtils.toString(payload, StandardCharsets.UTF_8), type));
+                response = wt.request(mediaType).put(Entity.entity(IOUtils.
+                        toString(payload, StandardCharsets.UTF_8), mediaType));
             } catch (IOException e) {
-                log.error("Cannot do PUT {} request on device {} because can't read payload",
-                          request, device);
+                log.error("Cannot do PUT {} request on device {} because can't read payload", request, device);
             }
         } else {
-            response = wt.request(type).put(Entity.entity(null, type));
+            response = wt.request(mediaType).put(Entity.entity(null, mediaType));
         }
-        return checkReply(response);
+
+        if (response == null) {
+            return Status.NO_CONTENT.getStatusCode();
+        }
+        return response.getStatus();
     }
 
     @Override
-    public InputStream get(DeviceId device, String request, String mediaType) {
-        String type = typeOfMediaType(mediaType);
-
+    public InputStream get(DeviceId device, String request, MediaType mediaType) {
         WebTarget wt = getWebTarget(device, request);
 
-        Response s = wt.request(type).get();
+        Response s = wt.request(mediaType).get();
 
         if (checkReply(s)) {
-            return new ByteArrayInputStream(s.readEntity((String.class))
-                    .getBytes(StandardCharsets.UTF_8));
+            return new ByteArrayInputStream(s.readEntity((String.class)).getBytes(StandardCharsets.UTF_8));
         }
         return null;
     }
 
     @Override
-    public boolean patch(DeviceId device, String request, InputStream payload, String mediaType) {
-        String type = typeOfMediaType(mediaType);
+    public int patch(DeviceId device, String request, InputStream payload, MediaType mediaType) {
 
         try {
             log.debug("Url request {} ", getUrlString(device, request));
             HttpPatch httprequest = new HttpPatch(getUrlString(device, request));
-            if (deviceMap.get(device).username() != null) {
+            if (deviceMap.get(device).authentication() == AuthenticationScheme.BASIC) {
                 String pwd = deviceMap.get(device).password() == null ? "" : COLON + deviceMap.get(device).password();
                 String userPassword = deviceMap.get(device).username() + pwd;
                 String base64string = Base64.getEncoder().encodeToString(userPassword.getBytes(StandardCharsets.UTF_8));
                 httprequest.addHeader(AUTHORIZATION_PROPERTY, BASIC_AUTH_PREFIX + base64string);
+            } else if (deviceMap.get(device).authentication() == AuthenticationScheme.OAUTH2) {
+                String token = deviceMap.get(device).token();
+                // TODO: support token types other then bearer of OAuth2 authentication
+                httprequest.addHeader(AUTHORIZATION_PROPERTY, OAUTH2_BEARER_AUTH_PREFIX + token);
             }
             if (payload != null) {
                 StringEntity input = new StringEntity(IOUtils.toString(payload, StandardCharsets.UTF_8));
-                input.setContentType(type);
+                input.setContentType(mediaType.toString());
                 httprequest.setEntity(input);
             }
             CloseableHttpClient httpClient;
@@ -219,49 +224,57 @@ public class HttpSBControllerImpl implements HttpSBController {
             } else {
                 httpClient = HttpClients.createDefault();
             }
-            int responseStatusCode = httpClient
-                    .execute(httprequest)
-                    .getStatusLine()
-                    .getStatusCode();
-            return checkStatusCode(responseStatusCode);
+            return httpClient.execute(httprequest).getStatusLine().getStatusCode();
         } catch (IOException | NoSuchAlgorithmException | KeyManagementException | KeyStoreException e) {
-            log.error("Cannot do PATCH {} request on device {}",
-                      request, device, e);
+            log.error("Cannot do PATCH {} request on device {}", request, device, e);
         }
-        return false;
+        return Status.BAD_REQUEST.getStatusCode();
     }
 
     @Override
-    public boolean delete(DeviceId device, String request, InputStream payload, String mediaType) {
-        String type = typeOfMediaType(mediaType);
+    public int delete(DeviceId device, String request, InputStream payload, MediaType mediaType) {
 
         WebTarget wt = getWebTarget(device, request);
 
-        // FIXME: do we need to delete an entry by enclosing data in DELETE request?
+        // FIXME: do we need to delete an entry by enclosing data in DELETE
+        // request?
         // wouldn't it be nice to use PUT to implement the similar concept?
-        Response response = wt.request(type).delete();
+        Response response = wt.request(mediaType).delete();
 
-        return checkReply(response);
+        return response.getStatus();
     }
 
-    private String typeOfMediaType(String mediaType) {
-        String type;
-        switch (mediaType) {
-            case XML:
-                type = MediaType.APPLICATION_XML;
-                break;
-            case JSON:
-                type = MediaType.APPLICATION_JSON;
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported media type " + mediaType);
+    private MediaType typeOfMediaType(String type) {
+        switch (type) {
+        case XML:
+            return MediaType.APPLICATION_XML_TYPE;
+        case JSON:
+            return MediaType.APPLICATION_JSON_TYPE;
+        case MediaType.WILDCARD:
+            return MediaType.WILDCARD_TYPE;
+        default:
+            throw new IllegalArgumentException("Unsupported media type " + type);
 
         }
-        return type;
     }
 
-    private void authenticate(Client client, String username, String password) {
-        client.register(HttpAuthenticationFeature.basic(username, password));
+    private void authenticate(Client client, RestSBDevice device) {
+        AuthenticationScheme authScheme = device.authentication();
+        if (authScheme == AuthenticationScheme.NO_AUTHENTICATION) {
+            log.debug("{} scheme is specified, ignoring authentication", authScheme);
+            return;
+        } else if (authScheme == AuthenticationScheme.OAUTH2) {
+            String token = checkNotNull(device.token());
+            client.register(OAuth2ClientSupport.feature(token));
+        } else if (authScheme == AuthenticationScheme.BASIC) {
+            String username = device.username();
+            String password = device.password() == null ? "" : device.password();
+            client.register(HttpAuthenticationFeature.basic(username, password));
+        } else {
+            // TODO: Add support for other authentication schemes here.
+            throw new IllegalArgumentException(String.format("Unsupported authentication scheme: %s",
+                    authScheme.name()));
+        }
     }
 
     protected WebTarget getWebTarget(DeviceId device, String request) {
@@ -279,34 +292,37 @@ public class HttpSBControllerImpl implements HttpSBController {
                                       .build()).build();
     }
 
-    protected String getUrlString(DeviceId device, String request) {
-        if (deviceMap.get(device).url() != null) {
-            return deviceMap.get(device).protocol() + COLON + DOUBLESLASH
-                    + deviceMap.get(device).url() + request;
+    protected String getUrlString(DeviceId deviceId, String request) {
+        RestSBDevice restSBDevice = deviceMap.get(deviceId);
+        if (restSBDevice == null) {
+            log.warn("restSbDevice cannot be NULL!");
+            return "";
+        }
+        if (restSBDevice.url() != null) {
+            return restSBDevice.protocol() + COLON + DOUBLESLASH + restSBDevice.url() + request;
         } else {
-            return deviceMap.get(device).protocol() + COLON +
-                    DOUBLESLASH +
-                    deviceMap.get(device).ip().toString() +
-                    COLON + deviceMap.get(device).port() + request;
+            return restSBDevice.protocol() + COLON + DOUBLESLASH + restSBDevice.ip().toString()
+                    + COLON + restSBDevice.port() + request;
         }
     }
 
     private boolean checkReply(Response response) {
         if (response != null) {
-            return checkStatusCode(response.getStatus());
+            boolean statusCode = checkStatusCode(response.getStatus());
+            if (!statusCode && response.hasEntity()) {
+                log.error("Failed request, HTTP error msg : " + response.readEntity(String.class));
+            }
+            return statusCode;
         }
         log.error("Null reply from device");
         return false;
     }
 
     private boolean checkStatusCode(int statusCode) {
-        if (statusCode == STATUS_OK ||
-                statusCode == STATUS_CREATED ||
-                statusCode == STATUS_ACCEPTED) {
+        if (statusCode == STATUS_OK || statusCode == STATUS_CREATED || statusCode == STATUS_ACCEPTED) {
             return true;
         } else {
-            log.error("Failed request, HTTP error code : "
-                              + statusCode);
+            log.error("Failed request, HTTP error code : " + statusCode);
             return false;
         }
     }
@@ -317,20 +333,24 @@ public class HttpSBControllerImpl implements HttpSBController {
         try {
             sslcontext = SSLContext.getInstance("TLS");
             sslcontext.init(null, new TrustManager[]{new X509TrustManager() {
+                @Override
                 public void checkClientTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
                 }
 
+                @Override
                 public void checkServerTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
                 }
 
+                @Override
                 public X509Certificate[] getAcceptedIssuers() {
                     return new X509Certificate[0];
                 }
             } }, new java.security.SecureRandom());
         } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            e.printStackTrace();
+            throw new IllegalStateException(e);
         }
 
         return ClientBuilder.newBuilder().sslContext(sslcontext).hostnameVerifier((s1, s2) -> true).build();
     }
+
 }

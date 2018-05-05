@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.onlab.graph.ScalarWeight;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DefaultPath;
 import org.onosproject.net.DeviceId;
@@ -150,38 +151,13 @@ public class PointToPointIntentCompiler
                                              ConnectPoint egressPoint,
                                              PointToPointIntent intent) {
         List<Link> links = asList(createEdgeLink(ingressPoint, true), createEdgeLink(egressPoint, false));
-        return asList(createPathIntent(new DefaultPath(PID, links, DEFAULT_COST),
+        return asList(createPathIntent(new DefaultPath(PID, links, ScalarWeight.toWeight(DEFAULT_COST)),
                                        intent, PathIntent.ProtectionType.PRIMARY));
     }
 
     private List<Intent> createZeroHopLinkCollectionIntent(PointToPointIntent intent) {
         return asList(createLinkCollectionIntent(ImmutableSet.of(), DEFAULT_COST,
                                        intent));
-    }
-
-    /**
-     * Creates an unprotected intent.
-     * @param ingressPoint the ingress connect point
-     * @param egressPoint the egress connect point
-     * @param intent the original intent
-     * @return the compilation result
-     * @deprecated 1.10.0
-     */
-    @Deprecated
-    private List<Intent> createUnprotectedIntent(ConnectPoint ingressPoint,
-                                                 ConnectPoint egressPoint,
-                                                 PointToPointIntent intent) {
-        List<Link> links = new ArrayList<>();
-        Path path = getPathOrException(intent, ingressPoint.deviceId(),
-                                       egressPoint.deviceId());
-
-        links.add(createEdgeLink(ingressPoint, true));
-        links.addAll(path.links());
-        links.add(createEdgeLink(egressPoint, false));
-
-        return asList(createPathIntent(new DefaultPath(PID, links, path.cost(),
-                                                       path.annotations()), intent,
-                                       PathIntent.ProtectionType.PRIMARY));
     }
 
     private List<Intent> createUnprotectedLinkCollectionIntent(PointToPointIntent intent) {
@@ -253,23 +229,24 @@ public class PointToPointIntentCompiler
             PortNumber primaryPort = getPrimaryPort(intent);
             if (primaryPort != null && !links.get(0).src().port().equals(primaryPort)) {
                 reusableIntents.add(createPathIntent(new DefaultPath(PID, links,
-                                                                     path.cost(), path.annotations()),
+                                                     path.weight(), path.annotations()),
                                                      intent, PathIntent.ProtectionType.BACKUP));
                 updateFailoverGroup(intent, links);
                 return reusableIntents;
 
             } else {
-                reusableIntents.add(createPathIntent(new DefaultPath(PID, backupLinks, path.backup().cost(),
-                                     path.backup().annotations()), intent, PathIntent.ProtectionType.BACKUP));
+                reusableIntents.add(createPathIntent(new DefaultPath(PID, backupLinks,
+                        path.backup().weight(),
+                        path.backup().annotations()), intent, PathIntent.ProtectionType.BACKUP));
                 updateFailoverGroup(intent, backupLinks);
                 return reusableIntents;
             }
         }
 
-        intentList.add(createPathIntent(new DefaultPath(PID, links, path.cost(),
+        intentList.add(createPathIntent(new DefaultPath(PID, links, path.weight(),
                                                         path.annotations()),
                                         intent, PathIntent.ProtectionType.PRIMARY));
-        intentList.add(createPathIntent(new DefaultPath(PID, backupLinks, path.backup().cost(),
+        intentList.add(createPathIntent(new DefaultPath(PID, backupLinks, path.backup().weight(),
                                                         path.backup().annotations()),
                                         intent, PathIntent.ProtectionType.BACKUP));
 
@@ -335,7 +312,7 @@ public class PointToPointIntentCompiler
             links.add(createEdgeLink(ingressPoint, true));
             links.addAll(onlyPath.links());
             links.add(createEdgeLink(egressPoint, false));
-            return asList(createPathIntent(new DefaultPath(PID, links, onlyPath.cost(),
+            return asList(createPathIntent(new DefaultPath(PID, links, onlyPath.weight(),
                                                            onlyPath.annotations()),
                                            intent, PathIntent.ProtectionType.PRIMARY));
         }
@@ -484,7 +461,7 @@ public class PointToPointIntentCompiler
     private List<FlowRule> createFailoverFlowRules(PointToPointIntent intent) {
         List<FlowRule> flowRules = new ArrayList<>();
 
-        ConnectPoint ingress = intent.ingressPoint();
+        ConnectPoint ingress = intent.filteredIngressPoint().connectPoint();
         DeviceId deviceId = ingress.deviceId();
 
         // flow rule with failover traffic treatment
@@ -589,36 +566,34 @@ public class PointToPointIntentCompiler
                                                  PointToPointIntent pointIntent) {
         List<Intent> intentList = new ArrayList<>();
         intentList.addAll(oldInstallables);
-        erasePrimary = false;
-        eraseBackup = false;
-        if (intentList != null) {
-            Iterator<Intent> iterator = intentList.iterator();
-            while (iterator.hasNext() && !(erasePrimary && eraseBackup)) {
-                Intent intent = iterator.next();
-                intent.resources().forEach(resource -> {
-                    if (resource instanceof Link) {
-                        Link link = (Link) resource;
-                        if (link.state() == Link.State.INACTIVE) {
+
+        Iterator<Intent> iterator = intentList.iterator();
+        while (iterator.hasNext()) {
+            Intent intent = iterator.next();
+            intent.resources().forEach(resource -> {
+                if (resource instanceof Link) {
+                    Link link = (Link) resource;
+                    if (link.state() == Link.State.INACTIVE) {
+                        setPathsToRemove(intent);
+                    } else if (link instanceof EdgeLink) {
+                        ConnectPoint connectPoint = (link.src().elementId() instanceof DeviceId)
+                                ? link.src() : link.dst();
+                        Port port = deviceService.getPort(connectPoint.deviceId(), connectPoint.port());
+                        if (port == null || !port.isEnabled()) {
                             setPathsToRemove(intent);
-                        } else if (link instanceof EdgeLink) {
-                            ConnectPoint connectPoint = (link.src().elementId() instanceof DeviceId)
-                                    ? link.src() : link.dst();
-                            Port port = deviceService.getPort(connectPoint.deviceId(), connectPoint.port());
-                            if (port == null || !port.isEnabled()) {
-                                setPathsToRemove(intent);
-                            }
-                        } else {
-                            Port port1 = deviceService.getPort(link.src().deviceId(), link.src().port());
-                            Port port2 = deviceService.getPort(link.dst().deviceId(), link.dst().port());
-                            if (port1 == null || !port1.isEnabled() || port2 == null || !port2.isEnabled()) {
-                                setPathsToRemove(intent);
-                            }
+                        }
+                    } else {
+                        Port port1 = deviceService.getPort(link.src().deviceId(), link.src().port());
+                        Port port2 = deviceService.getPort(link.dst().deviceId(), link.dst().port());
+                        if (port1 == null || !port1.isEnabled() || port2 == null || !port2.isEnabled()) {
+                            setPathsToRemove(intent);
                         }
                     }
-                });
-            }
-            removeAndUpdateIntents(intentList, pointIntent);
+                }
+            });
         }
+        removeAndUpdateIntents(intentList, pointIntent);
+
         return intentList;
     }
 

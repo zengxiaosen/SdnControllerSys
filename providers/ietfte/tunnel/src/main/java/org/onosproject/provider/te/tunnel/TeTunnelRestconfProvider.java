@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -216,7 +216,7 @@ public class TeTunnelRestconfProvider extends AbstractProvider
             return;
         }
 
-        IetfTe ietfTe = buildIetfTe(optTunnel.get());
+        IetfTe ietfTe = buildIetfTe(optTunnel.get(), true);
 
         YangCompositeEncoding encoding = codecHandler.
                 encodeCompositeOperation(RESTCONF_ROOT, null, ietfTe,

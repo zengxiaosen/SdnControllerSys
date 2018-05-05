@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import org.onosproject.yangutils.datamodel.YangSchemaNodeContextInfo;
 import org.onosproject.yangutils.datamodel.YangSchemaNodeIdentifier;
 import org.onosproject.yms.app.ydt.exceptions.YdtException;
 import org.onosproject.yms.app.ysr.YangSchemaRegistry;
+import org.onosproject.yms.ydt.YdtContext;
 import org.onosproject.yms.ydt.YdtContextOperationType;
 import org.onosproject.yms.ydt.YdtType;
 import org.onosproject.yms.ydt.YmsOperationType;
@@ -521,6 +522,14 @@ public class YangRequestWorkBench implements YdtExtendedBuilder {
         addLeaf(name, namespace, null, valueSet, MULTI_INSTANCE_LEAF);
     }
 
+    @Override
+    public void addNode(String name, String namespace)
+            throws IllegalArgumentException {
+        addChild(name, namespace, RequestedCardinality.UNKNOWN,
+                null, RequestedCallType.EMPTY_CONTAINER);
+    }
+
+
     /**
      * Adds a last leaf with list of values/single value to YANG data tree.
      * This method is used by all protocols which knows the nature
@@ -569,7 +578,10 @@ public class YangRequestWorkBench implements YdtExtendedBuilder {
 
             // If node is of multiInstanceNode type then check key uniqueness.
             if (curNode.getYdtType() == MULTI_INSTANCE_NODE) {
-                curNode.createKeyNodeList();
+                List<YdtContext> keyList = ((YdtMultiInstanceNode) curNode).getKeyNodeList();
+                if (keyList == null || keyList.isEmpty()) {
+                    curNode.createKeyNodeList();
+                }
             }
 
             /*
@@ -679,6 +691,7 @@ public class YangRequestWorkBench implements YdtExtendedBuilder {
                 }
 
                 curNode = curNode.getParent();
+                curNode.createKeyNodeList();
             }
         } catch (YdtException e) {
             freeRestResources(rootNode);

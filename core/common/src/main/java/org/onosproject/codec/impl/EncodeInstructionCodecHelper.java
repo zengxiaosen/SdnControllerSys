@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import org.onlab.osgi.DefaultServiceDirectory;
 import org.onlab.osgi.ServiceDirectory;
 import org.onlab.util.HexString;
 import org.onosproject.codec.CodecContext;
-import org.onosproject.codec.ExtensionTreatmentCodec;
+import org.onosproject.net.flow.ExtensionTreatmentCodec;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.OchSignal;
@@ -35,13 +35,14 @@ import org.onosproject.net.flow.instructions.L3ModificationInstruction;
 import org.onosproject.net.flow.instructions.L4ModificationInstruction;
 import org.slf4j.Logger;
 
+import static org.onlab.util.Tools.toHexWithPrefix;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * JSON encoding of Instructions.
  */
 public final class EncodeInstructionCodecHelper {
-    protected static final Logger log = getLogger(EncodeInstructionCodecHelper.class);
+    private static final Logger log = getLogger(EncodeInstructionCodecHelper.class);
     private final Instruction instruction;
     private final CodecContext context;
 
@@ -141,6 +142,8 @@ public final class EncodeInstructionCodecHelper {
                         (L2ModificationInstruction.ModVlanHeaderInstruction) l2Instruction;
                 result.put(InstructionCodec.ETHERNET_TYPE, pushVlanInstruction.ethernetType().toString());
                 break;
+            case VLAN_POP:
+                break;
             case MPLS_LABEL:
                 final L2ModificationInstruction.ModMplsLabelInstruction modMplsLabelInstruction =
                         (L2ModificationInstruction.ModMplsLabelInstruction) l2Instruction;
@@ -161,7 +164,13 @@ public final class EncodeInstructionCodecHelper {
                 final L2ModificationInstruction.ModMplsBosInstruction modMplsBosInstruction =
                         (L2ModificationInstruction.ModMplsBosInstruction) l2Instruction;
                 result.put(InstructionCodec.MPLS_BOS, modMplsBosInstruction.mplsBos());
+                break;
             case MPLS_POP:
+                final L2ModificationInstruction.ModMplsHeaderInstruction popHeaderInstruction =
+                        (L2ModificationInstruction.ModMplsHeaderInstruction) l2Instruction;
+                result.put(InstructionCodec.ETHERNET_TYPE,
+                        toHexWithPrefix(popHeaderInstruction.ethernetType().toShort()));
+                break;
             case DEC_MPLS_TTL:
                 break;
             default:
@@ -196,6 +205,7 @@ public final class EncodeInstructionCodecHelper {
             case TTL_IN:
             case TTL_OUT:
             case DEC_TTL:
+                // These instructions have no values to be encoded
                 break;
             default:
                 log.info("Cannot convert L3 subtype of {}", l3Instruction.subtype());
@@ -301,7 +311,9 @@ public final class EncodeInstructionCodecHelper {
                 final Instructions.SetQueueInstruction setQueueInstruction =
                         (Instructions.SetQueueInstruction) instruction;
                 result.put(InstructionCodec.QUEUE_ID, setQueueInstruction.queueId());
-                result.put(InstructionCodec.PORT, setQueueInstruction.port().toString());
+                if (setQueueInstruction.port() != null) {
+                    result.put(InstructionCodec.PORT, setQueueInstruction.port().toString());
+                }
                 break;
 
             case L0MODIFICATION:

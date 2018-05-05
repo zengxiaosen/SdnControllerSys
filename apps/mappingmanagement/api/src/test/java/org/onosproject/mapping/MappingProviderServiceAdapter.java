@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package org.onosproject.mapping;
 
+import java.util.List;
+
 /**
  * Adapter for testing against mapping provider service.
  */
@@ -27,5 +29,15 @@ public class MappingProviderServiceAdapter implements MappingProviderService {
     @Override
     public void mappingAdded(MappingEntry mappingEntry, MappingStore.Type type) {
 
+    }
+
+    @Override
+    public MappingValue mappingQueried(MappingKey mappingKey) {
+        return null;
+    }
+
+    @Override
+    public List<MappingValue> mappingQueried(List<MappingKey> mappingKeys) {
+        return null;
     }
 }

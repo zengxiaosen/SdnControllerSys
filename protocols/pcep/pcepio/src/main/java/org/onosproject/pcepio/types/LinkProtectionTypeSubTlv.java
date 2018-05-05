@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ public class LinkProtectionTypeSubTlv implements PcepValueType {
      |Protection Cap | Reserved      |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      */
-    protected static final Logger log = LoggerFactory.getLogger(LinkProtectionTypeSubTlv.class);
+    private static final Logger log = LoggerFactory.getLogger(LinkProtectionTypeSubTlv.class);
 
     public static final short TYPE = 27;
     public static final short LENGTH = 2;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,10 +60,10 @@ public class DefaultLispInfoRequest extends DefaultLispInfo
      * @param maskLength     EID prefix mask length
      * @param eidPrefix      EID prefix
      */
-    protected DefaultLispInfoRequest(boolean infoReply, long nonce, short keyId,
-                                     short authDataLength, byte[] authData,
-                                     int ttl, byte maskLength,
-                                     LispAfiAddress eidPrefix) {
+    DefaultLispInfoRequest(boolean infoReply, long nonce, short keyId,
+                                    short authDataLength, byte[] authData,
+                                    int ttl, byte maskLength,
+                                    LispAfiAddress eidPrefix) {
 
         super(infoReply, nonce, keyId, authDataLength, authData, ttl,
               maskLength, eidPrefix);
@@ -239,15 +239,19 @@ public class DefaultLispInfoRequest extends DefaultLispInfo
 
             LispInfo lispInfo = deserialize(byteBuf);
 
-            return new DefaultInfoRequestBuilder()
-                    .withIsInfoReply(lispInfo.isInfoReply())
-                    .withNonce(lispInfo.getNonce())
-                    .withKeyId(lispInfo.getKeyId())
-                    .withAuthDataLength(lispInfo.getAuthDataLength())
-                    .withAuthData(lispInfo.getAuthData())
-                    .withTtl(lispInfo.getTtl())
-                    .withMaskLength(lispInfo.getMaskLength())
-                    .withEidPrefix(lispInfo.getPrefix()).build();
+            if (lispInfo != null) {
+                return new DefaultInfoRequestBuilder()
+                        .withIsInfoReply(lispInfo.isInfoReply())
+                        .withNonce(lispInfo.getNonce())
+                        .withKeyId(lispInfo.getKeyId())
+                        .withAuthDataLength(lispInfo.getAuthDataLength())
+                        .withAuthData(lispInfo.getAuthData())
+                        .withTtl(lispInfo.getTtl())
+                        .withMaskLength(lispInfo.getMaskLength())
+                        .withEidPrefix(lispInfo.getPrefix()).build();
+            }
+
+            return null;
         }
     }
 

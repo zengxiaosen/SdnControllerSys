@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Application data type LCAF address class.
  * <p>
  * Application data type is defined in draft-ietf-lisp-lcaf-22
- * https://tools.ietf.org/html/draft-ietf-lisp-lcaf-22#page-27
+ * https://tools.ietf.org/html/draft-ietf-lisp-lcaf-22#page-29
  *
  * <pre>
  * {@literal
@@ -403,7 +403,7 @@ public final class LispAppDataLcafAddress extends LispLcafAddress {
          * @param value integer value
          * @return an array of bytes
          */
-        public static byte[] getPartialByteArray(int value) {
+        static byte[] getPartialByteArray(int value) {
             ByteBuffer buffer = ByteBuffer.allocate(4);
             byte[] array = buffer.putInt(value).array();
             return Arrays.copyOfRange(array, 1, 4);

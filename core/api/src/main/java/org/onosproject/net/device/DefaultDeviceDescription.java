@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -152,6 +152,18 @@ public class DefaultDeviceDescription extends AbstractDescription
         this(base.deviceUri(), base.type(), base.manufacturer(),
              base.hwVersion(), base.swVersion(), base.serialNumber(),
              base.chassisId(), defaultAvailable, annotations);
+    }
+
+    /**
+     * Creates a device description using the supplied information.
+     *
+     * @param base base
+     * @param annotations annotations
+     * @return device description
+     */
+    public static DefaultDeviceDescription copyReplacingAnnotation(DeviceDescription base,
+                                                                   SparseAnnotations annotations) {
+        return new DefaultDeviceDescription(base, annotations);
     }
 
     @Override

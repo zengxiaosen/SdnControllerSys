@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 @Service
 public class DpiStatisticsManager implements DpiStatisticsManagerService {
 
-    private static ServerSocket serverSocket;
+    private ServerSocket serverSocket;
     private static int port = 11990; // socket server listening port
 
     private final Logger log = getLogger(getClass());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,8 @@ import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.IntentData;
 import org.onosproject.net.intent.IntentService;
 import org.onosproject.net.intent.Key;
+import org.onosproject.net.intent.ObjectiveTrackerService;
+import org.onosproject.net.intent.TopologyChangeDelegate;
 import org.onosproject.net.intent.WorkPartitionEvent;
 import org.onosproject.net.intent.WorkPartitionEventListener;
 import org.onosproject.net.intent.WorkPartitionService;
@@ -289,7 +291,7 @@ public class ObjectiveTracker implements ObjectiveTrackerService {
                         dontRecompileAllFailedIntents = dontRecompileAllFailedIntents &&
                                 (linkEvent.type() == LINK_REMOVED ||
                                 (linkEvent.type() == LINK_UPDATED &&
-                                linkEvent.subject().isDurable()));
+                                linkEvent.subject().isExpected()));
                     }
                 }
                 delegate.triggerCompile(intentsToRecompile, !dontRecompileAllFailedIntents);
@@ -420,7 +422,7 @@ public class ObjectiveTracker implements ObjectiveTrackerService {
     private final class InternalPartitionListener implements WorkPartitionEventListener {
         @Override
         public void event(WorkPartitionEvent event) {
-            log.debug("got message {}", event.subject());
+            log.debug("got message {}:{}", event.type(), event.subject());
             scheduleIntentUpdate(1);
         }
     }

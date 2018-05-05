@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * Lists the inventory of intents and their states.
@@ -120,7 +119,7 @@ public class IntentsListCommand extends AbstractShellCommand {
      */
     private static final String SUMMARY_TITLES =
             BOLD + format(
-            "\n%1s%21s%14s%14s%14s%14s%14s%14s%14s%14s%14s%14s",
+            "%n%1s%21s%14s%14s%14s%14s%14s%14s%14s%14s%14s%14s",
             "Intent type",
             "Total",
             "Installed",
@@ -155,10 +154,20 @@ public class IntentsListCommand extends AbstractShellCommand {
             required = false, multiValued = false)
     private boolean pending = false;
 
+    @Option(name = "-d", aliases = "--details",
+            description = "Show details for intents, filtered by ID",
+            required = false, multiValued = true)
+    private List<String> intentIds = new ArrayList<>();
+
     @Option(name = "-f", aliases = "--filter",
             description = "Filter intents by specific keyword",
             required = false, multiValued = true)
     private List<String> filter = new ArrayList<>();
+
+    @Option(name = "-r", aliases = "--remove",
+            description = "Remove and purge intents by specific keyword",
+            required = false, multiValued = false)
+    private String remove = null;
 
     private StringFilter contentFilter;
     private IntentService service;
@@ -175,6 +184,25 @@ public class IntentsListCommand extends AbstractShellCommand {
             intents = service.getIntents();
         }
 
+        // Remove intents
+        if (remove != null && !remove.isEmpty()) {
+            filter.add(remove);
+            contentFilter = new StringFilter(filter, StringFilter.Strategy.AND);
+            IntentRemoveCommand intentRemoveCmd = new IntentRemoveCommand();
+            if (!remove.isEmpty()) {
+                intentRemoveCmd.purgeIntentsInteractive(filterIntents(service));
+            }
+            return;
+        }
+
+        // Show detailed intents
+        if (!intentIds.isEmpty()) {
+            IntentDetailsCommand intentDetailsCmd = new IntentDetailsCommand();
+            intentDetailsCmd.detailIntents(intentIds);
+            return;
+        }
+
+        // Show brief intents
         if (intentsSummary || miniSummary) {
             Map<String, IntentSummary> summarized = summarize(intents);
             if (outputJson()) {
@@ -197,6 +225,7 @@ public class IntentsListCommand extends AbstractShellCommand {
             return;
         }
 
+        // JSON or default output
         if (outputJson()) {
             print("%s", json(intents));
         } else {
@@ -210,6 +239,27 @@ public class IntentsListCommand extends AbstractShellCommand {
                 }
             }
         }
+    }
+
+    /**
+     * Filter a given list of intents based on the existing content filter.
+     *
+     * @param service IntentService object
+     * @return further filtered list of intents
+     */
+    private List<Intent> filterIntents(IntentService service) {
+        return filterIntents(service.getIntents());
+    }
+
+    /**
+     * Filter a given list of intents based on the existing content filter.
+     *
+     * @param intents Iterable of intents
+     * @return further filtered list of intents
+     */
+    private List<Intent> filterIntents(Iterable<Intent> intents) {
+        return Tools.stream(intents)
+                .filter(i -> contentFilter.filter(i)).collect(Collectors.toList());
     }
 
     /**
@@ -246,7 +296,9 @@ public class IntentsListCommand extends AbstractShellCommand {
         IntentSummary(Intent intent) {
             // remove "Intent" from intentType label
             this(intentType(intent));
-            update(service.getIntentState(intent.key()));
+            if (contentFilter.filter(intent)) {
+                update(service.getIntentState(intent.key()));
+            }
         }
 
         // for identity element, when reducing
@@ -303,7 +355,7 @@ public class IntentsListCommand extends AbstractShellCommand {
             StringBuilder builder = new StringBuilder();
 
             builder.append(format(
-                    "\n%1s%s%14d%14d%14d%14d%14d%14d%14d%14d%14d%14d",
+                    "%n%1s%s%14d%14d%14d%14d%14d%14d%14d%14d%14d%14d",
                     BOLD + intentType + RESET,
                     Strings.padStart(String.valueOf(total),
                                      (32 - intentType.length()),
@@ -412,7 +464,7 @@ public class IntentsListCommand extends AbstractShellCommand {
      */
     private Map<String, IntentSummary> summarize(Iterable<Intent> intents) {
         Map<String, List<Intent>> perIntent = Tools.stream(intents)
-            .collect(Collectors.groupingBy(i -> intentType(i)));
+            .collect(Collectors.groupingBy(IntentsListCommand::intentType));
 
         List<IntentSummary> collect = perIntent.values().stream()
             .map(il ->
@@ -486,16 +538,24 @@ public class IntentsListCommand extends AbstractShellCommand {
         } else if (intent instanceof OpticalCircuitIntent) {
             OpticalCircuitIntent ci = (OpticalCircuitIntent) intent;
             builder.append('\n').append(format("src=%s, dst=%s", ci.getSrc(), ci.getDst()));
+            builder.append('\n').append(format("signal type=%s", ci.getSignalType()));
+            builder.append('\n').append(format("bidirectional=%s", ci.isBidirectional()));
         } else if (intent instanceof OpticalConnectivityIntent) {
             OpticalConnectivityIntent ci = (OpticalConnectivityIntent) intent;
             builder.append('\n').append(format("src=%s, dst=%s", ci.getSrc(), ci.getDst()));
+            builder.append('\n').append(format("signal type=%s", ci.getSignalType()));
+            builder.append('\n').append(format("bidirectional=%s", ci.isBidirectional()));
+            builder.append('\n').append(format("ochSignal=%s", ci.ochSignal()));
         } else if (intent instanceof OpticalOduIntent) {
             OpticalOduIntent ci = (OpticalOduIntent) intent;
             builder.append('\n').append(format("src=%s, dst=%s", ci.getSrc(), ci.getDst()));
+            builder.append('\n').append(format("signal type=%s", ci.getSignalType()));
+            builder.append('\n').append(format("bidirectional=%s", ci.isBidirectional()));
         }
 
-        List<Intent> installable = service.getInstallableIntents(intent.key());
-        installable.stream().filter(i -> contentFilter.filter(i));
+        List<Intent> installable = service.getInstallableIntents(intent.key())
+            .stream().filter(i -> contentFilter.filter(i))
+            .collect(Collectors.toList());
         if (showInstallable && installable != null && !installable.isEmpty()) {
             builder.append('\n').append(format(INSTALLABLE, installable));
         }
@@ -571,10 +631,9 @@ public class IntentsListCommand extends AbstractShellCommand {
     private JsonNode json(Iterable<Intent> intents) {
         ObjectMapper mapper = new ObjectMapper();
         ArrayNode result = mapper.createArrayNode();
-        StreamSupport.stream(intents.spliterator(), false)
+        Tools.stream(intents)
                 .filter(intent -> contentFilter.filter(jsonForEntity(intent, Intent.class).toString()))
                 .forEach(intent -> result.add(jsonForEntity(intent, Intent.class)));
         return result;
     }
-
 }

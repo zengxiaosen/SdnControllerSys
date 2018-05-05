@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package org.onosproject.ofagent.impl;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import org.onosproject.ofagent.api.OFSwitch;
 
 /**
@@ -25,6 +26,7 @@ import org.onosproject.ofagent.api.OFSwitch;
 public final class OFChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     private final OFSwitch ofSwitch;
+    private static final int READ_TIMEOUT = 30;
 
     /**
      * Default constructor.
@@ -37,7 +39,9 @@ public final class OFChannelInitializer extends ChannelInitializer<SocketChannel
 
     @Override
     protected void initChannel(SocketChannel ch) throws Exception {
-
-        // TODO configure OF channel pipeline
+        ch.pipeline().addLast(new OFMessageDecoder())
+                .addLast(new OFMessageEncoder())
+                .addLast(new ReadTimeoutHandler(READ_TIMEOUT))
+                .addLast(new OFChannelHandler(ofSwitch));
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ public class GrpcRemoteServiceTest {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private static final ProviderId PID = new ProviderId("test", "com.exmaple.test");
+    private static final ProviderId PID = new ProviderId("test", "com.example.test");
 
     private static final URI DURI = URI.create("dev:000001");
 
@@ -160,7 +160,8 @@ public class GrpcRemoteServiceTest {
         assertEqualsButNotSame(DEVICE_ID, svDeviceProviderService.deviceConnectedDid);
         assertEqualsButNotSame(DDESC, svDeviceProviderService.deviceConnectedDesc);
 
-        PortDescription portDescription = new DefaultPortDescription(PORT, true, ANON);
+        PortDescription portDescription = DefaultPortDescription.builder().withPortNumber(PORT)
+                .isEnabled(true).annotations(ANON).build();
         List<PortDescription> portDescriptions = ImmutableList.of(portDescription);
         clDeviceProviderService.updatePorts(DEVICE_ID, portDescriptions);
         assertTrue(svDeviceProviderService.updatePorts.await(10, TimeUnit.SECONDS));

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,13 +37,13 @@ import org.onosproject.net.DefaultLink;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.NetworkResource;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.intent.constraint.BandwidthConstraint;
 import org.onosproject.net.intent.Constraint;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.pce.pceservice.ExplicitPathInfo;
 import org.onosproject.pce.pceservice.constraint.CostConstraint;
 import org.onosproject.pce.pceservice.LspType;
 import org.onosproject.pce.pceservice.api.PceService;
+import org.onosproject.pce.pceservice.constraint.PceBandwidthConstraint;
 import org.slf4j.Logger;
 
 /**
@@ -95,6 +95,10 @@ public class PceSetupPathCommand extends AbstractShellCommand {
             required = false, multiValued = true)
     String[] explicitPathInfoStrings;
 
+    @Option(name = "-l", aliases = "--loadBalancing", description = "The load balancing option for user. ",
+            required = false, multiValued = false)
+    boolean loadBalancing = false;
+
     //explicitPathInfo format : Type/SubType/Value(DeviceId or Link info)
     //If Value is Device : Type/SubType/deviceId
     //If Value is Link : Type/SubType/SourceDeviceId/SourcePortNo/DestinationDeviceId/DestinationPortNo
@@ -132,7 +136,7 @@ public class PceSetupPathCommand extends AbstractShellCommand {
         // Add bandwidth
         // bandwidth default data rate unit is in BPS
         if (bandwidth != 0.0) {
-            listConstrnt.add(BandwidthConstraint.of(bandwidth, DataRateUnit.valueOf("BPS")));
+            listConstrnt.add(PceBandwidthConstraint.of(bandwidth, DataRateUnit.valueOf("BPS")));
         }
 
         // Add cost
@@ -188,6 +192,15 @@ public class PceSetupPathCommand extends AbstractShellCommand {
                 explicitPathInfo.add(obj);
             }
         }
+
+        //with load balancing option
+        if (loadBalancing) {
+            if (!service.setupPath(srcDevice, dstDevice, name, listConstrnt, lspType, loadBalancing)) {
+                error("Path creation failed.");
+            }
+            return;
+        }
+
         if (!service.setupPath(srcDevice, dstDevice, name, listConstrnt, lspType, explicitPathInfo)) {
             error("Path creation failed.");
         }

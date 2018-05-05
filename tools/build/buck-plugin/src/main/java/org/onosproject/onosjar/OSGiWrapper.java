@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,18 +20,24 @@ import aQute.bnd.header.Attrs;
 import aQute.bnd.header.Parameters;
 import aQute.bnd.osgi.Analyzer;
 import aQute.bnd.osgi.Builder;
+import aQute.bnd.osgi.Constants;
+import aQute.bnd.osgi.Descriptors;
 import aQute.bnd.osgi.FileResource;
 import aQute.bnd.osgi.Jar;
+import aQute.bnd.osgi.Packages;
+import aQute.bnd.osgi.Processor;
 import aQute.bnd.osgi.Resource;
 import com.facebook.buck.step.ExecutionContext;
 import com.facebook.buck.step.Step;
 import com.facebook.buck.step.StepExecutionResult;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.felix.scrplugin.bnd.SCRDescriptorBndPlugin;
+import org.codehaus.plexus.util.DirectoryScanner;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,6 +51,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
@@ -55,6 +62,9 @@ import static java.nio.file.Files.walkFileTree;
  * BND-based wrapper to convert Buck JARs to OSGi-compatible JARs.
  */
 public class OSGiWrapper implements Step {
+
+    private static final String EMBED_DEPENDENCY = "Embed-Dependency";
+    private static final String EMBEDDED_ARTIFACTS = "Embedded-Artifacts";
 
     private Path inputJar;
     private Path outputJar;
@@ -68,7 +78,9 @@ public class OSGiWrapper implements Step {
     private String bundleVersion;
 
     private String importPackages;
+    private String privatePackages;
     private String dynamicimportPackages;
+    private String embeddedDependencies;
 
     private String exportPackages;
     private String includeResources;
@@ -76,6 +88,8 @@ public class OSGiWrapper implements Step {
 
     private String bundleDescription;
     private String bundleLicense;
+
+    private String bundleClasspath;
 
     private String webContext;
 
@@ -95,7 +109,10 @@ public class OSGiWrapper implements Step {
                        String includeResources,
                        String webContext,
                        String dynamicimportPackages,
-                       String bundleDescription) {
+                       String embeddedDependencies,
+                       String bundleDescription,
+                       String privatePackages,
+                       String bundleClasspath) {
         this.inputJar = inputJar;
         this.sourcesDir = sourcesDir;
         this.classesDir = classesDir;
@@ -115,14 +132,19 @@ public class OSGiWrapper implements Step {
         this.bundleDescription = bundleDescription;
 
         this.importPackages = importPackages;
+        this.privatePackages = privatePackages;
         this.dynamicimportPackages = dynamicimportPackages;
+        this.embeddedDependencies = embeddedDependencies;
         this.exportPackages = exportPackages;
         this.includeResources = includeResources;
 
         this.webContext = webContext;
+
+        this.bundleClasspath = bundleClasspath;
     }
 
     private void setProperties(Analyzer analyzer) {
+
         analyzer.setProperty(Analyzer.BUNDLE_NAME, bundleName);
         analyzer.setProperty(Analyzer.BUNDLE_SYMBOLICNAME, bundleSymbolicName);
         analyzer.setProperty(Analyzer.BUNDLE_VERSION, bundleVersion.replace('-', '.'));
@@ -138,31 +160,43 @@ public class OSGiWrapper implements Step {
         //analyzer.setProperty("-provider-policy", "${range;[===,==+)}");
         //analyzer.setProperty("-consumer-policy", "${range;[===,==+)}");
 
-        // There are no good defaults so make sure you set the Import-Package
-        analyzer.setProperty(Analyzer.IMPORT_PACKAGE, importPackages);
+        if (privatePackages != null) {
+            analyzer.setProperty(Analyzer.PRIVATE_PACKAGE, privatePackages);
+        }
+        analyzer.setProperty(Analyzer.REMOVEHEADERS, "Private-Package,Include-Resource");
 
-        analyzer.setProperty(Analyzer.DYNAMICIMPORT_PACKAGE, dynamicimportPackages);
+        analyzer.setProperty(Analyzer.DYNAMICIMPORT_PACKAGE,
+                             dynamicimportPackages);
 
         // TODO include version in export, but not in import
         analyzer.setProperty(Analyzer.EXPORT_PACKAGE, exportPackages);
 
         // TODO we may need INCLUDE_RESOURCE, or that might be done by Buck
+        // FIXME NOTE we handle this manually below
         if (includeResources != null) {
             analyzer.setProperty(Analyzer.INCLUDE_RESOURCE, includeResources);
         }
 
+        if (embeddedDependencies != null) {
+            analyzer.setProperty(EMBED_DEPENDENCY, embeddedDependencies);
+        }
+
+        // There are no good defaults so make sure you set the Import-Package
+        analyzer.setProperty(Analyzer.IMPORT_PACKAGE, importPackages);
+
         if (isWab()) {
             analyzer.setProperty(Analyzer.WAB, "src/main/webapp/");
             analyzer.setProperty("Web-ContextPath", webContext);
-            analyzer.setProperty(Analyzer.IMPORT_PACKAGE, "*,org.glassfish.jersey.servlet,org.jvnet.mimepull\n");
+            analyzer.setProperty(Analyzer.IMPORT_PACKAGE, importPackages +
+                    ",org.glassfish.jersey.servlet,org.jvnet.mimepull\n");
         }
     }
 
     public boolean execute() {
-        Analyzer analyzer = new Builder();
+        Builder analyzer = new Builder();
         try {
 
-            Jar jar = new Jar(inputJar.toFile());  // where our data is
+            Jar jar = new Jar(inputJar.toFile());   // where our data is
             analyzer.setJar(jar);                   // give bnd the contents
 
             // You can provide additional class path entries to allow
@@ -171,13 +205,6 @@ public class OSGiWrapper implements Step {
             analyzer.addClasspath(classpath);
 
             setProperties(analyzer);
-
-            //analyzer.setBase(classesDir.toFile());
-
-//            analyzer.setProperty("DESTDIR");
-//            analyzer.setBase();
-
-            // ------------- let's begin... -------------------------
 
             // Analyze the target JAR first
             analyzer.analyze();
@@ -190,7 +217,12 @@ public class OSGiWrapper implements Step {
             scrDescriptorBndPlugin.setReporter(analyzer);
             scrDescriptorBndPlugin.analyzeJar(analyzer);
 
-            if (includeResources != null) {
+            //Add local packges to jar file.
+            //FIXME removing this call for now; not sure what exactly it's doing
+            //addLocalPackages(new File(classesDir.toString()), analyzer);
+
+            //add resources.
+            if (includeResources != null || embeddedDependencies != null) {
                 doIncludeResources(analyzer);
             }
 
@@ -199,11 +231,13 @@ public class OSGiWrapper implements Step {
 
             // Calculate the manifest
             Manifest manifest = analyzer.calcManifest();
-            //OutputStream s = new FileOutputStream("/tmp/foo2.txt");
-            //manifest.write(s);
-            //s.close();
+
+            //Build the jar files
+            //FIXME this call conflicts with some of the above
+//            analyzer.build();
 
             if (analyzer.isOk()) {
+                //add calculated manifest file.
                 analyzer.getJar().setManifest(manifest);
                 if (analyzer.save(outputJar.toFile(), true)) {
                     log("Saved!\n");
@@ -225,6 +259,75 @@ public class OSGiWrapper implements Step {
         }
     }
 
+    private static void addLocalPackages(File outputDirectory, Analyzer analyzer) throws IOException {
+        Packages packages = new Packages();
+
+        if (outputDirectory != null && outputDirectory.isDirectory()) {
+            // scan classes directory for potential packages
+            DirectoryScanner scanner = new DirectoryScanner();
+            scanner.setBasedir(outputDirectory);
+            scanner.setIncludes(new String[]
+                                        {"**/*.class"});
+
+            scanner.addDefaultExcludes();
+            scanner.scan();
+
+            String[] paths = scanner.getIncludedFiles();
+            for (int i = 0; i < paths.length; i++) {
+                packages.put(analyzer.getPackageRef(getPackageName(paths[i])));
+            }
+        }
+
+        Packages exportedPkgs = new Packages();
+        Packages privatePkgs = new Packages();
+
+        boolean noprivatePackages = "!*".equals(analyzer.getProperty(Analyzer.PRIVATE_PACKAGE));
+
+        for (Descriptors.PackageRef pkg : packages.keySet()) {
+            // mark all source packages as private by default (can be overridden by export list)
+            privatePkgs.put(pkg);
+
+            // we can't export the default package (".") and we shouldn't export internal packages
+            String fqn = pkg.getFQN();
+            if (noprivatePackages || !(".".equals(fqn) || fqn.contains(".internal") || fqn.contains(".impl"))) {
+                exportedPkgs.put(pkg);
+            }
+        }
+
+        Properties properties = analyzer.getProperties();
+        String exported = properties.getProperty(Analyzer.EXPORT_PACKAGE);
+        if (exported == null) {
+            if (!properties.containsKey(Analyzer.EXPORT_CONTENTS)) {
+                // no -exportcontents overriding the exports, so use our computed list
+                for (Attrs attrs : exportedPkgs.values()) {
+                    attrs.put(Constants.SPLIT_PACKAGE_DIRECTIVE, "merge-first");
+                }
+                properties.setProperty(Analyzer.EXPORT_PACKAGE, Processor.printClauses(exportedPkgs));
+            } else {
+                // leave Export-Package empty (but non-null) as we have -exportcontents
+                properties.setProperty(Analyzer.EXPORT_PACKAGE, "");
+            }
+        }
+
+        String internal = properties.getProperty(Analyzer.PRIVATE_PACKAGE);
+        if (internal == null) {
+            if (!privatePkgs.isEmpty()) {
+                for (Attrs attrs : privatePkgs.values()) {
+                    attrs.put(Constants.SPLIT_PACKAGE_DIRECTIVE, "merge-first");
+                }
+                properties.setProperty(Analyzer.PRIVATE_PACKAGE, Processor.printClauses(privatePkgs));
+            } else {
+                // if there are really no private packages then use "!*" as this will keep the Bnd Tool happy
+                properties.setProperty(Analyzer.PRIVATE_PACKAGE, "!*");
+            }
+        }
+    }
+
+    private static String getPackageName(String filename) {
+        int n = filename.lastIndexOf(File.separatorChar);
+        return n < 0 ? "." : filename.substring(0, n).replace(File.separatorChar, '.');
+    }
+
     private boolean isWab() {
         return webContext != null;
     }
@@ -237,8 +340,10 @@ public class OSGiWrapper implements Step {
         Jar dot = analyzer.getJar();
 
         log("wab %s", wab);
-        analyzer.setBundleClasspath("WEB-INF/classes," +
-                                    analyzer.getProperty(analyzer.BUNDLE_CLASSPATH));
+
+        if (bundleClasspath != null) {
+            analyzer.setBundleClasspath("WEB-INF/classes," + bundleClasspath);
+        }
 
         Set<String> paths = new HashSet<>(dot.getResources().keySet());
 
@@ -368,7 +473,6 @@ public class OSGiWrapper implements Step {
                 .add("bundleDescription", bundleDescription)
                 .add("bundleLicense", bundleLicense)
                 .toString();
-
     }
 
     @Override

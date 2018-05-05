@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,44 @@
  */
 package org.onosproject.net.statistic.impl;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Predicate;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableSet;
+import org.apache.felix.scr.annotations.Activate;
+import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.Deactivate;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.apache.felix.scr.annotations.Service;
+import org.onosproject.core.ApplicationId;
+import org.onosproject.core.GroupId;
+import org.onosproject.net.ConnectPoint;
+import org.onosproject.net.Link;
+import org.onosproject.net.Path;
+
+import org.onosproject.net.flow.FlowEntry;
+import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.flow.FlowRuleEvent;
+import org.onosproject.net.flow.FlowRuleListener;
+import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.statistic.DefaultLoad;
+import org.onosproject.net.statistic.Load;
+import org.onosproject.net.statistic.StatisticService;
+import org.onosproject.net.statistic.StatisticStore;
+import org.slf4j.Logger;
+
+import java.util.Collections;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static org.slf4j.LoggerFactory.getLogger;
+import static org.onosproject.security.AppGuard.checkPermission;
+import static org.onosproject.security.AppPermission.Type.*;
+
+////
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
@@ -49,6 +87,7 @@ import static org.onosproject.security.AppGuard.checkPermission;
 import static org.onosproject.security.AppPermission.Type.*;
 
 
+
 /**
  * Provides an implementation of the Statistic Service.
  */
@@ -59,17 +98,12 @@ public class StatisticManager implements StatisticService {
     private final Logger log = getLogger(getClass());
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected PortStatisticsService portStatisticsService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected StatisticStore statisticStore;
-//
-//    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-//    protected StatisticService statisticService;
-
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PortStatisticsService portStatisticsService;
 
     private final InternalFlowRuleListener listener = new InternalFlowRuleListener();
 
@@ -87,52 +121,20 @@ public class StatisticManager implements StatisticService {
     }
 
     @Override
+    public Load load(Link link) {
+        checkPermission(STATISTIC_READ);
+
+        return load(link.src());
+    }
+    @Override
     public  Load vportload(ConnectPoint connectPoint) {
         return portStatisticsService.load(connectPoint);
     }
 
     @Override
-    public Load load(Link link) {
-        checkPermission(STATISTIC_READ);
-        //log.info("1");
-//        ConnectPoint linksrcCp = link.src();
-//        Load result =  load(linksrcCp);
-
-        //
-        /**
-         StatisticManager.java
-         对流的统计
-         connectPoint暂定为流的src交换机
-         private HashMap<FlowEntry, Long> flow_rate_interval(ConnectPoint connectPoint)
-         */
-
-
-//        HashMap<FlowEntry, Long> flow_rate_Of_LinkSrc = statisticService.flow_rate_interval(linksrcCp);
-//
-//        if(flow_rate_Of_LinkSrc == null){
-//            log.info("flow_rate_Of_LinkSrc 为空！");
-//        }
-//         else{
-//            for(Map.Entry<FlowEntry, Long> entryLongEntry : flow_rate_Of_LinkSrc.entrySet()){
-//                if(entryLongEntry.getKey() != null && entryLongEntry.getValue() != null){
-//                    String flowId = entryLongEntry.getKey().id().toString();
-//                    String flowRate = entryLongEntry.getValue().toString();
-//                    log.info("flowId: " + flowId);
-//                    log.info("flowRate: " + flowRate);
-//                }
-//
-//            }
-//        }
-
-
-        return load(link.src());
-    }
-
-    @Override
     public Load load(Link link, ApplicationId appId, Optional<GroupId> groupId) {
-        log.info("2");
         checkPermission(STATISTIC_READ);
-        //没有经过这个函数
+
         Statistics stats = getStatistics(link.src());
         if (!stats.isValid()) {
             return new DefaultLoad();
@@ -152,7 +154,6 @@ public class StatisticManager implements StatisticService {
 
     @Override
     public Load load(ConnectPoint connectPoint) {
-        //log.info("3");
         checkPermission(STATISTIC_READ);
 
         return loadInternal(connectPoint);
@@ -160,7 +161,6 @@ public class StatisticManager implements StatisticService {
 
     @Override
     public Link max(Path path) {
-        log.info("4");
         checkPermission(STATISTIC_READ);
 
         if (path.links().isEmpty()) {
@@ -181,7 +181,6 @@ public class StatisticManager implements StatisticService {
     @Override
     public Link min(Path path) {
         checkPermission(STATISTIC_READ);
-        log.info("5");
 
         if (path.links().isEmpty()) {
             return null;
@@ -200,7 +199,6 @@ public class StatisticManager implements StatisticService {
 
     @Override
     public FlowRule highestHitter(ConnectPoint connectPoint) {
-        log.info("6");
         checkPermission(STATISTIC_READ);
 
         Set<FlowEntry> hitters = statisticStore.getCurrentStatistic(connectPoint);
@@ -217,157 +215,14 @@ public class StatisticManager implements StatisticService {
         return max;
     }
 
-    /**
-     * 自研，每流統計模塊
-     * @param connectPoint
-     * @return
-     */
-
     private Load loadInternal(ConnectPoint connectPoint) {
-        //log.info("7");
         Statistics stats = getStatistics(connectPoint);
         if (!stats.isValid()) {
             return new DefaultLoad();
         }
-        HashMap<String, Long> flowCurrent_idBytes1 = new HashMap<>();
-        for(FlowEntry flowEntry1 : stats.current){
-//            log.info("currentFlowId: " + flowEntry1.id().toString());
-//            log.info("currentFlowBytes: " + flowEntry1.bytes() + "");
-
-            flowCurrent_idBytes1.put(flowEntry1.id().toString().trim(), flowEntry1.bytes());
-        }
-
-        HashMap<String, Long> flowCurrent_idBytes2 = new HashMap<>();
-        for(FlowEntry flowEntry2 : stats.previous){
-//            log.info("previousFlowId: " + flowEntry2.id().toString());
-//            log.info("previousFlowBytes: " + flowEntry2.bytes());
-            flowCurrent_idBytes2.put(flowEntry2.id().toString().trim(), flowEntry2.bytes());
-        }
-
-        for(Map.Entry<String, Long> stringLongEntry : flowCurrent_idBytes1.entrySet()){
-            String key = stringLongEntry.getKey();//flowId
-            if(flowCurrent_idBytes2.containsKey(key)){
-                long flowBytesNow = stringLongEntry.getValue();
-                long flowBytesPrevious = flowCurrent_idBytes2.get(key);
-                long bytesTrans = flowBytesNow - flowBytesPrevious;
-                long flowRate = bytesTrans / 5;
-                String flowRateString = String.valueOf(flowRate);
-                StringBuffer sb = new StringBuffer();
-                sb.append(key).append("|").append(connectPoint.deviceId().toString()).append("|").append(flowRateString).append("b/s");
-                //sb:flowId|deviceId|flowRate
-//                log.info("flowId|deviceId|flowRate:");
-//                log.info(sb.toString());
-                //update flow information to file
-                File csvFile = new File("/home/zengxiaosen/deviceId_FlowId_FlowRate.csv");
-                String filePath = "/home/zengxiaosen/deviceId_FlowId_FlowRate.csv";
-                checkExist(csvFile);
-                /**
-                 * sb:flowId|deviceId|flowRate
-                 * 取出文件中的所有flowId，如果有，同時deviceid一楊，則更新flowRate
-                 * 否則append添加
-                 */
-
-                ProToRedis proToRedis = new ProToRedis(sb.toString());
-                proToRedis.start();
-
-//                boolean b = appendData(csvFile, sb.toString(), filePath);
-//                if(b == true){
-//                    log.info("updateFlowInfomation写成功..");
-//                }else{
-//                    log.info("updateFlowInformation写失败..");
-//                }
-
-
-            }
-        }
-
 
         return new DefaultLoad(aggregate(stats.current), aggregate(stats.previous));
     }
-
-
-
-    public void checkExist(File file) {
-        //判断文件目录的存在
-        if(file.exists()){
-            //file exists
-        }else{
-            //file not exists, create it ...
-            try{
-                file.createNewFile();
-            }catch (IOException e){
-                e.printStackTrace();
-            }
-        }
-    }
-
-    /**
-     * sb:flowId|deviceId|flowRate
-     * 取出文件中的所有flowId，如果有，同時deviceid一楊，則更新flowRate
-     * 否則append添加
-     *
-     * 這裏是直接append，待修復！！！
-     * 方法:只能read then write
-     */
-
-    public boolean appendData(File csvFile, String data, String filePath){
-        try{
-            BufferedReader br = new BufferedReader(new FileReader(filePath));
-            StringBuffer sb = new StringBuffer();
-            String temp = null;
-            int line = 0;
-            temp = br.readLine();
-            while(temp != null){
-                String FlowId = StringUtils.split(temp.trim(), "|")[0];
-                if(temp.contains(FlowId.trim())){
-                    continue;
-                }else{
-                    sb.append(temp).append("\n");
-                }
-                line ++;
-                temp = br.readLine();
-            }
-            br.close();
-
-
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFile, true), "GBK"), 1024);
-            bw.write(sb.toString());
-            bw.write("\n");
-            //bw.flush();
-            bw.close();
-            return true;
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    //对流的统计
-    //connectPoint暂定为流的src交换机
-    @Override
-    public HashMap<FlowEntry, Long> flow_rate_interval(ConnectPoint connectPoint){
-        log.info("8");
-        Statistics stats = getStatistics(connectPoint);
-        ImmutableSet<FlowEntry> allFlow_cur = stats.current;
-        ImmutableSet<FlowEntry> allFlow_previous = stats.previous;
-        HashMap<FlowEntry, Long> result = new HashMap<>();
-        for(FlowEntry flowEntry : allFlow_cur){
-            //只要在allFlow_previous
-            if(allFlow_previous.contains(flowEntry)){
-                long cur_bytes = flowEntry.bytes();
-                for(FlowEntry flowEntry_pre : allFlow_previous){
-                    //在FlowEntry class中重写hashcode 判断hashcode是否相同
-                    long pre_bytes = flowEntry_pre.bytes();
-                    long interval_bytes = cur_bytes - pre_bytes;
-                    long rate_interval = interval_bytes / 5;
-                    result.put(flowEntry, rate_interval);
-                }
-            }
-        }
-        return result;
-    }
-
-
 
     /**
      * Returns statistics of the specified port.
@@ -376,15 +231,12 @@ public class StatisticManager implements StatisticService {
      * @return statistics
      */
     private Statistics getStatistics(ConnectPoint connectPoint) {
-        //log.info("9");
         Set<FlowEntry> current;
         Set<FlowEntry> previous;
         synchronized (statisticStore) {
             current = getCurrentStatistic(connectPoint);
             previous = getPreviousStatistic(connectPoint);
-
         }
-
 
         return new Statistics(current, previous);
     }
@@ -396,7 +248,6 @@ public class StatisticManager implements StatisticService {
      * @return set of flow entries
      */
     private Set<FlowEntry> getCurrentStatistic(ConnectPoint connectPoint) {
-        //log.info("10");
         Set<FlowEntry> stats = statisticStore.getCurrentStatistic(connectPoint);
         if (stats == null) {
             return Collections.emptySet();
@@ -412,7 +263,6 @@ public class StatisticManager implements StatisticService {
      * @return set of flow entries
      */
     private Set<FlowEntry> getPreviousStatistic(ConnectPoint connectPoint) {
-        //log.info("11");
         Set<FlowEntry> stats = statisticStore.getPreviousStatistic(connectPoint);
         if (stats == null) {
             return Collections.emptySet();
@@ -429,7 +279,6 @@ public class StatisticManager implements StatisticService {
      * @return a long value
      */
     private long aggregate(Set<FlowEntry> values) {
-        //log.info("12");
         long sum = 0;
         for (FlowEntry f : values) {
             sum += f.bytes();
@@ -444,27 +293,16 @@ public class StatisticManager implements StatisticService {
 
         @Override
         public void event(FlowRuleEvent event) {
-            //log.info("13");
-            //打標籤
             FlowRule rule = event.subject();
-
-            //flow_rate_interval
-//            String flowId = rule.id().toString();
-//            Short appId = rule.appId();
-//            String groupId = rule.groupId().toString();
-//            String deviceId = rule.deviceId().toString();
-//            log.info(flowId + "," + appId + "," + groupId + "," + deviceId);
             switch (event.type()) {
                 case RULE_ADDED:
                 case RULE_UPDATED:
                     if (rule instanceof FlowEntry) {
                         statisticStore.addOrUpdateStatistic((FlowEntry) rule);
                     }
-                    //log.info("13_1");
                     break;
                 case RULE_ADD_REQUESTED:
                     statisticStore.prepareForStatistics(rule);
-                    //log.info("13_2");
                     break;
                 case RULE_REMOVE_REQUESTED:
                     statisticStore.removeFromStatistics(rule);
@@ -472,7 +310,6 @@ public class StatisticManager implements StatisticService {
                 case RULE_REMOVED:
                     break;
                 default:
-                    //log.info("13_3");
                     log.warn("Unknown flow rule event {}", event);
             }
         }
@@ -551,7 +388,6 @@ public class StatisticManager implements StatisticService {
      * @return predicate
      */
     private static Predicate<FlowEntry> hasApplicationId(ApplicationId appId) {
-
         return flowEntry -> flowEntry.appId() == appId.id();
     }
 

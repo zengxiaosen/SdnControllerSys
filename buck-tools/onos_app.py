@@ -26,6 +26,10 @@ APP_HEADER = '''\
     <description>%(description)s</description>
 '''
 ARTIFACT = '    <artifact>%s</artifact>\n'
+SECURITY = '''\
+    <security>
+%s
+    </security>\n'''
 APP_FOOTER = '</app>'
 
 NON_OSGI_TAG = 'NON-OSGI'
@@ -103,6 +107,7 @@ def generateAppFile(app_name,
                     description = None,
                     apps = [],
                     artifacts = [],
+                    security= None,
                     **kwargs):
     values = {
         'app_name' : app_name,
@@ -123,6 +128,9 @@ def generateAppFile(app_name,
     for artifact in artifacts:
         output += ARTIFACT % mvnUrl(artifact)
 
+    if security is not None:
+        output += SECURITY % security
+
     output += APP_FOOTER
     return output
 
@@ -139,6 +147,8 @@ if __name__ == '__main__':
     parser.add_option("-v", "--version",  dest="version",      help="Version")
     parser.add_option("-t", "--title",    dest="title",        help="Title")
     parser.add_option("-r", "--repo",     dest="repo_name",    help="Repo Name")
+    parser.add_option('-D', '--desc',     dest='desc',         help='Application description')
+    parser.add_option('-s', '--security', dest='security',     help='Application security')
 
     parser.add_option('-b', '--bundle',
                       action="append", dest='included_bundles',
@@ -188,6 +198,9 @@ if __name__ == '__main__':
         bundles += options.included_bundles
     if options.excluded_bundles:
         bundles += options.excluded_bundles
+    if options.desc:
+        values['description'] = options.desc
+
     feature = generateFeature(bundles=bundles,
                               features=options.features,
                               **values)
@@ -202,4 +215,5 @@ if __name__ == '__main__':
     if options.write_app:
         print generateAppFile(artifacts=options.included_bundles,
                               apps=options.apps,
+                              security=options.security,
                               **values)

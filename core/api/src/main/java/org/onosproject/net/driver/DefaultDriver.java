@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,18 @@
  */
 package org.onosproject.net.driver;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.Set;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -65,7 +68,7 @@ public class DefaultDriver implements Driver {
                          Map<Class<? extends Behaviour>, Class<? extends Behaviour>> behaviours,
                          Map<String, String> properties) {
         this.name = checkNotNull(name, "Name cannot be null");
-        this.parents = parents == null || parents.isEmpty() ? null : parents;
+        this.parents = parents == null ? ImmutableList.of() : ImmutableList.copyOf(parents);
         this.manufacturer = checkNotNull(manufacturer, "Manufacturer cannot be null");
         this.hwVersion = checkNotNull(hwVersion, "HW version cannot be null");
         this.swVersion = checkNotNull(swVersion, "SW version cannot be null");
@@ -77,6 +80,7 @@ public class DefaultDriver implements Driver {
     public Driver merge(Driver other) {
         checkArgument(parents == null || Objects.equals(parent(), other.parent()),
                       "Parent drivers are not the same");
+
         // Merge the behaviours.
         Map<Class<? extends Behaviour>, Class<? extends Behaviour>>
                 behaviours = Maps.newHashMap();
@@ -85,7 +89,13 @@ public class DefaultDriver implements Driver {
 
         // Merge the properties.
         ImmutableMap.Builder<String, String> properties = ImmutableMap.builder();
-        properties.putAll(this.properties).putAll(other.properties());
+        properties.putAll(other.properties());
+
+        // remove duplicated properties from this driver and merge
+        this.properties().entrySet().stream()
+                .filter(e -> !other.properties().containsKey(e.getKey()))
+                .forEach(properties::put);
+
         List<Driver> completeParents = new ArrayList<>();
 
         if (parents != null) {
@@ -126,7 +136,7 @@ public class DefaultDriver implements Driver {
 
     @Override
     public Driver parent() {
-        return parents == null ? null : parents.get(0);
+        return parents.isEmpty() ? null : parents.get(0);
     }
 
     @Override
@@ -233,6 +243,22 @@ public class DefaultDriver implements Driver {
     @Override
     public Map<String, String> properties() {
         return properties;
+    }
+
+    @Override
+    public String getProperty(String name) {
+        Queue<Driver> queue = new LinkedList<>();
+        queue.add(this);
+        while (!queue.isEmpty()) {
+            Driver driver = queue.remove();
+            String property = driver.properties().get(name);
+            if (property != null) {
+                return property;
+            } else if (driver.parents() != null) {
+                queue.addAll(driver.parents());
+            }
+        }
+        return null;
     }
 
     @Override

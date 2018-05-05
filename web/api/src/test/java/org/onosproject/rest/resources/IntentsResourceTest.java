@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonArray;
 import com.eclipsesource.json.JsonObject;
 import com.eclipsesource.json.JsonValue;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.hamcrest.Description;
 import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeMatcher;
@@ -28,24 +29,28 @@ import org.junit.Test;
 import org.onlab.osgi.ServiceDirectory;
 import org.onlab.osgi.TestServiceDirectory;
 import org.onlab.packet.MacAddress;
-import org.onlab.rest.BaseResource;
 import org.onosproject.codec.CodecService;
 import org.onosproject.codec.impl.CodecManager;
+import org.onosproject.codec.impl.MockCodecContext;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.core.DefaultApplicationId;
-import org.onosproject.core.DefaultGroupId;
 import org.onosproject.core.GroupId;
-import org.onosproject.core.IdGenerator;
+import org.onosproject.net.ConnectPoint;
+import org.onosproject.net.DefaultLink;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.Link;
 import org.onosproject.net.NetworkResource;
+import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowEntry;
+import org.onosproject.net.flow.FlowEntryAdapter;
 import org.onosproject.net.flow.FlowId;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleExtPayLoad;
 import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.flow.TableId;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
@@ -56,18 +61,24 @@ import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.IntentService;
 import org.onosproject.net.intent.IntentState;
 import org.onosproject.net.intent.Key;
+import org.onosproject.net.intent.MockIdGenerator;
+import org.onosproject.net.intent.PathIntent;
+import org.onosproject.net.provider.ProviderId;
+
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -76,7 +87,6 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.onosproject.net.intent.IntentTestsMocks.MockIntent;
-import static org.onosproject.net.intent.MockIdGenerator.bindNewGenerator;
 
 /**
  * Unit tests for Intents REST APIs.
@@ -90,6 +100,12 @@ public class IntentsResourceTest extends ResourceTest {
     private static final String ID = "id";
     private static final String INSTRUCTIONS = "instructions";
     private static final String PATHS = "paths";
+    private static final String INSTALLABLES = "installables";
+    private static final String RESOURCES = "resources";
+    private static final String DEVICE = "device";
+    private static final String PORT = "port";
+    private static final String SRC = "src";
+    private static final String DST = "dst";
     private static final String SELECTOR = "selector";
     private static final String SPACE = " ";
     private static final String TREATMENT = "treatment";
@@ -101,9 +117,15 @@ public class IntentsResourceTest extends ResourceTest {
     final HashSet<Intent> intents = new HashSet<>();
     final List<org.onosproject.net.intent.Intent> installableIntents = new ArrayList<>();
     private static final ApplicationId APP_ID = new DefaultApplicationId(1, "test");
-    private IdGenerator mockGenerator;
 
     final DeviceId deviceId1 = DeviceId.deviceId("1");
+    final DeviceId deviceId2 = DeviceId.deviceId("2");
+    final DeviceId deviceId3 = DeviceId.deviceId("3");
+
+    final ConnectPoint connectPoint1 = new ConnectPoint(deviceId1, PortNumber.portNumber(1L));
+    final ConnectPoint connectPoint2 = new ConnectPoint(deviceId2, PortNumber.portNumber(1L));
+    final ConnectPoint connectPoint3 = new ConnectPoint(deviceId2, PortNumber.portNumber(2L));
+    final ConnectPoint connectPoint4 = new ConnectPoint(deviceId3, PortNumber.portNumber(1L));
 
     final TrafficTreatment treatment1 = DefaultTrafficTreatment.builder()
             .setEthDst(MacAddress.BROADCAST)
@@ -143,7 +165,7 @@ public class IntentsResourceTest extends ResourceTest {
     /**
      * Mock class for a flow entry.
      */
-    private static class MockFlowEntry implements FlowEntry {
+    private static class MockFlowEntry extends FlowEntryAdapter {
         final DeviceId deviceId;
         final long baseValue;
         TrafficTreatment treatment;
@@ -159,18 +181,13 @@ public class IntentsResourceTest extends ResourceTest {
         }
 
         @Override
-        public FlowEntryState state() {
-            return FlowEntryState.ADDED;
-        }
-
-        @Override
         public long life() {
             return life(SECONDS);
         }
 
         @Override
         public FlowLiveType liveType() {
-            return null;
+            return FlowLiveType.IMMEDIATE;
         }
 
         @Override
@@ -194,16 +211,6 @@ public class IntentsResourceTest extends ResourceTest {
         }
 
         @Override
-        public int errType() {
-            return 0;
-        }
-
-        @Override
-        public int errCode() {
-            return 0;
-        }
-
-        @Override
         public FlowId id() {
             final long id = baseValue + 55;
             return FlowId.valueOf(id);
@@ -211,7 +218,7 @@ public class IntentsResourceTest extends ResourceTest {
 
         @Override
         public GroupId groupId() {
-            return new DefaultGroupId(3);
+            return new GroupId(3);
         }
 
         @Override
@@ -244,25 +251,6 @@ public class IntentsResourceTest extends ResourceTest {
             return (int) (baseValue + 77);
         }
 
-        @Override
-        public int hardTimeout() {
-            return 0;
-        }
-
-        @Override
-        public FlowRule.FlowRemoveReason reason() {
-            return  FlowRule.FlowRemoveReason.NO_REASON;
-        }
-
-        @Override
-        public boolean isPermanent() {
-            return false;
-        }
-
-        @Override
-        public int tableId() {
-            return 0;
-        }
 
         @Override
         public boolean exactMatch(FlowRule rule) {
@@ -271,11 +259,6 @@ public class IntentsResourceTest extends ResourceTest {
                     this.id().equals(rule.id()) &&
                     this.treatment.equals(rule.treatment()) &&
                     this.selector().equals(rule.selector());
-        }
-
-        @Override
-        public FlowRuleExtPayLoad payLoad() {
-            return null;
         }
 
         @Override
@@ -317,7 +300,7 @@ public class IntentsResourceTest extends ResourceTest {
 
         @Override
         public GroupId groupId() {
-            return new DefaultGroupId(3);
+            return new GroupId(3);
         }
 
         @Override
@@ -366,6 +349,11 @@ public class IntentsResourceTest extends ResourceTest {
         }
 
         @Override
+        public TableId table() {
+            return DEFAULT_TABLE;
+        }
+
+        @Override
         public boolean exactMatch(FlowRule rule) {
             return false;
         }
@@ -408,14 +396,14 @@ public class IntentsResourceTest extends ResourceTest {
 
             // check intent type
             final String jsonType = jsonIntent.get("type").asString();
-            if (!jsonType.equals("MockIntent")) {
+            if (!intent.getClass().getSimpleName().equals(jsonType)) {
                 reason = "type MockIntent";
                 return false;
             }
 
             // check state field
             final String jsonState = jsonIntent.get("state").asString();
-            if (!jsonState.equals("INSTALLED")) {
+            if (!"INSTALLED".equals(jsonState)) {
                 reason = "state INSTALLED";
                 return false;
             }
@@ -430,10 +418,32 @@ public class IntentsResourceTest extends ResourceTest {
                 for (final NetworkResource resource : intent.resources()) {
                     boolean resourceFound = false;
                     final String resourceString = resource.toString();
-                    for (int resourceIndex = 0; resourceIndex < jsonResources.size(); resourceIndex++) {
-                        final JsonValue value = jsonResources.get(resourceIndex);
-                        if (value.asString().equals(resourceString)) {
-                            resourceFound = true;
+
+                    if (resource instanceof Link) {
+                        final Link resourceLink = (Link) resource;
+                        MockCodecContext codecContext = new MockCodecContext();
+
+                        for (int resourceIndex = 0; resourceIndex < jsonResources.size(); resourceIndex++) {
+                            final ObjectNode value;
+                            try {
+                                value = (ObjectNode) codecContext.mapper()
+                                        .readTree(jsonResources.get(resourceIndex).toString());
+                            } catch (IOException e) {
+                                reason = "bad json";
+                                return false;
+                            }
+                            final Link link = codecContext.codec(Link.class).decode(value, codecContext);
+                            if (resourceLink.equals(link)) {
+                                resourceFound = true;
+                            }
+                        }
+                    } else {
+
+                        for (int resourceIndex = 0; resourceIndex < jsonResources.size(); resourceIndex++) {
+                            final JsonValue value = jsonResources.get(resourceIndex);
+                            if (value.asString().equals(resourceString)) {
+                                resourceFound = true;
+                            }
                         }
                     }
                     if (!resourceFound) {
@@ -467,7 +477,7 @@ public class IntentsResourceTest extends ResourceTest {
     /**
      * Factory to allocate an IntentRelatedFlows matcher.
      *
-     * @param pathEntries list of path conatining flow entries of a particular intent
+     * @param pathEntries   list of path conatining flow entries of a particular intent
      * @param expectedAppId expected app id we are looking for
      * @return matcher
      */
@@ -673,7 +683,7 @@ public class IntentsResourceTest extends ResourceTest {
         @Override
         public boolean matchesSafely(JsonArray json) {
             boolean intentFound = false;
-            final int expectedAttributes = 5;
+            final int expectedAttributes = 6;
             for (int jsonIntentIndex = 0; jsonIntentIndex < json.size();
                  jsonIntentIndex++) {
 
@@ -726,7 +736,7 @@ public class IntentsResourceTest extends ResourceTest {
                 .andReturn(IntentState.INSTALLED)
                 .anyTimes();
         // Register the services needed for the test
-        final CodecManager codecService =  new CodecManager();
+        final CodecManager codecService = new CodecManager();
         codecService.activate();
         ServiceDirectory testDirectory =
                 new TestServiceDirectory()
@@ -735,9 +745,9 @@ public class IntentsResourceTest extends ResourceTest {
                         .add(CodecService.class, codecService)
                         .add(CoreService.class, mockCoreService);
 
-        BaseResource.setServiceDirectory(testDirectory);
+        setServiceDirectory(testDirectory);
 
-        bindNewGenerator();
+        MockIdGenerator.cleanBind();
     }
 
     /**
@@ -745,6 +755,7 @@ public class IntentsResourceTest extends ResourceTest {
      */
     @After
     public void tearDownTest() {
+        MockIdGenerator.unbind();
         verify(mockIntentService);
     }
 
@@ -851,8 +862,11 @@ public class IntentsResourceTest extends ResourceTest {
         flowRules.add(flowRule2);
         FlowRuleIntent flowRuleIntent = new FlowRuleIntent(
                 APP_ID,
+                null,
                 flowRules,
-                new HashSet<NetworkResource>());
+                new HashSet<NetworkResource>(),
+                PathIntent.ProtectionType.PRIMARY,
+        null);
         Intent intent = new MockIntent(3L);
         installableIntents.add(flowRuleIntent);
         intents.add(intent);
@@ -897,6 +911,83 @@ public class IntentsResourceTest extends ResourceTest {
                 + "/0x0").request().get(String.class);
         final JsonObject resultNumeric = Json.parse(responseNumeric).asObject();
         assertThat(resultNumeric, matchesRelatedFlowEntries(paths, APP_ID.name()));
+    }
+
+    /**
+     * Tests the result of a rest api GET for intent installables.
+     */
+    @Test
+    public void testIntentInstallables() {
+
+        Link link1 = DefaultLink.builder()
+                .type(Link.Type.DIRECT)
+                .providerId(ProviderId.NONE)
+                .src(connectPoint1)
+                .dst(connectPoint2)
+                .build();
+
+        Link link2 = DefaultLink.builder()
+                .type(Link.Type.DIRECT)
+                .providerId(ProviderId.NONE)
+                .src(connectPoint3)
+                .dst(connectPoint4)
+                .build();
+
+        Set<NetworkResource> resources = new HashSet<>();
+        resources.add(link1);
+        resources.add(link2);
+
+        FlowRuleIntent flowRuleIntent = new FlowRuleIntent(
+                APP_ID,
+                null,
+                new ArrayList<>(),
+                resources,
+                PathIntent.ProtectionType.PRIMARY,
+                null);
+
+        Intent intent = new MockIntent(MockIntent.nextId());
+        Long intentId = intent.id().id();
+        installableIntents.add(flowRuleIntent);
+        intents.add(intent);
+
+        expect(mockIntentService.getIntent(Key.of(intentId, APP_ID)))
+                .andReturn(intent)
+                .anyTimes();
+        expect(mockIntentService.getIntent(Key.of(intentId.toString(), APP_ID)))
+                .andReturn(intent)
+                .anyTimes();
+        expect(mockIntentService.getIntent(Key.of(intentId, APP_ID)))
+                .andReturn(intent)
+                .anyTimes();
+        expect(mockIntentService.getIntent(Key.of(Long.toHexString(intentId), APP_ID)))
+                .andReturn(null)
+                .anyTimes();
+        expect(mockIntentService.getInstallableIntents(intent.key()))
+                .andReturn(installableIntents)
+                .anyTimes();
+        replay(mockIntentService);
+
+        replay(mockFlowService);
+
+        expect(mockCoreService.getAppId(APP_ID.name()))
+                .andReturn(APP_ID).anyTimes();
+        expect(mockCoreService.getAppId(APP_ID.id()))
+                .andReturn(APP_ID).anyTimes();
+        replay(mockCoreService);
+
+        final WebTarget wt = target();
+
+        // Test get using key string
+        final String response = wt.path("intents/installables/" + APP_ID.name()
+                + "/" + intentId).request().get(String.class);
+        final JsonObject result = Json.parse(response).asObject();
+        assertThat(result.get(INSTALLABLES).asArray(), hasIntent(flowRuleIntent));
+
+        // Test get using numeric value
+        final String responseNumeric = wt.path("intents/installables/" + APP_ID.name()
+                + "/" + Long.toHexString(intentId)).request().get(String.class);
+        final JsonObject resultNumeric = Json.parse(responseNumeric).asObject();
+        assertThat(resultNumeric.get(INSTALLABLES).asArray(), hasIntent(flowRuleIntent));
     }
 
     /**
@@ -1032,4 +1123,30 @@ public class IntentsResourceTest extends ResourceTest {
         assertThat(response.getStatus(), is(HttpURLConnection.HTTP_NO_CONTENT));
     }
 
+    @Test
+    public void testIntentsMiniSummary() {
+        final Intent intent1 = new MockIntent(1L, Collections.emptyList());
+        final HashSet<NetworkResource> resources = new HashSet<>();
+        resources.add(new MockResource(1));
+        resources.add(new MockResource(2));
+        resources.add(new MockResource(3));
+        final Intent intent2 = new MockIntent(2L, resources);
+        intents.add(intent1);
+        intents.add(intent2);
+        final WebTarget wt = target();
+        replay(mockIntentService);
+        final String response = wt.path("intents/minisummary").request().get(String.class);
+        assertThat(response, containsString("{\"All\":{"));
+        final JsonObject result = Json.parse(response).asObject();
+        assertThat(result, notNullValue());
+        assertThat(result.names(), hasSize(2));
+        assertThat(result.names().get(0), containsString("All"));
+        JsonObject jsonIntents = (JsonObject) result.get("All");
+        assertThat(jsonIntents, notNullValue());
+        assertThat(jsonIntents.get("total").toString(), containsString("2"));
+        jsonIntents = (JsonObject) result.get("Mock");
+        assertThat(jsonIntents, notNullValue());
+        assertThat(jsonIntents.get("installed").toString(), containsString("2"));
+    }
 }
+

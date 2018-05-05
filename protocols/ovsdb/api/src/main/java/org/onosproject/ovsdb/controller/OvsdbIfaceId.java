@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * The class representing an ifaceid.
- * This class is immutable.
+ * This class is immutable.不可变的
  */
 public class OvsdbIfaceId extends Identifier<String> {
     /**

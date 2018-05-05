@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ public class PcepFecObjectIPv4Ver1 implements PcepFecObjectIPv4 {
 
                        FEC Object-Type is 1 IPv4 Node ID
      */
-    protected static final Logger log = LoggerFactory.getLogger(PcepFecObjectIPv4Ver1.class);
+    private static final Logger log = LoggerFactory.getLogger(PcepFecObjectIPv4Ver1.class);
 
     public static final byte FEC_OBJ_TYPE = 1;
     public static final byte FEC_OBJ_CLASS = (byte) 226;

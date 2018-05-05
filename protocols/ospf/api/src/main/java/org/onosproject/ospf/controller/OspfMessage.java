@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package org.onosproject.ospf.controller;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.onlab.packet.Ip4Address;
+import org.onosproject.ospf.exceptions.OspfParseException;
 
 /**
  * Representation of an OSPF message.
@@ -48,9 +49,9 @@ public interface OspfMessage {
      * Reads from ChannelBuffer and initializes the type of LSA.
      *
      * @param channelBuffer channel buffer instance
-     * @throws Exception might throws exception while parsing buffer
+     * @throws OspfParseException might throws exception while parsing buffer
      */
-    void readFrom(ChannelBuffer channelBuffer) throws Exception;
+    void readFrom(ChannelBuffer channelBuffer) throws OspfParseException;
 
     /**
      * Returns OSPFMessage as byte array.

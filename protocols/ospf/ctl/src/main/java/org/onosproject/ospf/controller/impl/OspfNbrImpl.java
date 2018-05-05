@@ -1,5 +1,5 @@
 /*
-* Copyright 2016-present Open Networking Laboratory
+* Copyright 2016-present Open Networking Foundation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import org.onosproject.ospf.controller.area.OspfAreaImpl;
 import org.onosproject.ospf.controller.area.OspfInterfaceImpl;
 import org.onosproject.ospf.controller.lsdb.LsaWrapperImpl;
 import org.onosproject.ospf.controller.util.OspfInterfaceType;
+import org.onosproject.ospf.exceptions.OspfParseException;
 import org.onosproject.ospf.protocol.lsa.LsaHeader;
 import org.onosproject.ospf.protocol.lsa.OpaqueLsaHeader;
 import org.onosproject.ospf.protocol.lsa.types.OpaqueLsa10;
@@ -144,23 +145,23 @@ public class OspfNbrImpl implements OspfNbr {
     /**
      * The list of LSAs that have to be flooded.
      */
-    private Map<String, OspfLsa> reTxList = new LinkedHashMap();
+    private Map<String, OspfLsa> reTxList = new LinkedHashMap<>();
 
     /**
      * The list of LSAs that have been flooded but not yet acknowledged on this adjacency.
      */
-    private Map<String, OspfLsa> pendingReTxList = new LinkedHashMap();
+    private Map<String, OspfLsa> pendingReTxList = new LinkedHashMap<>();
 
     /**
      * List of LSAs which are failed to received ACK.
      */
-    private Map failedTxList = new HashMap();
+    private Map failedTxList = new HashMap<>();
 
     /**
      * The complete list of LSAs that make up the area link-state database, at the moment the.
      * neighbor goes into Database Exchange state (EXCHANGE).
      */
-    private List<LsaHeader> ddSummaryList = new CopyOnWriteArrayList();
+    private List<LsaHeader> ddSummaryList = new CopyOnWriteArrayList<>();
 
     /**
      * LSA Request List from Neighbor.
@@ -218,6 +219,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return the IP address of this neighbor
      */
+    @Override
     public Ip4Address neighborIpAddr() {
         return neighborIpAddr;
     }
@@ -227,6 +229,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return true if the neighbor is opaque enabled else false.
      */
+    @Override
     public boolean isOpaqueCapable() {
         return isOpaqueCapable;
     }
@@ -236,6 +239,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @param isOpaqueCapable true if the neighbor is opaque enabledelse false
      */
+    @Override
     public void setIsOpaqueCapable(boolean isOpaqueCapable) {
         this.isOpaqueCapable = isOpaqueCapable;
     }
@@ -245,6 +249,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @param routerDeadInterval router dead interval
      */
+    @Override
     public void setRouterDeadInterval(int routerDeadInterval) {
         this.routerDeadInterval = routerDeadInterval;
     }
@@ -279,9 +284,8 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @param ospfMessage ospf message instance
      * @param channel     netty channel instance
-     * @throws Exception might throws exception
      */
-    public void twoWayReceived(OspfMessage ospfMessage, Channel channel) throws Exception {
+    public void twoWayReceived(OspfMessage ospfMessage, Channel channel) {
         log.debug("OSPFNbr::twoWayReceived...!!!");
         stopInactivityTimeCheck();
         startInactivityTimeCheck();
@@ -363,10 +367,9 @@ public class OspfNbrImpl implements OspfNbr {
      * @param neighborIsMaster neighbor is master or slave
      * @param payload          contains the LSAs to add in Dd Packet
      * @param ch               netty channel instance
-     * @throws Exception might throws exception
      */
     public void negotiationDone(OspfMessage ospfMessage,
-                                boolean neighborIsMaster, List payload, Channel ch) throws Exception {
+                                boolean neighborIsMaster, List payload, Channel ch) {
         stopRxMtDdTimer();
         OspfPacketHeader packet = (OspfPacketHeader) ospfMessage;
         DdPacket ddPacketForCheck = (DdPacket) packet;
@@ -386,7 +389,7 @@ public class OspfNbrImpl implements OspfNbr {
             state = OspfNeighborState.EXCHANGE;
             boolean excludeMaxAgeLsa = true;
             //list of contents of area wise LSA
-            ddSummaryList = (CopyOnWriteArrayList) ospfArea.getLsaHeaders(excludeMaxAgeLsa, isOpaqueCapable);
+            ddSummaryList = ospfArea.getLsaHeaders(excludeMaxAgeLsa, isOpaqueCapable);
 
             if (neighborIsMaster) {
                 processLsas(payload);
@@ -457,9 +460,8 @@ public class OspfNbrImpl implements OspfNbr {
      * Process the LSA Headers received in the last received Database Description OSPFMessage.
      *
      * @param ddPayload LSA headers to process
-     * @throws Exception might throws exception
      */
-    public void processLsas(List ddPayload) throws Exception {
+    public void processLsas(List ddPayload) {
         log.debug("OSPFNbr::processLsas...!!!");
         OspfLsa nextLsa;
         Iterator lsas = ddPayload.iterator();
@@ -499,9 +501,8 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @param reason a string represents the mismatch reason
      * @return OSPF message instance
-     * @throws Exception might throws exception
      */
-    public OspfMessage seqNumMismatch(String reason) throws Exception {
+    public OspfMessage seqNumMismatch(String reason) {
         log.debug("OSPFNbr::seqNumMismatch...{} ", reason);
         stopRxMtDdTimer();
 
@@ -556,9 +557,9 @@ public class OspfNbrImpl implements OspfNbr {
      * In addition, stop the possibly activated re transmission timer.
      *
      * @param ch netty channel instance
-     * @throws Exception on error
      */
-    public void badLSReq(Channel ch) throws Exception {
+    @Override
+    public void badLSReq(Channel ch) {
         log.debug("OSPFNbr::badLSReq...!!!");
 
         if (state.getValue() >= OspfNeighborState.EXCHANGE.getValue()) {
@@ -617,10 +618,9 @@ public class OspfNbrImpl implements OspfNbr {
      * @param neighborIsMaster true if neighbor is master else false
      * @param dataDescPkt      DdPacket instance
      * @param ch               netty channel instance
-     * @throws Exception might throws exception
      */
     public void processDdPacket(boolean neighborIsMaster, DdPacket dataDescPkt,
-                                Channel ch) throws Exception {
+                                Channel ch) {
         log.debug("OSPFNbr::neighborIsMaster.{}", neighborIsMaster);
 
         if (!neighborIsMaster) {
@@ -837,6 +837,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @param ch netty channel instance
      */
+    @Override
     public void adjOk(Channel ch) {
         log.debug("OSPFNbr::adjOk...!!!");
         if (ospfInterface.interfaceType() != OspfInterfaceType.POINT_TO_POINT.value()) {
@@ -896,9 +897,9 @@ public class OspfNbrImpl implements OspfNbr {
      * @param lsUpdPkt LS Update Packet received while Neighbor state was EXCHANGE or
      *                 LOADING
      * @param ch       netty channel instance
-     * @throws Exception might throws exception
+     * @throws OspfParseException on parsing error
      */
-    public void processLsUpdate(LsUpdate lsUpdPkt, Channel ch) throws Exception {
+    public void processLsUpdate(LsUpdate lsUpdPkt, Channel ch) throws OspfParseException {
         stopRxMtLsrTimer();
         log.debug("OSPFNbr::processLsUpdate...!!!");
 
@@ -940,10 +941,8 @@ public class OspfNbrImpl implements OspfNbr {
 
     /***
      * Method gets called when no more ls request list and moving to FULL State.
-     *
-     * @throws Exception might throws exception
      */
-    public void loadingDone() throws Exception {
+    public void loadingDone() {
         stopRxMtLsrTimer();
         stopRxMtDdTimer();
         log.debug("OSPFNbr::loadingDone...!!!");
@@ -1045,13 +1044,13 @@ public class OspfNbrImpl implements OspfNbr {
      * @param receivedViaFlooding received via flooding or not
      * @param ch                  channel instance
      * @param sourceIp            source of this Lsa
+     * @throws OspfParseException on parsing error
      * @return true to remove it from lsReqList else false
-     * @throws Exception might throws exception
      */
     public boolean processReceivedLsa(LsaHeader recLsa,
                                       boolean receivedViaFlooding, Channel ch, Ip4Address sourceIp)
-            throws Exception {
-        log.debug("OSPFNbr::processReceivedLsa(recLsa, recievedViaFlooding, ch)...!!!");
+                    throws OspfParseException {
+        log.debug("OSPFNbr::processReceivedLsa(recLsa, receivedViaFlooding, ch)...!!!");
 
         //Validate the lsa checksum RFC 2328 13 (1)
         ChecksumCalculator checkSum = new ChecksumCalculator();
@@ -1176,7 +1175,7 @@ public class OspfNbrImpl implements OspfNbr {
             }
         }
         // RFC 2328 Section 13  (6)
-        if (lsReqList.contains(key)) {
+        if (lsReqList.containsValue(key)) {
             badLSReq(ch);
         }
         if (status.equals("same")) { //13 (7)
@@ -1276,10 +1275,8 @@ public class OspfNbrImpl implements OspfNbr {
     /**
      * RFC 2328 section 13.4
      * Processing self-originated LSAs.
-     *
-     * @throws Exception might throws exception
      */
-    public void processSelfOriginatedLsa() throws Exception {
+    public void processSelfOriginatedLsa() {
         ospfArea.refreshArea(ospfInterface);
     }
 
@@ -1343,10 +1340,8 @@ public class OspfNbrImpl implements OspfNbr {
 
     /**
      * Called when neighbor is down.
-     *
-     * @throws Exception might throws exception
      */
-    public void neighborDown() throws Exception {
+    public void neighborDown() {
         log.debug("Neighbor Down {} and NeighborId {}", neighborIpAddr,
                   neighborId);
         stopInactivityTimeCheck();
@@ -1397,6 +1392,7 @@ public class OspfNbrImpl implements OspfNbr {
     /**
      * Starts the inactivity timer.
      */
+    @Override
     public void startInactivityTimeCheck() {
         if (!inActivityTimerScheduled) {
             log.debug("OSPFNbr::startInactivityTimeCheck");
@@ -1411,6 +1407,7 @@ public class OspfNbrImpl implements OspfNbr {
     /**
      * Stops the inactivity timer.
      */
+    @Override
     public void stopInactivityTimeCheck() {
         if (inActivityTimerScheduled) {
             log.debug("OSPFNbr::stopInactivityTimeCheck ");
@@ -1440,6 +1437,7 @@ public class OspfNbrImpl implements OspfNbr {
     /**
      * Stops the flooding timer.
      */
+    @Override
     public void stopFloodingTimer() {
         if (floodingTimerScheduled) {
             log.debug("OSPFNbr::stopFloodingTimer ");
@@ -1467,6 +1465,7 @@ public class OspfNbrImpl implements OspfNbr {
     /**
      * Stops the Dd Retransmission executor task.
      */
+    @Override
     public void stopRxMtDdTimer() {
         if (rxmtDdPacketTimerScheduled) {
             exServiceRxmtDDPacket.shutdown();
@@ -1494,6 +1493,7 @@ public class OspfNbrImpl implements OspfNbr {
     /**
      * Stops Ls request retransmission executor task.
      */
+    @Override
     public void stopRxMtLsrTimer() {
         if (rxmtLsrTimerScheduled) {
             exServiceRxmtLsr.shutdown();
@@ -1524,6 +1524,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return neighbor id
      */
+    @Override
     public Ip4Address neighborId() {
         return neighborId;
     }
@@ -1533,6 +1534,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @param neighborId neighbor id
      */
+    @Override
     public void setNeighborId(Ip4Address neighborId) {
         this.neighborId = neighborId;
     }
@@ -1542,6 +1544,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return neighbor DR address
      */
+    @Override
     public Ip4Address neighborDr() {
         return neighborDr;
     }
@@ -1551,6 +1554,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @param neighborDr neighbor DR address
      */
+    @Override
     public void setNeighborDr(Ip4Address neighborDr) {
         this.neighborDr = neighborDr;
     }
@@ -1560,6 +1564,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return neighbor BDR address
      */
+    @Override
     public Ip4Address neighborBdr() {
         return neighborBdr;
     }
@@ -1569,6 +1574,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @param neighborBdr neighbor BDR address
      */
+    @Override
     public void setNeighborBdr(Ip4Address neighborBdr) {
         this.neighborBdr = neighborBdr;
     }
@@ -1578,6 +1584,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return router priority
      */
+    @Override
     public int routerPriority() {
         return routerPriority;
     }
@@ -1587,6 +1594,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @param routerPriority router priority
      */
+    @Override
     public void setRouterPriority(int routerPriority) {
         this.routerPriority = routerPriority;
     }
@@ -1596,6 +1604,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return options value
      */
+    @Override
     public int options() {
         return options;
     }
@@ -1605,6 +1614,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @param options options value
      */
+    @Override
     public void setOptions(int options) {
         this.options = options;
     }
@@ -1614,6 +1624,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return DD sequence number
      */
+    @Override
     public long ddSeqNum() {
         return ddSeqNum;
     }
@@ -1623,6 +1634,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @param ddSeqNum DD sequence number
      */
+    @Override
     public void setDdSeqNum(long ddSeqNum) {
         this.ddSeqNum = ddSeqNum;
     }
@@ -1632,6 +1644,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return true if neighbor is master else false
      */
+    @Override
     public int isMaster() {
         return isMaster;
     }
@@ -1677,6 +1690,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return neighbors state
      */
+    @Override
     public OspfNeighborState getState() {
         return state;
     }
@@ -1695,6 +1709,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @param isMaster neighbor is master or not
      */
+    @Override
     public void setIsMaster(int isMaster) {
         this.isMaster = isMaster;
     }
@@ -1704,6 +1719,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return ls request list
      */
+    @Override
     public Hashtable getLsReqList() {
         return lsReqList;
     }
@@ -1713,6 +1729,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return reTxList instance
      */
+    @Override
     public Map getReTxList() {
         return reTxList;
     }
@@ -1722,6 +1739,7 @@ public class OspfNbrImpl implements OspfNbr {
      *
      * @return pendingReTxList instance
      */
+    @Override
     public Map<String, OspfLsa> getPendingReTxList() {
         return pendingReTxList;
     }
@@ -1902,20 +1920,19 @@ public class OspfNbrImpl implements OspfNbr {
 
                     String key = (String) itr.next();
                     OspfLsa lsa = txList.get(key);
-                    if ((lsa.age() + OspfParameters.INFTRA_NS_DELAY) >= OspfParameters.MAXAGE) {
-                        ((LsaHeader) lsa.lsaHeader()).setAge(OspfParameters.MAXAGE);
-                    } else {
-                        ((LsaHeader) lsa.lsaHeader()).setAge(lsa.age() + OspfParameters.INFTRA_NS_DELAY);
-                    }
-
-                    if ((currentLength + ((LsaHeader) lsa.lsaHeader()).lsPacketLen()) >= maxSize) {
-                        itr.previous();
-                        break;
-                    }
-                    log.debug("FloodingTimer::LSA Type::{}, Header: {}, LSA: {}", lsa.getOspfLsaType(),
-                              lsa.lsaHeader(), lsa);
-
                     if (lsa != null) {
+                        if ((lsa.age() + OspfParameters.INFTRA_NS_DELAY) >= OspfParameters.MAXAGE) {
+                            ((LsaHeader) lsa.lsaHeader()).setAge(OspfParameters.MAXAGE);
+                        } else {
+                            ((LsaHeader) lsa.lsaHeader()).setAge(lsa.age() + OspfParameters.INFTRA_NS_DELAY);
+                        }
+
+                        if ((currentLength + ((LsaHeader) lsa.lsaHeader()).lsPacketLen()) >= maxSize) {
+                            itr.previous();
+                            break;
+                        }
+                        log.debug("FloodingTimer::LSA Type::{}, Header: {}, LSA: {}", lsa.getOspfLsaType(),
+                                  lsa.lsaHeader(), lsa);
                         lsupdate.addLsa(lsa);
                         noLsa++;
                         currentLength = currentLength + ((LsaHeader) lsa.lsaHeader()).lsPacketLen();

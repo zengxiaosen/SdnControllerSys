@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Open Networking Laboratory
+ * Copyright 2016 Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,7 +93,7 @@ public class TeTunnelNbiManager
         List<Tunnel> tunnels = new ArrayList<>();
         Collection<TeTunnel> teTunnels = tunnelService.getTeTunnels();
         teTunnels.forEach(teTunnel -> {
-            Tunnel tunnel = te2YangTunnelConverter(teTunnel);
+            Tunnel tunnel = te2YangTunnelConverter(teTunnel, false);
             tunnels.add(tunnel);
         });
         IetfTe newIetfTe = buildIetfTeWithTunnels(tunnels);

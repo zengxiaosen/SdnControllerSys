@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present Open Networking Laboratory
+ * Copyright 2017-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ public class MeterRemoveCommand extends AbstractShellCommand {
             required = true, multiValued = false)
     private String uri = null;
 
-    @Argument(index = 1, name = "meterId", description = "Meter ID",
+    @Argument(index = 1, name = "meterId", description = "Meter ID hexadecimal value",
             required = true, multiValued = false)
     private String meterIdstr = null;
 
@@ -53,7 +53,7 @@ public class MeterRemoveCommand extends AbstractShellCommand {
         CoreService coreService = get(CoreService.class);
 
         DeviceId deviceId = DeviceId.deviceId(uri);
-        MeterId meterId = MeterId.meterId(Long.parseLong(meterIdstr));
+        MeterId meterId = MeterId.meterId(Long.parseLong(meterIdstr, 16));
 
         Band b = new DefaultBand(Band.Type.DROP, 0L, 0L, (short) 0);
 
@@ -64,5 +64,8 @@ public class MeterRemoveCommand extends AbstractShellCommand {
                 .fromApp(coreService.registerApplication(appId));
         MeterRequest meterRequest = builder.remove();
         service.withdraw(meterRequest, meterId);
+        log.info("Requested meter removal: {}", meterRequest.toString());
+
+        print("Requested meter removal: %s", meterRequest.toString());
     }
 }

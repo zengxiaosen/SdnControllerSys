@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,26 +18,32 @@
  ONOS GUI -- Toolbar Service (theme) -- CSS file
  */
 
-.light .tbar-arrow svg.embeddedIcon .icon .glyph {
-    fill: #838383;
-}
-.dark .tbar-arrow svg.embeddedIcon .icon .glyph {
-    fill: #B2B2B2;
-}
-
 .tbar-arrow svg.embeddedIcon .icon rect {
     stroke: none;
 }
-.light .tbar-arrow svg.embeddedIcon .icon rect {
-    fill: none;
+
+.light .tbar-arrow svg.embeddedIcon .icon .glyph {
+    fill: #838383;
 }
-.dark .tbar-arrow svg.embeddedIcon .icon rect {
+
+.light .tbar-arrow svg.embeddedIcon .icon rect {
     fill: none;
 }
 
 .light .separator {
     border-color: #ddd;
 }
+
+/* ========== DARK Theme ========== */
+
+.dark .tbar-arrow svg.embeddedIcon .icon .glyph {
+    fill: #B2B2B2;
+}
+
+.dark .tbar-arrow svg.embeddedIcon .icon rect {
+    fill: none;
+}
+
 .dark .separator {
-    border-color: #1A1A1A;
+    border-color: #454545;
 }

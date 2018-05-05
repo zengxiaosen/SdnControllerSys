@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 package org.onosproject.store.resource.impl;
 
 import com.google.common.collect.ImmutableList;
-import org.onlab.util.GuavaCollectors;
 import org.onosproject.net.resource.ContinuousResource;
 import org.onosproject.net.resource.ResourceAllocation;
 import org.onosproject.net.resource.ResourceConsumerId;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -92,6 +92,28 @@ final class ContinuousResourceAllocation {
 
         return new ContinuousResourceAllocation(original,
                 Stream.concat(nonMatched.stream(), matched.stream())
-                        .collect(GuavaCollectors.toImmutableList()));
+                        .collect(ImmutableList.toImmutableList()));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        ContinuousResourceAllocation that = (ContinuousResourceAllocation) o;
+
+        if (!original.equals(that.original)) {
+            return false;
+        }
+        return allocations.equals(that.allocations);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(original, allocations);
     }
 }

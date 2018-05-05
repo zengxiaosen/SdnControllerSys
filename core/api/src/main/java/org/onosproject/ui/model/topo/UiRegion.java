@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016-present Open Networking Laboratory
+ *  Copyright 2016-present Open Networking Foundation
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import java.util.Set;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static org.onosproject.net.DeviceId.deviceId;
 import static org.onosproject.net.region.RegionId.regionId;
 
 /**
@@ -60,7 +61,7 @@ public class UiRegion extends UiNode {
 
     private final UiTopology topology;
 
-    private final Region region;
+    private final RegionId regionId;
 
     // keep track of hierarchy (inferred from UiTopoLayoutService)
     private RegionId parent;
@@ -76,7 +77,7 @@ public class UiRegion extends UiNode {
         // Implementation Note: if region is null, this UiRegion is being used
         //  as a container for devices, hosts, links that belong to no region.
         this.topology = topology;
-        this.region = region;
+        this.regionId = region == null ? NULL_ID : region.id();
 
         setLayerOrder(DEFAULT_LAYER_TAGS);
     }
@@ -104,7 +105,7 @@ public class UiRegion extends UiNode {
      * @return region ID
      */
     public RegionId id() {
-        return region == null ? NULL_ID : region.id();
+        return regionId;
     }
 
     /**
@@ -122,7 +123,7 @@ public class UiRegion extends UiNode {
      * @return true if root region
      */
     public boolean isRoot() {
-        return id().equals(parent);
+        return parent == null;
     }
 
     /**
@@ -169,6 +170,7 @@ public class UiRegion extends UiNode {
 
     @Override
     public String name() {
+        Region region = backingRegion();
         return region == null ? NULL_NAME : region.name();
     }
 
@@ -179,7 +181,7 @@ public class UiRegion extends UiNode {
      * @return the backing region instance
      */
     public Region backingRegion() {
-        return region;
+        return isRoot() ? null : topology.services.region().getRegion(regionId);
     }
 
     /**
@@ -210,6 +212,7 @@ public class UiRegion extends UiNode {
      * @return region type
      */
     public Region.Type type() {
+        Region region = backingRegion();
         return region == null ? null : region.type();
     }
 
@@ -308,5 +311,71 @@ public class UiRegion extends UiNode {
         }
         String name = region.name();
         return isNullOrEmpty(name) ? NO_NAME : name;
+    }
+
+    /**
+     * Determins whether the specified event is relevant to the view
+     * constrained to this region.
+     *
+     * @param event UI model event
+     * @return true if relevant
+     */
+    public boolean isRelevant(UiModelEvent event) {
+        switch (event.type()) {
+            case CLUSTER_MEMBER_ADDED_OR_UPDATED:
+            case CLUSTER_MEMBER_REMOVED:
+                return true;
+
+            case REGION_ADDED_OR_UPDATED:
+            case REGION_REMOVED:
+                return isRegionRelevant(((UiRegion) event.subject()).id());
+
+            case DEVICE_ADDED_OR_UPDATED:
+            case DEVICE_REMOVED:
+                return isDeviceRelevant(((UiDevice) event.subject()).id());
+
+            case LINK_ADDED_OR_UPDATED:
+            case LINK_REMOVED:
+                return isLinkRelevant((UiLink) event.subject());
+
+            case HOST_ADDED_OR_UPDATED:
+            case HOST_MOVED:
+            case HOST_REMOVED:
+                return isDeviceRelevant(((UiHost) event.subject()).locationDevice());
+
+            default:
+                return true;
+        }
+    }
+
+    private boolean isDeviceRelevant(DeviceId deviceId) {
+        return deviceIds.contains(deviceId);
+    }
+
+    private boolean isLinkRelevant(UiLink uiLink) {
+        if (uiLink instanceof UiDeviceLink) {
+            UiDeviceLink uiDeviceLink = (UiDeviceLink) uiLink;
+            return isDeviceRelevant(uiDeviceLink.deviceA()) ||
+                    isDeviceRelevant(uiDeviceLink.deviceB());
+
+        } else if (uiLink instanceof UiRegionLink) {
+            UiRegionLink uiRegionLink = (UiRegionLink) uiLink;
+            return isRegionRelevant(uiRegionLink.regionA()) ||
+                    isRegionRelevant(uiRegionLink.regionB());
+
+        } else if (uiLink instanceof UiRegionDeviceLink) {
+            UiRegionDeviceLink uiRegionDeviceLink = (UiRegionDeviceLink) uiLink;
+            return isRegionRelevant(uiRegionDeviceLink.region()) ||
+                    isDeviceRelevant(uiRegionDeviceLink.device());
+
+        } else if (uiLink instanceof UiEdgeLink) {
+            UiEdgeLink uiEdgeLink = (UiEdgeLink) uiLink;
+            return isDeviceRelevant(uiEdgeLink.deviceId());
+        }
+        return false;
+    }
+
+    private boolean isRegionRelevant(RegionId regionId) {
+        return kids.contains(regionId);
     }
 }

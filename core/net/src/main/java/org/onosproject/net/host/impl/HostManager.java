@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,10 @@ import org.onlab.packet.MacAddress;
 import org.onlab.packet.VlanId;
 import org.onlab.util.Tools;
 import org.onosproject.cfg.ComponentConfigService;
-import org.onosproject.incubator.net.intf.InterfaceService;
+import org.onosproject.net.host.HostLocationProbingService.ProbeMode;
+import org.onosproject.net.intf.Interface;
+import org.onosproject.net.intf.InterfaceService;
+import org.onosproject.net.HostLocation;
 import org.onosproject.net.edge.EdgePortService;
 import org.onosproject.net.provider.AbstractListenerProviderRegistry;
 import org.onosproject.net.config.NetworkConfigEvent;
@@ -57,16 +60,15 @@ import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 
 import java.util.Dictionary;
-import java.util.HashSet;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static org.onlab.packet.IPv6.getLinkLocalAddress;
-import static org.onosproject.net.link.ProbedLinkProvider.DEFAULT_MAC;
 import static org.onosproject.security.AppGuard.checkPermission;
+import static org.onosproject.security.AppPermission.Type.HOST_EVENT;
+import static org.onosproject.security.AppPermission.Type.HOST_READ;
 import static org.slf4j.LoggerFactory.getLogger;
-import static org.onosproject.security.AppPermission.Type.*;
 
 /**
  * Provides basic implementation of the host SB &amp; NB APIs.
@@ -124,8 +126,6 @@ public class HostManager
 
     private HostMonitor monitor;
 
-    private static HashSet<String> hashSet = new HashSet<>();
-
 
     @Activate
     public void activate(ComponentContext context) {
@@ -152,7 +152,7 @@ public class HostManager
     }
 
     @Modified
-     public void modified(ComponentContext context) {
+    public void modified(ComponentContext context) {
         boolean oldValue = monitorHosts;
         readComponentConfiguration(context);
         if (probeRate > 0) {
@@ -186,7 +186,7 @@ public class HostManager
         } else {
             monitorHosts = flag;
             log.info("Configured. monitorHosts {}",
-            monitorHosts ? "enabled" : "disabled");
+                     monitorHosts ? "enabled" : "disabled");
         }
 
         Long longValue = Tools.getLongProperty(properties, "probeRate");
@@ -220,24 +220,22 @@ public class HostManager
 
     /**
      * Starts monitoring the hosts by IP Address.
-     *
      */
     private void startMonitoring() {
         store.getHosts().forEach(host -> {
-                    host.ipAddresses().forEach(ip -> {
-                           monitor.addMonitoringFor(ip);
+            host.ipAddresses().forEach(ip -> {
+                monitor.addMonitoringFor(ip);
             });
         });
     }
 
     /**
      * Stops monitoring the hosts by IP Address.
-     *
      */
     private void stopMonitoring() {
         store.getHosts().forEach(host -> {
-                    host.ipAddresses().forEach(ip -> {
-                           monitor.stopMonitoring(ip);
+            host.ipAddresses().forEach(ip -> {
+                monitor.stopMonitoring(ip);
             });
         });
     }
@@ -284,7 +282,6 @@ public class HostManager
     public Set<Host> getHostsByIp(IpAddress ip) {
         checkPermission(HOST_READ);
         checkNotNull(ip, "IP address cannot be null");
-
         return store.getHosts(ip);
     }
 
@@ -338,17 +335,10 @@ public class HostManager
             checkNotNull(hostId, HOST_ID_NULL);
             checkValidity();
             hostDescription = validateHost(hostDescription, hostId);
-//            for(int i=0; i<3; i++) {
-//                log.info("hostDetected........");
-//            }
-            hashSet.add(hostId.toString().trim());
 
-//            log.info("到目前为止host的个数："+ hashSet.size());
-//            log.info("hostId:"+hostId);
             if (!allowDuplicateIps) {
                 removeDuplicates(hostId, hostDescription);
             }
-
             store.createOrUpdateHost(provider().id(), hostId,
                                      hostDescription, replaceIps);
 
@@ -360,7 +350,7 @@ public class HostManager
 
             // Greedy learning of IPv6 host. We have to disable the greedy
             // learning of configured hosts. Validate hosts each time will
-            // overwrite the learnt information with the configured informations.
+            // overwrite the learnt information with the configured information.
             if (greedyLearningIpv6) {
                 // Auto-generation of the IPv6 link local address
                 // using the mac address
@@ -376,19 +366,18 @@ public class HostManager
                     }
                     // Host does not exist in the store or the target is not known
                     if ((host == null || !host.ipAddresses().contains(targetIp6Address))) {
-                        // We generate ONOS ip from the ONOS default mac
-                        // We could use the mac generated for the link
-                        // discovery but maybe does not worth
-                        MacAddress onosMacAddress = MacAddress.valueOf(DEFAULT_MAC);
-                        Ip6Address onosIp6Address = Ip6Address.valueOf(
-                                getLinkLocalAddress(onosMacAddress.toBytes())
-                        );
+                        // Use DAD to probe if interface MAC is not specified
+                        MacAddress probeMac = interfaceService.getInterfacesByPort(hostDescription.location())
+                                .stream().map(Interface::mac).findFirst().orElse(MacAddress.ONOS);
+                        Ip6Address probeIp = !probeMac.equals(MacAddress.ONOS) ?
+                                Ip6Address.valueOf(getLinkLocalAddress(probeMac.toBytes())) :
+                                Ip6Address.ZERO;
                         // We send a probe using the monitoring service
                         monitor.sendProbe(
                                 hostDescription.location(),
                                 targetIp6Address,
-                                onosIp6Address,
-                                onosMacAddress,
+                                probeIp,
+                                probeMac,
                                 hostId.vlanId()
                         );
                     }
@@ -410,9 +399,6 @@ public class HostManager
             });
         }
 
-
-
-
         // returns a HostDescription made from the union of the BasicHostConfig
         // annotations if it exists
         private HostDescription validateHost(HostDescription hostDescription, HostId hostId) {
@@ -427,6 +413,12 @@ public class HostManager
             checkNotNull(hostId, HOST_ID_NULL);
             checkValidity();
             Host host = store.getHost(hostId);
+
+            if (!allowedToChange(hostId)) {
+                log.info("Request to remove {} is ignored due to provider mismatch", hostId);
+                return;
+            }
+
             if (monitorHosts) {
                 host.ipAddresses().forEach(ip -> {
                     monitor.stopMonitoring(ip);
@@ -439,7 +431,47 @@ public class HostManager
         public void removeIpFromHost(HostId hostId, IpAddress ipAddress) {
             checkNotNull(hostId, HOST_ID_NULL);
             checkValidity();
+
+            if (!allowedToChange(hostId)) {
+                log.info("Request to remove {} from {} is ignored due to provider mismatch",
+                        ipAddress, hostId);
+                return;
+            }
+
             store.removeIp(hostId, ipAddress);
+        }
+
+        @Override
+        public void removeLocationFromHost(HostId hostId, HostLocation location) {
+            checkNotNull(hostId, HOST_ID_NULL);
+            checkValidity();
+
+            if (!allowedToChange(hostId)) {
+                log.info("Request to remove {} from {} is ignored due to provider mismatch",
+                        location, hostId);
+                return;
+            }
+
+            store.removeLocation(hostId, location);
+        }
+
+        @Override
+        public MacAddress addPendingHostLocation(HostId hostId, ConnectPoint connectPoint, ProbeMode probeMode) {
+            return store.addPendingHostLocation(hostId, connectPoint, probeMode);
+        }
+
+        @Override
+        public void removePendingHostLocation(MacAddress probeMac) {
+            store.removePendingHostLocation(probeMac);
+        }
+
+        /**
+         * Providers should only be able to remove a host that is provided by itself,
+         * or a host that is not configured.
+         */
+        private boolean allowedToChange(HostId hostId) {
+            Host host = store.getHost(hostId);
+            return host == null || !host.configured() || host.providerId().equals(provider().id());
         }
     }
 
@@ -455,27 +487,49 @@ public class HostManager
     // links that the config does not allow
     private class InternalNetworkConfigListener implements NetworkConfigListener {
         @Override
+        public boolean isRelevant(NetworkConfigEvent event) {
+            return (event.type() == NetworkConfigEvent.Type.CONFIG_ADDED
+                    || event.type() == NetworkConfigEvent.Type.CONFIG_UPDATED)
+                    && (event.configClass().equals(BasicHostConfig.class));
+        }
+
+        @Override
         public void event(NetworkConfigEvent event) {
-            if ((event.type() == NetworkConfigEvent.Type.CONFIG_ADDED ||
-                    event.type() == NetworkConfigEvent.Type.CONFIG_UPDATED) &&
-                    event.configClass().equals(BasicHostConfig.class)) {
-                log.debug("Detected host network config event {}", event.type());
-                kickOutBadHost(((HostId) event.subject()));
+            log.debug("Detected host network config event {}", event.type());
+            HostEvent he = null;
+
+            HostId hostId = (HostId) event.subject();
+            BasicHostConfig cfg =
+                    networkConfigService.getConfig(hostId, BasicHostConfig.class);
+
+            if (!isAllowed(cfg)) {
+                kickOutBadHost(hostId);
+            } else {
+                Host host = getHost(hostId);
+                HostDescription desc =
+                        (host == null) ? null : BasicHostOperator.descriptionOf(host);
+                desc = BasicHostOperator.combine(cfg, desc);
+                if (desc != null) {
+                    he = store.createOrUpdateHost(host.providerId(), hostId, desc, false);
+                }
+            }
+
+            if (he != null) {
+                post(he);
             }
         }
     }
 
-    // checks if the specified host is allowed by the BasicHostConfig
-    // and if not, removes it
+    // by default allowed, otherwise check flag
+    private boolean isAllowed(BasicHostConfig cfg) {
+        return (cfg == null || cfg.isAllowed());
+    }
+
+    // removes the specified host, if it exists
     private void kickOutBadHost(HostId hostId) {
-        BasicHostConfig cfg = networkConfigService.getConfig(hostId, BasicHostConfig.class);
-        if (cfg != null && !cfg.isAllowed()) {
-            Host badHost = getHost(hostId);
-            if (badHost != null) {
-                removeHost(hostId);
-            } else {
-                log.info("Failed removal: Host {} does not exist", hostId);
-            }
+        Host badHost = getHost(hostId);
+        if (badHost != null) {
+            removeHost(hostId);
         }
     }
 }

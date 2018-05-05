@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ public class IPv6SubObject implements PcepValueType {
                maintain this tunnel (usually in the face of an outage
                of the link it was previously routed over).
      */
-    protected static final Logger log = LoggerFactory.getLogger(IPv6SubObject.class);
+    private static final Logger log = LoggerFactory.getLogger(IPv6SubObject.class);
 
     public static final short TYPE = 0x02;
     public static final short LENGTH = 20;
@@ -130,7 +130,7 @@ public class IPv6SubObject implements PcepValueType {
         boolean bFoundNoMask = true;
         //value starts from 3rd byte.
         for (int i = 2; i < 20; ++i) {
-            if (0xFF != raw[i]) {
+            if ((byte) 0xFF != raw[i]) {
                 bFoundNoMask = false;
             }
         }

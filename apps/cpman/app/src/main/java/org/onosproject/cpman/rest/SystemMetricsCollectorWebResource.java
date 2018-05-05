@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,7 +93,7 @@ public class SystemMetricsCollectorWebResource extends AbstractWebResource {
             ObjectNode jsonTree = (ObjectNode) mapper().readTree(stream);
 
             if (jsonTree == null || !checkFields(jsonTree, CPU_FIELD_SET)) {
-                ok(root).build();
+                return ok(root).build();
             }
 
             long cpuLoad = nullIsIllegal((long) (jsonTree.get("cpuLoad").asDouble()
@@ -154,7 +154,7 @@ public class SystemMetricsCollectorWebResource extends AbstractWebResource {
             ObjectNode jsonTree = (ObjectNode) mapper().readTree(stream);
 
             if (jsonTree == null || !checkFields(jsonTree, MEMORY_FIELD_SET)) {
-                ok(root).build();
+                return ok(root).build();
             }
 
             long memUsed = nullIsIllegal(jsonTree.get("memoryUsed").asLong(), INVALID_REQUEST);

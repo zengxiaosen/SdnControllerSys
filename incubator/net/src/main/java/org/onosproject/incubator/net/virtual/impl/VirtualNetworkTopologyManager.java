@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import org.onosproject.net.Path;
 import org.onosproject.net.topology.ClusterId;
 import org.onosproject.net.topology.DefaultGraphDescription;
 import org.onosproject.net.topology.LinkWeigher;
-import org.onosproject.net.topology.LinkWeight;
 import org.onosproject.net.topology.Topology;
 import org.onosproject.net.topology.TopologyCluster;
 import org.onosproject.net.topology.TopologyEvent;
@@ -45,7 +44,6 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onosproject.incubator.net.virtual.DefaultVirtualLink.PID;
-import static org.onosproject.net.topology.AdapterLinkWeigher.adapt;
 
 /**
  * Topology service implementation built on the virtual network service.
@@ -69,7 +67,7 @@ public class VirtualNetworkTopologyManager
      */
     public VirtualNetworkTopologyManager(VirtualNetworkService virtualNetworkManager,
                                          NetworkId networkId) {
-        super(virtualNetworkManager, networkId);
+        super(virtualNetworkManager, networkId, TopologyEvent.class);
     }
 
     @Override
@@ -88,10 +86,6 @@ public class VirtualNetworkTopologyManager
         return new DefaultTopology(PID, graph);
     }
 
-    @Override
-    public LinkedList<Link> getAllPaths(Topology topology){
-        return null;
-    }
     @Override
     public boolean isLatest(Topology topology) {
         Topology currentTopology = currentTopology();
@@ -141,16 +135,9 @@ public class VirtualNetworkTopologyManager
         checkNotNull(dst, DEVICE_ID_NULL);
         return defaultTopology(topology).getPaths(src, dst);
     }
-
     @Override
-    public Set<Path> getPaths1(Topology topology, DeviceId src, DeviceId dst, DeviceId hs) {
+    public LinkedList<Link> getAllPaths(Topology topology){
         return null;
-    }
-
-    @Override
-    public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst,
-                              LinkWeight weight) {
-        return getPaths(topology, src, dst, adapt(weight));
     }
 
     @Override
@@ -172,12 +159,6 @@ public class VirtualNetworkTopologyManager
 
     @Override
     public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src,
-                                              DeviceId dst, LinkWeight weight) {
-        return getDisjointPaths(topology, src, dst, adapt(weight));
-    }
-
-    @Override
-    public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src,
                                               DeviceId dst,
                                               LinkWeigher weigher) {
         checkNotNull(src, DEVICE_ID_NULL);
@@ -193,13 +174,6 @@ public class VirtualNetworkTopologyManager
         checkNotNull(src, DEVICE_ID_NULL);
         checkNotNull(dst, DEVICE_ID_NULL);
         return defaultTopology(topology).getDisjointPaths(src, dst, riskProfile);
-    }
-
-    @Override
-    public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src,
-                                              DeviceId dst, LinkWeight weight,
-                                              Map<Link, Object> riskProfile) {
-        return getDisjointPaths(topology, src, dst, adapt(weight), riskProfile);
     }
 
     @Override

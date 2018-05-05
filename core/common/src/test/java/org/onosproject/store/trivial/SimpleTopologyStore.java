@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import org.onosproject.net.provider.ProviderId;
 import org.onosproject.net.topology.ClusterId;
 import org.onosproject.net.topology.GraphDescription;
 import org.onosproject.net.topology.LinkWeigher;
-import org.onosproject.net.topology.LinkWeight;
 import org.onosproject.net.topology.Topology;
 import org.onosproject.net.topology.TopologyCluster;
 import org.onosproject.net.topology.TopologyEvent;
@@ -45,7 +44,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.onosproject.net.topology.AdapterLinkWeigher.adapt;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
@@ -96,11 +94,11 @@ public class SimpleTopologyStore
     public TopologyCluster getCluster(Topology topology, ClusterId clusterId) {
         return defaultTopology(topology).getCluster(clusterId);
     }
-
     @Override
     public LinkedList<Link> getAllPaths(Topology topology){
         return null;
     }
+
     @Override
     public Set<DeviceId> getClusterDevices(Topology topology, TopologyCluster cluster) {
         return defaultTopology(topology).getClusterDevices(cluster);
@@ -113,39 +111,18 @@ public class SimpleTopologyStore
 
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst) {
-        for(int i=0; i<10; i++){
-            log.info("1是不是被调用了SimpleTopologyStore。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
-        }
         return defaultTopology(topology).getPaths(src, dst);
-    }
-
-    @Override
-    public Set<Path> getPaths(Topology topology, DeviceId src, DeviceId dst,
-                              LinkWeight weight) {
-        for(int i=0; i<10; i++){
-            log.info("2是不是被调用了SimpleTopologyStore。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
-        }
-        return getPaths(topology, src, dst, adapt(weight));
     }
 
     @Override
     public Set<Path> getPaths(Topology topology, DeviceId src,
                               DeviceId dst, LinkWeigher weigher) {
-        for(int i=0; i<10; i++){
-            log.info("3是不是被调用了SimpleTopologyStore。。。。。。。。。。。。。。。。。。。。。。。。。。。。。");
-        }
         return defaultTopology(topology).getPaths(src, dst, weigher);
     }
 
     @Override
     public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src, DeviceId dst) {
         return defaultTopology(topology).getDisjointPaths(src, dst);
-    }
-
-    @Override
-    public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src, DeviceId dst,
-                                              LinkWeight weight) {
-        return getDisjointPaths(topology, src, dst, adapt(weight));
     }
 
     @Override
@@ -158,12 +135,6 @@ public class SimpleTopologyStore
     public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src, DeviceId dst,
                                                   Map<Link, Object> riskProfile) {
         return defaultTopology(topology).getDisjointPaths(src, dst, riskProfile);
-    }
-
-    @Override
-    public Set<DisjointPath> getDisjointPaths(Topology topology, DeviceId src, DeviceId dst,
-                                                  LinkWeight weight, Map<Link, Object> riskProfile) {
-        return getDisjointPaths(topology, src, dst, adapt(weight), riskProfile);
     }
 
     @Override

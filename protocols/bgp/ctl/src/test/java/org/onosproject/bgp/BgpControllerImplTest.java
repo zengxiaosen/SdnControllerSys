@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ import org.onosproject.bgpio.util.Constants;
 @Ignore("Tests are failing due to NPE and due to failure to bind port")
 public class BgpControllerImplTest {
 
-    protected static final Logger log = LoggerFactory
+    private static final Logger log = LoggerFactory
             .getLogger(BgpControllerImplTest.class);
 
     private static final String IP_LOOPBACK_ID1 = "127.0.0.1";

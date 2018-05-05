@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ public class PcepFecObjectIPv4UnnumberedAdjacencyVer1 implements PcepFecObjectIP
 
              FEC Object-Type is 5, Unnumbered Adjacency with IPv4 NodeIDs
      */
-    protected static final Logger log = LoggerFactory.getLogger(PcepFecObjectIPv4UnnumberedAdjacencyVer1.class);
+    private static final Logger log = LoggerFactory.getLogger(PcepFecObjectIPv4UnnumberedAdjacencyVer1.class);
 
     public static final byte FEC_OBJ_TYPE = 5;
     public static final byte FEC_OBJ_CLASS = (byte) 226;

@@ -1,5 +1,5 @@
 /*
-* Copyright 2016-present Open Networking Laboratory
+* Copyright 2016-present Open Networking Foundation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -234,7 +234,7 @@ public class TopologyForDeviceAndLinkImpl implements TopologyForDeviceAndLink {
     /**
      * Gets OSPF Link TED details from the map.
      *
-     * @param key key used to retreive from map
+     * @param key key used to retrieve from map
      * @return OSPF link ted instance
      */
     public OspfLinkTed getOspfLinkTedHashMap(String key) {
@@ -411,7 +411,7 @@ public class TopologyForDeviceAndLinkImpl implements TopologyForDeviceAndLink {
 
         while (iterator.hasNext()) {
             Ip4Address secondValue = (Ip4Address) iterator.next();
-            if (!value.equals("0.0.0.0")) {
+            if (!value.toString().equals("0.0.0.0")) {
                 if ((!value.equals(secondValue))) {
                     if ((!secondValue.equals(ospfArea.routerId()))) {
                         String key = "link:" + value.toString() + "-" + secondValue.toString();
@@ -606,9 +606,9 @@ public class TopologyForDeviceAndLinkImpl implements TopologyForDeviceAndLink {
             routerLsa.lsType();
             List<OspfLsaLink> ospfLsaLinkList = routerLsa.routerLink();
             for (OspfLsaLink link : ospfLsaLinkList) {
-                if (link.linkType == 1 || link.linkType == 2) {
+                if (link.linkType() == 1 || link.linkType() == 2) {
                     if ((routerLsa.advertisingRouter().equals(ospfArea.routerId())) ||
-                            (link.equals(ospfArea.routerId()))) {
+                            (link.linkId().equals(ospfArea.routerId().toString()))) {
                         log.debug("OspfInterface information will not display in web ");
                     } else {
                         String key = routerLsa.advertisingRouter() + "-" + link.linkData();
@@ -641,9 +641,9 @@ public class TopologyForDeviceAndLinkImpl implements TopologyForDeviceAndLink {
             RouterLsa routerLsa = (RouterLsa) ospfLsa;
             List<OspfLsaLink> ospfLsaLinkList = routerLsa.routerLink();
             for (OspfLsaLink link : ospfLsaLinkList) {
-                if (link.linkType == 1 || link.linkType == 2) {
+                if (link.linkType() == 1 || link.linkType() == 2) {
                     if ((routerLsa.advertisingRouter().equals(ospfArea.routerId())) ||
-                            (link.equals(ospfArea.routerId()))) {
+                            (link.linkId().equals(ospfArea.routerId().toString()))) {
                         log.debug("OspfInterface information will not display in web ");
                     } else {
                         String key = routerLsa.advertisingRouter() + "-" + link.linkData();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,28 @@
 
 package org.onosproject.config;
 
-import org.onosproject.config.model.DataNode;
-import org.onosproject.config.model.ResourceId;
+import com.google.common.annotations.Beta;
+import org.onosproject.yang.model.DataNode;
+import org.onosproject.yang.model.ResourceId;
 import org.onosproject.event.ListenerService;
+import org.onosproject.yang.model.RpcInput;
+import org.onosproject.yang.model.RpcOutput;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Service for storing and distributing dynamic configuration data.
  */
+@Beta
 public interface DynamicConfigService
         extends ListenerService<DynamicConfigEvent, DynamicConfigListener> {
+
+    // FIXME revisit and verify ResourceId documentation.
+    // it is likely that it actually is not expecting absolute ResourceId
+
+    // TODO revisit which path ResourceId these API should accepting.
+    // there is inconsistency, some expect parent, some expect node itself
+
     /**
      * Creates a new node in the dynamic config store.
      * This method would throw an exception if there is a node with the same
@@ -32,25 +45,11 @@ public interface DynamicConfigService
      * nodes were not present in the path leading up to the requested node.
      * Failure reason will be the error message in the exception.
      *
-     * @param path data structure with absolute path to the parent
+     * @param parent data structure with absolute path to the parent
      * @param node recursive data structure, holding a leaf node or a subtree
      * @throws FailedException if the new node could not be created
      */
-    void createNode(ResourceId path, DataNode node);
-
-    /**
-     * Creates a new node in the dynamic config store.
-     * Creates any missing parent nodes, leading up to the given node.
-     * This method will throw an exception if there is a node with the same
-     * identifier, already present at the specified path or any of the parent
-     * nodes were not present in the path leading up to the requested node.
-     * Failure reason will be the error message in the exception.
-     *
-     * @param path data structure with absolute path to the parent
-     * @param node recursive data structure, holding a leaf node or a subtree
-     * @throws FailedException if the new node could not be created
-     */
-    void createNodeRecursive(ResourceId path, DataNode node);
+    void createNode(ResourceId parent, DataNode node);
 
     /**
      * Reads the requested node form the dynamic config store.
@@ -68,43 +67,26 @@ public interface DynamicConfigService
     DataNode readNode(ResourceId path, Filter filter);
 
     /**
-     * Returns the number of children under the node at the given path.
-     * This method would throw an exception if the requested node or any parent
-     * nodes in the path were not present.
-     * Failure reason will be the error message in the exception.
+     * Returns whether the requested node exists in the Dynamic Config store.
      *
      * @param path data structure with absolute path to the intended node
-     * @param filter filtering conditions to be applied on the result list of nodes
-     * @return the number of children after applying the filtering conditions if any
-     * @throws FailedException if the request failed
+     * @return {@code true} if the node existed in the store
+     * {@code false} otherwise
      */
-    Integer getNumberOfChildren(ResourceId path, Filter filter);
+    Boolean nodeExist(ResourceId path);
 
     /**
      * Updates an existing node in the dynamic config store.
-     * This method would throw an exception if the requested node, any of its
-     * children or any parent nodes in the path were not present.
-     * Failure reason will be the error message in the exception.
-     *
-     * @param path data structure with absolute path to the parent
-     * @param node recursive data structure, holding a leaf node or a subtree
-     * @throws FailedException if the update request failed
-     */
-    void updateNode(ResourceId path, DataNode node);
-
-    /**
-     * Updates an existing node in the dynamic config store.
-     * Any missing children nodes will be created with this request.
+     * Existing nodes will be updated and missing nodes will be created as needed.
      * This method would throw an exception if the requested node or any of the
      * parent nodes in the path were not present.
      * Failure reason will be the error message in the exception.
      *
-     * @param path data structure with absolute path to the parent
+     * @param parent data structure with absolute path to the parent
      * @param node recursive data structure, holding a leaf node or a subtree
      * @throws FailedException if the update request failed for any reason
-     *
      */
-    void updateNodeRecursive(ResourceId path, DataNode node);
+    void updateNode(ResourceId parent, DataNode node);
 
     /**
      * Replaces nodes in the dynamic config store.
@@ -113,18 +95,17 @@ public interface DynamicConfigService
      * the requested node or any of the parent nodes in the path were not
      * present. Failure reason will be the error message in the exception.
      *
-     * @param path data structure with absolute path to the parent
+     * @param parent data structure with absolute path to the parent
      * @param node recursive data structure, holding a leaf node or a subtree
      * @throws FailedException if the replace request failed
      */
-    void replaceNode(ResourceId path, DataNode node);
+    void replaceNode(ResourceId parent, DataNode node);
 
     /**
-     * Removes a leaf node from the dynamic config store.
-     * This method would throw an exception if the requested node or any of the
-     * parent nodes in the path were not present or the specified node is the
-     * root node or has one or more children.
-     * Failure reason will be the error message in the exception.
+     * Removes a node from the dynamic config store.
+     * If the node pointed to a subtree, that will be deleted recursively.
+     * It will throw an exception if the requested node or any of the parent nodes in the
+     * path were not present; Failure reason will be the error message in the exception.
      *
      * @param path data structure with absolute path to the intended node
      * @throws FailedException if the delete request failed
@@ -132,72 +113,22 @@ public interface DynamicConfigService
     void deleteNode(ResourceId path);
 
     /**
-     * Removes a subtree from the dynamic config store.
-     * This method will delete all the children recursively, under the given
-     * node. It will throw an exception if the requested node or any of the
-     * parent nodes in the path were not present.
-     * Failure reason will be the error message in the exception.
+     * Invokes an RPC.
      *
-     * @param path data structure with absolute path to the intended node
-     * @throws FailedException if the delete request failed
+     * @param id of RPC node
+     * @param input RPC input
+     * @return future that will be completed with RpcOutput
+     * @throws FailedException if the RPC could not be invoked
      */
-    void deleteNodeRecursive(ResourceId path);
-
-    /**
-     * Adds a listener to be notified when a leaf or subtree rooted at the
-     * specified path is modified.
-     *
-     * @param path data structure with absolute path to the node being listened to
-     * @param listener listener to be notified
-     * @throws FailedException if the listener could not be added
-     */
-    void addConfigListener(ResourceId path, DynamicConfigListener listener);
-
-    /**
-     * Removes a previously added listener.
-     *
-     * @param path data structure with absolute path to the node being listened to
-     * @param listener listener to unregister
-     * @throws FailedException if the listener could not be removed
-     */
-    void removeConfigListener(ResourceId path, DynamicConfigListener listener);
-
-    /**
-     * Registers an RPC handler.
-     *
-     * @param handler RPC handler
-     * @param command RPC command
-     * @throws FailedException if the handler could not be added
-     */
-    void registerHandler(RpcHandler handler, RpcCommand command);
-
-    /**
-     * Unregisters an RPC receiver.
-     *
-     * @param handler RPC handler
-     * @param command RPC command
-     * @throws FailedException if the handler could not be removed
-     */
-    void unRegisterHandler(RpcHandler handler, RpcCommand command);
+    @Deprecated
+    CompletableFuture<RpcOutput> invokeRpc(ResourceId id, RpcInput input);
 
     /**
      * Invokes an RPC.
      *
-     * @param caller of the of the RPC
-     * @param msgId RPC message id
-     * @param command RPC command
-     * @param input RPC input
+     * @param input RPC input with ResourceId and DataNode
+     * @return future that will be completed with RpcOutput
      * @throws FailedException if the RPC could not be invoked
      */
-    void invokeRpc(RpcCaller caller, Integer msgId, RpcCommand command, RpcInput input);
-
-    /**
-     * Provides response to a a previously invoked RPC.
-     *
-     * @param msgId of a previously invoked RPC
-     * @param output data from the RPC execution
-     * @throws FailedException if the RPC response was invalid
-     * (or the msg id was not recognised by the store)
-     */
-    void rpcResponse(Integer msgId, RpcOutput output);
+    CompletableFuture<RpcOutput> invokeRpc(RpcInput input);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ public class PcepRsvpSpecObjHeader {
               ERROR_SPEC object Header
      */
 
-    protected static final Logger log = LoggerFactory.getLogger(PcepRsvpSpecObjHeader.class);
+    private static final Logger log = LoggerFactory.getLogger(PcepRsvpSpecObjHeader.class);
 
     private short objLen;
     private byte objClassNum;

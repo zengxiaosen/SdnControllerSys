@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.testing.EqualsTester;
+import org.onlab.graph.ScalarWeight;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -53,15 +54,15 @@ public class DefaultDisjointPathTest {
 
     private static List<Link> links1 = ImmutableList.of(link1, link2);
     private static DefaultPath path1 =
-            new DefaultPath(PID, links1, 1.0);
+            new DefaultPath(PID, links1, ScalarWeight.toWeight(1.0));
 
     private static List<Link> links2 = ImmutableList.of(link2, link1);
     private static DefaultPath path2 =
-            new DefaultPath(PID, links2, 2.0);
+            new DefaultPath(PID, links2, ScalarWeight.toWeight(2.0));
 
     private static List<Link> links3 = ImmutableList.of(link1, link2, link3);
     private static DefaultPath path3 =
-            new DefaultPath(PID, links3, 3.0);
+            new DefaultPath(PID, links3, ScalarWeight.toWeight(3.0));
 
     private static DefaultDisjointPath disjointPath1 =
             new DefaultDisjointPath(PID, path1, path2);
@@ -84,28 +85,6 @@ public class DefaultDisjointPathTest {
         assertThat(disjointPath1.backup(), is(path2));
         assertThat(disjointPath1.links(), is(links1));
         assertThat(disjointPath1.cost(), is(1.0));
-    }
-
-    /**
-     * Tests switching to the backup path.
-     */
-    @Test
-    public void testUseBackup() {
-        disjointPath1.useBackup();
-        assertThat(disjointPath1.primary(), is(path1));
-        assertThat(disjointPath1.backup(), is(path2));
-        assertThat(disjointPath1.links(), is(links2));
-        assertThat(disjointPath1.cost(), is(2.0));
-
-        disjointPath1.useBackup();
-        assertThat(disjointPath1.links(), is(links1));
-        assertThat(disjointPath1.cost(), is(1.0));
-
-        assertThat(disjointPath4.primary(), is(path1));
-        assertThat(disjointPath4.backup(), is((DefaultDisjointPath) null));
-        disjointPath4.useBackup();
-        assertThat(disjointPath4.primary(), is(path1));
-        assertThat(disjointPath4.backup(), is((DefaultDisjointPath) null));
     }
 
     /**

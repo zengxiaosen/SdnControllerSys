@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,10 +38,10 @@ import static com.google.common.collect.Lists.newArrayList;
 public class HostsListCommand extends AbstractShellCommand {
 
     private static final String FMT =
-            "id=%s, mac=%s, location=%s/%s, vlan=%s, ip(s)=%s%s, configured=%s";
+            "id=%s, mac=%s, locations=%s, vlan=%s, ip(s)=%s%s, provider=%s:%s, configured=%s";
 
     private static final String FMT_SHORT =
-            "id=%s, mac=%s, location=%s/%s, vlan=%s, ip(s)=%s";
+            "id=%s, mac=%s, locations=%s, vlan=%s, ip(s)=%s";
 
     @Option(name = "-s", aliases = "--short", description = "Show short output only",
             required = false, multiValued = false)
@@ -88,12 +88,13 @@ public class HostsListCommand extends AbstractShellCommand {
     protected void printHost(Host host) {
         if (shortOnly) {
             print(FMT_SHORT, host.id(), host.mac(),
-                  host.location().deviceId(), host.location().port(),
+                  host.locations(),
                   host.vlan(), host.ipAddresses());
         } else {
             print(FMT, host.id(), host.mac(),
-                  host.location().deviceId(), host.location().port(),
+                  host.locations(),
                   host.vlan(), host.ipAddresses(), annotations(host.annotations()),
+                  host.providerId().scheme(), host.providerId().id(),
                   host.configured());
         }
     }

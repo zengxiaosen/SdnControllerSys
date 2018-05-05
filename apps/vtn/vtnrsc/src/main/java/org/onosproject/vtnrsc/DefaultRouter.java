@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,9 +55,9 @@ public final class DefaultRouter implements Router {
                          List<String> routes) {
         this.id = checkNotNull(id, "id cannot be null");
         this.name = routerName;
-        this.adminStateUp = checkNotNull(adminStateUp, "adminStateUp cannot be null");
+        this.adminStateUp = adminStateUp;
         this.status = checkNotNull(status, "status cannot be null");
-        this.distributed = checkNotNull(distributed, "distributed cannot be null");
+        this.distributed = distributed;
         this.externalGatewayInfo = externalGatewayInfo;
         this.gatewayPortId = gatewayPortId;
         this.tenantId = checkNotNull(tenantId, "tenantId cannot be null");

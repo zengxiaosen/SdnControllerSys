@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import org.onosproject.store.service.AsyncConsistentMap;
 import org.onosproject.store.service.AsyncConsistentMultimap;
 import org.onosproject.store.service.AsyncConsistentTreeMap;
 import org.onosproject.store.service.AsyncDistributedSet;
+import org.onosproject.store.service.AsyncDocumentTree;
 
 import java.util.function.Function;
 
@@ -75,6 +76,18 @@ public final class DistributedPrimitives {
      */
     public static <K, V> AsyncConsistentMap<K, V> newUnmodifiableMap(AsyncConsistentMap<K, V> map) {
         return new UnmodifiableAsyncConsistentMap<>(map);
+    }
+
+    /**
+     * Creates an instance of {@code AsyncConsistentMap} that disallows null values.
+     *
+     * @param map backing map
+     * @return not null map
+     * @param <K> map key type
+     * @param <V> map value type
+     */
+    public static <K, V> AsyncConsistentMap<K, V> newNotNullMap(AsyncConsistentMap<K, V> map) {
+        return new NotNullAsyncConsistentMap<>(map);
     }
 
     /**
@@ -172,6 +185,17 @@ public final class DistributedPrimitives {
                                                         keyDecoder,
                                                         valueDecoder,
                                                         valueEncoder);
+    }
+
+    /**
+     * Creates an instance of {@code AsyncDocumentTree} that caches values on get.
+     *
+     * @param tree backing tree
+     * @return caching tree
+     * @param <V> tree value type
+     */
+    public static <V> AsyncDocumentTree<V> newCachingDocumentTree(AsyncDocumentTree<V> tree) {
+        return new CachingAsyncDocumentTree<V>(tree);
     }
 
 }

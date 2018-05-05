@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,16 +51,16 @@
             return this.footer.append(x);
         },
         emptyRegions: function () {
-            this.header.selectAll("*").remove();
-            this.body.selectAll("*").remove();
-            this.footer.selectAll("*").remove();
+            this.header.selectAll('*').remove();
+            this.body.selectAll('*').remove();
+            this.footer.selectAll('*').remove();
         },
         destroy: function () {
             ps.destroyPanel(this.id);
         },
         isVisible: function () {
             return this.el.isVisible();
-        }
+        },
     };
 
     angular.module('ovTopo2')
@@ -71,7 +71,7 @@
             ps = _ps_;
 
             return View.extend(panel);
-        }
+        },
     ]);
 
 })();

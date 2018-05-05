@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,21 +20,17 @@ import org.onosproject.core.GroupId;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
-import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
 
-import java.util.HashMap;
 import java.util.Optional;
 
 /**
  * Service for obtaining statistic information about link in the system.
  * Statistics are obtained from the FlowRuleService in order to minimize the
- * amount of hammering occuring at the dataplane.
+ * amount of hammering occurring at the dataplane.
  */
 public interface StatisticService {
-
     Load vportload(ConnectPoint connectPoint);
-
     /**
      * Obtain the load for a the ingress to the given link.
      *
@@ -43,12 +39,6 @@ public interface StatisticService {
      */
     Load load(Link link);
 
-    /**
-     * 自研.增加对流速的统计
-     * @param connectPoint
-     * @return
-     */
-    HashMap<FlowEntry, Long> flow_rate_interval(ConnectPoint connectPoint);
     /**
      * Obtain the load for the given port.
      *

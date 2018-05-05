@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,10 +64,29 @@ public class ObstacleConstraint extends BooleanConstraint {
     }
 
     private boolean isValid(Link link) {
-        DeviceId src = link.src().deviceId();
-        DeviceId dst = link.dst().deviceId();
+        if (link.type() != Link.Type.EDGE) {
+            DeviceId src = link.src().deviceId();
+            DeviceId dst = link.dst().deviceId();
 
-        return !(obstacles.contains(src) || obstacles.contains(dst));
+            return !(obstacles.contains(src) || obstacles.contains(dst));
+
+        } else {
+
+            boolean isSrc = true;
+            if (link.src().elementId() instanceof DeviceId) {
+
+                DeviceId src = link.src().deviceId();
+                isSrc = !(obstacles.contains(src));
+            }
+
+            boolean isDst = true;
+            if (link.dst().elementId() instanceof DeviceId) {
+                DeviceId dst = link.dst().deviceId();
+                isDst = !(obstacles.contains(dst));
+            }
+
+            return isSrc || isDst;
+        }
     }
 
     @Override

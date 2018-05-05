@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ public class BasicUiTopoLayoutConfigTest extends AbstractConfigTest {
 
     private static final String LAYOUT_JSON = "configs.layouts.1.json";
 
-    private static final String L_DEFAULT = "_default_";
+    private static final String L_DEFAULT = "root";
     private static final String L1 = "l1";
     private static final String L2 = "l2";
     private static final String L3 = "l3";

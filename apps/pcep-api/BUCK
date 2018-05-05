@@ -1,5 +1,6 @@
 COMPILE_DEPS = [
     '//lib:CORE_DEPS',
+    '//lib:JACKSON',
     '//protocols/ovsdb/api:onos-protocols-ovsdb-api',
     '//protocols/ovsdb/rfc:onos-protocols-ovsdb-rfc',
 ]
@@ -10,7 +11,7 @@ osgi_jar_with_tests (
 
 onos_app (
     title = 'PCEP Protocol API',
-    category = 'Traffic Steering',
+    category = 'Protocol',
     url = 'http://onosproject.org',
     description = 'PCEP protocol API.',
 )

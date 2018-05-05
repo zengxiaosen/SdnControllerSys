@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,8 +29,8 @@ import org.onlab.packet.IpPrefix;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.VlanId;
 import org.onlab.packet.ndp.NeighborSolicitation;
-import org.onosproject.incubator.net.intf.Interface;
-import org.onosproject.incubator.net.intf.InterfaceService;
+import org.onosproject.net.intf.Interface;
+import org.onosproject.net.intf.InterfaceService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
@@ -131,7 +131,7 @@ public class HostMonitorTest {
         hostMonitor.registerHostProvider(hostProvider);
         hostMonitor.addMonitoringFor(hostIp);
 
-        hostMonitor.run(null);
+        hostMonitor.run();
 
         verify(hostProvider);
     }
@@ -163,9 +163,9 @@ public class HostMonitorTest {
         replay(hostManager);
 
         InterfaceService interfaceService = createMock(InterfaceService.class);
-        expect(interfaceService.getMatchingInterface(TARGET_IPV4_ADDR))
-                .andReturn(new Interface(Interface.NO_INTERFACE_NAME,
-                        cp, Collections.singletonList(IA1), sourceMac, VlanId.NONE))
+        expect(interfaceService.getMatchingInterfaces(TARGET_IPV4_ADDR))
+                .andReturn(Collections.singleton(new Interface(Interface.NO_INTERFACE_NAME,
+                        cp, Collections.singletonList(IA1), sourceMac, VlanId.NONE)))
                 .anyTimes();
         replay(interfaceService);
 
@@ -176,7 +176,7 @@ public class HostMonitorTest {
         hostMonitor = new HostMonitor(packetService, hostManager, interfaceService, edgePortService);
 
         hostMonitor.addMonitoringFor(TARGET_IPV4_ADDR);
-        hostMonitor.run(null);
+        hostMonitor.run();
 
 
         // Check that a packet was sent to our PacketService and that it has
@@ -232,9 +232,9 @@ public class HostMonitorTest {
         replay(hostManager);
 
         InterfaceService interfaceService = createMock(InterfaceService.class);
-        expect(interfaceService.getMatchingInterface(TARGET_IPV6_ADDR))
-                .andReturn(new Interface(Interface.NO_INTERFACE_NAME, cp,
-                        Collections.singletonList(IA2), sourceMac2, VlanId.NONE))
+        expect(interfaceService.getMatchingInterfaces(TARGET_IPV6_ADDR))
+                .andReturn(Collections.singleton(new Interface(Interface.NO_INTERFACE_NAME, cp,
+                        Collections.singletonList(IA2), sourceMac2, VlanId.NONE)))
                 .anyTimes();
         replay(interfaceService);
 
@@ -245,7 +245,7 @@ public class HostMonitorTest {
         hostMonitor = new HostMonitor(packetService, hostManager, interfaceService, edgePortService);
 
         hostMonitor.addMonitoringFor(TARGET_IPV6_ADDR);
-        hostMonitor.run(null);
+        hostMonitor.run();
 
 
         // Check that a packet was sent to our PacketService and that it has
@@ -303,9 +303,9 @@ public class HostMonitorTest {
         replay(hostManager);
 
         InterfaceService interfaceService = createMock(InterfaceService.class);
-        expect(interfaceService.getMatchingInterface(TARGET_IPV4_ADDR))
-                .andReturn(new Interface(Interface.NO_INTERFACE_NAME, cp,
-                        Collections.singletonList(IA1), sourceMac, VlanId.vlanId(vlan)))
+        expect(interfaceService.getMatchingInterfaces(TARGET_IPV4_ADDR))
+                .andReturn(Collections.singleton(new Interface(Interface.NO_INTERFACE_NAME, cp,
+                        Collections.singletonList(IA1), sourceMac, VlanId.vlanId(vlan))))
                 .anyTimes();
         replay(interfaceService);
 
@@ -316,7 +316,7 @@ public class HostMonitorTest {
         hostMonitor = new HostMonitor(packetService, hostManager, interfaceService, edgePortService);
 
         hostMonitor.addMonitoringFor(TARGET_IPV4_ADDR);
-        hostMonitor.run(null);
+        hostMonitor.run();
 
 
         // Check that a packet was sent to our PacketService and that it has
@@ -373,9 +373,9 @@ public class HostMonitorTest {
         replay(hostManager);
 
         InterfaceService interfaceService = createMock(InterfaceService.class);
-        expect(interfaceService.getMatchingInterface(TARGET_IPV6_ADDR))
-                .andReturn(new Interface(Interface.NO_INTERFACE_NAME, cp,
-                        Collections.singletonList(IA2), sourceMac2, VlanId.vlanId(vlan)))
+        expect(interfaceService.getMatchingInterfaces(TARGET_IPV6_ADDR))
+                .andReturn(Collections.singleton(new Interface(Interface.NO_INTERFACE_NAME, cp,
+                        Collections.singletonList(IA2), sourceMac2, VlanId.vlanId(vlan))))
                 .anyTimes();
         replay(interfaceService);
 
@@ -386,7 +386,7 @@ public class HostMonitorTest {
         hostMonitor = new HostMonitor(packetService, hostManager, interfaceService, edgePortService);
 
         hostMonitor.addMonitoringFor(TARGET_IPV6_ADDR);
-        hostMonitor.run(null);
+        hostMonitor.run();
 
 
         // Check that a packet was sent to our PacketService and that it has

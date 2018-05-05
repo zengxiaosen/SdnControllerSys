@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright 2016-present Open Networking Laboratory
+  ~ Copyright 2016-present Open Networking Foundation
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -18,10 +18,30 @@
     <command-bundle xmlns="http://karaf.apache.org/xmlns/shell/v1.1.0">
         <command>
             <action class="org.onosproject.newoptical.cli.AddOpticalConnectivityCommand"/>
+            <completers>
+                <ref component-id="connectPointCompleter"/>
+                <ref component-id="connectPointCompleter"/>
+                <null/>
+            </completers>
         </command>
+
         <command>
             <action class="org.onosproject.newoptical.cli.RemoveOpticalConnectivityCommand"/>
+            <completers>
+                <ref component-id="opticalConnectivityIdCompleter"/>
+                <null/>
+            </completers>
         </command>
+
+        <command>
+            <action class="org.onosproject.newoptical.cli.ListOpticalConnectivityCommand"/>
+        </command>
+
     </command-bundle>
+
+    <!-- TODO complete only applicable ports -->
+    <bean id="connectPointCompleter" class="org.onosproject.cli.net.ConnectPointCompleter"/>
+
+    <bean id="opticalConnectivityIdCompleter" class="org.onosproject.newoptical.cli.OpticalConnectivityIdCompleter"/>
 
 </blueprint>

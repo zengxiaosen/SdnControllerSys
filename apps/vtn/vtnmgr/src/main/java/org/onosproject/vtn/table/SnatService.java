@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,11 +28,14 @@ import org.onosproject.vtnrsc.SegmentationId;
  * SnatService interface provides the rules in SNAT table which is Table(40) for ovs pipeline.
  * SNAT means Source Network Address Translation, it is acronym for network terminology.
  * Handle the upward flows.
+ * SnatService接口提供了SNAT表中的规则，该规则是ovs pipeline的表（40）。SNAT表示源网络地址转换，
+ * 它是网络术语的首字母缩写。 处理上层的流。
+ * router修改返回的数据包，将其转发给真正的VM实例，这个行为被称为 Source NAT
  */
 public interface SnatService {
 
     /**
-     * Assemble the SNAT table rules.
+     * Assemble the SNAT table rules.组装SNAT表规则
      * Match: ipv4 type, vnid, destination ip and source ip.
      * Action: set eth_src, set eth_dst, set ip_src, set vnid and goto L2Forward Table(50).
      *
@@ -43,7 +46,7 @@ public interface SnatService {
      * @param ethDst external gateway mac
      * @param ethSrc external port mac
      * @param ipSrc floating ip
-     * @param actionVni external network VNI
+     * @param actionVni external network VNI，外部网络的VNI
      * @param type the operation type of the flow rules
      */
     void programSnatSameSegmentRules(DeviceId deviceId, SegmentationId matchVni,

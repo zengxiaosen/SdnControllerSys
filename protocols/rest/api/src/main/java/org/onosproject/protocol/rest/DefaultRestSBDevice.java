@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.onlab.packet.IpAddress;
 import org.onosproject.net.DeviceId;
 
+import static com.google.common.base.Strings.nullToEmpty;
+
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Objects;
@@ -41,6 +43,8 @@ public class DefaultRestSBDevice implements RestSBDevice {
     private String protocol;
     private String url;
     private boolean isProxy;
+    private AuthenticationScheme authenticationScheme;
+    private String token;
     private final Optional<String> testUrl;
     private final Optional<String> manufacturer;
     private final Optional<String> hwVersion;
@@ -48,13 +52,13 @@ public class DefaultRestSBDevice implements RestSBDevice {
 
     public DefaultRestSBDevice(IpAddress ip, int port, String name, String password,
                                String protocol, String url, boolean isActive) {
-        this(ip, port, name, password, protocol, url, isActive, "", "", "", "");
+        this(ip, port, name, password, protocol, url, isActive, "", "", "", "", AuthenticationScheme.BASIC, "");
     }
 
     public DefaultRestSBDevice(IpAddress ip, int port, String name, String password,
                                String protocol, String url, boolean isActive, String testUrl, String manufacturer,
-                               String hwVersion,
-                               String swVersion) {
+                               String hwVersion, String swVersion, AuthenticationScheme authenticationScheme,
+                               String token) {
         Preconditions.checkNotNull(ip, "IP address cannot be null");
         Preconditions.checkArgument(port > 0, "Port address cannot be negative");
         Preconditions.checkNotNull(protocol, "protocol address cannot be null");
@@ -65,6 +69,8 @@ public class DefaultRestSBDevice implements RestSBDevice {
         this.isActive = isActive;
         this.protocol = protocol;
         this.url = StringUtils.isEmpty(url) ? null : url;
+        this.authenticationScheme = authenticationScheme;
+        this.token = token;
         this.manufacturer = StringUtils.isEmpty(manufacturer) ?
                 Optional.empty() : Optional.ofNullable(manufacturer);
         this.hwVersion = StringUtils.isEmpty(hwVersion) ?
@@ -159,6 +165,16 @@ public class DefaultRestSBDevice implements RestSBDevice {
     }
 
     @Override
+    public AuthenticationScheme authentication() {
+        return authenticationScheme;
+    }
+
+    @Override
+    public String token() {
+        return token;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                 .omitNullValues()
@@ -168,6 +184,8 @@ public class DefaultRestSBDevice implements RestSBDevice {
                 .add("username", username)
                 .add("port", port)
                 .add("ip", ip)
+                .add("authentication", authenticationScheme.name())
+                .add("token", token)
                 .add("manufacturer", manufacturer.orElse(null))
                 .add("hwVersion", hwVersion.orElse(null))
                 .add("swVersion", swVersion.orElse(null))
@@ -175,6 +193,7 @@ public class DefaultRestSBDevice implements RestSBDevice {
 
     }
 
+    // FIXME revisit equality condition. Why urls are not included?
     @Override
     public boolean equals(Object obj) {
         if (obj == this) {
@@ -183,15 +202,16 @@ public class DefaultRestSBDevice implements RestSBDevice {
         if (!(obj instanceof RestSBDevice)) {
             return false;
         }
-        RestSBDevice device = (RestSBDevice) obj;
-        return this.username.equals(device.username()) && this.ip.equals(device.ip()) &&
-                this.port == device.port();
+        RestSBDevice that = (RestSBDevice) obj;
+        return Objects.equals(this.ip, that.ip()) &&
+               this.port == that.port() &&
+               nullToEmpty(this.username).equals(nullToEmpty(that.username()));
 
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(ip, port);
+        return Objects.hash(ip, port, nullToEmpty(username));
     }
 
 }

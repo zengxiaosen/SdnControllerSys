@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,12 +28,11 @@ import org.onlab.packet.TpPort;
 import org.onlab.packet.VlanId;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
-import org.onosproject.incubator.net.intf.Interface;
-import org.onosproject.incubator.net.intf.InterfaceListener;
-import org.onosproject.incubator.net.intf.InterfaceService;
+import org.onosproject.intentsync.IntentSynchronizationService;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.EncapsulationType;
+import org.onosproject.net.FilteredConnectPoint;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigService;
@@ -46,7 +45,9 @@ import org.onosproject.net.intent.AbstractIntentTest;
 import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.Key;
 import org.onosproject.net.intent.PointToPointIntent;
-import org.onosproject.intentsync.IntentSynchronizationService;
+import org.onosproject.net.intf.Interface;
+import org.onosproject.net.intf.InterfaceListener;
+import org.onosproject.net.intf.InterfaceService;
 import org.onosproject.routing.config.BgpConfig;
 import org.onosproject.sdnip.config.SdnIpConfig;
 
@@ -119,7 +120,7 @@ public class PeerConnectivityManagerTest extends AbstractIntentTest {
     private static final VlanId VLAN30 = VlanId.vlanId(Short.valueOf("30"));
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         interfaceService = createMock(InterfaceService.class);
@@ -345,8 +346,8 @@ public class PeerConnectivityManagerTest extends AbstractIntentTest {
                 .key(key)
                 .selector(builder.build())
                 .treatment(treatment.build())
-                .ingressPoint(srcConnectPoint)
-                .egressPoint(dstConnectPoint)
+                .filteredIngressPoint(new FilteredConnectPoint(srcConnectPoint))
+                .filteredEgressPoint(new FilteredConnectPoint(dstConnectPoint))
                 .build();
 
         intentList.add(intent);
@@ -517,8 +518,8 @@ public class PeerConnectivityManagerTest extends AbstractIntentTest {
                 .key(key)
                 .selector(builder.build())
                 .treatment(treatment.build())
-                .ingressPoint(srcConnectPoint)
-                .egressPoint(dstConnectPoint)
+                .filteredIngressPoint(new FilteredConnectPoint(srcConnectPoint))
+                .filteredEgressPoint(new FilteredConnectPoint(dstConnectPoint))
                 .build();
 
         intentList.add(intent);

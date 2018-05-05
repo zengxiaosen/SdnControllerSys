@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.onlab.osgi.ServiceDirectory;
 import org.onlab.osgi.TestServiceDirectory;
-import org.onlab.rest.BaseResource;
 import org.onosproject.codec.CodecService;
 import org.onosproject.codec.impl.CodecManager;
 import org.onosproject.codec.impl.MeterCodec;
@@ -115,7 +114,7 @@ public class MetersResourceTest extends ResourceTest {
         public MockMeter(DeviceId deviceId, int appId, long meterId, int id) {
             this.deviceId = deviceId;
             this.appId = new DefaultApplicationId(appId, String.valueOf(appId));
-            this.baseValue = id * 200;
+            this.baseValue = id * 200L;
             this.meterId = MeterId.meterId(meterId);
 
             Band band = DefaultBand.builder()
@@ -239,7 +238,7 @@ public class MetersResourceTest extends ResourceTest {
                         .add(CodecService.class, codecService)
                         .add(CoreService.class, mockCoreService);
 
-        BaseResource.setServiceDirectory(testDirectory);
+        setServiceDirectory(testDirectory);
     }
 
     /**

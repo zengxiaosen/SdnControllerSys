@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -299,7 +299,7 @@ public class ProtectedTransportIntentCompiler
         List<Link> revLinks = Lists.reverse(transform(path.links(), this::reverse));
         return new DefaultPath(path.providerId(),
                                revLinks,
-                               path.cost(),
+                               path.weight(),
                                path.annotations());
     }
 
@@ -417,8 +417,8 @@ public class ProtectedTransportIntentCompiler
 
             List<Resource> resources = concat(primaryResources, secondaryResources)
                                         .collect(Collectors.toList());
-            log.trace("Calling allocate({},{})", intent.id(), resources);
-            if (resourceService.allocate(intent.id(), resources).isEmpty()) {
+            log.trace("Calling allocate({},{})", intent.key(), resources);
+            if (resourceService.allocate(intent.key(), resources).isEmpty()) {
                 log.warn("Allocation failed, retrying");
                 continue;
             }

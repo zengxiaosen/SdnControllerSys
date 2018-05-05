@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-present Open Networking Laboratory
+ * Copyright 2014-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,10 @@
 package org.onosproject.net.flow;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
+import com.google.common.annotations.Beta;
 import org.onlab.packet.EthType;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
@@ -30,6 +33,7 @@ import org.onosproject.net.flow.instructions.ExtensionTreatment;
 import org.onosproject.net.flow.instructions.Instruction;
 import org.onosproject.net.flow.instructions.Instructions;
 import org.onosproject.net.meter.MeterId;
+import org.onosproject.net.pi.runtime.PiTableAction;
 
 /**
  * Abstraction of network traffic treatment.
@@ -79,11 +83,24 @@ public interface TrafficTreatment {
     Instructions.MetadataInstruction writeMetadata();
 
     /**
+     * Returns the stat trigger instruction if there is one.
+     * @return a stat trigger instruction; may be null.
+     */
+    Instructions.StatTriggerInstruction statTrigger();
+
+    /**
      * Returns the meter instruction if there is one.
      *
-     * @return a meter instruction that may be null
+     * @return a meter instruction that may be a null.
      */
     Instructions.MeterInstruction metered();
+
+    /**
+     * Returns the meter instructions if there is any.
+     *
+     * @return meter instructions that may be an empty set.
+     */
+    Set<Instructions.MeterInstruction> meters();
 
     /**
      * Builder of traffic treatment entities.
@@ -318,6 +335,12 @@ public interface TrafficTreatment {
         Builder wipeDeferred();
 
         /**
+         * the instruction to clear not wipe the deferred instructions set.
+         * @return a treatment builder
+         */
+        Builder notWipeDeferred();
+
+        /**
          * Writes metadata to associate with a packet.
          * <pre>
          * {@code
@@ -396,6 +419,15 @@ public interface TrafficTreatment {
         Builder setArpOp(short op);
 
         /**
+         * Sets the protocol independent table action.
+         *
+         * @param piTableAction protocol-independent table action
+         * @return a treatment builder.
+         */
+        @Beta
+        Builder piTableAction(PiTableAction piTableAction);
+
+        /**
          * Uses an extension treatment.
          *
          * @param extension extension treatment
@@ -403,6 +435,16 @@ public interface TrafficTreatment {
          * @return a treatment builder
          */
         Builder extension(ExtensionTreatment extension, DeviceId deviceId);
+
+        /**
+         * Add stat trigger instruction.
+         *
+         * @param statTriggerFieldMap defines stat trigger constraints
+         * @param statTriggerFlag describes which circumstances that start will be triggered
+         * @return a treatment builder
+         */
+        Builder statTrigger(Map<StatTriggerField, Long> statTriggerFieldMap,
+                            StatTriggerFlag statTriggerFlag);
 
         /**
          * Add all instructions from another treatment.

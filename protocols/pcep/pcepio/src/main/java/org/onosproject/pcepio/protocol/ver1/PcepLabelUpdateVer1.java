@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ public class PcepLabelUpdateVer1 implements PcepLabelUpdate {
              <label-list >           ::= <LABEL>
                                          [<label-list>]
      */
-    protected static final Logger log = LoggerFactory.getLogger(PcepLabelUpdateVer1.class);
+    private static final Logger log = LoggerFactory.getLogger(PcepLabelUpdateVer1.class);
 
     //Either PceLabelDownload or PceLabelMap is mandatory.
     //label Download
@@ -118,10 +118,7 @@ public class PcepLabelUpdateVer1 implements PcepLabelUpdate {
             if (isLabelMapSet) {
                 return new PcepLabelUpdateVer1(labelMap);
             }
-            if (!isLabelDownloadSet && !isLabelMapSet) {
-                throw new PcepParseException(
-                        "Label Download or Label Map is not set while building PcepLabelUpdate Message");
-            }
+
             return new PcepLabelUpdateVer1();
         }
 

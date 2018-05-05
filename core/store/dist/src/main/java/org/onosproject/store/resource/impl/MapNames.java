@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,6 @@ final class MapNames {
     static final String CONTINUOUS_CONSUMER_MAP = "onos-continuous-consumers";
     static final String CONTINUOUS_CHILD_MAP = "onos-resource-continuous-children";
 
-    // prohibit contruction
+    // prohibit construction
     private MapNames() {}
 }

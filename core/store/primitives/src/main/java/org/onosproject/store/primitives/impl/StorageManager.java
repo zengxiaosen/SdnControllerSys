@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,7 @@
  */
 package org.onosproject.store.primitives.impl;
 
-import static org.onosproject.security.AppGuard.checkPermission;
-import static org.onosproject.security.AppPermission.Type.STORAGE_WRITE;
-import static org.slf4j.LoggerFactory.getLogger;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
+import com.google.common.collect.Maps;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -33,6 +23,10 @@ import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
 import org.onosproject.cluster.ClusterService;
+import org.onosproject.cluster.ControllerNode;
+import org.onosproject.cluster.Member;
+import org.onosproject.cluster.MembershipService;
+import org.onosproject.cluster.NodeId;
 import org.onosproject.cluster.PartitionId;
 import org.onosproject.persistence.PersistenceService;
 import org.onosproject.store.cluster.messaging.ClusterCommunicationService;
@@ -42,16 +36,18 @@ import org.onosproject.store.primitives.PartitionService;
 import org.onosproject.store.primitives.TransactionId;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.AsyncAtomicValue;
-import org.onosproject.store.service.AsyncDocumentTree;
 import org.onosproject.store.service.AsyncConsistentMultimap;
 import org.onosproject.store.service.AsyncConsistentTreeMap;
+import org.onosproject.store.service.AsyncDocumentTree;
 import org.onosproject.store.service.AtomicCounterBuilder;
 import org.onosproject.store.service.AtomicCounterMapBuilder;
+import org.onosproject.store.service.AtomicIdGeneratorBuilder;
 import org.onosproject.store.service.AtomicValueBuilder;
 import org.onosproject.store.service.ConsistentMap;
 import org.onosproject.store.service.ConsistentMapBuilder;
 import org.onosproject.store.service.ConsistentMultimapBuilder;
 import org.onosproject.store.service.ConsistentTreeMapBuilder;
+import org.onosproject.store.service.DistributedLockBuilder;
 import org.onosproject.store.service.DistributedSetBuilder;
 import org.onosproject.store.service.DocumentTreeBuilder;
 import org.onosproject.store.service.EventuallyConsistentMapBuilder;
@@ -67,7 +63,16 @@ import org.onosproject.store.service.WorkQueue;
 import org.onosproject.store.service.WorkQueueStats;
 import org.slf4j.Logger;
 
-import com.google.common.collect.Maps;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import static org.onosproject.security.AppGuard.checkPermission;
+import static org.onosproject.security.AppPermission.Type.STORAGE_WRITE;
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Implementation for {@code StorageService} and {@code StorageAdminService}.
@@ -75,6 +80,8 @@ import com.google.common.collect.Maps;
 @Service
 @Component(immediate = true)
 public class StorageManager implements StorageService, StorageAdminService {
+
+    private static final int BUCKETS = 128;
 
     private final Logger log = getLogger(getClass());
 
@@ -93,6 +100,9 @@ public class StorageManager implements StorageService, StorageAdminService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected PartitionAdminService partitionAdminService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected MembershipService membershipService;
+
     private final Supplier<TransactionId> transactionIdGenerator =
             () -> TransactionId.from(UUID.randomUUID().toString());
     private DistributedPrimitiveCreator federatedPrimitiveCreator;
@@ -102,10 +112,10 @@ public class StorageManager implements StorageService, StorageAdminService {
     public void activate() {
         Map<PartitionId, DistributedPrimitiveCreator> partitionMap = Maps.newHashMap();
         partitionService.getAllPartitionIds().stream()
-            .filter(id -> !id.equals(PartitionId.from(0)))
+            .filter(id -> !id.equals(PartitionId.SHARED))
             .forEach(id -> partitionMap.put(id, partitionService.getDistributedPrimitiveCreator(id)));
-        federatedPrimitiveCreator = new FederatedDistributedPrimitiveCreator(partitionMap);
-        transactionManager = new TransactionManager(this, partitionService);
+        federatedPrimitiveCreator = new FederatedDistributedPrimitiveCreator(partitionMap, BUCKETS);
+        transactionManager = new TransactionManager(this, partitionService, BUCKETS);
         log.info("Started");
     }
 
@@ -117,9 +127,48 @@ public class StorageManager implements StorageService, StorageAdminService {
     @Override
     public <K, V> EventuallyConsistentMapBuilder<K, V> eventuallyConsistentMapBuilder() {
         checkPermission(STORAGE_WRITE);
-        return new EventuallyConsistentMapBuilderImpl<>(clusterService,
+
+        // Note: NPE in the usage of ClusterService/MembershipService prevents rebooting the Karaf container.
+        // We need to reference these services outside the following peer suppliers.
+        final MembershipService membershipService = this.membershipService;
+        final ClusterService clusterService = this.clusterService;
+
+        final NodeId localNodeId = clusterService.getLocalNode().id();
+
+        // Use the MembershipService to provide peers for the map that are isolated within the current version.
+        Supplier<List<NodeId>> peersSupplier = () -> membershipService.getMembers().stream()
+                .map(Member::nodeId)
+                .filter(nodeId -> !nodeId.equals(localNodeId))
+                .filter(id -> clusterService.getState(id).isActive())
+                .collect(Collectors.toList());
+
+        // If this is the first node in its version, bootstrap from the previous version. Otherwise, bootstrap the
+        // map from members isolated within the current version.
+        Supplier<List<NodeId>> bootstrapPeersSupplier = () -> {
+            if (membershipService.getMembers().size() == 1) {
+                return clusterService.getNodes()
+                        .stream()
+                        .map(ControllerNode::id)
+                        .filter(id -> !localNodeId.equals(id))
+                        .filter(id -> clusterService.getState(id).isActive())
+                        .collect(Collectors.toList());
+            } else {
+                return membershipService.getMembers()
+                        .stream()
+                        .map(Member::nodeId)
+                        .filter(id -> !localNodeId.equals(id))
+                        .filter(id -> clusterService.getState(id).isActive())
+                        .collect(Collectors.toList());
+            }
+        };
+
+        return new EventuallyConsistentMapBuilderImpl<>(
+                localNodeId,
                 clusterCommunicator,
-                persistenceService);
+                persistenceService,
+                peersSupplier,
+                bootstrapPeersSupplier
+        );
     }
 
     @Override
@@ -166,6 +215,12 @@ public class StorageManager implements StorageService, StorageAdminService {
     }
 
     @Override
+    public AtomicIdGeneratorBuilder atomicIdGeneratorBuilder() {
+        checkPermission(STORAGE_WRITE);
+        return new DefaultAtomicIdGeneratorBuilder(federatedPrimitiveCreator);
+    }
+
+    @Override
     public <V> AtomicValueBuilder<V> atomicValueBuilder() {
         checkPermission(STORAGE_WRITE);
         Supplier<ConsistentMapBuilder<String, byte[]>> mapBuilderSupplier =
@@ -179,6 +234,12 @@ public class StorageManager implements StorageService, StorageAdminService {
     public TransactionContextBuilder transactionContextBuilder() {
         checkPermission(STORAGE_WRITE);
         return new DefaultTransactionContextBuilder(transactionIdGenerator.get(), transactionManager);
+    }
+
+    @Override
+    public DistributedLockBuilder lockBuilder() {
+        checkPermission(STORAGE_WRITE);
+        return new DefaultDistributedLockBuilder(federatedPrimitiveCreator);
     }
 
     @Override

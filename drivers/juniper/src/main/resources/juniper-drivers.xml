@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2016 Open Networking Laboratory
+  ~ Copyright 2016 Open Networking Foundation
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@
             hwVersion="" swVersion="JunOS">
         <behaviour api="org.onosproject.net.device.DeviceDescriptionDiscovery"
                    impl="org.onosproject.drivers.juniper.DeviceDiscoveryJuniperImpl"/>
+        <behaviour api="org.onosproject.net.flow.FlowRuleProgrammable"
+                   impl="org.onosproject.drivers.juniper.FlowRuleJuniperImpl"/>
         <behaviour api="org.onosproject.net.behaviour.LinkDiscovery"
                    impl="org.onosproject.drivers.juniper.LinkDiscoveryJuniperImpl"/>
     </driver>

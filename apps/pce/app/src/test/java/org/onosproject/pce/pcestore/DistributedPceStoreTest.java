@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-present Open Networking Laboratory
+ * Copyright 2016-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,11 @@
  */
 package org.onosproject.pce.pcestore;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import org.onlab.util.DataRateUnit;
 import org.onosproject.incubator.net.resource.label.LabelResourceId;
 import org.onosproject.incubator.net.tunnel.TunnelId;
@@ -36,15 +27,23 @@ import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DefaultAnnotations;
 import org.onosproject.net.DefaultLink;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.intent.Constraint;
-import org.onosproject.net.intent.constraint.BandwidthConstraint;
 import org.onosproject.net.Link;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.intent.Constraint;
+import org.onosproject.net.intent.constraint.BandwidthConstraint;
+import org.onosproject.net.provider.ProviderId;
 import org.onosproject.net.resource.ResourceConsumer;
+import org.onosproject.pce.pceservice.ExplicitPathInfo;
 import org.onosproject.pce.pceservice.LspType;
 import org.onosproject.pce.pceservice.TunnelConsumerId;
-import org.onosproject.net.provider.ProviderId;
 import org.onosproject.store.service.TestStorageService;
+
+import java.util.LinkedList;
+import java.util.List;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
 /**
  * Unit tests for DistributedPceStore class.
@@ -120,7 +119,7 @@ public class DistributedPceStoreTest {
        Constraint bandwidth1 = BandwidthConstraint.of(200, DataRateUnit.BPS);
        constraints1.add(bandwidth1);
 
-       failedPathInfo1 = new PcePathInfo(src1, dst1, name1, constraints1, lspType1, null);
+       failedPathInfo1 = new PcePathInfo(src1, dst1, name1, constraints1, lspType1, null, false);
 
        // Creates failedPathInfo2
        DeviceId src2 = DeviceId.deviceId("foo2");
@@ -131,7 +130,7 @@ public class DistributedPceStoreTest {
        Constraint bandwidth2 = BandwidthConstraint.of(400, DataRateUnit.BPS);
        constraints2.add(bandwidth2);
 
-       failedPathInfo2 = new PcePathInfo(src2, dst2, name2, constraints2, lspType2, null);
+       failedPathInfo2 = new PcePathInfo(src2, dst2, name2, constraints2, lspType2, null, false);
 
        // Creates failedPathInfo3
        DeviceId src3 = DeviceId.deviceId("foo3");
@@ -142,7 +141,7 @@ public class DistributedPceStoreTest {
        Constraint bandwidth3 = BandwidthConstraint.of(500, DataRateUnit.BPS);
        constraints3.add(bandwidth3);
 
-       failedPathInfo3 = new PcePathInfo(src3, dst3, name3, constraints3, lspType3, null);
+       failedPathInfo3 = new PcePathInfo(src3, dst3, name3, constraints3, lspType3, null, false);
 
        // Creates failedPathInfo4
        DeviceId src4 = DeviceId.deviceId("foo4");
@@ -153,7 +152,7 @@ public class DistributedPceStoreTest {
        Constraint bandwidth4 = BandwidthConstraint.of(600, DataRateUnit.BPS);
        constraints4.add(bandwidth4);
 
-       failedPathInfo4 = new PcePathInfo(src4, dst4, name4, constraints4, lspType4, null);
+       failedPathInfo4 = new PcePathInfo(src4, dst4, name4, constraints4, lspType4, null, false);
     }
 
     @After
@@ -164,18 +163,16 @@ public class DistributedPceStoreTest {
      * Checks the operation of addTunnelInfo() method.
      */
     @Test
-    public void testAddTunnelInfo() {
+    public void testAddExplicitPathInfo() {
         // initialization
         distrPceStore.storageService = new TestStorageService();
         distrPceStore.activate();
 
-        // TunnelId with device label store information
-        distrPceStore.addTunnelInfo(tunnelId1, tunnelConsumerId1);
-        assertThat(distrPceStore.existsTunnelInfo(tunnelId1), is(true));
-        assertThat(distrPceStore.getTunnelInfo(tunnelId1), is(tunnelConsumerId1));
-        distrPceStore.addTunnelInfo(tunnelId2, tunnelConsumerId2);
-        assertThat(distrPceStore.existsTunnelInfo(tunnelId2), is(true));
-        assertThat(distrPceStore.getTunnelInfo(tunnelId2), is(tunnelConsumerId2));
+        List<ExplicitPathInfo> infoList = new LinkedList<>();
+        ExplicitPathInfo info1 = new ExplicitPathInfo(ExplicitPathInfo.Type.LOOSE, DeviceId.deviceId("D1"));
+        infoList.add(info1);
+        distrPceStore.tunnelNameExplicitPathInfoMap("Sample1", infoList);
+        assertThat(distrPceStore.getTunnelNameExplicitPathInfoMap("Sample1"), is(infoList));
     }
 
     /**
@@ -195,19 +192,6 @@ public class DistributedPceStoreTest {
     }
 
     /**
-     * Checks the operation of existsTunnelInfo() method.
-     */
-    @Test
-    public void testExistsTunnelInfo() {
-        testAddTunnelInfo();
-
-        assertThat(distrPceStore.existsTunnelInfo(tunnelId1), is(true));
-        assertThat(distrPceStore.existsTunnelInfo(tunnelId2), is(true));
-        assertThat(distrPceStore.existsTunnelInfo(tunnelId3), is(false));
-        assertThat(distrPceStore.existsTunnelInfo(tunnelId4), is(false));
-    }
-
-    /**
      * Checks the operation of existsFailedPathInfo() method.
      */
     @Test
@@ -221,16 +205,6 @@ public class DistributedPceStoreTest {
     }
 
     /**
-     * Checks the operation of getTunnelInfoCount() method.
-     */
-    @Test
-    public void testGetTunnelInfoCount() {
-        testAddTunnelInfo();
-
-        assertThat(distrPceStore.getTunnelInfoCount(), is(2));
-    }
-
-    /**
      * Checks the operation of getFailedPathInfoCount() method.
      */
     @Test
@@ -238,19 +212,6 @@ public class DistributedPceStoreTest {
         testAddFailedPathInfo();
 
         assertThat(distrPceStore.getFailedPathInfoCount(), is(2));
-    }
-
-    /**
-     * Checks the operation of getTunnelInfos() method.
-     */
-    @Test
-    public void testGetTunnelInfos() {
-        testAddTunnelInfo();
-
-        Map<TunnelId, ResourceConsumer> tunnelInfoMap = distrPceStore.getTunnelInfos();
-        assertThat(tunnelInfoMap, is(notNullValue()));
-        assertThat(tunnelInfoMap.isEmpty(), is(false));
-        assertThat(tunnelInfoMap.size(), is(2));
     }
 
     /**
@@ -263,33 +224,6 @@ public class DistributedPceStoreTest {
         Iterable<PcePathInfo> failedPathInfoSet = distrPceStore.getFailedPathInfos();
         assertThat(failedPathInfoSet, is(notNullValue()));
         assertThat(failedPathInfoSet.iterator().hasNext(), is(true));
-    }
-
-    /**
-     * Checks the operation of getTunnelInfo() method.
-     */
-    @Test
-    public void testGetTunnelInfo() {
-        testAddTunnelInfo();
-
-        // tunnelId1 with device label store info
-        assertThat(tunnelId1, is(notNullValue()));
-        assertThat(distrPceStore.getTunnelInfo(tunnelId1), is(tunnelConsumerId1));
-
-        // tunnelId2 with device label store info
-        assertThat(tunnelId2, is(notNullValue()));
-        assertThat(distrPceStore.getTunnelInfo(tunnelId2), is(tunnelConsumerId2));
-    }
-
-    /**
-     * Checks the operation of removeTunnelInfo() method.
-     */
-    @Test
-    public void testRemoveTunnelInfo() {
-        testAddTunnelInfo();
-
-        assertThat(distrPceStore.removeTunnelInfo(tunnelId1), is(true));
-        assertThat(distrPceStore.removeTunnelInfo(tunnelId2), is(true));
     }
 
     /**

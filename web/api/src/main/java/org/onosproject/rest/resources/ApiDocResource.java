@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -147,7 +147,7 @@ public class ApiDocResource extends AbstractInjectionResource {
         StringBuilder sb = new StringBuilder();
         service.getDocProviders().forEach(p -> {
             sb.append("<option value=\"").append(p.key()).append("\"")
-                    .append(p.key().equals("/onos/v1") ? " selected>" : ">")
+                    .append("/onos/v1".equals(p.key()) ? " selected>" : ">")
                     .append(p.name())
                     .append("</option>");
         });
@@ -164,7 +164,7 @@ public class ApiDocResource extends AbstractInjectionResource {
     @GET
     @Path("{resource: .*}")
     public Response getResource(@PathParam("resource") String resource) throws IOException {
-        if (resource != null && resource.equals("")) {
+        if ("".equals(resource)) {
             return getIndex();
         }
         InputStream stream = getClass().getClassLoader().getResourceAsStream(DOCS + resource);

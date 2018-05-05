@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present Open Networking Laboratory
+ * Copyright 2015-present Open Networking Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,15 @@
     'use strict';
 
     // injected refs
-    var $log, fs, sus, is, ts, ps, ttbs;
+    var sus, is, ts, ps, ttbs;
+
+    // function to be replaced by the localization bundle function
+    var topoLion = function (x) {
+        return '#tfs#' + x + '#';
+    };
 
     // api to topoForce
-    var api;
+    var zoomer, api;
     /*
      node()                 // get ref to D3 selection of nodes
      link()                 // get ref to D3 selection of links
@@ -46,15 +51,16 @@
         badgeConfig = {
             radius: 12,
             yoff: 5,
-            gdelta: 10
+            gdelta: 10,
         },
         halfDevIcon = devIconDim / 2,
         devBadgeOff = { dx: -halfDevIcon, dy: -halfDevIcon },
         hostBadgeOff = { dx: -hostRadius, dy: -hostRadius },
+        portLabelDim = 30,
         status = {
             i: 'badgeInfo',
             w: 'badgeWarn',
-            e: 'badgeError'
+            e: 'badgeError',
         };
 
     // NOTE: this type of hack should go away once we have implemented
@@ -76,7 +82,7 @@
     var remappedHostTypes = {
         router: 'm_router',
         endstation: 'm_endstation',
-        bgpSpeaker: 'm_bgpSpeaker'
+        bgpSpeaker: 'm_bgpSpeaker',
     };
 
     function mapDeviceTypeToGlyph(type) {
@@ -99,13 +105,13 @@
     var dColTheme = {
         light: {
             online: '#444444',
-            offline: '#cccccc'
+            offline: '#cccccc',
         },
         dark: {
             // TODO: theme
             online: '#444444',
-            offline: '#cccccc'
-        }
+            offline: '#cccccc',
+        },
     };
 
     function devGlyphColor(d) {
@@ -118,16 +124,16 @@
 
     function setDeviceColor(d) {
         // want to color the square rectangle (no longer the 'use' glyph)
-        d.el.selectAll('rect').filter(function (d, i) {return i === 1;})
+        d.el.selectAll('rect').filter(function (d, i) { return i === 1; })
             .style('fill', devGlyphColor(d));
     }
 
     function incDevLabIndex() {
         setDevLabIndex(deviceLabelIndex+1);
-        switch(deviceLabelIndex) {
-            case 0: return 'Hide device labels';
-            case 1: return 'Show friendly device labels';
-            case 2: return 'Show device ID labels';
+        switch (deviceLabelIndex) {
+            case 0: return topoLion('fl_device_labels_hide');
+            case 1: return topoLion('fl_device_labels_show_friendly');
+            case 2: return topoLion('fl_device_labels_show_id');
         }
     }
 
@@ -135,6 +141,23 @@
         deviceLabelIndex = mode % 3;
         var p = ps.getPrefs('topo_prefs', ttbs.defaultPrefs);
         p.dlbls = deviceLabelIndex;
+        ps.setPrefs('topo_prefs', p);
+    }
+
+    function incHostLabIndex() {
+        setHostLabIndex(hostLabelIndex+1);
+        switch (hostLabelIndex) {
+            case 0: return topoLion('fl_host_labels_show_friendly');
+            case 1: return topoLion('fl_host_labels_show_ip');
+            case 2: return topoLion('fl_host_labels_show_mac');
+            case 3: return topoLion('fl_host_labels_hide');
+        }
+    }
+
+    function setHostLabIndex(mode) {
+        hostLabelIndex = mode % 4;
+        var p = ps.getPrefs('topo_prefs', ttbs.defaultPrefs);
+        p.hlbls = hostLabelIndex;
         ps.setPrefs('topo_prefs', p);
     }
 
@@ -163,8 +186,8 @@
             x: -dim/2,
             y: -dim/2,
             width: dim + labelWidth,
-            height: dim
-        }
+            height: dim,
+        };
     }
 
     function updateDeviceRendering(d) {
@@ -222,7 +245,7 @@
                     width: bcgd * 2,
                     height: bcgd * 2,
                     transform: sus.translate(-bcgd, -bcgd),
-                    'xlink:href': '#' + bdg.gid
+                    'xlink:href': '#' + bdg.gid,
                 });
         }
     }
@@ -262,14 +285,14 @@
         var node = d3.select(this),
             glyphId = mapDeviceTypeToGlyph(d.type),
             label = trimLabel(deviceLabel(d)),
-            rect, crect, text, glyph, labelWidth;
+            rect, crect, glyph, labelWidth;
 
         d.el = node;
 
         rect = node.append('rect');
         crect = node.append('rect');
 
-        text = node.append('text').text(label)
+        node.append('text').text(label)
             .attr('text-anchor', 'left')
             .attr('y', '0.3em')
             .attr('x', halfDevIcon + labelPad);
@@ -283,6 +306,9 @@
         glyph.attr(iconBox(devIconDim, 0));
 
         node.attr('transform', sus.translate(-halfDevIcon, -halfDevIcon));
+
+        d.el.selectAll('*')
+            .style('transform', 'scale(' + api.deviceScale() + ')');
     }
 
     function hostEnter(d) {
@@ -299,6 +325,9 @@
             .text(hostLabel)
             .attr('dy', textDy)
             .attr('text-anchor', 'middle');
+
+        d.el.selectAll('g').style('transform', 'scale(' + api.deviceScale() + ')');
+        d.el.selectAll('text').style('transform', 'scale(' + api.deviceScale() + ')');
     }
 
     function hostExit(d) {
@@ -346,6 +375,7 @@
 
         var link = d3.select(this);
         d.el = link;
+        d.el.style('stroke-width', api.linkWidthScale() + 'px');
         api.restyleLinkElement(d);
         if (d.type() === 'hostLink') {
             sus.visible(link, api.showHosts());
@@ -411,23 +441,24 @@
     }
 
     function generateLabelFunction() {
-        var labels = [];
-        var xGap = 15;
-        var yGap = 17;
+        var labels = [],
+            xGap = 15,
+            yGap = 17;
 
-        return function(newId, newX, newY) {
-
+        return function (newId, newX, newY) {
             var idx = -1;
 
-            labels.forEach(function(l, i) {
-                if (l.id === newId) {
+            labels.forEach(function (lab, i) {
+                var minX, maxX, minY, maxY;
+
+                if (lab.id === newId) {
                     idx = i;
                     return;
                 }
-                var minX = l.x - xGap;
-                var maxX = l.x + xGap;
-                var minY = l.y - yGap;
-                var maxY = l.y + yGap;
+                minX = lab.x - xGap;
+                maxX = lab.x + xGap;
+                minY = lab.y - yGap;
+                maxY = lab.y + yGap;
 
                 if (newX > minX && newX < maxX && newY > minY && newY < maxY) {
                     // labels are overlapped
@@ -437,17 +468,16 @@
             });
 
             if (idx === -1) {
-                labels.push({id: newId, x: newX, y: newY});
-            }
-            else {
-                labels[idx] = {id: newId, x: newX, y: newY};
+                labels.push({ id: newId, x: newX, y: newY });
+            } else {
+                labels[idx] = { id: newId, x: newX, y: newY };
             }
 
-            return {x: newX, y: newY};
-        }
+            return { x: newX, y: newY };
+        };
     }
 
-    var getLabelPosNoOverlap = generateLabelFunction();
+    var getLabelPos = generateLabelFunction();
 
     function transformLabel(p, id) {
         var dx = p.x2 - p.x1,
@@ -456,7 +486,7 @@
             yMid = dy/2 + p.y1;
 
         if (id) {
-            var pos = getLabelPosNoOverlap(id, xMid, yMid);
+            var pos = getLabelPos(id, xMid, yMid);
             return sus.translate(pos.x, pos.y);
         }
 
@@ -469,13 +499,18 @@
             .classed('portLabel', true)
             .attr('id', function (d) { return d.id; });
 
+        var labelScale = portLabelDim / (portLabelDim * zoomer.scale());
+
         entering.each(function (d) {
             var el = d3.select(this),
                 rect = el.append('rect'),
                 text = el.append('text').text(d.num);
 
-            rect.attr(rectAroundText(el));
-            text.attr('dy', linkLabelOffset);
+            rect.attr(rectAroundText(el))
+                .style('transform', 'scale(' + labelScale + ')');
+            text.attr('dy', linkLabelOffset)
+                .style('transform', 'scale(' + labelScale + ')');
+
             el.attr('transform', sus.translate(d.x, d.y));
         });
     }
@@ -489,7 +524,7 @@
 
         return {
             x: movedX,
-            y: movedY
+            y: movedY,
         };
     }
 
@@ -516,7 +551,7 @@
             x2: mid.x + moveAmtX,
             y2: mid.y + moveAmtY,
             stroke: api.linkConfig()[ts.theme()].baseColor,
-            transform: 'rotate(' + angle + ',' + mid.x + ',' + mid.y + ')'
+            transform: 'rotate(' + angle + ',' + mid.x + ',' + mid.y + ')',
         };
     }
 
@@ -525,7 +560,7 @@
             dist = 20;
         return {
             x: point.x + dist,
-            y: point.y + dist
+            y: point.y + dist,
         };
     }
 
@@ -539,7 +574,7 @@
             var el = d3.select(this);
 
             el.attr({
-                transform: function (d) { return calcGroupPos(d.linkCoords); }
+                transform: function (d) { return calcGroupPos(d.linkCoords); },
             });
             el.select('line')
                 .attr(hashAttrs(d.linkCoords));
@@ -554,7 +589,7 @@
             .append('g')
             .attr({
                 transform: function (d) { return calcGroupPos(d.linkCoords); },
-                id: function (d) { return 'pair-' + d.id; }
+                id: function (d) { return 'pair-' + d.id; },
             })
             .classed('numLinkLabel', true);
 
@@ -574,25 +609,29 @@
         labels.exit().remove();
     }
 
+    // invoked after the localization bundle has been received from the server
+    function setLionBundle(bundle) {
+        topoLion = bundle;
+    }
+
     // ==========================
     // Module definition
 
     angular.module('ovTopo')
     .factory('TopoD3Service',
-        ['$log', 'FnService', 'SvgUtilService', 'IconService', 'ThemeService',
+        ['SvgUtilService', 'IconService', 'ThemeService',
             'PrefsService', 'TopoToolbarService',
 
-        function (_$log_, _fs_, _sus_, _is_, _ts_, _ps_, _ttbs_) {
-            $log = _$log_;
-            fs = _fs_;
+        function (_sus_, _is_, _ts_, _ps_, _ttbs_) {
             sus = _sus_;
             is = _is_;
             ts = _ts_;
             ps = _ps_;
             ttbs = _ttbs_;
 
-            function initD3(_api_) {
+            function initD3(_api_, _zoomer_) {
                 api = _api_;
+                zoomer = _zoomer_;
             }
 
             function destroyD3() { }
@@ -603,6 +642,8 @@
 
                 incDevLabIndex: incDevLabIndex,
                 setDevLabIndex: setDevLabIndex,
+                incHostLabIndex: incHostLabIndex,
+                setHostLabIndex: setHostLabIndex,
                 hostLabel: hostLabel,
                 deviceLabel: deviceLabel,
                 trimLabel: trimLabel,
@@ -622,7 +663,9 @@
                 applyLinkLabels: applyLinkLabels,
                 transformLabel: transformLabel,
                 applyPortLabels: applyPortLabels,
-                applyNumLinkLabels: applyNumLinkLabels
+                applyNumLinkLabels: applyNumLinkLabels,
+
+                setLionBundle: setLionBundle,
             };
         }]);
 }());
