@@ -247,7 +247,7 @@ public class TopologyViewMessageHandler extends TopologyViewMessageHandlerBase {
 
                 new ReqAllTraffic(),
                 new ReqDevLinkFlows(),
-                new myReqDevLinkFlows(),
+                //new myReqDevLinkFlows(),
                 new ReqRelatedIntents(),
                 new ReqNextIntent(),
                 new ReqPrevIntent(),
