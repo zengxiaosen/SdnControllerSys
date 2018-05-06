@@ -446,6 +446,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
             // we only want to report on links deemed to have traffic
             if (tlink.hasTraffic()) {
+
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
                 //LinkHighlight linkHighlight1 = new LinkHighlight(linkHighlight);
@@ -454,6 +455,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                  * 目前我准备在这开启监控
                  */
                 if(type == StatsType.PORT_STATS){
+                    log.info("--------------------------------------");
 
                     /**
                      * LinkHighlight实际上是：
