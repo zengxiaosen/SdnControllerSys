@@ -393,7 +393,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      * @return
      */
     ///////////////////////////////////////////////TrafficLink.StatsType.PORT_STATS///////////////////////////////////////////////////////
-    protected Highlights trafficSummary(TrafficLink.StatsType type){
+    protected Highlights trafficSummaryV2(TrafficLink.StatsType type){
         Highlights highlights = new Highlights();
         Set<TrafficLink> linksWithTraffic = computeLinksWithTraffic(type);
         Set<TrafficLink> aggregatedLinks = doAggregation(linksWithTraffic);
@@ -404,7 +404,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return highlights;
     }
 
-    protected Highlights trafficSummaryV2(TrafficLink.StatsType type) {
+    protected Highlights trafficSummary(TrafficLink.StatsType type) {
         Highlights highlights = new Highlights();
         TrafficLinkMap linkMap = new TrafficLinkMap();
         //TrafficLinkMap linkMapForFlow = new TrafficLinkMap();
@@ -760,6 +760,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         // For bi-directional traffic links, use
         // the max link rate of either direction
         // (we choose 'one' since we know that is never null)
+        log.info("-----------------------------------------------------------------------------------");
         Link one = link.one();
         Load egressSrc = services.portStats().load(one.src(), metricType);
         Load egressDst = services.portStats().load(one.dst(), metricType);
