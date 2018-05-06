@@ -264,9 +264,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             log.debug("Starting up background traffic task...");
             trafficTask = new TrafficUpdateTask();
             //new MyPortStatusTrafficUpdateTask();
-            myPortStatusTrafficUpdateTask = new MyPortStatusTrafficUpdateTask();
+            //myPortStatusTrafficUpdateTask = new MyPortStatusTrafficUpdateTask();
             timer.schedule(trafficTask, trafficPeriod, trafficPeriod);
-            timer1.schedule(myPortStatusTrafficUpdateTask, trafficPeriod, trafficPeriod);
+            //timer1.schedule(myPortStatusTrafficUpdateTask, trafficPeriod, trafficPeriod);
 
         } else {
             log.debug("(traffic task already running)");
@@ -760,7 +760,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         // For bi-directional traffic links, use
         // the max link rate of either direction
         // (we choose 'one' since we know that is never null)
-        log.info("-----------------------------------------------------------------------------------");
+
         Link one = link.one();
         Load egressSrc = services.portStats().load(one.src(), metricType);
         Load egressDst = services.portStats().load(one.dst(), metricType);
