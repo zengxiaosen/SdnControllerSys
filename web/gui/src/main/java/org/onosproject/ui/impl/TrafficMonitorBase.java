@@ -455,7 +455,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                  * 目前我准备在这开启监控
                  */
                 if(type == StatsType.PORT_STATS){
-                    log.info("--------------------------------------");
+                    //log.info("--------------------------------------");
 
                     /**
                      * LinkHighlight实际上是：
@@ -495,7 +495,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     String tlinkId = tlink.linkId();
                     if(bandwidth.contains("M")){
                         double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
-                        log.info("=====bandwidth: " + temp + ", 帶寬利用率： " + temp/level);
+                        //log.info("=====bandwidth: " + temp + ", 帶寬利用率： " + temp/level);
                         tLinkId_BandWidth.put(tlinkId, temp);
                         tLinkId_BandWidthUsedRate.put(tlinkId, temp/level);
                         sum += temp;
@@ -515,7 +515,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         if(tempString != null &&  tempString != "" && !tempString.equals("")){
                             temp = Double.valueOf(tempString);
                         }
-                        log.info("=====bandwidth(M: " + temp  + ", 帶寬利用率： " + temp/level1);
+                        //log.info("=====bandwidth(M: " + temp  + ", 帶寬利用率： " + temp/level1);
                         tLinkId_BandWidth.put(tlinkId, temp);
                         tLinkId_BandWidthUsedRate.put(tlinkId, temp/level1);
                         sum += temp;
@@ -564,7 +564,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * 每条link平均的带宽
          */
         double meanTrafficBandWidth = sum / TrafficLinkSize;
-        log.info("meanTrafficBandWidth: " + meanTrafficBandWidth);
+        //log.info("meanTrafficBandWidth: " + meanTrafficBandWidth);
         /**
          * 每条link平均的带宽利用率
          */
