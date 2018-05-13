@@ -661,6 +661,7 @@ public class ReactiveForwarding {
              */
             InboundPacket pkt = context.inPacket();
             Ethernet ethPkt = pkt.parsed();//从数据包中解析出以太网的信息
+            String curProtocol = String.valueOf(ethPkt.getEtherType());
 
             if (ethPkt == null) {
                 return;
@@ -868,7 +869,7 @@ public class ReactiveForwarding {
 
             Set<Path> Paths_Choise = new HashSet<>();
 
-            int choise = 1;
+            int choise = 2;
             if(choise == 0){
                 Set<Path> Paths_FESM = PathsDecision_FESM(paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
@@ -913,16 +914,12 @@ public class ReactiveForwarding {
                         src.location().deviceId(),
                         LinksResult);
                 Paths_Choise = Paths_PLLB;
-            }else if(choise == 3){
-//                Set<Path> paths_DijkStra =
-//                        topologyService.getPaths1(topologyService.currentTopology(),
-//                                dst.location().deviceId(),
-//                                src.location().deviceId(),
-//                                pkt.receivedFrom().deviceId());
-//                Paths_Choise = paths_DijkStra;
-            }else if(choise == 4){
+            }
+            else if(choise == 2){
 
-                Set<Path> paths_ecmp = PathsDecision_ECMP(paths, src.location().deviceId().toString(), dst.location().deviceId().toString());
+                Set<Path> paths_ecmp = PathsDecision_ECMP(paths,
+                        src.location().deviceId().toString(), dst.location().deviceId().toString(),
+                        src.location().port().toString(), dst.location().port().toString(), curProtocol);
                 Paths_Choise = paths_ecmp;
             }
 
@@ -994,12 +991,12 @@ public class ReactiveForwarding {
         }
 
 
-        private  Set<Path> PathsDecision_ECMP(Set<Path> paths, String src, String dst){
+        private  Set<Path> PathsDecision_ECMP(Set<Path> paths, String srcMac, String dstMac, String srcPort, String dstPort,String protocol){
             Set<Path> result = new HashSet<>();
-            int hashcode = (src + dst).hashCode() % paths.size();
+            int hc = (srcMac.hashCode() + dstMac.hashCode() + srcPort.hashCode() + dstPort.hashCode() + protocol.hashCode()) % paths.size();
             int j=0;
             for(Path path : paths){
-                if(j == hashcode){
+                if(j == hc){
                     result.add(path);
                 }
             }
