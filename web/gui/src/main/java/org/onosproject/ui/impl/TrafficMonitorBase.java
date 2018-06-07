@@ -455,6 +455,18 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                  * 目前我准备在这开启监控
                  */
                 if(type == StatsType.PORT_STATS){
+
+
+                    /**
+                     * check if the link load reach 70%
+                     * choose the biggest flow
+                     * and replace it to the new path for load balance
+                     *
+                     */
+
+
+
+
                     //log.info("--------------------------------------");
 
                     /**
@@ -580,7 +592,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * bdInterval = Math.abs(value - meanTrafficBandWidth)
          * value: 遍历每条link，对应的负载（kbps）
          * meanTrafficBandWidth： 所有link的平均负载（kbps）
-         *
          */
 
         double bdInterval2_Sum = 0;
