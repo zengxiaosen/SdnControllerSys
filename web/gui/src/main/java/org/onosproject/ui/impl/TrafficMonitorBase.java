@@ -21,6 +21,7 @@ import org.onosproject.incubator.net.PortStatisticsService.MetricType;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Link;
 import org.onosproject.net.statistic.Load;
+import org.onosproject.net.topology.TopologyService;
 import org.onosproject.ui.impl.topo.util.ServicesBundle;
 import org.onosproject.ui.impl.topo.util.TrafficLink;
 import org.onosproject.ui.impl.topo.util.TrafficLinkMap;
@@ -102,6 +103,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected TopologyService topologyService;
 
     // 4 Kilo Bytes as threshold
     protected static final double BPS_THRESHOLD = 4 * TopoUtils.N_KILO;
@@ -456,6 +460,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                  */
                 if(type == StatsType.PORT_STATS){
 
+                    ConnectPoint src = tlink.key().src();
+                    ConnectPoint dst = tlink.key().dst();
 
                     /**
                      * check if the link load reach 70%
@@ -463,8 +469,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                      * and replace it to the new path for load balance
                      *
                      */
-
-
+                    //--------------------------------------------------------------------------------------------------------------
 
 
                     //log.info("--------------------------------------");
@@ -484,8 +489,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                      */
 
 
-                    ConnectPoint src = tlink.key().src();
-                    ConnectPoint dst = tlink.key().dst();
 
 
 //                    log.info("========= monitor ========================");
@@ -505,9 +508,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     String bandwidth = linkHighlight.label();
                     double level = 100000;
                     String tlinkId = tlink.linkId();
+                    double bwUsedRate = 0;
                     if(bandwidth.contains("M")){
                         double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
-                        //log.info("=====bandwidth: " + temp + ", 帶寬利用率： " + temp/level);
+                        bwUsedRate = temp / level;
                         tLinkId_BandWidth.put(tlinkId, temp);
                         tLinkId_BandWidthUsedRate.put(tlinkId, temp/level);
                         sum += temp;
@@ -528,13 +532,14 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             temp = Double.valueOf(tempString);
                         }
                         //log.info("=====bandwidth(M: " + temp  + ", 帶寬利用率： " + temp/level1);
+                        bwUsedRate = temp/level1;
                         tLinkId_BandWidth.put(tlinkId, temp);
                         tLinkId_BandWidthUsedRate.put(tlinkId, temp/level1);
                         sum += temp;
                         sum_UsedRate += temp/level1;
                     }
                     //log.info("curSUm: " +  sum);
-
+                    log.info("bw ---------------------- " + bwUsedRate);
                     //sum
 
 
