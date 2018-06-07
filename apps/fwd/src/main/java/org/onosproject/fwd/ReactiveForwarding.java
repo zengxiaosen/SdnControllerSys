@@ -1306,7 +1306,7 @@ public class ReactiveForwarding {
              src.location().deviceId(),
              LinksResult
              */
-            if(isBigFlow == true){
+
                 //flowStatisticService.loadSummaryPortInternal()
                 Set<Path> result = new HashSet<Path>();
                 Map<Integer, Path> indexPath = new LinkedHashMap<>();
@@ -1508,12 +1508,12 @@ public class ReactiveForwarding {
                      * rrestBW = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
                      *
                      */
-                    double feature_ChokeLinkPassbytes = 1.0 / (double)(Math.log((double)(ChokeLinkPassbytes + 2))) + 1;
+                    //double feature_ChokeLinkPassbytes = 1.0 / (double)(Math.log((double)(ChokeLinkPassbytes + 2))) + 1;
                     //double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
-                    double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 2));
+                    double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1));
                     //double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
-                    double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 2));
-                    double feature_preAddFlowToThisPath_AllStandardDeviation = 1.0/(double)(Math.log((double)preAddFlowToThisPath_AllStandardDeviation + 2) + 1);
+                    double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
+                    double feature_preAddFlowToThisPath_AllStandardDeviation = 1.0/(double)(Math.log((double)preAddFlowToThisPath_AllStandardDeviation + 1) + 1);
 //                    log.info("feature_ChokeLinkPassbytes: " + feature_ChokeLinkPassbytes);
 //                    log.info("feature_ChokePointRestBandWidth: " + feature_ChokePointRestBandWidth);
 //                    log.info("feature_pathMeanRestBw: " + feature_pathMeanRestBw);
@@ -1538,19 +1538,19 @@ public class ReactiveForwarding {
                     result.add(finalPath);
                 }
                 return result;
-            }
 
-            int hashvalue = (srcId.toString()+dstid.toString()).hashCode()%paths.size();
-            Set<Path> result = new HashSet<>();
-            //result.add(paths[hashvalue]);
-            int j=0;
-            for(Path path : paths){
-                if(j == hashvalue){
-                    result.add(path);
-                }
-                j++;
-            }
-            return result;
+
+//            int hashvalue = (srcId.toString()+dstid.toString()).hashCode()%paths.size();
+//            Set<Path> result = new HashSet<>();
+//            //result.add(paths[hashvalue]);
+//            int j=0;
+//            for(Path path : paths){
+//                if(j == hashvalue){
+//                    result.add(path);
+//                }
+//                j++;
+//            }
+//            return result;
         }
 
 
