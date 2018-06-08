@@ -594,9 +594,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                 //install rule
 
                                 installRuleForPath(flowEntryObject, pathObject);
-                                log.info("yyyyyyyyyyyyyyyyyyyyyyyyyy");
-                            }else{
-                                log.info("xxxxxxxxxxxxxxxxxxxxxxxx");
+                                log.info("install rule finish ... ");
                             }
 
 
