@@ -510,7 +510,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         sum_UsedRate += temp/level1;
                     }
                     //log.info("curSUm: " +  sum);
-                    log.info("bw ---------------------- " + bwUsedRate);
                     if(bwUsedRate > 0.7){
                         /**
                          * check if the link load reach 70%
@@ -536,12 +535,19 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                 String flowSpeedEtl = flowRateOutOfMonitor.substring(0, flowRateOutOfMonitor.indexOf("b"));
                                 Double resultFlowSpeed = Double.valueOf(flowSpeedEtl);
 
-                                if(resultFlowSpeed > maxFlowRate && r != null){
+                                EthCriterion srcEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_SRC);
+                                EthCriterion dstEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_DST);
+                                if(resultFlowSpeed > maxFlowRate
+                                        && r != null
+                                        && srcEth != null
+                                        && dstEth != null){
+                                    log.info("--------------test----------------");
                                     log.info("resultFlowSpeed: " + resultFlowSpeed);
                                     maxFlowRate = resultFlowSpeed;
                                     maxFlowId = objectFlowId;
                                     //flow src
-                                    EthCriterion srcEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_SRC);
+
+
                                     MacAddress srcMac = srcEth.mac();
                                     HostId srcHostId = HostId.hostId(srcMac);
                                     Host srcHost = services.host().getHost(srcHostId);
@@ -552,7 +558,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                     log.info("srcHost: " + srcHost.toString());
                                     log.info("srcDeviceId: " + srcDeviceId.toString());
                                     //flow dst
-                                    EthCriterion dstEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_DST);
+
                                     MacAddress dstMac = dstEth.mac();
                                     HostId dstHostId = HostId.hostId(dstMac);
                                     Host dstHost = services.host().getHost(dstHostId);
