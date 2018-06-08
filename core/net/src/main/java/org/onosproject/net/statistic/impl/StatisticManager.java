@@ -381,9 +381,13 @@ public class StatisticManager implements StatisticService {
     private Statistics getStatistics(ConnectPoint connectPoint) {
         Set<FlowEntry> current;
         Set<FlowEntry> previous;
+
         synchronized (statisticStore) {
             current = getCurrentStatistic(connectPoint);
             previous = getPreviousStatistic(connectPoint);
+        }
+        if(current == null){
+            log.info("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
         }
 
         return new Statistics(current, previous);
