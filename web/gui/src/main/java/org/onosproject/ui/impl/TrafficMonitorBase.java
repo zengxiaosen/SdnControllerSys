@@ -19,12 +19,15 @@ package org.onosproject.ui.impl;
 
 import org.apache.commons.lang.StringUtils;
 import org.onlab.packet.MacAddress;
+import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.incubator.net.PortStatisticsService.MetricType;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Link;
+import org.onosproject.net.flow.*;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.EthCriterion;
 import org.onosproject.net.flow.criteria.PortCriterion;
+import org.onosproject.net.flow.instructions.Instructions;
 import org.onosproject.net.statistic.*;
 import org.onosproject.net.topology.TopologyService;
 import org.onosproject.ui.impl.topo.util.ServicesBundle;
@@ -50,9 +53,6 @@ import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.eclipse.jetty.util.StringUtil;
 import org.onosproject.net.*;
 import org.onosproject.net.device.DeviceService;
-import org.onosproject.net.flow.FlowEntry;
-import org.onosproject.net.flow.FlowRuleService;
-import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.instructions.Instruction;
 import org.onosproject.net.flow.instructions.Instructions.OutputInstruction;
 import org.onosproject.net.intent.FlowObjectiveIntent;
@@ -102,6 +102,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowStatisticService flowStatisticService;
+
 
     // 4 Kilo Bytes as threshold
     protected static final double BPS_THRESHOLD = 4 * TopoUtils.N_KILO;
@@ -688,10 +689,35 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return highlights;
     }
 
+    private static int curPriority = 10;
+
     private void installRuleForPath(FlowEntry flowEntry, Path path){
         for(int j=0; j < path.links().size(); j++){
 
             System.out.println("------" + path.links().get(0).src().deviceId().toString());
+            if(j == 0){
+                PortCriterion inPortCriterion = (PortCriterion)flowEntry.selector().getCriterion(Criterion.Type.IN_PORT);
+                PortNumber inPort = inPortCriterion.port();
+                PortNumber outPort = path.links().get(0).src().port();
+                DeviceId curDeviceId = path.links().get(0).src().deviceId();
+
+                TrafficSelector trafficSelector = DefaultTrafficSelector.builder(flowEntry.selector()).matchInPort(inPort).build();
+                TrafficTreatment trafficTreatment = DefaultTrafficTreatment.builder().add(Instructions.createOutput(outPort)).build();
+                //50s
+                FlowRule flowRule = new DefaultFlowRule(curDeviceId, trafficSelector, trafficTreatment, 11, new DefaultApplicationId(flowEntry.appId(),
+                        "new flow entry for load balance"), 70000, false, flowEntry.payLoad());
+                services.flow().applyFlowRules(flowRule);
+            }else{
+                PortNumber inPort = path.links().get(j-1).dst().port();
+                PortNumber outPort = path.links().get(j).src().port();
+                DeviceId curDeviceId = path.links().get(j).src().deviceId();
+
+                TrafficSelector trafficSelector = DefaultTrafficSelector.builder(flowEntry.selector()).matchInPort(inPort).build();
+                TrafficTreatment trafficTreatment = DefaultTrafficTreatment.builder().add(Instructions.createOutput(outPort)).build();
+                FlowRule flowRule = new DefaultFlowRule(curDeviceId, trafficSelector, trafficTreatment, 11, new DefaultApplicationId(flowEntry.appId(),
+                        "new flow entry for load balance"), 70000, false, flowEntry.payLoad());
+                flowRuleService.applyFlowRules(flowRule);
+            }
         }
     }
 
