@@ -737,7 +737,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 TrafficTreatment trafficTreatment = DefaultTrafficTreatment.builder().add(Instructions.createOutput(outPort)).build();
                 FlowRule flowRule = new DefaultFlowRule(curDeviceId, trafficSelector, trafficTreatment, 11, new DefaultApplicationId(flowEntry.appId(),
                         "new flow entry for load balance"), 70000, false, flowEntry.payLoad());
-                flowRuleService.applyFlowRules(flowRule);
+                services.flow().applyFlowRules(flowRule);
+                //flowRuleService.applyFlowRules(flowRule);
             }
         }
     }
