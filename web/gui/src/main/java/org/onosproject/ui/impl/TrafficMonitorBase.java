@@ -534,7 +534,15 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                 String flowRateOutOfMonitor = getflowRateFromMonitorModule2(objectFlowId, flowIdRateCollection);
                                 String flowSpeedEtl = flowRateOutOfMonitor.substring(0, flowRateOutOfMonitor.indexOf("b"));
                                 Double resultFlowSpeed = Double.valueOf(flowSpeedEtl);
-                                if(resultFlowSpeed > maxFlowRate){
+
+                                if(resultFlowSpeed > maxFlowRate && r != null){
+                                    log.info("resultFlowSpeed: " + resultFlowSpeed);
+                                    log.info("selector: " +r.selector().toString());
+                                    if(r.selector() == null){
+                                        log.info("r.selector == null");
+                                    }else{
+                                        log.info(r.selector().getCriterion(Criterion.Type.ETH_SRC).toString());
+                                    }
                                     maxFlowRate = resultFlowSpeed;
                                     maxFlowId = objectFlowId;
                                     //flow src
