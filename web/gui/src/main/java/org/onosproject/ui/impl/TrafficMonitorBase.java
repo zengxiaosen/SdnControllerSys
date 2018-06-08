@@ -566,9 +566,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
                             //replace it to the new path for load balance
                             //all links
-                            LinkedList<Link> LinksResult = services.topology().getAllPaths(services.topology().currentTopology());
                             Set<Path> paths = PathsDecision_PLLB(maxFlowRate, reachablePaths);
-                            Path pathObject = paths.iterator().next();
+                            Path pathObject = paths[0];
 
                             //install rule
 
