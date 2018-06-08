@@ -725,7 +725,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 TrafficSelector trafficSelector = DefaultTrafficSelector.builder(flowEntry.selector()).matchInPort(inPort).build();
                 TrafficTreatment trafficTreatment = DefaultTrafficTreatment.builder().add(Instructions.createOutput(outPort)).build();
                 //50s
-                FlowRule flowRule = new DefaultFlowRule(curDeviceId, trafficSelector, trafficTreatment, 11, new DefaultApplicationId(flowEntry.appId(),
+                curPriority += 1;
+                log.info("curPriority: " + curPriority);
+                FlowRule flowRule = new DefaultFlowRule(curDeviceId, trafficSelector, trafficTreatment, curPriority, new DefaultApplicationId(flowEntry.appId(),
                         "new flow entry for load balance"), 70000, false, flowEntry.payLoad());
                 services.flow().applyFlowRules(flowRule);
             }else{
@@ -735,7 +737,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
                 TrafficSelector trafficSelector = DefaultTrafficSelector.builder(flowEntry.selector()).matchInPort(inPort).build();
                 TrafficTreatment trafficTreatment = DefaultTrafficTreatment.builder().add(Instructions.createOutput(outPort)).build();
-                FlowRule flowRule = new DefaultFlowRule(curDeviceId, trafficSelector, trafficTreatment, 11, new DefaultApplicationId(flowEntry.appId(),
+
+                curPriority += 1;
+                log.info("curPriority: " + curPriority);
+                FlowRule flowRule = new DefaultFlowRule(curDeviceId, trafficSelector, trafficTreatment, curPriority, new DefaultApplicationId(flowEntry.appId(),
                         "new flow entry for load balance"), 70000, false, flowEntry.payLoad());
                 services.flow().applyFlowRules(flowRule);
                 //flowRuleService.applyFlowRules(flowRule);
