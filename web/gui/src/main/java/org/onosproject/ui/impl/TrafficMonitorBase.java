@@ -17,10 +17,15 @@
 
 package org.onosproject.ui.impl;
 
+import org.apache.commons.lang.StringUtils;
+import org.onlab.packet.MacAddress;
 import org.onosproject.incubator.net.PortStatisticsService.MetricType;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Link;
-import org.onosproject.net.statistic.Load;
+import org.onosproject.net.flow.criteria.Criterion;
+import org.onosproject.net.flow.criteria.EthCriterion;
+import org.onosproject.net.flow.criteria.PortCriterion;
+import org.onosproject.net.statistic.*;
 import org.onosproject.net.topology.TopologyService;
 import org.onosproject.ui.impl.topo.util.ServicesBundle;
 import org.onosproject.ui.impl.topo.util.TrafficLink;
@@ -31,10 +36,7 @@ import org.onosproject.ui.topo.TopoUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
 import static org.onosproject.incubator.net.PortStatisticsService.MetricType.BYTES;
 import static org.onosproject.incubator.net.PortStatisticsService.MetricType.PACKETS;
@@ -62,7 +64,6 @@ import org.onosproject.net.intent.OpticalConnectivityIntent;
 import org.onosproject.net.intent.OpticalPathIntent;
 import org.onosproject.net.intent.PathIntent;
 import org.onosproject.net.statistic.Load;
-import org.onosproject.net.statistic.StatisticService;
 import org.onosproject.ui.impl.topo.util.IntentSelection;
 import org.onosproject.ui.impl.topo.util.ServicesBundle;
 import org.onosproject.ui.impl.topo.util.TopoIntentFilter;
@@ -76,16 +77,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -105,7 +101,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     protected FlowRuleService flowRuleService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected TopologyService topologyService;
+    protected FlowStatisticService flowStatisticService;
 
     // 4 Kilo Bytes as threshold
     protected static final double BPS_THRESHOLD = 4 * TopoUtils.N_KILO;
@@ -463,43 +459,16 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     ConnectPoint src = tlink.key().src();
                     ConnectPoint dst = tlink.key().dst();
 
-                    /**
-                     * check if the link load reach 70%
-                     * choose the biggest flow
-                     * and replace it to the new path for load balance
-                     *
-                     */
-                    //--------------------------------------------------------------------------------------------------------------
-
-
-                    //log.info("--------------------------------------");
 
                     /**
                      * LinkHighlight实际上是：
                      * highlightForStats(statsType);
                      *
-                     *
-                     *
                      private LinkHighlight highlightForStats(StatsType type) {
                      return new LinkHighlight(linkId(), SECONDARY_HIGHLIGHT)
                      .setLabel(generateLabel(type));
                      }
-
-
                      */
-
-
-
-
-//                    log.info("========= monitor ========================");
-//
-//                    log.info("src.toString(): " + src.toString());
-//                    log.info("dst.toString(): " + dst.toString());
-//                    log.info("src.elementId(): " + src.elementId());
-//                    log.info("dst.elementId(): " + dst.elementId());
-//                    log.info("src.port(): " + src.port().toString());
-//                    log.info("dst.port(): " + dst.port().toString());
-
 
 
                     //linkHighlight.label()就是带宽
@@ -540,7 +509,68 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     }
                     //log.info("curSUm: " +  sum);
                     log.info("bw ---------------------- " + bwUsedRate);
-                    //sum
+                    if(bwUsedRate > 0.7){
+                        /**
+                         * check if the link load reach 70%
+                         * choose the biggest flow
+                         * and replace it to the new path for load balance
+                         *
+                         */
+                        if(src.toString().trim().split(":")[0].equals("of") &&
+                                dst.toString().trim().split(":")[0].equals("of")){
+                            DeviceId curDid = src.deviceId();
+                            PortNumber curPort = src.port();
+                            //flow and load
+                            ConcurrentHashMap<String, String> flowIdRateCollection = services.flowStats().getFlowId_flowRate();
+                            //choose the biggest flow
+                            String maxFlowId = "";
+                            double maxFlowRate = 0.0;
+                            DeviceId maxFlowSrcDeviceId = new DeviceId();
+                            DeviceId maxFlowDstDeviceId = new DeviceId();
+                            FlowEntry flowEntryObject = null;
+                            for(FlowEntry r : services.flow().getFlowEntries(curDid)){
+                                String objectFlowId = r.id().toString();
+                                String flowRateOutOfMonitor = getflowRateFromMonitorModule2(objectFlowId, flowIdRateCollection);
+                                String flowSpeedEtl = flowRateOutOfMonitor.substring(0, flowRateOutOfMonitor.indexOf("b"));
+                                Double resultFlowSpeed = Double.valueOf(flowSpeedEtl);
+                                if(resultFlowSpeed > maxFlowRate){
+                                    maxFlowRate = resultFlowSpeed;
+                                    maxFlowId = objectFlowId;
+                                    //flow src
+                                    EthCriterion srcEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_SRC);
+                                    MacAddress srcMac = srcEth.mac();
+                                    HostId srcHostId = HostId.hostId(srcMac);
+                                    Host srcHost = services.host().getHost(srcHostId);
+                                    DeviceId srcDeviceId = srcHost.location().deviceId();
+
+                                    //flow dst
+                                    EthCriterion dstEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_DST);
+                                    MacAddress dstMac = dstEth.mac();
+                                    HostId dstHostId = HostId.hostId(dstMac);
+                                    Host dstHost = services.host().getHost(dstHostId);
+                                    DeviceId dstDeviceId = dstHost.location().deviceId();
+                                    maxFlowSrcDeviceId = srcDeviceId;
+                                    maxFlowDstDeviceId = dstDeviceId;
+                                    flowEntryObject = r;
+                                }
+                            }
+                            Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
+                            //replace it to the new path for load balance
+                            //all links
+                            LinkedList<Link> LinksResult = services.topology().getAllPaths(services.topology().currentTopology());
+                            Set<Path> paths = PathsDecision_PLLB(maxFlowRate, reachablePaths);
+                            Path pathObject = paths.iterator().next();
+
+                            //install rule
+
+                            installRuleForPath(flowEntryObject, pathObject);
+
+
+                        }
+
+
+
+                    }
 
 
                 }else{
@@ -657,6 +687,291 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
         return highlights;
     }
+
+    private void installRuleForPath(FlowEntry flowEntry, Path path){
+        for(int j=0; j < path.links().size(); j++){
+
+            System.out.println("------" + path.links().get(0).src().deviceId().toString());
+        }
+    }
+
+    private  Set<Path> PathsDecision_PLLB(Double curFlowSpeed, Set<Path> paths) {
+
+        /**
+         * sBigFlow, paths, pkt.receivedFrom().deviceId(),
+         dst.location().deviceId(),
+         src.location().deviceId(),
+         LinksResult
+         */
+
+        //flowStatisticService.loadSummaryPortInternal()
+        Set<Path> result = new HashSet<Path>();
+        Map<Integer, Path> indexPath = new LinkedHashMap<>();
+        //Path finalPath = paths.iterator().next();
+        Path finalPath = null;
+
+        int i=0;
+        /**
+         *
+         * 对多条等价路径进行选路决策
+         *
+         */
+        double maxScore = 0.0;
+        //init with a small score
+        Double flowbw = 10.0;
+        if(curFlowSpeed > 0){
+            flowbw = curFlowSpeed;
+        }
+        /**
+         * pre add the flowbw to path
+         * compute the standard deviation of all link in all reachable path
+         */
+        HashMap<Path, Integer> path_index_ofPaths = new HashMap<Path, Integer>();
+        Integer index_of_path_inPaths = 0;
+        HashMap<Integer, String> pathIndex_linksrestBw_ofPaths = new HashMap<Integer, String>();
+        for(Path path : paths){
+            path_index_ofPaths.put(path, index_of_path_inPaths);
+            StringBuffer sb = new StringBuffer();
+            //compute all link rest bw of this path
+            for(Link link : path.links()){
+                long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                sb.append(IntraLinkRestBw+"|");
+            }
+            pathIndex_linksrestBw_ofPaths.put(index_of_path_inPaths, sb.toString());
+            index_of_path_inPaths ++;
+        }
+
+        for(Path path : paths){
+            /**
+             * in order to compute the standard deviation of all links after pre add the flowBw to curPath
+             * now:
+             * compute all linksRestBw of all path except cur path
+             * And insert them into the otherPathLinksRestBw(ArrayList<Double>)
+             */
+            Integer curPathIndex = path_index_ofPaths.get(path);
+            ArrayList<Double> otherPathLinksRestBw = new ArrayList<>();
+            for(Map.Entry<Path, Integer> entry : path_index_ofPaths.entrySet()){
+                Path thisPath = entry.getKey();
+                Integer thisPathIndex = entry.getValue();
+                if(thisPathIndex != curPathIndex){
+                    // this is the other path needed to compute the rest Bw
+                    String alllinkRestBw_OfThisPath = pathIndex_linksrestBw_ofPaths.get(thisPathIndex);
+                    //ETL: link1_RestBw|link2_RestBw|link3_RestBw....
+                    alllinkRestBw_OfThisPath = alllinkRestBw_OfThisPath.substring(0, alllinkRestBw_OfThisPath.length()-1);
+                    String[] alllinkRestBw = StringUtils.split(alllinkRestBw_OfThisPath, "|");
+                    for(String s : alllinkRestBw){
+                        Double tmp = Double.valueOf(s);
+                        otherPathLinksRestBw.add(tmp);
+                    }
+                }
+
+            }
+            int j=0;
+            indexPath.put(i, path);
+            int rPathLength = path.links().size();
+            /**
+             *
+             *  PathsDecision_PLLB
+             *
+             *  ChokeLinkPassbytes: link bytes
+             *
+             */
+            double allLinkOfPath_BandWidth = 0;
+            double allLinkOfPath_RestBandWidth = 0;
+            //if there is no traffic in this link, that means the link bandwidth is 100M
+            long ChokePointRestBandWidth = 100*1000000;
+            long ChokeLinkPassbytes = 0;
+            ArrayList<Double> arrayList = new ArrayList<>();
+            long IntraLinkMaxBw = 100 * 1000000;
+            for(Link link : path.links()){
+
+                long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
+
+//                    long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
+//                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+//                    double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
+
+                arrayList.add((double)IntraLinkLoadBw);
+                allLinkOfPath_BandWidth += IntraLinkLoadBw;
+                long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                // --------------------------------
+                /**
+                 * pre add the flowBw to curPath
+                 */
+                Double theAddRestBw = flowbw;
+                Double thisLinkResBw = Double.valueOf(IntraLinkLoadBw);
+                Double tp = thisLinkResBw - theAddRestBw;
+                if(tp < 0){
+                    tp = 0.0;
+                }
+                otherPathLinksRestBw.add(tp);
+                // ---------------------------------
+                allLinkOfPath_RestBandWidth += IntraLinkRestBw;
+                /**
+                 * link 源端口和目的端口 信息监控
+                 */
+                long bytesReceived_src = 0;
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    bytesReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesReceived();
+                }
+
+                long bytesSent_src = 0;
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    bytesSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
+                }
+                long rx_dropped_src = 0;
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    rx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
+                }
+                long tx_dropped_src = 0;
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
+                }
+                long rx_tx_dropped_src = rx_dropped_src+tx_dropped_src;
+                /**
+                 * dst
+                 */
+                long bytesReceived_dst = 0;
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                    bytesReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
+                }
+                long bytesSent_dst = 0;
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                    bytesSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesSent();
+                }
+                long rx_dropped_dst = 0;
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                    flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
+                }
+                long tx_dropped_dst = 0;
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                    flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
+                }
+                long rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
+                /**
+                 * the choke point link means(the min restBandWidth)
+                 * b denotes the byte count of the critical
+                 * r denotes the forwarding rate
+                 */
+                if(IntraLinkRestBw < ChokePointRestBandWidth){
+                    //choise the choke point
+                    ChokeLinkPassbytes = Math.max(bytesSent_src, bytesReceived_dst);
+                    //ChokePointRestBandWidth
+                    ChokePointRestBandWidth = IntraLinkRestBw;
+                }
+
+                j++;
+            }
+            /**
+             * 从检测路径模块得到的path中包含的link的数量
+             */
+            double pathlinksSize = path.links().size();
+            /**
+             * path中各个link的平均负载
+             */
+            double pathMeanLoad = allLinkOfPath_BandWidth / pathlinksSize;
+            /**
+             * the mean restBandWidth of all link at this path
+             */
+            double pathMeanRestBw = allLinkOfPath_RestBandWidth / pathlinksSize;
+
+            // -------------------------------------
+
+            /**
+             * otherPathLinksRestBw: ArrayList<Double>
+             * this data structure store the rest Bw of all links in all Path after pre add the flowBw to the cur Path
+             * now compute the standart deviation of them
+             */
+            int sizeOf_otherPathLinksRestBw = otherPathLinksRestBw.size();
+            double sumLinksRestBw = 0;
+            for(int k1=0; k1<otherPathLinksRestBw.size(); k1++){
+                double t = otherPathLinksRestBw.get(k1);
+                sumLinksRestBw += t;
+            }
+            double meanLinksResBw = sumLinksRestBw / sizeOf_otherPathLinksRestBw;
+            double sumpownode = 0;
+            for(int k2=0; k2<otherPathLinksRestBw.size(); k2++){
+                double t2 = otherPathLinksRestBw.get(k2);
+                double t3 = t2-sumLinksRestBw;
+                double t4 = Math.pow(t3, 2);
+                sumpownode += t4;
+            }
+            double preAddFlowToThisPath_AllStandardDeviation = Math.sqrt(sumpownode)/sizeOf_otherPathLinksRestBw;
+            //log.info("preAddFlowToThisPath_AllStandardDeviation: " + preAddFlowToThisPath_AllStandardDeviation);
+            // -------------------------------------
+            /**
+             * 特征工程(all between 0~1 )
+             * rb = 1.0/log(b+1) + 1
+             * rrestBW = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
+             *
+             */
+            //double feature_ChokeLinkPassbytes = 1.0 / (double)(Math.log((double)(ChokeLinkPassbytes + 2))) + 1;
+            //double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
+            double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1));
+            //double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
+            double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
+            double feature_preAddFlowToThisPath_AllStandardDeviation = 1.0/(double)(Math.log((double)preAddFlowToThisPath_AllStandardDeviation + 1) + 1);
+//                    log.info("feature_ChokeLinkPassbytes: " + feature_ChokeLinkPassbytes);
+//                    log.info("feature_ChokePointRestBandWidth: " + feature_ChokePointRestBandWidth);
+//                    log.info("feature_pathMeanRestBw: " + feature_pathMeanRestBw);
+//                    log.info("feature_preAddFlowToThisPath_AllStandardDeviation: " + feature_preAddFlowToThisPath_AllStandardDeviation);
+
+            //log.info("resultScore: " + resultScore);
+            //there are some problem
+            double resultScore = feature_ChokePointRestBandWidth * 5 + feature_pathMeanRestBw * 1 + feature_preAddFlowToThisPath_AllStandardDeviation * 4;
+            //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
+            //log.info("resultScore: "+ resultScore);
+            if(resultScore > maxScore){
+                finalPath = path;
+            }
+
+            i++;
+        }
+
+        //result.add(indexPath.get(0));
+        if(finalPath == null){
+            result.add(indexPath.get(0));
+        }else{
+            result.add(finalPath);
+        }
+        return result;
+
+
+//            int hashvalue = (srcId.toString()+dstid.toString()).hashCode()%paths.size();
+//            Set<Path> result = new HashSet<>();
+//            //result.add(paths[hashvalue]);
+//            int j=0;
+//            for(Path path : paths){
+//                if(j == hashvalue){
+//                    result.add(path);
+//                }
+//                j++;
+//            }
+//            return result;
+    }
+
+
+    public String getflowRateFromMonitorModule2(String ObjectFlowId, ConcurrentHashMap<String, String> curSwitch_deviceId){
+        //如果是沒有這個key就append，有這個key就更改
+        String resultFLowRate = "10b/s";
+        for(Map.Entry<String, String> entry : curSwitch_deviceId.entrySet()){
+            String entrykey = entry.getKey();
+            String entryValue = entry.getValue();
+//                for(int i=0; i< 3; i++){
+//                    log.info("map.size: " + curSwitch_deviceId.size());
+//                    log.info(entrykey);
+//                    log.info(entryValue);
+//                }
+            if(entrykey.contains(ObjectFlowId)){
+                //log.info("match...");
+                resultFLowRate = entryValue;
+            }
+        }
+
+
+        return resultFLowRate;
+    }
+
     public void checkExist(File file) {
         //判断文件目录的存在
         if(file.exists()){
