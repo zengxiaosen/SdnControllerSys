@@ -939,8 +939,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
         //result.add(indexPath.get(0));
         if(finalPath == null){
+            log.info("--------------no--------------");
             result.add(indexPath.get(0));
         }else{
+            log.info("-----------------yes-------------");
             result.add(finalPath);
         }
         return result;
