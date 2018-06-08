@@ -538,12 +538,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
                                 if(resultFlowSpeed > maxFlowRate && r != null){
                                     log.info("resultFlowSpeed: " + resultFlowSpeed);
-                                    log.info("selector: " +r.selector().toString());
-                                    if(r.selector() == null){
-                                        log.info("r.selector == null");
-                                    }else{
-                                        log.info(r.selector().getCriterion(Criterion.Type.ETH_SRC).toString());
-                                    }
                                     maxFlowRate = resultFlowSpeed;
                                     maxFlowId = objectFlowId;
                                     //flow src
@@ -553,6 +547,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                     Host srcHost = services.host().getHost(srcHostId);
                                     DeviceId srcDeviceId = srcHost.location().deviceId();
 
+                                    log.info("srcEth: " + srcEth.toString());
+                                    log.info("srcMac: " + srcMac.toString());
+                                    log.info("srcHost: " + srcHost.toString());
+                                    log.info("srcDeviceId: " + srcDeviceId.toString());
                                     //flow dst
                                     EthCriterion dstEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_DST);
                                     MacAddress dstMac = dstEth.mac();
@@ -562,6 +560,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                     maxFlowSrcDeviceId = srcDeviceId;
                                     maxFlowDstDeviceId = dstDeviceId;
                                     flowEntryObject = r;
+                                    log.info("flowEntryObject: " + flowEntryObject.toString());
                                 }
                             }
                             Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
