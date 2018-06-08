@@ -446,9 +446,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 attachPortLoad(tlink, PACKETS);
             }
 
+            log.info("--------------1-----------");
             // we only want to report on links deemed to have traffic
             if (tlink.hasTraffic()) {
-
+                log.info("-------------0-----------");
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
                 //LinkHighlight linkHighlight1 = new LinkHighlight(linkHighlight);
