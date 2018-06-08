@@ -512,7 +512,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
                     //log.info("curSUm: " +  sum);
-                    if(bwUsedRate > 0.5){
+                    if(bwUsedRate > 0.7){
                         log.info("-------2----------------");
                         /**
                          * check if the link load reach 70%

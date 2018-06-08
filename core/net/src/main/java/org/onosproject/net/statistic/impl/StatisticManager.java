@@ -262,9 +262,7 @@ public class StatisticManager implements StatisticService {
      */
     private Load loadInternal(ConnectPoint connectPoint) {
         Statistics stats = getStatistics(connectPoint);
-        log.info("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-        log.info(stats.toString());
-        log.info("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
         if (!stats.isValid()) {
 
             return new DefaultLoad();
