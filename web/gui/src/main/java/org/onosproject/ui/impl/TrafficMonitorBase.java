@@ -573,7 +573,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             log.info("--------------reachablePaths.size(): " + reachablePaths.size());
                             //replace it to the new path for load balance
                             //all links
-                            //Set<Path> paths = PathsDecision_PLLB(maxFlowRate, reachablePaths);
+                            Set<Path> paths = PathsDecision_PLLB(maxFlowRate, reachablePaths);
+                            log.info("----------------filteredSize: " + paths.size());
+
 //                            log.info("paths.size(): " + paths.size());
 //                            Path pathObject;
 //                            for(Path pathTemp : paths){
