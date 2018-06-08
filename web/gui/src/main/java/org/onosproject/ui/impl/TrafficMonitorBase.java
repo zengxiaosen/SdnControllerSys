@@ -310,8 +310,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         long vportCurSpeed = 0;
         if(connectPoint != null){
             //rate : bytes/s result : b/s
-            if(statisticService.vportload(connectPoint) != null) {
-                vportCurSpeed = statisticService.vportload(connectPoint).rate();
+            if(services.flowStats().vportload(connectPoint) != null) {
+                vportCurSpeed = services.flowStats().vportload(connectPoint).rate();
             }
 
         }
@@ -324,7 +324,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      */
 
     private long getVportMaxCapability(ConnectPoint connectPoint) {
-        Port port = deviceService.getPort(connectPoint.deviceId(), connectPoint.port());
+
+        Port port = services.device().getPort(connectPoint.deviceId(), connectPoint.port());
         long vportMaxSpeed = 0;
         if(connectPoint != null){
             vportMaxSpeed = port.portSpeed() * 1000000;  //portSpeed Mbps result : bps
