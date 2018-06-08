@@ -479,36 +479,38 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     double level = 100000;
                     String tlinkId = tlink.linkId();
                     double bwUsedRate = 0;
-                    if(bandwidth.contains("M")){
-                        double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
-                        bwUsedRate = temp / level;
-                        tLinkId_BandWidth.put(tlinkId, temp);
-                        tLinkId_BandWidthUsedRate.put(tlinkId, temp/level);
-                        sum += temp;
-                        sum_UsedRate += temp/level;
+//                    if(bandwidth.contains("M")){
+//                        double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
+//                        bwUsedRate = temp / level;
+//                        tLinkId_BandWidth.put(tlinkId, temp);
+//                        tLinkId_BandWidthUsedRate.put(tlinkId, temp/level);
+//                        sum += temp;
+//                        sum_UsedRate += temp/level;
+//
+//                    }else if(bandwidth.contains("K")){
+//                        double level1 = 100000;
+//                        String tempETL = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
+//                        //处理 “1,006.67”这种脏数据
+//                        String tempString = "";
+//                        if(tempETL.contains(",")){
+//                            String[] tempStringArray = tempETL.split(",");
+//                            tempString = tempStringArray[0] + tempStringArray[1];
+//                        }
+//                        //log.info("curTemp: " + tempString);
+//                        double temp = 0;
+//                        if(tempString != null &&  tempString != "" && !tempString.equals("")){
+//                            temp = Double.valueOf(tempString);
+//                        }
+//                        //log.info("=====bandwidth(M: " + temp  + ", 帶寬利用率： " + temp/level1);
+//                        bwUsedRate = temp/level1;
+//                        tLinkId_BandWidth.put(tlinkId, temp);
+//                        tLinkId_BandWidthUsedRate.put(tlinkId, temp/level1);
+//                        sum += temp;
+//                        sum_UsedRate += temp/level1;
+//                    }
+//                    log.info("bwUsedRate: " + bwUsedRate);
 
-                    }else if(bandwidth.contains("K")){
-                        double level1 = 100000;
-                        String tempETL = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
-                        //处理 “1,006.67”这种脏数据
-                        String tempString = "";
-                        if(tempETL.contains(",")){
-                            String[] tempStringArray = tempETL.split(",");
-                            tempString = tempStringArray[0] + tempStringArray[1];
-                        }
-                        //log.info("curTemp: " + tempString);
-                        double temp = 0;
-                        if(tempString != null &&  tempString != "" && !tempString.equals("")){
-                            temp = Double.valueOf(tempString);
-                        }
-                        //log.info("=====bandwidth(M: " + temp  + ", 帶寬利用率： " + temp/level1);
-                        bwUsedRate = temp/level1;
-                        tLinkId_BandWidth.put(tlinkId, temp);
-                        tLinkId_BandWidthUsedRate.put(tlinkId, temp/level1);
-                        sum += temp;
-                        sum_UsedRate += temp/level1;
-                    }
-                    log.info("bwUsedRate: " + bwUsedRate);
+
                     //log.info("curSUm: " +  sum);
 //                    if(bwUsedRate > 0.5){
 //                        log.info("-------2----------------");
