@@ -856,44 +856,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 /**
                  * link 源端口和目的端口 信息监控
                  */
-                long bytesReceived_src = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                    bytesReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesReceived();
-                }
 
-                long bytesSent_src = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                    bytesSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
-                }
-                long rx_dropped_src = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                    rx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
-                }
-                long tx_dropped_src = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                    flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
-                }
-                long rx_tx_dropped_src = rx_dropped_src+tx_dropped_src;
-                /**
-                 * dst
-                 */
-                long bytesReceived_dst = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                    bytesReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
-                }
-                long bytesSent_dst = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                    bytesSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesSent();
-                }
-                long rx_dropped_dst = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                    flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
-                }
-                long tx_dropped_dst = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                    flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
-                }
-                long rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
+
                 /**
                  * the choke point link means(the min restBandWidth)
                  * b denotes the byte count of the critical
@@ -901,7 +865,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                  */
                 if(IntraLinkRestBw < ChokePointRestBandWidth){
                     //choise the choke point
-                    ChokeLinkPassbytes = Math.max(bytesSent_src, bytesReceived_dst);
                     //ChokePointRestBandWidth
                     ChokePointRestBandWidth = IntraLinkRestBw;
                 }
