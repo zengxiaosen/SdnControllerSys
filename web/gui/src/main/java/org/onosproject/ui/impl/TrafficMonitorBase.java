@@ -526,8 +526,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             //choose the biggest flow
                             String maxFlowId = "";
                             double maxFlowRate = 0.0;
-                            DeviceId maxFlowSrcDeviceId = new DeviceId();
-                            DeviceId maxFlowDstDeviceId = new DeviceId();
+                            DeviceId maxFlowSrcDeviceId = null;
+                            DeviceId maxFlowDstDeviceId = null;
                             FlowEntry flowEntryObject = null;
                             for(FlowEntry r : services.flow().getFlowEntries(curDid)){
                                 String objectFlowId = r.id().toString();
