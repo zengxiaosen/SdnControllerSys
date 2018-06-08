@@ -568,8 +568,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                     log.info("dstHost: " + dstHost.toString());
                                     log.info("dstDeviceId: " + dstDeviceId.toString());
 
-                                    maxFlowSrcDeviceId = new DeviceId(srcDeviceId);
-                                    maxFlowDstDeviceId = new DeviceId(dstDeviceId);
+                                    maxFlowSrcDeviceId = srcDeviceId;
+                                    maxFlowDstDeviceId = dstDeviceId;
                                     flowEntryObject = r;
                                     log.info("flowEntryObject: " + flowEntryObject.toString());
                                     log.info("maxFlowSrcDeviceId: " + maxFlowSrcDeviceId);
@@ -577,23 +577,29 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                 }
                             }
 
+                            if(maxFlowSrcDeviceId != null && maxFlowDstDeviceId != null){
+                                Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
+                                log.info("--------------reachablePaths.size(): " + reachablePaths.size());
+                                //replace it to the new path for load balance
+                                //all links
+                                Set<Path> paths = PathsDecision_PLLB(maxFlowRate, reachablePaths);
+                                log.info("----------------filteredSize: " + paths.size());
 
-                            Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
-                            log.info("--------------reachablePaths.size(): " + reachablePaths.size());
-                            //replace it to the new path for load balance
-                            //all links
-                            Set<Path> paths = PathsDecision_PLLB(maxFlowRate, reachablePaths);
-                            log.info("----------------filteredSize: " + paths.size());
+                                Path pathObject = null;
+                                //size == 1
+                                for(Path pathTemp : paths){
+                                    pathObject = pathTemp;
+                                }
 
-                            Path pathObject = null;
-                            //size == 1
-                            for(Path pathTemp : paths){
-                                pathObject = pathTemp;
+                                //install rule
+
+                                installRuleForPath(flowEntryObject, pathObject);
+                                log.info("yyyyyyyyyyyyyyyyyyyyyyyyyy");
+                            }else{
+                                log.info("xxxxxxxxxxxxxxxxxxxxxxxx");
                             }
 
-                            //install rule
 
-                            installRuleForPath(flowEntryObject, pathObject);
 
 
                         }
