@@ -262,7 +262,11 @@ public class StatisticManager implements StatisticService {
      */
     private Load loadInternal(ConnectPoint connectPoint) {
         Statistics stats = getStatistics(connectPoint);
+        log.info("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        log.info(stats.toString());
+        log.info("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
         if (!stats.isValid()) {
+
             return new DefaultLoad();
         }
         HashMap<String, Long> flowCurrent_idBytes1 = new HashMap<>();
@@ -386,9 +390,9 @@ public class StatisticManager implements StatisticService {
             current = getCurrentStatistic(connectPoint);
             previous = getPreviousStatistic(connectPoint);
         }
-        if(current == null){
-            log.info("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-        }
+
+
+
 
         return new Statistics(current, previous);
     }
