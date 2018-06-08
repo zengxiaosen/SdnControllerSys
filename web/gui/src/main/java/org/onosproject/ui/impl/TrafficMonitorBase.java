@@ -576,15 +576,15 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             Set<Path> paths = PathsDecision_PLLB(maxFlowRate, reachablePaths);
                             log.info("----------------filteredSize: " + paths.size());
 
-//                            log.info("paths.size(): " + paths.size());
-//                            Path pathObject;
-//                            for(Path pathTemp : paths){
-//                                pathObject = pathTemp;
-//                            }
+                            Path pathObject = null;
+                            //size == 1
+                            for(Path pathTemp : paths){
+                                pathObject = pathTemp;
+                            }
 
                             //install rule
 
-                            //installRuleForPath(flowEntryObject, pathObject);
+                            installRuleForPath(flowEntryObject, pathObject);
 
 
                         }
@@ -712,6 +712,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     private static int curPriority = 10;
 
     private void installRuleForPath(FlowEntry flowEntry, Path path){
+
         for(int j=0; j < path.links().size(); j++){
 
             System.out.println("------" + path.links().get(0).src().deviceId().toString());
@@ -939,10 +940,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
         //result.add(indexPath.get(0));
         if(finalPath == null){
-            log.info("--------------no--------------");
             result.add(indexPath.get(0));
         }else{
-            log.info("-----------------yes-------------");
             result.add(finalPath);
         }
         return result;
