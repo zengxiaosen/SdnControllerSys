@@ -509,8 +509,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         sum += temp;
                         sum_UsedRate += temp/level1;
                     }
+                    log.info("-------------1-----------");
                     //log.info("curSUm: " +  sum);
-                    if(bwUsedRate > 0.7){
+                    if(bwUsedRate > 0.5){
+                        log.info("-------2----------------");
                         /**
                          * check if the link load reach 70%
                          * choose the biggest flow
