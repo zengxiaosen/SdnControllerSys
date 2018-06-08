@@ -446,10 +446,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 attachPortLoad(tlink, PACKETS);
             }
 
-            log.info("--------------1-----------");
             // we only want to report on links deemed to have traffic
             if (tlink.hasTraffic()) {
-                log.info("-------------0-----------");
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
                 //LinkHighlight linkHighlight1 = new LinkHighlight(linkHighlight);
@@ -510,106 +508,108 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         sum += temp;
                         sum_UsedRate += temp/level1;
                     }
-                    log.info("-------------1-----------");
+                    log.info("bwUsedRate: " + bwUsedRate);
                     //log.info("curSUm: " +  sum);
-                    if(bwUsedRate > 0.5){
-                        log.info("-------2----------------");
-                        /**
-                         * check if the link load reach 70%
-                         * choose the biggest flow
-                         * and replace it to the new path for load balance
-                         *
-                         */
-                        if(src.toString().trim().split(":")[0].equals("of") &&
-                                dst.toString().trim().split(":")[0].equals("of")){
-                            DeviceId curDid = src.deviceId();
-                            PortNumber curPort = src.port();
-                            //flow and load
-                            ConcurrentHashMap<String, String> flowIdRateCollection = services.flowStats().getFlowId_flowRate();
-                            //choose the biggest flow
-                            String maxFlowId = "";
-                            double maxFlowRate = 0.0;
-                            DeviceId maxFlowSrcDeviceId = null;
-                            DeviceId maxFlowDstDeviceId = null;
-                            FlowEntry flowEntryObject = null;
-                            for(FlowEntry r : services.flow().getFlowEntries(curDid)){
-                                String objectFlowId = r.id().toString();
-                                String flowRateOutOfMonitor = getflowRateFromMonitorModule2(objectFlowId, flowIdRateCollection);
-                                String flowSpeedEtl = flowRateOutOfMonitor.substring(0, flowRateOutOfMonitor.indexOf("b"));
-                                Double resultFlowSpeed = Double.valueOf(flowSpeedEtl);
+//                    if(bwUsedRate > 0.5){
+//                        log.info("-------2----------------");
+//                        /**
+//                         * check if the link load reach 70%
+//                         * choose the biggest flow
+//                         * and replace it to the new path for load balance
+//                         *
+//                         */
+//                        if(src.toString().trim().split(":")[0].equals("of") &&
+//                                dst.toString().trim().split(":")[0].equals("of")){
+//                            DeviceId curDid = src.deviceId();
+//                            PortNumber curPort = src.port();
+//                            //flow and load
+//                            ConcurrentHashMap<String, String> flowIdRateCollection = services.flowStats().getFlowId_flowRate();
+//                            //choose the biggest flow
+//                            String maxFlowId = "";
+//                            double maxFlowRate = 0.0;
+//                            DeviceId maxFlowSrcDeviceId = null;
+//                            DeviceId maxFlowDstDeviceId = null;
+//                            FlowEntry flowEntryObject = null;
+//                            for(FlowEntry r : services.flow().getFlowEntries(curDid)){
+//                                String objectFlowId = r.id().toString();
+//                                String flowRateOutOfMonitor = getflowRateFromMonitorModule2(objectFlowId, flowIdRateCollection);
+//                                String flowSpeedEtl = flowRateOutOfMonitor.substring(0, flowRateOutOfMonitor.indexOf("b"));
+//                                Double resultFlowSpeed = Double.valueOf(flowSpeedEtl);
+//
+//                                EthCriterion srcEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_SRC);
+//                                EthCriterion dstEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_DST);
+//                                if(resultFlowSpeed > maxFlowRate
+//                                        && r != null
+//                                        && srcEth != null
+//                                        && dstEth != null){
+//                                    log.info("--------------test----------------");
+//                                    log.info("resultFlowSpeed: " + resultFlowSpeed);
+//                                    maxFlowRate = resultFlowSpeed;
+//                                    maxFlowId = objectFlowId;
+//                                    //flow src
+//
+//
+//                                    MacAddress srcMac = srcEth.mac();
+//                                    HostId srcHostId = HostId.hostId(srcMac);
+//                                    Host srcHost = services.host().getHost(srcHostId);
+//                                    DeviceId srcDeviceId = srcHost.location().deviceId();
+//
+//                                    log.info("srcEth: " + srcEth.toString());
+//                                    log.info("srcMac: " + srcMac.toString());
+//                                    log.info("srcHost: " + srcHost.toString());
+//                                    log.info("srcDeviceId: " + srcDeviceId.toString());
+//                                    //flow dst
+//
+//                                    MacAddress dstMac = dstEth.mac();
+//                                    HostId dstHostId = HostId.hostId(dstMac);
+//                                    Host dstHost = services.host().getHost(dstHostId);
+//                                    DeviceId dstDeviceId = dstHost.location().deviceId();
+//                                    log.info("dstEth: " + dstEth.toString());
+//                                    log.info("dstMac: " + dstMac.toString());
+//                                    log.info("dstHost: " + dstHost.toString());
+//                                    log.info("dstDeviceId: " + dstDeviceId.toString());
+//
+//                                    maxFlowSrcDeviceId = srcDeviceId;
+//                                    maxFlowDstDeviceId = dstDeviceId;
+//                                    flowEntryObject = r;
+//                                    log.info("flowEntryObject: " + flowEntryObject.toString());
+//                                    log.info("maxFlowSrcDeviceId: " + maxFlowSrcDeviceId);
+//                                    log.info("maxFlowDstDeviceId: " + maxFlowDstDeviceId);
+//                                }
+//                            }
+//
+//                            if(maxFlowSrcDeviceId != null && maxFlowDstDeviceId != null){
+//                                Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
+//                                log.info("--------------reachablePaths.size(): " + reachablePaths.size());
+//                                //replace it to the new path for load balance
+//                                //all links
+//                                Set<Path> paths = PathsDecision_PLLB(maxFlowRate, reachablePaths);
+//                                log.info("----------------filteredSize: " + paths.size());
+//
+//                                Path pathObject = null;
+//                                //size == 1
+//                                for(Path pathTemp : paths){
+//                                    pathObject = pathTemp;
+//                                }
+//
+//                                //install rule
+//
+//                                installRuleForPath(flowEntryObject, pathObject);
+//                                log.info("install rule finish");
+//                            }else{
+//                                log.info("xxxxxxxxxxxxxxxxxxxxxxxx");
+//                            }
+//
+//
+//
+//
+//                        }
+//
+//
+//
+//                    }
 
-                                EthCriterion srcEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_SRC);
-                                EthCriterion dstEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_DST);
-                                if(resultFlowSpeed > maxFlowRate
-                                        && r != null
-                                        && srcEth != null
-                                        && dstEth != null){
-                                    log.info("--------------test----------------");
-                                    log.info("resultFlowSpeed: " + resultFlowSpeed);
-                                    maxFlowRate = resultFlowSpeed;
-                                    maxFlowId = objectFlowId;
-                                    //flow src
-
-
-                                    MacAddress srcMac = srcEth.mac();
-                                    HostId srcHostId = HostId.hostId(srcMac);
-                                    Host srcHost = services.host().getHost(srcHostId);
-                                    DeviceId srcDeviceId = srcHost.location().deviceId();
-
-                                    log.info("srcEth: " + srcEth.toString());
-                                    log.info("srcMac: " + srcMac.toString());
-                                    log.info("srcHost: " + srcHost.toString());
-                                    log.info("srcDeviceId: " + srcDeviceId.toString());
-                                    //flow dst
-
-                                    MacAddress dstMac = dstEth.mac();
-                                    HostId dstHostId = HostId.hostId(dstMac);
-                                    Host dstHost = services.host().getHost(dstHostId);
-                                    DeviceId dstDeviceId = dstHost.location().deviceId();
-                                    log.info("dstEth: " + dstEth.toString());
-                                    log.info("dstMac: " + dstMac.toString());
-                                    log.info("dstHost: " + dstHost.toString());
-                                    log.info("dstDeviceId: " + dstDeviceId.toString());
-
-                                    maxFlowSrcDeviceId = srcDeviceId;
-                                    maxFlowDstDeviceId = dstDeviceId;
-                                    flowEntryObject = r;
-                                    log.info("flowEntryObject: " + flowEntryObject.toString());
-                                    log.info("maxFlowSrcDeviceId: " + maxFlowSrcDeviceId);
-                                    log.info("maxFlowDstDeviceId: " + maxFlowDstDeviceId);
-                                }
-                            }
-
-                            if(maxFlowSrcDeviceId != null && maxFlowDstDeviceId != null){
-                                Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
-                                log.info("--------------reachablePaths.size(): " + reachablePaths.size());
-                                //replace it to the new path for load balance
-                                //all links
-                                Set<Path> paths = PathsDecision_PLLB(maxFlowRate, reachablePaths);
-                                log.info("----------------filteredSize: " + paths.size());
-
-                                Path pathObject = null;
-                                //size == 1
-                                for(Path pathTemp : paths){
-                                    pathObject = pathTemp;
-                                }
-
-                                //install rule
-
-                                installRuleForPath(flowEntryObject, pathObject);
-                                log.info("install rule finish");
-                            }else{
-                                log.info("xxxxxxxxxxxxxxxxxxxxxxxx");
-                            }
-
-
-
-
-                        }
-
-
-
-                    }
+                    /////////////////////////////////////////////////////////////////////////
 
 
                 }else{
