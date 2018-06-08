@@ -563,12 +563,21 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                     HostId dstHostId = HostId.hostId(dstMac);
                                     Host dstHost = services.host().getHost(dstHostId);
                                     DeviceId dstDeviceId = dstHost.location().deviceId();
-                                    maxFlowSrcDeviceId = srcDeviceId;
-                                    maxFlowDstDeviceId = dstDeviceId;
+                                    log.info("dstEth: " + dstEth.toString());
+                                    log.info("dstMac: " + dstMac.toString());
+                                    log.info("dstHost: " + dstHost.toString());
+                                    log.info("dstDeviceId: " + dstDeviceId.toString());
+
+                                    maxFlowSrcDeviceId = new DeviceId(srcDeviceId);
+                                    maxFlowDstDeviceId = new DeviceId(dstDeviceId);
                                     flowEntryObject = r;
                                     log.info("flowEntryObject: " + flowEntryObject.toString());
+                                    log.info("maxFlowSrcDeviceId: " + maxFlowSrcDeviceId);
+                                    log.info("maxFlowDstDeviceId: " + maxFlowDstDeviceId);
                                 }
                             }
+
+
                             Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
                             log.info("--------------reachablePaths.size(): " + reachablePaths.size());
                             //replace it to the new path for load balance
