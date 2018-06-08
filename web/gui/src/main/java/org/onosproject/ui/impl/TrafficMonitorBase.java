@@ -569,7 +569,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                     log.info("flowEntryObject: " + flowEntryObject.toString());
                                 }
                             }
-                            //Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
+                            Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
+                            log.info("--------------reachablePaths.size(): " + reachablePaths.size());
                             //replace it to the new path for load balance
                             //all links
                             //Set<Path> paths = PathsDecision_PLLB(maxFlowRate, reachablePaths);
