@@ -1538,7 +1538,7 @@ public class ReactiveForwarding {
                     //there are some links not satisfy the flow bw
                     if(ifPathCanChoose == 0){
                         // not choose this path
-                        //resultScore = 0;
+                        resultScore = 0;
                     }
 
 
