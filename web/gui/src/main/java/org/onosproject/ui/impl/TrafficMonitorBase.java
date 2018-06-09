@@ -966,7 +966,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             //there are some links not satisfy the flow bw
             if(ifPathCanChoose == 0){
                 // not choose this path
-                resultScore = 0;
+                //resultScore = 0;
             }
             if(resultScore > maxScore){
                 finalPath = path;
