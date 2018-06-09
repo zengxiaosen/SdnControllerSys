@@ -959,14 +959,14 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
             //log.info("resultScore: " + resultScore);
             //there are some problem
-            double resultScore = feature_ChokePointRestBandWidth * 5 + feature_pathMeanRestBw * 4 + feature_preAddFlowToThisPath_AllStandardDeviation * 1;
+            double resultScore = feature_ChokePointRestBandWidth * 5 + feature_pathMeanRestBw * 1 + feature_preAddFlowToThisPath_AllStandardDeviation * 4;
             //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
             //log.info("resultScore: "+ resultScore);
 
             //there are some links not satisfy the flow bw
             if(ifPathCanChoose == 0){
                 // not choose this path
-                //resultScore = 0;
+                resultScore = 0;
             }
             if(resultScore > maxScore){
                 finalPath = path;
