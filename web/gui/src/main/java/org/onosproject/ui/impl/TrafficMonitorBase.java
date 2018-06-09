@@ -856,6 +856,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             long ChokeLinkPassbytes = 0;
             ArrayList<Double> arrayList = new ArrayList<>();
             long IntraLinkMaxBw = 100 * 1000000;
+            int ifPathCanChoose = 1;
             for(Link link : path.links()){
 
                 long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
@@ -867,6 +868,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 arrayList.add((double)IntraLinkLoadBw);
                 allLinkOfPath_BandWidth += IntraLinkLoadBw;
                 long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+
+                if(flowbw > IntraLinkLoadBw){
+                    ifPathCanChoose = 0;
+                }
                 // --------------------------------
                 /**
                  * pre add the flowBw to curPath
@@ -957,6 +962,12 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             double resultScore = feature_ChokePointRestBandWidth * 5 + feature_pathMeanRestBw * 2 + feature_preAddFlowToThisPath_AllStandardDeviation * 3;
             //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
             //log.info("resultScore: "+ resultScore);
+
+            //there are some links not satisfy the flow bw
+            if(ifPathCanChoose == 0){
+                // not choose this path
+                resultScore = 0;
+            }
             if(resultScore > maxScore){
                 finalPath = path;
             }
