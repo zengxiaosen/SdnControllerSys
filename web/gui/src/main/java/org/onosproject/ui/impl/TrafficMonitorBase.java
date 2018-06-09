@@ -512,7 +512,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
                     //log.info("curSUm: " +  sum);
-                    if(bwUsedRate > 0.7){
+                    if(bwUsedRate > 0.6){
                         log.info("-------2----------------");
                         /**
                          * check if the link load reach 70%
@@ -966,7 +966,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             //there are some links not satisfy the flow bw
             if(ifPathCanChoose == 0){
                 // not choose this path
-                //resultScore = 0;
+                resultScore = 0;
             }
             if(resultScore > maxScore){
                 finalPath = path;
