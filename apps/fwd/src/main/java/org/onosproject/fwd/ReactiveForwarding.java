@@ -1531,7 +1531,7 @@ public class ReactiveForwarding {
 
                     //log.info("resultScore: " + resultScore);
                     //there are some problem
-                    double resultScore = feature_ChokePointRestBandWidth * 1 + feature_pathMeanRestBw * 1 + feature_preAddFlowToThisPath_AllStandardDeviation * 8;
+                    double resultScore = feature_ChokePointRestBandWidth * 2 + feature_pathMeanRestBw * 1 + feature_preAddFlowToThisPath_AllStandardDeviation * 7;
                     //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
                     //log.info("resultScore: "+ resultScore);
 
