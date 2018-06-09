@@ -1388,6 +1388,7 @@ public class ReactiveForwarding {
                     long ChokeLinkPassbytes = 0;
                     ArrayList<Double> arrayList = new ArrayList<>();
                     long IntraLinkMaxBw = 100 * 1000000;
+                    int ifPathCanChoose = 1;
                     for(Link link : path.links()){
 
                         long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
@@ -1399,6 +1400,9 @@ public class ReactiveForwarding {
                         arrayList.add((double)IntraLinkLoadBw);
                         allLinkOfPath_BandWidth += IntraLinkLoadBw;
                         long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                        if(flowbw > IntraLinkLoadBw){
+                            ifPathCanChoose = 0;
+                        }
                         // --------------------------------
                         /**
                          * pre add the flowBw to curPath
@@ -1467,6 +1471,10 @@ public class ReactiveForwarding {
 
                         j++;
                     }
+
+
+
+
                     /**
                      * 从检测路径模块得到的path中包含的link的数量
                      */
@@ -1526,6 +1534,15 @@ public class ReactiveForwarding {
                     double resultScore = feature_ChokePointRestBandWidth * 5 + feature_pathMeanRestBw * 2 + feature_preAddFlowToThisPath_AllStandardDeviation * 3;
                     //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
                     //log.info("resultScore: "+ resultScore);
+
+                    //there are some links not satisfy the flow bw
+                    if(ifPathCanChoose == 0){
+                        // not choose this path
+                        resultScore = 0;
+                    }
+
+
+
                     if(resultScore > maxScore){
                         finalPath = path;
                     }
