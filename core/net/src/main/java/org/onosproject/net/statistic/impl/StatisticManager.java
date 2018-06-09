@@ -289,6 +289,9 @@ public class StatisticManager implements StatisticService {
                 long flowBytesPrevious = flowCurrent_idBytes2.get(key);
                 long bytesTrans = flowBytesNow - flowBytesPrevious;
                 long flowRate = bytesTrans / 5;
+                log.info("flowBytesNow: " + flowBytesNow);
+                log.info("flowBytesPrevious: " + flowBytesPrevious);
+                log.info("flowRate: " + flowRate);
                 String flowRateString = String.valueOf(flowRate);
                 StringBuffer sb = new StringBuffer();
                 sb.append(key).append("|").append(connectPoint.deviceId().toString()).append("|").append(flowRateString).append("b/s");
