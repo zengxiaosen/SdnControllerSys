@@ -416,6 +416,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         //addEdgeLinks(linkMapForFlow);
         double sum = 0;
         double sum_UsedRate = 0;
+        double sum_restBw = 0;
         /**
          * key: String tlinkId
          * value: Double BandWidth
@@ -486,6 +487,11 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         tLinkId_BandWidthUsedRate.put(tlinkId, temp/level);
                         sum += temp;
                         sum_UsedRate += temp/level;
+                        double restTemp = 0.0;
+                        if(level > temp){
+                            restTemp = level - temp;
+                        }
+                        sum_restBw += restTemp;
 
                     }else if(bandwidth.contains("K")){
                         double level1 = 100000;
@@ -507,6 +513,11 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         tLinkId_BandWidthUsedRate.put(tlinkId, temp/level1);
                         sum += temp;
                         sum_UsedRate += temp/level1;
+                        double restTemp = 0.0;
+                        if(level1 > temp){
+                            restTemp = level1 - temp;
+                        }
+                        sum_restBw += restTemp;
                     }
                     log.info("bwUsedRate: " + bwUsedRate);
 
@@ -620,13 +631,14 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 }
 
             }else{
-                double level2 = 100000;
+                double level2 = 100000;//100M
                 double temp = 0;// 带宽设为0
                 String tlinkId = tlink.linkId();
                 tLinkId_BandWidth.put(tlinkId, temp);
                 tLinkId_BandWidthUsedRate.put(tlinkId, temp/level2);
                 sum += 0;
                 sum_UsedRate += 0;
+                sum_restBw += 0;
             }
         }
         // TODO: consider whether a map would be better...
@@ -657,6 +669,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * 每条link平均的带宽利用率
          */
         double meanTrafficBandWidthUsedRate = sum_UsedRate / TrafficLinkSize;
+        /**
+         * mean restbw of links
+         */
+        double meanTrafficRestBandWidth = sum_restBw / TrafficLinkSize;
 
         /**
          * 对tLinkId_BandWidth中每条link算负载的均衡度(用帶寬的均衡度判斷）
@@ -681,6 +697,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             double bdInterval2 = Math.pow(bdInterval, 2);
             //log.info("bdInterval2 : " + bdInterval2);
             bdInterval2_Sum += bdInterval2;
+
 
 
         }
@@ -716,10 +733,13 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         log.info("標準差(網絡拓撲所有link帶寬利用率的標準差) == " + standard_deviation_usedRate);
 
         File csvFile = new File("/home/lihaifeng/BandWidthUsedRateStandardDeviation.csv");
+        File csvFile2 = new File("/home/lihaifeng/BwMeanRest.csv");
         checkExist(csvFile);
+        checkExist(csvFile2);
         //boolean b = appendData(csvFile, standard_deviation+"");
         boolean b = appendData(csvFile, standard_deviation_usedRate+"");
-        if(b == true){
+        boolean b1 = appendData(csvFile2, meanTrafficRestBandWidth+"");
+        if(b == true && b1 == true){
             log.info("追加写成功..");
         }else{
             log.info("追加写失败..");
@@ -959,7 +979,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
             //log.info("resultScore: " + resultScore);
             //there are some problem
-            double resultScore = feature_ChokePointRestBandWidth * 2 + feature_pathMeanRestBw * 1 + feature_preAddFlowToThisPath_AllStandardDeviation * 7;
+            double resultScore = feature_ChokePointRestBandWidth * 0 + feature_pathMeanRestBw * 1 + feature_preAddFlowToThisPath_AllStandardDeviation * 9;
             //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
             //log.info("resultScore: "+ resultScore);
 
