@@ -874,7 +874,7 @@ public class ReactiveForwarding {
 
             Set<Path> Paths_Choise = new HashSet<>();
 
-            int choise = 0;
+            int choise = 2;
             if(choise == 0){
                 Set<Path> Paths_FESM = PathsDecision_FESM(paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),

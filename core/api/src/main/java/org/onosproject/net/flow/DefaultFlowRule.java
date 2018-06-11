@@ -609,12 +609,12 @@ public class DefaultFlowRule implements FlowRule {
         double result1 = averageNumber(test1);
         double result2 = averageNumber(test2);
         double result3 = averageNumber(test3);
-        double result4 = averageNumber(test4);
+        //double result4 = averageNumber(test4);
         System.out.println("average:");
         System.out.println("0:1:9 = " + result1);
         System.out.println("3:1:6 = " + result2);
         System.out.println("5:1:4 = " + result3);
-        System.out.println("7:1:2 = " + result4);
+        //System.out.println("7:1:2 = " + result4);
 
     }
 
