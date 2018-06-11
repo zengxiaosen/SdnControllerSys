@@ -181,6 +181,9 @@ import static org.slf4j.LoggerFactory.getLogger;
 @Component(immediate = true)
 @Service(value = ReactiveForwarding.class)
 public class ReactiveForwarding {
+
+    private static ConcurrentHashMap<String, Integer> srcDstMacEcmp = new ConcurrentHashMap<>();
+
     //默认超时时间
     private static final int DEFAULT_TIMEOUT = 10;
     //默认优先级
@@ -992,7 +995,6 @@ public class ReactiveForwarding {
 
         }
 
-        private static ConcurrentHashMap<String, Integer> srcDstMacEcmp = new ConcurrentHashMap<>();
         private  Set<Path> PathsDecision_ECMP(Set<Path> paths, String srcMac, String dstMac, String srcPort, String dstPort,String protocol){
             Set<Path> result = new HashSet<>();
             String srcDstMac = srcMac.trim() + dstMac.trim();
