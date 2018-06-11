@@ -871,7 +871,7 @@ public class ReactiveForwarding {
 
             Set<Path> Paths_Choise = new HashSet<>();
 
-            int choise = 1;
+            int choise = 2;
             if(choise == 0){
                 Set<Path> Paths_FESM = PathsDecision_FESM(paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
@@ -992,13 +992,21 @@ public class ReactiveForwarding {
 
         }
 
-
+        private static ConcurrentHashMap<String, Integer> srcDstMacEcmp = new ConcurrentHashMap<>();
         private  Set<Path> PathsDecision_ECMP(Set<Path> paths, String srcMac, String dstMac, String srcPort, String dstPort,String protocol){
             Set<Path> result = new HashSet<>();
-            int hc = (srcMac.hashCode() + dstMac.hashCode() + srcPort.hashCode() + dstPort.hashCode() + protocol.hashCode()) % paths.size();
+            String srcDstMac = srcMac.trim() + dstMac.trim();
+            int indexPath = 0;
+            if(srcDstMacEcmp.get(srcDstMac) == null){
+                srcDstMacEcmp.put(srcDstMac, indexPath);
+            }else{
+                indexPath = (srcDstMacEcmp.get(srcDstMac) + 1) % paths.size();
+                srcDstMacEcmp.put(srcDstMac, indexPath);
+            }
+
             int j=0;
             for(Path path : paths){
-                if(j == hc){
+                if(j == indexPath){
                     result.add(path);
                 }
             }
