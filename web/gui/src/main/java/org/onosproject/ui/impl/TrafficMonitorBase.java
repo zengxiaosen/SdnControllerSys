@@ -507,7 +507,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         if(tempString != null &&  tempString != "" && !tempString.equals("")){
                             temp = Double.valueOf(tempString);
                         }
-                        //log.info("=====bandwidth(M: " + temp  + ", 帶寬利用率： " + temp/level1);
+                        log.info("=====bandwidth(M: " + temp  + ", 帶寬利用率： " + temp/level1);
                         bwUsedRate = temp/level1;
                         tLinkId_BandWidth.put(tlinkId, temp);
                         tLinkId_BandWidthUsedRate.put(tlinkId, temp/level1);
@@ -732,19 +732,22 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         log.info("标准差(网络拓扑所有link帶寬的標準差）== " + standard_deviation);
         log.info("標準差(網絡拓撲所有link帶寬利用率的標準差) == " + standard_deviation_usedRate);
         log.info("mean bw used rate == " + meanTrafficBandWidthUsedRate);
+        log.info("mean bw KBPS == " + meanTrafficBandWidth);
 
         File csvFile = new File("/home/lihaifeng/BandWidthUsedRateStandardDeviation.csv");
         File csvFile2 = new File("/home/lihaifeng/BwMeanRest.csv");
         File csvFile3 = new File("/home/lihaifeng/BwMeanUsedRate.csv");
+        File csvFile4 = new File("/home/lihaifeng/BwMeanBps.csv");
         checkExist(csvFile);
         checkExist(csvFile2);
         checkExist(csvFile3);
-
+        checkExist(csvFile4);
         //boolean b = appendData(csvFile, standard_deviation+"");
         boolean b = appendData(csvFile, standard_deviation_usedRate+"");
         boolean b1 = appendData(csvFile2, meanTrafficRestBandWidth+"");
-        boolean b2 = appendData(csvFile3, meanTrafficBandWidth+"");
-        if(b == true && b1 == true && b2 == true){
+        boolean b2 = appendData(csvFile3, meanTrafficBandWidthUsedRate+"");
+        boolean b3 = appendData(csvFile4, meanTrafficBandWidth + "");
+        if(b == true && b1 == true && b2 == true && b3 == true){
             log.info("追加写成功..");
         }else{
             log.info("追加写失败..");
