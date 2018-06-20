@@ -874,7 +874,7 @@ public class ReactiveForwarding {
 
             Set<Path> Paths_Choise = new HashSet<>();
 
-            int choise = 2;
+            int choise = 1;
             if(choise == 0){
                 Set<Path> Paths_FESM = PathsDecision_FESM(paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
@@ -1541,7 +1541,7 @@ public class ReactiveForwarding {
 
                     //log.info("resultScore: " + resultScore);
                     //there are some problem
-                    double resultScore = feature_ChokePointRestBandWidth * 5 + feature_pathMeanRestBw * 1 + feature_preAddFlowToThisPath_AllStandardDeviation * 4;
+                    double resultScore = feature_ChokePointRestBandWidth * 5   + feature_pathMeanRestBw * 5 + feature_preAddFlowToThisPath_AllStandardDeviation * 0;
                     //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
                     //log.info("resultScore: "+ resultScore);
 
