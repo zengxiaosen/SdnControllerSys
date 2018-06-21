@@ -311,7 +311,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         if(connectPoint != null){
             //rate : bytes/s result : B/s
             //services.flowStats().vportload(connectPoint)
-            services.portStats().load(connectPoint, BYTES)
+            //services.portStats().load(connectPoint, BYTES)
             if(services.portStats().load(connectPoint, BYTES) != null) {
                 vportCurSpeed = services.portStats().load(connectPoint, BYTES).rate();
             }
