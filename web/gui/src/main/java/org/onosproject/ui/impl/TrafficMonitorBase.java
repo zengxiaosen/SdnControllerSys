@@ -480,6 +480,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     double level = 100000;
                     String tlinkId = tlink.linkId();
                     double bwUsedRate = 0;
+                    double restBw = 0.0;
                     if(bandwidth.contains("M")){
                         double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
                         bwUsedRate = temp / level;
@@ -491,6 +492,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         if(level > temp){
                             restTemp = level - temp;
                         }
+                        restBw = restTemp;
                         sum_restBw += restTemp;
 
                     }else if(bandwidth.contains("K")){
@@ -517,13 +519,14 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         if(level1 > temp){
                             restTemp = level1 - temp;
                         }
+                        restBw = restTemp;
                         sum_restBw += restTemp;
                     }
                     log.info("bwUsedRate: " + bwUsedRate);
 
 
                     //log.info("curSUm: " +  sum);
-                    if(bwUsedRate > 0.6){
+                    if(bwUsedRate > 0.7){
                         log.info("-------2----------------");
                         /**
                          * check if the link load reach 70%
@@ -554,7 +557,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                 if(resultFlowSpeed > maxFlowRate
                                         && r != null
                                         && srcEth != null
-                                        && dstEth != null){
+                                        && dstEth != null
+                                        && resultFlowSpeed < restBw){
                                     log.info("--------------test----------------");
                                     log.info("resultFlowSpeed: " + resultFlowSpeed);
                                     maxFlowRate = resultFlowSpeed;
