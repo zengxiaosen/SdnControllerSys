@@ -558,7 +558,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                         && r != null
                                         && srcEth != null
                                         && dstEth != null
-                                        && resultFlowSpeed < restBw){
+                                        ){
                                     log.info("--------------test----------------");
                                     log.info("resultFlowSpeed: " + resultFlowSpeed);
                                     maxFlowRate = resultFlowSpeed;
