@@ -922,6 +922,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 //long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
                 //long IntraLinkRestBw = 100*1000000 - IntraLinkLoadBw;
                 log.info("check............................................");
+                log.info("src: " + link.src().deviceId().toString());
+                log.info("dst: " + link.dst().deviceId().toString());
                 log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
                 log.info("IntraLinkRestBw: " + IntraLinkRestBw);
                 log.info("flowbw: " + flowbw);
