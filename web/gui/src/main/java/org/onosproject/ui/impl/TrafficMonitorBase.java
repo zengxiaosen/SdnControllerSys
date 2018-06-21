@@ -653,13 +653,17 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                         //size == 1
                                         for(Path pathTemp : paths){
                                             pathObject = pathTemp;
+                                            break;
                                         }
 
-                                        if(paths.size() == 0 || paths == null){
+                                        if(paths.size() == 0 || paths == null || pathObject == null){
                                             //not install rule
                                         }else{
                                             //install rule
-                                            installRuleForPath(flowEntryObject, pathObject);
+                                            //has problem
+                                            log.info("install rule ing ..............");
+                                            //flowEntryObject
+                                            installRuleForPath(r, pathObject);
                                             break;
                                         }
 
