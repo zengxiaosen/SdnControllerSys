@@ -311,8 +311,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         if(connectPoint != null){
             //rate : bytes/s result : B/s
 
-            if(services.flowStats().load(connectPoint) != null) {
-                vportCurSpeed = services.flowStats().load(connectPoint).rate();
+            if(services.flowStats().vportload(connectPoint) != null) {
+                vportCurSpeed = services.flowStats().vportload(connectPoint).rate();
             }
 
         }
@@ -854,7 +854,11 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             StringBuffer sb = new StringBuffer();
             //compute all link rest bw of this path
             for(Link link : path.links()){
-                long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                //
+                long IntraLinkRestBw = services.flowStats().load(link).rate();
+
+
+                //long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
                 sb.append(IntraLinkRestBw+"|");
             }
             pathIndex_linksrestBw_ofPaths.put(index_of_path_inPaths, sb.toString());
@@ -906,7 +910,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             int ifPathCanChoose = 1;
             for(Link link : path.links()){
 
-                long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
+                //long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
+                long IntraLinkLoadBw = services.flowStats().load(link).rate();
 
 //                    long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
 //                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
@@ -914,7 +919,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
                 arrayList.add((double)IntraLinkLoadBw);
                 allLinkOfPath_BandWidth += IntraLinkLoadBw;
-                long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                //long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                long IntraLinkRestBw = 100*1000000 - IntraLinkLoadBw;
                 log.info("check............................................");
                 log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
                 log.info("IntraLinkRestBw: " + IntraLinkRestBw);
