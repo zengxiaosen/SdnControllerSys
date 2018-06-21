@@ -912,7 +912,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
                 //long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
                 long IntraLinkLoadBw = services.flowStats().load(link).rate();
-
+                long IntraLinkLoadBw2 = services.portStats().load(link.src(), BYTES).rate();
 //                    long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
 //                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
 //                    double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
@@ -923,6 +923,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 long IntraLinkRestBw = 100*1000000 - IntraLinkLoadBw;
                 log.info("check............................................");
                 log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
+                log.info("IntraLinkLoadBw2: " + IntraLinkLoadBw2);
                 log.info("IntraLinkRestBw: " + IntraLinkRestBw);
                 log.info("flowbw: " + flowbw);
                 if(flowbw > IntraLinkLoadBw){
