@@ -310,8 +310,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         long vportCurSpeed = 0;
         if(connectPoint != null){
             //rate : bytes/s result : B/s
-            if(services.flowStats().vportload(connectPoint) != null) {
-                vportCurSpeed = services.flowStats().vportload(connectPoint).rate();
+
+            if(services.flowStats().load(connectPoint) != null) {
+                vportCurSpeed = services.flowStats().load(connectPoint).rate();
             }
 
         }
@@ -363,6 +364,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      * @return
      */
     private long getIntraLinkRestBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+
         return getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint) - getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint);
     }
 
