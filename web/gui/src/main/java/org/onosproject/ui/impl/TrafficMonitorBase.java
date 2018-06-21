@@ -560,7 +560,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                         && dstEth != null
                                         ){
                                     log.info("--------------test----------------");
-                                    log.info("resultFlowSpeed: " + resultFlowSpeed);
+                                    for(int k1=0; k1 < 5; k1++){
+                                        log.info("resultFlowSpeed: " + resultFlowSpeed);
+                                    }
                                     maxFlowRate = resultFlowSpeed;
                                     maxFlowId = objectFlowId;
                                     //flow src
