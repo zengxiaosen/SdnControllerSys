@@ -531,12 +531,13 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         log.info("restBw: " + restTemp);
 
                     }
-                    log.info("bwUsedRate: " + bwUsedRate);
+
 
 
                     //log.info("curSUm: " +  sum);
                     if(bwUsedRate > 0.7){
                         log.info("-------2----------------");
+                        log.info("bwUsedRate: " + bwUsedRate);
                         /**
                          * check if the link load reach 70%
                          * choose the biggest flow
@@ -570,7 +571,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                         ){
                                     log.info("--------------test----------------");
                                     log.info("resultFlowSpeed: " + resultFlowSpeed);
-                                    log.info("restBw: " + restBw*1000);
+
                                     maxFlowRate = resultFlowSpeed;
                                     maxFlowId = objectFlowId;
                                     //flow src
@@ -833,7 +834,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          */
         double maxScore = 0.0;
         //init with a small score
-        Double flowbw = 10.0;
+        double flowbw = 10.0;
         if(curFlowSpeed > 0){
             flowbw = curFlowSpeed;
         }
@@ -912,6 +913,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
 
                 if(flowbw > IntraLinkLoadBw){
+                    log.info("check............................................");
+                    log.info("IntraLinkRestBw: " + IntraLinkRestBw);
+                    log.info("flowbw: " + flowbw);
                     ifPathCanChoose = 0;
                 }
                 // --------------------------------
