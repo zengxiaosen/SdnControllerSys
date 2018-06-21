@@ -495,6 +495,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         restBw = restTemp;
                         sum_restBw += restTemp;
 
+                        log.info("curBw: " + temp);
+                        log.info("totalBw: " + level);
+                        log.info("restBw: " + restTemp);
+
                     }else if(bandwidth.contains("K")){
                         double level1 = 100000;
                         String tempETL = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
@@ -521,6 +525,11 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         }
                         restBw = restTemp;
                         sum_restBw += restTemp;
+
+                        log.info("curBw: " + temp);
+                        log.info("totalBw: " + level1);
+                        log.info("restBw: " + restTemp);
+
                     }
                     log.info("bwUsedRate: " + bwUsedRate);
 
