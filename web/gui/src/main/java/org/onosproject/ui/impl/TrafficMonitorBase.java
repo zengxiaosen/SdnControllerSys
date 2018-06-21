@@ -561,7 +561,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                         ){
                                     log.info("--------------test----------------");
                                     log.info("resultFlowSpeed: " + resultFlowSpeed);
-
+                                    log.info("restBw: " + restBw*1000);
                                     maxFlowRate = resultFlowSpeed;
                                     maxFlowId = objectFlowId;
                                     //flow src
@@ -1044,7 +1044,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 //                    log.info(entryValue);
 //                }
             if(entrykey.contains(ObjectFlowId)){
-                for(int i=0; i< 10; i++){
+                for(int i=0; i< 3; i++){
                     log.info("match...");
                 }
                 resultFLowRate = entryValue;
