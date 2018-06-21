@@ -309,7 +309,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     private long getVportLoadCapability(ConnectPoint connectPoint) {
         long vportCurSpeed = 0;
         if(connectPoint != null){
-            //rate : bytes/s result : b/s
+            //rate : bytes/s result : B/s
             if(services.flowStats().vportload(connectPoint) != null) {
                 vportCurSpeed = services.flowStats().vportload(connectPoint).rate();
             }
@@ -341,7 +341,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      * @return
      */
     private long getIntraLinkLoadBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
-        return Long.min(getVportLoadCapability(srcConnectPoint), getVportLoadCapability(dstConnectPoint));
+        return Long.max(getVportLoadCapability(srcConnectPoint), getVportLoadCapability(dstConnectPoint));
     }
 
     /**
@@ -351,7 +351,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      * @return
      */
     private long getIntraLinkMaxBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
-        return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
+        //return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
+        //100M
+        return 100*1000000;
     }
 
     /**
@@ -911,11 +913,12 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 arrayList.add((double)IntraLinkLoadBw);
                 allLinkOfPath_BandWidth += IntraLinkLoadBw;
                 long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-
+                log.info("check............................................");
+                log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
+                log.info("IntraLinkRestBw: " + IntraLinkRestBw);
+                log.info("flowbw: " + flowbw);
                 if(flowbw > IntraLinkLoadBw){
-                    log.info("check............................................");
-                    log.info("IntraLinkRestBw: " + IntraLinkRestBw);
-                    log.info("flowbw: " + flowbw);
+
                     ifPathCanChoose = 0;
                 }
                 // --------------------------------
