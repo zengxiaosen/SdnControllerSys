@@ -636,7 +636,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                     HostId dstHostId = HostId.hostId(dstMac);
                                     Host dstHost = services.host().getHost(dstHostId);
                                     DeviceId dstDeviceId = dstHost.location().deviceId();
-                                    if(r != null && maxFlowSrcDeviceId != null && maxFlowDstDeviceId != null){
+                                    if(r != null && srcDeviceId != null && dstDeviceId != null){
                                         Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), srcDeviceId, dstDeviceId);
                                         log.info("--------------reachablePaths.size(): " + reachablePaths.size());
 
