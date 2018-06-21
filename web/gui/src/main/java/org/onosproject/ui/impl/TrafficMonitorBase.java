@@ -560,9 +560,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                         && dstEth != null
                                         ){
                                     log.info("--------------test----------------");
-                                    for(int k1=0; k1 < 5; k1++){
-                                        log.info("resultFlowSpeed: " + resultFlowSpeed);
-                                    }
+                                    log.info("resultFlowSpeed: " + resultFlowSpeed);
+
                                     maxFlowRate = resultFlowSpeed;
                                     maxFlowId = objectFlowId;
                                     //flow src
@@ -573,30 +572,30 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                     Host srcHost = services.host().getHost(srcHostId);
                                     DeviceId srcDeviceId = srcHost.location().deviceId();
 
-                                    log.info("srcEth: " + srcEth.toString());
-                                    log.info("srcMac: " + srcMac.toString());
-                                    log.info("srcHost: " + srcHost.toString());
-                                    log.info("srcDeviceId: " + srcDeviceId.toString());
+//                                    log.info("srcEth: " + srcEth.toString());
+//                                    log.info("srcMac: " + srcMac.toString());
+//                                    log.info("srcHost: " + srcHost.toString());
+//                                    log.info("srcDeviceId: " + srcDeviceId.toString());
                                     //flow dst
 
                                     MacAddress dstMac = dstEth.mac();
                                     HostId dstHostId = HostId.hostId(dstMac);
                                     Host dstHost = services.host().getHost(dstHostId);
                                     DeviceId dstDeviceId = dstHost.location().deviceId();
-                                    log.info("dstEth: " + dstEth.toString());
-                                    log.info("dstMac: " + dstMac.toString());
-                                    log.info("dstHost: " + dstHost.toString());
-                                    log.info("dstDeviceId: " + dstDeviceId.toString());
+//                                    log.info("dstEth: " + dstEth.toString());
+//                                    log.info("dstMac: " + dstMac.toString());
+//                                    log.info("dstHost: " + dstHost.toString());
+//                                    log.info("dstDeviceId: " + dstDeviceId.toString());
 
                                     maxFlowSrcDeviceId = srcDeviceId;
                                     maxFlowDstDeviceId = dstDeviceId;
                                     flowEntryObject = r;
-                                    log.info("flowEntryObject: " + flowEntryObject.toString());
-                                    log.info("maxFlowSrcDeviceId: " + maxFlowSrcDeviceId);
-                                    log.info("maxFlowDstDeviceId: " + maxFlowDstDeviceId);
+//                                    log.info("flowEntryObject: " + flowEntryObject.toString());
+//                                    log.info("maxFlowSrcDeviceId: " + maxFlowSrcDeviceId);
+//                                    log.info("maxFlowDstDeviceId: " + maxFlowDstDeviceId);
                                 }
                             }
-
+                            log.info("maxFlowRate: " + maxFlowRate);
                             if(maxFlowSrcDeviceId != null && maxFlowDstDeviceId != null){
                                 Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
                                 log.info("--------------reachablePaths.size(): " + reachablePaths.size());
