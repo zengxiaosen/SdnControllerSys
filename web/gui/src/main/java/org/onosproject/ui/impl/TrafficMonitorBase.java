@@ -353,9 +353,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      * @return
      */
     private long getIntraLinkMaxBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
-        //return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
-        //100M
-        return 100*1000000;
+        return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
+        //100Mbpt b:bit
+        //return 100*1000000;
     }
 
     /**
@@ -867,6 +867,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             log.info("links rest bw : " + sb.toString());
             pathIndex_linksrestBw_ofPaths.put(index_of_path_inPaths, sb.toString());
             index_of_path_inPaths ++;
+
         }
 
         for(Path path : paths){
@@ -906,18 +907,18 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
              */
             double allLinkOfPath_BandWidth = 0;
             double allLinkOfPath_RestBandWidth = 0;
-            //if there is no traffic in this link, that means the link bandwidth is 100M
-            long ChokePointRestBandWidth = 100*1000000;
+            //if there is no traffic in this link, that means the link bandwidth is 100Mbps b:bit
+            long ChokePointRestBandWidth = 100*1000000/8;
             long ChokeLinkPassbytes = 0;
             ArrayList<Double> arrayList = new ArrayList<>();
-            long IntraLinkMaxBw = 100 * 1000000;
+            long IntraLinkMaxBw = 100 * 1000000/8;
             int ifPathCanChoose = 1;
             for(Link link : path.links()){
 
                 long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
                 //long IntraLinkLoadBw = services.flowStats().load(link).rate();
                 //long IntraLinkLoadBw = services.portStats().load(link.src(), BYTES).rate();
-                    //long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
+                long IntraLinkMaxBwTest = getIntraLinkMaxBw(link.src(), link.dst()); //bps
                 long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
 //                    double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
 
@@ -926,6 +927,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 //long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
                 //long IntraLinkRestBw = 100*1000000 - IntraLinkLoadBw;
                 log.info("check............................................");
+                log.info("IntraLinkMaxBwTest: bps: " + IntraLinkMaxBwTest);
+                log.info("IntraLinkMaxBwTest: Kbps: " + IntraLinkMaxBwTest/8);
                 log.info("src: " + link.src().deviceId().toString());
                 log.info("dst: " + link.dst().deviceId().toString());
                 log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
