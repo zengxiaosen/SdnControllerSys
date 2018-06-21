@@ -1396,7 +1396,7 @@ public class ReactiveForwarding {
                         arrayList.add((double)IntraLinkLoadBw);
                         allLinkOfPath_BandWidth += IntraLinkLoadBw;
                         long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-                        if(flowbw > IntraLinkLoadBw){
+                        if(flowbw > IntraLinkRestBw){
                             ifPathCanChoose = 0;
                         }
                         // --------------------------------

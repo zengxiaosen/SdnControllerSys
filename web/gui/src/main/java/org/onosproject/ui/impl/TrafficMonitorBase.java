@@ -624,65 +624,73 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 //                                    flowEntryObject = r;
 //
 //                                }
+                                if(srcEth != null && dstEth != null){
 
-                                //flow src
-                                MacAddress srcMac = srcEth.mac();
-                                HostId srcHostId = HostId.hostId(srcMac);
-                                Host srcHost = services.host().getHost(srcHostId);
-                                DeviceId srcDeviceId = srcHost.location().deviceId();
-                                //flow dst
-                                MacAddress dstMac = dstEth.mac();
-                                HostId dstHostId = HostId.hostId(dstMac);
-                                Host dstHost = services.host().getHost(dstHostId);
-                                DeviceId dstDeviceId = dstHost.location().deviceId();
-                                if(r != null && maxFlowSrcDeviceId != null && maxFlowDstDeviceId != null){
-                                    Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), srcDeviceId, dstDeviceId);
-                                    log.info("--------------reachablePaths.size(): " + reachablePaths.size());
+                                    //flow src
+                                    MacAddress srcMac = srcEth.mac();
+                                    HostId srcHostId = HostId.hostId(srcMac);
+                                    Host srcHost = services.host().getHost(srcHostId);
+                                    DeviceId srcDeviceId = srcHost.location().deviceId();
+                                    //flow dst
+                                    MacAddress dstMac = dstEth.mac();
+                                    HostId dstHostId = HostId.hostId(dstMac);
+                                    Host dstHost = services.host().getHost(dstHostId);
+                                    DeviceId dstDeviceId = dstHost.location().deviceId();
+                                    if(r != null && maxFlowSrcDeviceId != null && maxFlowDstDeviceId != null){
+                                        Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), srcDeviceId, dstDeviceId);
+                                        log.info("--------------reachablePaths.size(): " + reachablePaths.size());
 
-                                    /**
-                                     * judge each link of the reachable path
-                                     * choise the min link restbw
-                                     *
-                                     */
+                                        /**
+                                         * judge each link of the reachable path
+                                         * choise the min link restbw
+                                         *
+                                         */
 
-                                    Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
-                                    log.info("----------------filteredSize: " + paths.size());
+                                        Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
+                                        log.info("----------------filteredSize: " + paths.size());
 
-                                    Path pathObject = null;
-                                    //size == 1
-                                    for(Path pathTemp : paths){
-                                        pathObject = pathTemp;
-                                    }
+                                        Path pathObject = null;
+                                        //size == 1
+                                        for(Path pathTemp : paths){
+                                            pathObject = pathTemp;
+                                        }
 
-                                    if(paths.size() == 0 || paths == null){
-                                        //not install rule
+                                        if(paths.size() == 0 || paths == null){
+                                            //not install rule
+                                        }else{
+                                            //install rule
+                                            installRuleForPath(flowEntryObject, pathObject);
+                                            break;
+                                        }
+
+                                        log.info("install rule finish");
+
                                     }else{
-                                        //install rule
-                                        installRuleForPath(flowEntryObject, pathObject);
-                                        break;
+                                        log.info("xxxxxxxxxxxxxxxxxxxxxxxx");
                                     }
 
-                                    log.info("install rule finish");
 
-                                }else{
-                                    log.info("xxxxxxxxxxxxxxxxxxxxxxxx");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                                 }
 
 
                             }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
                         }
 
