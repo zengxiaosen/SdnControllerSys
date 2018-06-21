@@ -571,6 +571,28 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             DeviceId maxFlowSrcDeviceId = null;
                             DeviceId maxFlowDstDeviceId = null;
                             FlowEntry flowEntryObject = null;
+                            Map<Double, FlowEntry> flowRateFlowEntry = new TreeMap<>();
+                            //sort by rate
+                            for(FlowEntry r0 : services.flow().getFlowEntries(curDid)){
+                                String objectFlowId = r0.id().toString();
+                                String flowRateOutOfMonitor = getflowRateFromMonitorModule2(objectFlowId, flowIdRateCollection);
+                                String flowSpeedEtl = flowRateOutOfMonitor.substring(0, flowRateOutOfMonitor.indexOf("b"));
+                                Double resultFlowSpeed = Double.valueOf(flowSpeedEtl);
+                                flowRateFlowEntry.put(resultFlowSpeed, r0);
+                            }
+
+                            Map<Double, FlowEntry> sortedFlowRateFlowEntry = sortMapByKey(flowRateFlowEntry);
+                            log.info("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
+                            log.info("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
+                            for(Map.Entry<Double, FlowEntry> entry: sortedFlowRateFlowEntry.entrySet()){
+                                double tmp = entry.getKey();
+                                log.info(tmp+"");
+                            }
+                            log.info("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
+                            log.info("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
+
+
+
                             for(FlowEntry r : services.flow().getFlowEntries(curDid)){
                                 String objectFlowId = r.id().toString();
                                 String flowRateOutOfMonitor = getflowRateFromMonitorModule2(objectFlowId, flowIdRateCollection);
@@ -620,11 +642,21 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 //                                    log.info("maxFlowDstDeviceId: " + maxFlowDstDeviceId);
                                 }
                             }
+
+
+
+
+
+
+
+
+
                             log.info("maxFlowRate: " + maxFlowRate);
                             if(maxFlowSrcDeviceId != null && maxFlowDstDeviceId != null){
+                                //
                                 Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
                                 log.info("--------------reachablePaths.size(): " + reachablePaths.size());
-                                //replace it to the new path for load balance
+
                                 //all links
                                 Set<Path> paths = PathsDecision_PLLB(maxFlowRate, reachablePaths);
                                 log.info("----------------filteredSize: " + paths.size());
@@ -785,6 +817,24 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
         return highlights;
+    }
+
+    private Map<Double, FlowEntry> sortMapByKey(Map<Double, FlowEntry> map) {
+        if (map == null || map.isEmpty()) {
+            return null;
+        }
+
+        Map<Double, FlowEntry> sortMap = new TreeMap<Double, FlowEntry>(
+                new MapKeyComparator());
+
+        sortMap.putAll(map);
+
+        return sortMap;
+    }
+
+    private Set<Path> getChoisedPaths(Set<Path> reachablePaths) {
+
+        return reachablePaths;
     }
 
     private static int curPriority = 10;
@@ -1316,6 +1366,14 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 log.warn("Unable to process traffic task due to {}", e.getMessage());
                 log.warn("Boom!", e);
             }
+        }
+    }
+
+    private class MapKeyComparator implements Comparator<Double>{
+
+        @Override
+        public int compare(Double o1, Double o2) {
+            return o1.compareTo(o2);
         }
     }
 }

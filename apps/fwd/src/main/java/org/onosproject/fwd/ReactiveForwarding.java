@@ -574,7 +574,8 @@ public class ReactiveForwarding {
             long vportCurSpeed = 0;
             if(connectPoint != null && statisticService.vportload(connectPoint) != null){
                 //rate : bytes/s result : b/s
-                vportCurSpeed = statisticService.vportload(connectPoint).rate() ;
+
+                vportCurSpeed = statisticService.vportload(connectPoint).rate() * 8 ;
             }
             return vportCurSpeed;
         }
@@ -606,7 +607,7 @@ public class ReactiveForwarding {
         private long getIntraLinkLoadBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
 //            log.info("aaaaa : " + getVportLoadCapability(srcConnectPoint));
 //            log.info("bbbbb : " + getVportLoadCapability(dstConnectPoint));
-            return Long.min(getVportLoadCapability(srcConnectPoint), getVportLoadCapability(dstConnectPoint));
+            return Long.max(getVportLoadCapability(srcConnectPoint), getVportLoadCapability(dstConnectPoint));
         }
 
         /**
@@ -616,7 +617,8 @@ public class ReactiveForwarding {
          * @return
          */
         private long getIntraLinkMaxBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
-            return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
+            //return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
+            return 100 * 1000000;
         }
 
         /**
@@ -717,23 +719,7 @@ public class ReactiveForwarding {
                 flood(context, macMetrics);
                 return;
             }
-            /**
-             * 测试case： 取ip地址
-             */
 
-//            for(int i=0; i< 5; i++){
-//                log.info("===ipv4地址！！！！！===================");
-//            }
-//
-//            Set<IpAddress> result_src = dst.ipAddresses();
-//            for(IpAddress ipAddress : result_src){
-//                String ipV4String = ipAddress.getIp4Address().toString();
-//                log.info(ipV4String);
-//            }
-//
-//            for(int i=0; i< 5; i++){
-//                log.info("==ipv4地址！！！！！=========================");
-//            }
 
 
             // Are we on an edge switch that our destination is on? If so,
@@ -911,7 +897,7 @@ public class ReactiveForwarding {
                 boolean isBigFlow = true;
                 //init with a small number
                 Double curFlowSpeed1 = 10.0;
-                curFlowSpeed1 = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+                //curFlowSpeed1 = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 //                isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
                 Set<Path> Paths_PLLB = PathsDecision_PLLB(curFlowSpeed1, isBigFlow, paths, pkt.receivedFrom().deviceId(),
