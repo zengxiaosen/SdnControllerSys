@@ -1039,13 +1039,15 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         for(Map.Entry<String, String> entry : curSwitch_deviceId.entrySet()){
             String entrykey = entry.getKey();
             String entryValue = entry.getValue();
-                for(int i=0; i< 3; i++){
-                    log.info("map.size: " + curSwitch_deviceId.size());
-                    log.info(entrykey);
-                    log.info(entryValue);
-                }
+//                for(int i=0; i< 3; i++){
+//                    log.info("map.size: " + curSwitch_deviceId.size());
+//                    log.info(entrykey);
+//                    log.info(entryValue);
+//                }
             if(entrykey.contains(ObjectFlowId)){
-                log.info("match...");
+                for(int i=0; i< 10; i++){
+                    log.info("match...");
+                }
                 resultFLowRate = entryValue;
             }
         }
