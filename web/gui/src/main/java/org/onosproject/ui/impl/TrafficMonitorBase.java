@@ -310,9 +310,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         long vportCurSpeed = 0;
         if(connectPoint != null){
             //rate : bytes/s result : B/s
-
-            if(services.flowStats().vportload(connectPoint) != null) {
-                vportCurSpeed = services.flowStats().vportload(connectPoint).rate();
+            //services.flowStats().vportload(connectPoint)
+            services.portStats().load(connectPoint, BYTES)
+            if(services.portStats().load(connectPoint, BYTES) != null) {
+                vportCurSpeed = services.portStats().load(connectPoint, BYTES).rate();
             }
 
         }
@@ -854,11 +855,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             StringBuffer sb = new StringBuffer();
             //compute all link rest bw of this path
             for(Link link : path.links()){
-                //
-                long IntraLinkRestBw = services.flowStats().load(link).rate();
+                //long IntraLinkRestBw = services.flowStats().load(link).rate();
 
 
-                //long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
                 sb.append(IntraLinkRestBw+"|");
             }
             pathIndex_linksrestBw_ofPaths.put(index_of_path_inPaths, sb.toString());
@@ -910,20 +910,19 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             int ifPathCanChoose = 1;
             for(Link link : path.links()){
 
-                //long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
-                long IntraLinkLoadBw = services.flowStats().load(link).rate();
-                long IntraLinkLoadBw2 = services.portStats().load(link.src(), BYTES).rate();
-//                    long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
-//                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
+                //long IntraLinkLoadBw = services.flowStats().load(link).rate();
+                //long IntraLinkLoadBw = services.portStats().load(link.src(), BYTES).rate();
+                    //long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
+                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
 //                    double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
 
                 arrayList.add((double)IntraLinkLoadBw);
                 allLinkOfPath_BandWidth += IntraLinkLoadBw;
                 //long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-                long IntraLinkRestBw = 100*1000000 - IntraLinkLoadBw;
+                //long IntraLinkRestBw = 100*1000000 - IntraLinkLoadBw;
                 log.info("check............................................");
                 log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
-                log.info("IntraLinkLoadBw2: " + IntraLinkLoadBw2);
                 log.info("IntraLinkRestBw: " + IntraLinkRestBw);
                 log.info("flowbw: " + flowbw);
                 if(flowbw > IntraLinkLoadBw){
