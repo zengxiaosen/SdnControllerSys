@@ -482,6 +482,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     //log.info("linkId: " + tlink.linkId());
                     //log.info("link的带宽"+"label: " + linkHighlight.label());
                     String bandwidth = linkHighlight.label();
+
                     double level = 100000;
                     String tlinkId = tlink.linkId();
                     double bwUsedRate = 0;
@@ -861,6 +862,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
                 sb.append(IntraLinkRestBw+"|");
             }
+            log.info("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
+            log.info("path i : " + index_of_path_inPaths);
+            log.info("links rest bw : " + sb.toString());
             pathIndex_linksrestBw_ofPaths.put(index_of_path_inPaths, sb.toString());
             index_of_path_inPaths ++;
         }
@@ -914,7 +918,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 //long IntraLinkLoadBw = services.flowStats().load(link).rate();
                 //long IntraLinkLoadBw = services.portStats().load(link.src(), BYTES).rate();
                     //long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
-                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
 //                    double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
 
                 arrayList.add((double)IntraLinkLoadBw);
