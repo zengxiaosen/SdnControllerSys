@@ -586,13 +586,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
                             Map<Double, FlowEntry> sortedFlowRateFlowEntry = sortMapByKey(flowRateFlowEntry);
 
-                            for(Map.Entry<Double, FlowEntry> entry: sortedFlowRateFlowEntry.entrySet()){
-                                double tmp = entry.getKey();
-                                log.info(tmp+"");
-                            }
 
 
 
+                            // has sorted by rate finished
                             for(Map.Entry<Double, FlowEntry> entryEntry : sortedFlowRateFlowEntry.entrySet()){
                                 FlowEntry r = entryEntry.getValue();
                                 String objectFlowId = r.id().toString();
@@ -602,46 +599,76 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
                                 EthCriterion srcEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_SRC);
                                 EthCriterion dstEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_DST);
-                                if(resultFlowSpeed > maxFlowRate
-                                        && r != null
-                                        && srcEth != null
-                                        && dstEth != null
-                                        ){
-                                    log.info("--------------test----------------");
-                                    log.info("resultFlowSpeed: " + resultFlowSpeed); //bps
+//                                if(resultFlowSpeed > maxFlowRate
+//                                        && r != null
+//                                        && srcEth != null
+//                                        && dstEth != null
+//                                        ){
+//                                    log.info("resultFlowSpeed: " + resultFlowSpeed); //bps
+//
+//                                    maxFlowRate = resultFlowSpeed;
+//                                    maxFlowId = objectFlowId;
+//                                    //flow src
+//                                    MacAddress srcMac = srcEth.mac();
+//                                    HostId srcHostId = HostId.hostId(srcMac);
+//                                    Host srcHost = services.host().getHost(srcHostId);
+//                                    DeviceId srcDeviceId = srcHost.location().deviceId();
+//                                    //flow dst
+//                                    MacAddress dstMac = dstEth.mac();
+//                                    HostId dstHostId = HostId.hostId(dstMac);
+//                                    Host dstHost = services.host().getHost(dstHostId);
+//                                    DeviceId dstDeviceId = dstHost.location().deviceId();
+//
+//                                    maxFlowSrcDeviceId = srcDeviceId;
+//                                    maxFlowDstDeviceId = dstDeviceId;
+//                                    flowEntryObject = r;
+//
+//                                }
 
-                                    maxFlowRate = resultFlowSpeed;
-                                    maxFlowId = objectFlowId;
-                                    //flow src
+                                //flow src
+                                MacAddress srcMac = srcEth.mac();
+                                HostId srcHostId = HostId.hostId(srcMac);
+                                Host srcHost = services.host().getHost(srcHostId);
+                                DeviceId srcDeviceId = srcHost.location().deviceId();
+                                //flow dst
+                                MacAddress dstMac = dstEth.mac();
+                                HostId dstHostId = HostId.hostId(dstMac);
+                                Host dstHost = services.host().getHost(dstHostId);
+                                DeviceId dstDeviceId = dstHost.location().deviceId();
+                                if(r != null && maxFlowSrcDeviceId != null && maxFlowDstDeviceId != null){
+                                    Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), srcDeviceId, dstDeviceId);
+                                    log.info("--------------reachablePaths.size(): " + reachablePaths.size());
 
+                                    /**
+                                     * judge each link of the reachable path
+                                     * choise the min link restbw
+                                     *
+                                     */
 
-                                    MacAddress srcMac = srcEth.mac();
-                                    HostId srcHostId = HostId.hostId(srcMac);
-                                    Host srcHost = services.host().getHost(srcHostId);
-                                    DeviceId srcDeviceId = srcHost.location().deviceId();
+                                    Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
+                                    log.info("----------------filteredSize: " + paths.size());
 
-                                    log.info("srcEth: " + srcEth.toString());
-                                    log.info("srcMac: " + srcMac.toString());
-                                    log.info("srcHost: " + srcHost.toString());
-                                    log.info("srcDeviceId: " + srcDeviceId.toString());
-                                    //flow dst
+                                    Path pathObject = null;
+                                    //size == 1
+                                    for(Path pathTemp : paths){
+                                        pathObject = pathTemp;
+                                    }
 
-                                    MacAddress dstMac = dstEth.mac();
-                                    HostId dstHostId = HostId.hostId(dstMac);
-                                    Host dstHost = services.host().getHost(dstHostId);
-                                    DeviceId dstDeviceId = dstHost.location().deviceId();
-                                    log.info("dstEth: " + dstEth.toString());
-                                    log.info("dstMac: " + dstMac.toString());
-                                    log.info("dstHost: " + dstHost.toString());
-                                    log.info("dstDeviceId: " + dstDeviceId.toString());
+                                    if(paths.size() == 0 || paths == null){
+                                        //not install rule
+                                    }else{
+                                        //install rule
+                                        installRuleForPath(flowEntryObject, pathObject);
+                                        break;
+                                    }
 
-                                    maxFlowSrcDeviceId = srcDeviceId;
-                                    maxFlowDstDeviceId = dstDeviceId;
-                                    flowEntryObject = r;
-//                                    log.info("flowEntryObject: " + flowEntryObject.toString());
-//                                    log.info("maxFlowSrcDeviceId: " + maxFlowSrcDeviceId);
-//                                    log.info("maxFlowDstDeviceId: " + maxFlowDstDeviceId);
+                                    log.info("install rule finish");
+
+                                }else{
+                                    log.info("xxxxxxxxxxxxxxxxxxxxxxxx");
                                 }
+
+
                             }
 
 
@@ -652,29 +679,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
 
-                            log.info("maxFlowRate: " + maxFlowRate);
-                            if(maxFlowSrcDeviceId != null && maxFlowDstDeviceId != null){
-                                //
-                                Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), maxFlowSrcDeviceId, maxFlowDstDeviceId);
-                                log.info("--------------reachablePaths.size(): " + reachablePaths.size());
 
-                                //all links
-                                Set<Path> paths = PathsDecision_PLLB(maxFlowRate, reachablePaths);
-                                log.info("----------------filteredSize: " + paths.size());
-
-                                Path pathObject = null;
-                                //size == 1
-                                for(Path pathTemp : paths){
-                                    pathObject = pathTemp;
-                                }
-
-                                //install rule
-
-                                installRuleForPath(flowEntryObject, pathObject);
-                                log.info("install rule finish");
-                            }else{
-                                log.info("xxxxxxxxxxxxxxxxxxxxxxxx");
-                            }
 
 
 
@@ -909,6 +914,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * compute the standard deviation of all link in all reachable path
          */
         HashMap<Path, Integer> path_index_ofPaths = new HashMap<Path, Integer>();
+
         Integer index_of_path_inPaths = 0;
         HashMap<Integer, String> pathIndex_linksrestBw_ofPaths = new HashMap<Integer, String>();
         for(Path path : paths){
