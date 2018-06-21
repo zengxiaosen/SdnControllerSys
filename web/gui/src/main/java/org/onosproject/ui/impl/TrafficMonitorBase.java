@@ -578,22 +578,23 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                 String flowRateOutOfMonitor = getflowRateFromMonitorModule2(objectFlowId, flowIdRateCollection);
                                 String flowSpeedEtl = flowRateOutOfMonitor.substring(0, flowRateOutOfMonitor.indexOf("b"));
                                 Double resultFlowSpeed = Double.valueOf(flowSpeedEtl);
-                                flowRateFlowEntry.put(resultFlowSpeed, r0);
+                                if(resultFlowSpeed > 0){
+                                    flowRateFlowEntry.put(resultFlowSpeed, r0);
+                                }
+
                             }
 
                             Map<Double, FlowEntry> sortedFlowRateFlowEntry = sortMapByKey(flowRateFlowEntry);
-                            log.info("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
-                            log.info("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
+
                             for(Map.Entry<Double, FlowEntry> entry: sortedFlowRateFlowEntry.entrySet()){
                                 double tmp = entry.getKey();
                                 log.info(tmp+"");
                             }
-                            log.info("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
-                            log.info("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
 
 
 
-                            for(FlowEntry r : services.flow().getFlowEntries(curDid)){
+                            for(Map.Entry<Double, FlowEntry> entryEntry : sortedFlowRateFlowEntry.entrySet()){
+                                FlowEntry r = entryEntry.getValue();
                                 String objectFlowId = r.id().toString();
                                 String flowRateOutOfMonitor = getflowRateFromMonitorModule2(objectFlowId, flowIdRateCollection);
                                 String flowSpeedEtl = flowRateOutOfMonitor.substring(0, flowRateOutOfMonitor.indexOf("b"));
@@ -619,20 +620,20 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                     Host srcHost = services.host().getHost(srcHostId);
                                     DeviceId srcDeviceId = srcHost.location().deviceId();
 
-//                                    log.info("srcEth: " + srcEth.toString());
-//                                    log.info("srcMac: " + srcMac.toString());
-//                                    log.info("srcHost: " + srcHost.toString());
-//                                    log.info("srcDeviceId: " + srcDeviceId.toString());
+                                    log.info("srcEth: " + srcEth.toString());
+                                    log.info("srcMac: " + srcMac.toString());
+                                    log.info("srcHost: " + srcHost.toString());
+                                    log.info("srcDeviceId: " + srcDeviceId.toString());
                                     //flow dst
 
                                     MacAddress dstMac = dstEth.mac();
                                     HostId dstHostId = HostId.hostId(dstMac);
                                     Host dstHost = services.host().getHost(dstHostId);
                                     DeviceId dstDeviceId = dstHost.location().deviceId();
-//                                    log.info("dstEth: " + dstEth.toString());
-//                                    log.info("dstMac: " + dstMac.toString());
-//                                    log.info("dstHost: " + dstHost.toString());
-//                                    log.info("dstDeviceId: " + dstDeviceId.toString());
+                                    log.info("dstEth: " + dstEth.toString());
+                                    log.info("dstMac: " + dstMac.toString());
+                                    log.info("dstHost: " + dstHost.toString());
+                                    log.info("dstDeviceId: " + dstDeviceId.toString());
 
                                     maxFlowSrcDeviceId = srcDeviceId;
                                     maxFlowDstDeviceId = dstDeviceId;
@@ -1373,7 +1374,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
         @Override
         public int compare(Double o1, Double o2) {
-            return o1.compareTo(o2);
+            return o2.compareTo(o1);
         }
     }
 }
