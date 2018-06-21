@@ -288,7 +288,7 @@ public class StatisticManager implements StatisticService {
                 long flowBytesNow = stringLongEntry.getValue();
                 long flowBytesPrevious = flowCurrent_idBytes2.get(key);
                 long bytesTrans = flowBytesNow - flowBytesPrevious;
-                long flowRate = bytesTrans / 5;
+                long flowRate = 8 * bytesTrans / 5;
 //                log.info("flowBytesNow: " + flowBytesNow);
 //                log.info("flowBytesPrevious: " + flowBytesPrevious);
 //                log.info("flowRate: " + flowRate);
