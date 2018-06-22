@@ -773,7 +773,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             String key = entry.getKey();
             //BandWidth
             Double value = entry.getValue();
-            double bdInterval = Math.abs(value - meanTrafficBandWidth) / 8000;
+            double bdInterval = Math.abs(value - meanTrafficBandWidth) / 80;
             //log.info("bdInterval : " + bdInterval);
             double bdInterval2 = Math.pow(bdInterval, 2);
             //log.info("bdInterval2 : " + bdInterval2);
