@@ -815,15 +815,18 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         log.info("mean bw KBPS == " + meanTrafficBandWidth);
 
         File csvFile = new File("/home/lihaifeng/BandWidthUsedRateStandardDeviation.csv");
+        File csvFile1 = new File("/home/lihaifeng/BandWidthStandardDeviation.csv");
         File csvFile2 = new File("/home/lihaifeng/BwMeanRest.csv");
         File csvFile3 = new File("/home/lihaifeng/BwMeanUsedRate.csv");
         File csvFile4 = new File("/home/lihaifeng/BwMeanBps.csv");
         checkExist(csvFile);
+        checkExist(csvFile1);
         checkExist(csvFile2);
         checkExist(csvFile3);
         checkExist(csvFile4);
         //boolean b = appendData(csvFile, standard_deviation+"");
         boolean b = appendData(csvFile, standard_deviation_usedRate+"");
+        boolean b0 = appendData(csvFile1, standard_deviation + "");
         boolean b1 = appendData(csvFile2, meanTrafficRestBandWidth+"");
         boolean b2 = appendData(csvFile3, meanTrafficBandWidthUsedRate+"");
         boolean b3 = appendData(csvFile4, meanTrafficBandWidth + "");
