@@ -440,7 +440,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 //                attachFlowLoad(tlink1);
 //            }
 //        }
-
+        int numbers = 0;
         for (TrafficLink tlink : linkMap.biLinks()) {
             if (type == TrafficLink.StatsType.FLOW_STATS) {
                 attachFlowLoad(tlink);
@@ -454,6 +454,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
             // we only want to report on links deemed to have traffic
             if (tlink.hasTraffic()) {
+                numbers ++;
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
                 //LinkHighlight linkHighlight1 = new LinkHighlight(linkHighlight);
@@ -714,7 +715,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 double level2 = 100000;//100M
                 double temp = 0;// 带宽设为0
                 String tlinkId = tlink.linkId();
-                tLinkId_BandWidth.put(tlinkId, temp);
+                //tLinkId_BandWidth.put(tlinkId, temp);
                 tLinkId_BandWidthUsedRate.put(tlinkId, temp/level2);
                 sum += 0;
                 sum_UsedRate += 0;
@@ -736,8 +737,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * 每5秒周期，计算出拓扑中所有link负载的均衡度
          * 目前在mininet上设定的最大linkcapacity是10M
          */
-
-        int TrafficLinkSize = linkMap.biLinks().size();
+        int TrafficLinkSize = numbers;
+        //int TrafficLinkSize = linkMap.biLinks().size();
         //log.info("TrafficLinkSize: " + TrafficLinkSize);
 
         /**
