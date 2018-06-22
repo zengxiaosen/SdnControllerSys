@@ -830,7 +830,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         boolean b1 = appendData(csvFile2, meanTrafficRestBandWidth+"");
         boolean b2 = appendData(csvFile3, meanTrafficBandWidthUsedRate+"");
         boolean b3 = appendData(csvFile4, meanTrafficBandWidth + "");
-        if(b == true && b1 == true && b2 == true && b3 == true){
+        if(b == true && b1 == true && b2 == true && b3 == true && b0 == true){
             log.info("追加写成功..");
         }else{
             log.info("追加写失败..");
