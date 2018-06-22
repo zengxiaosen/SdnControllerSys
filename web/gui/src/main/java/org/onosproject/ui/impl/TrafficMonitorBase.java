@@ -715,7 +715,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 double level2 = 100000;//100M
                 double temp = 0;// 带宽设为0
                 String tlinkId = tlink.linkId();
-                //tLinkId_BandWidth.put(tlinkId, temp);
+                tLinkId_BandWidth.put(tlinkId, temp);
                 tLinkId_BandWidthUsedRate.put(tlinkId, temp/level2);
                 sum += 0;
                 sum_UsedRate += 0;
@@ -737,8 +737,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * 每5秒周期，计算出拓扑中所有link负载的均衡度
          * 目前在mininet上设定的最大linkcapacity是10M
          */
-        int TrafficLinkSize = numbers;
-        //int TrafficLinkSize = linkMap.biLinks().size();
+        //int TrafficLinkSize = numbers;
+        int TrafficLinkSize = linkMap.biLinks().size();
         //log.info("TrafficLinkSize: " + TrafficLinkSize);
 
         /**
@@ -807,8 +807,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         //log.info("variance(方差）: " + variance);
         /**
          * 标准差
+         * bit -> Byte
+         * K -> M
          */
-        double standard_deviation = Math.pow(variance, 0.5);
+        double standard_deviation = Math.pow(variance, 0.5) ;
         double standard_deviation_usedRate = Math.pow(variance_of_usedRate, 0.5);
         log.info("标准差(网络拓扑所有link帶寬的標準差）== " + standard_deviation);
         log.info("標準差(網絡拓撲所有link帶寬利用率的標準差) == " + standard_deviation_usedRate);
