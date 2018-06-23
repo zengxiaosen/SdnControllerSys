@@ -998,14 +998,16 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 //long IntraLinkRestBw = 100*1000000 - IntraLinkLoadBw;
                 log.info("check............................................");
                 //bit/s
-                log.info("src: " + link.src().deviceId().toString());
-                log.info("dst: " + link.dst().deviceId().toString());
+//                log.info("src: " + link.src().deviceId().toString());
+//                log.info("dst: " + link.dst().deviceId().toString());
                 log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
                 log.info("IntraLinkRestBw: " + IntraLinkRestBw);
                 log.info("flowbw: " + flowbw);
                 if(flowbw > IntraLinkLoadBw){
-
+                    log.info("flow speed too large");
                     ifPathCanChoose = 0;
+                }else{
+                    log.info("flow is enough to put");
                 }
                 // --------------------------------
                 /**
