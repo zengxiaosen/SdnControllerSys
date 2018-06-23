@@ -551,7 +551,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
                     //log.info("curSUm: " +  sum);
-                    if(bwUsedRate > 0.7){
+                    if(bwUsedRate > 0.5){
                         log.info("-------2----------------");
                         log.info("bwUsedRate: " + bwUsedRate);
                         /**
@@ -680,18 +680,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
                                 }
 
 
@@ -773,14 +761,12 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             String key = entry.getKey();
             //BandWidth
             Double value = entry.getValue();
+            //bit -> Byte
             double bdInterval = Math.abs(value - meanTrafficBandWidth) / 80;
             //log.info("bdInterval : " + bdInterval);
             double bdInterval2 = Math.pow(bdInterval, 2);
             //log.info("bdInterval2 : " + bdInterval2);
             bdInterval2_Sum += bdInterval2;
-
-
-
         }
 
         /**
