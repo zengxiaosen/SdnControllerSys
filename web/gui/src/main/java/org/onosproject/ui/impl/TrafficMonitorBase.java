@@ -647,8 +647,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                          *
                                          */
 
-                                        //Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
-                                        Set<Path> paths = PathsDecision_FESM(reachablePaths);
+                                        Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
+                                        //Set<Path> paths = PathsDecision_FESM(reachablePaths);
                                         log.info("----------------filteredSize: " + paths.size());
 
                                         Path pathObject = null;
