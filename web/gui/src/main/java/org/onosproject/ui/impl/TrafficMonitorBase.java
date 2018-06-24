@@ -647,8 +647,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                          *
                                          */
 
-                                        //Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
-                                        Set<Path> paths = PathsDecision_FESM(reachablePaths);
+                                        Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
+                                        //Set<Path> paths = PathsDecision_FESM(reachablePaths);
                                         log.info("----------------filteredSize: " + paths.size());
 
                                         Path pathObject = null;
@@ -1379,7 +1379,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
             //log.info("resultScore: " + resultScore);
             //there are some problem
-            double resultScore = feature_ChokePointRestBandWidth * 6 + feature_pathMeanRestBw * 3 + feature_preAddFlowToThisPath_AllStandardDeviation * 1;
+            double resultScore = feature_ChokePointRestBandWidth * 5 + feature_pathMeanRestBw * 2.5 + feature_preAddFlowToThisPath_AllStandardDeviation * 2.5;
 
             //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
             //log.info("resultScore: "+ resultScore);
