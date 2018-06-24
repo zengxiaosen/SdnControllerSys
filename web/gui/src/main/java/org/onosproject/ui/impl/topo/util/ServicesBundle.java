@@ -27,6 +27,7 @@ import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.intent.IntentService;
 import org.onosproject.net.link.LinkService;
+import org.onosproject.net.statistic.FlowStatisticService;
 import org.onosproject.net.statistic.StatisticService;
 import org.onosproject.net.topology.TopologyService;
 
@@ -51,7 +52,7 @@ public class ServicesBundle {
     private FlowRuleService flowService;
     private StatisticService flowStatsService;
     private PortStatisticsService portStatsService;
-
+    private FlowStatisticService flowStatisticService;
 
     /**
      * Creates the services bundle, from the given directly.
@@ -75,6 +76,7 @@ public class ServicesBundle {
         flowService = directory.get(FlowRuleService.class);
         flowStatsService = directory.get(StatisticService.class);
         portStatsService = directory.get(PortStatisticsService.class);
+        flowStatisticService = directory.get(FlowStatisticService.class);
     }
 
     /**
@@ -183,5 +185,9 @@ public class ServicesBundle {
      */
     public PortStatisticsService portStats() {
         return portStatsService;
+    }
+
+    public FlowStatisticService flowStatistic() {
+        return flowStatisticService;
     }
 }

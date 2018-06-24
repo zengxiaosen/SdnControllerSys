@@ -647,8 +647,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                          *
                                          */
 
-                                        Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
-                                        //Set<Path> paths = PathsDecision_FESM(reachablePaths);
+                                        //Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
+                                        Set<Path> paths = PathsDecision_FESM(reachablePaths);
                                         log.info("----------------filteredSize: " + paths.size());
 
                                         Path pathObject = null;
@@ -1008,18 +1008,19 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
                 long packetsSent_src = 0;
-                if(link.src()!=null && link.src().deviceId() !=null && link.src().port() != null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                    packetsSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsSent();
+                //flowStatisticService
+                if(link.src()!=null && link.src().deviceId() !=null && link.src().port() != null && services.flowStatistic().getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    packetsSent_src = services.flowStatistic().getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsSent();
                 }
                 long bytesReceived_src = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                    bytesReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesReceived();
+                if(services.flowStatistic().getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    bytesReceived_src = services.flowStatistic().getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesReceived();
                 }
 
                 long bytesSent_src = 0;
 
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                    bytesSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
+                if(services.flowStatistic().getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    bytesSent_src = services.flowStatistic().getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
                 }
 //                long rx_dropped_src = 0;
 //                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
@@ -1045,16 +1046,16 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                  * rx_tx_dropped_dst
                  */
                 long packetsReceived_dst = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                    packetsReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
+                if(services.flowStatistic().getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                    packetsReceived_dst = services.flowStatistic().getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
                 }
 //                long packetsSent_dst = 0;
 //                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
 //                    packetsSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
 //                }
                 long bytesReceived_dst = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                    bytesReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
+                if(services.flowStatistic().getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                    bytesReceived_dst = services.flowStatistic().getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
                 }
 //                long bytesSent_dst = 0;
 //                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
@@ -1376,7 +1377,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
             //log.info("resultScore: " + resultScore);
             //there are some problem
-            double resultScore = feature_ChokePointRestBandWidth * 5 + feature_pathMeanRestBw * 2.5 + feature_preAddFlowToThisPath_AllStandardDeviation * 2.5;
+            double resultScore = feature_ChokePointRestBandWidth * 5 + feature_pathMeanRestBw * 2 + feature_preAddFlowToThisPath_AllStandardDeviation * 3;
 
             //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
             //log.info("resultScore: "+ resultScore);
