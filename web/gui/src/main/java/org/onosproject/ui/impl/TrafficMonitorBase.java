@@ -778,6 +778,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         for(Map.Entry<String, Double> entry : tLinkId_BandWidthUsedRate.entrySet()){
             String key = entry.getKey();
             Double value = entry.getValue();
+            log.info("li yong l : " + value);
             double bdInterval = Math.abs(value - meanTrafficBandWidthUsedRate);
             double bdInterval3 = Math.pow(bdInterval, 2);
             bdInterval3_Sum += bdInterval3;
