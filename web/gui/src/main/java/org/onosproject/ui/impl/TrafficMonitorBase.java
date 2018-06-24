@@ -1006,10 +1006,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                  * rx_tx_dropped_src
                  */
 
-                long packetsReceived_src = 0;
-                if(link.src()!=null &&  link.src().deviceId() != null && link.src().port() !=null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                    packetsReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsReceived();
-                }
+
                 long packetsSent_src = 0;
                 if(link.src()!=null && link.src().deviceId() !=null && link.src().port() != null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
                     packetsSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsSent();
@@ -1024,15 +1021,15 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
                     bytesSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
                 }
-                long rx_dropped_src = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                    rx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
-                }
-                long tx_dropped_src = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                    flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
-                }
-                long rx_tx_dropped_src = rx_dropped_src+tx_dropped_src;
+//                long rx_dropped_src = 0;
+//                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+//                    rx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
+//                }
+//                long tx_dropped_src = 0;
+//                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+//                    flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
+//                }
+//                long rx_tx_dropped_src = rx_dropped_src+tx_dropped_src;
 
                 /**
                  * dst
@@ -1051,26 +1048,26 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
                     packetsReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
                 }
-                long packetsSent_dst = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                    packetsSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
-                }
+//                long packetsSent_dst = 0;
+//                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+//                    packetsSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
+//                }
                 long bytesReceived_dst = 0;
                 if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
                     bytesReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
                 }
-                long bytesSent_dst = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                    bytesSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesSent();
-                }
-                long rx_dropped_dst = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                    flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
-                }
-                long tx_dropped_dst = 0;
-                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                    flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
-                }
+//                long bytesSent_dst = 0;
+//                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+//                    bytesSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesSent();
+//                }
+//                long rx_dropped_dst = 0;
+//                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+//                    flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
+//                }
+//                long tx_dropped_dst = 0;
+//                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+//                    flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
+//                }
 
 //                    log.info("packetsReceived_src: " + packetsReceived_src);
 //                    log.info("packetsSent_src: " + packetsSent_src);
@@ -1078,7 +1075,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 //                    log.info("bytesSent_src(bytes): " + bytesSent_src);
 //                    log.info("rx_dropped_dst: " + rx_dropped_dst);
 //                    log.info("tx_dropped_dst: " + tx_dropped_dst);
-                long rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
+                //long rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
 
                 /**
                  * U = (h, p, b, r)
