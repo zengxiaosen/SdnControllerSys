@@ -421,6 +421,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         //addEdgeLinks(linkMapForFlow);
         double sum = 0;
         double sum_UsedRate = 0;
+        double sum_ur = 0;
         double sum_restBw = 0;
         /**
          * key: String tlinkId
@@ -504,6 +505,11 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         tLinkId_BandWidthUsedRate.put(tlinkId, temp/level);
                         sum += temp;
                         sum_UsedRate += temp/level;
+                        if(temp / level < 1){
+                            sum_ur += temp/level;
+                        }else{
+                            sum_ur += 1;
+                        }
                         double restTemp = 0.0;
                         if(level > temp){
                             restTemp = level - temp;
@@ -535,6 +541,11 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         tLinkId_BandWidthUsedRate.put(tlinkId, temp/level1);
                         sum += temp;
                         sum_UsedRate += temp/level1;
+                        if(temp/level1 < 1){
+                            sum_ur += temp/level1;
+                        }else{
+                            sum_ur += 1;
+                        }
                         double restTemp = 0.0;
                         if(level1 > temp){
                             restTemp = level1 - temp;
@@ -647,8 +658,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                          *
                                          */
 
-                                        //Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
-                                        Set<Path> paths = PathsDecision_FESM(reachablePaths);
+                                        Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
+                                        //Set<Path> paths = PathsDecision_FESM(reachablePaths);
                                         log.info("----------------filteredSize: " + paths.size());
 
                                         Path pathObject = null;
@@ -665,7 +676,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                             //has problem
                                             log.info("install rule ing ..............");
                                             //flowEntryObject
-                                            //installRuleForPath(r, pathObject);
+                                            installRuleForPath(r, pathObject);
                                             break;
                                         }
 
@@ -708,6 +719,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 tLinkId_BandWidthUsedRate.put(tlinkId, temp/level2);
                 sum += 0;
                 sum_UsedRate += 0;
+                sum_ur += 0;
                 sum_restBw += 0;
             }
         }
@@ -739,6 +751,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * 每条link平均的带宽利用率
          */
         double meanTrafficBandWidthUsedRate = sum_UsedRate / TrafficLinkSize;
+        double meanTrafficBandWidthUr = sum_ur / TrafficLinkSize;
         /**
          * mean restbw of links
          */
@@ -802,7 +815,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         double standard_deviation_usedRate = Math.pow(variance_of_usedRate, 0.5);
         log.info("标准差(网络拓扑所有link帶寬的標準差）== " + standard_deviation);
         log.info("標準差(網絡拓撲所有link帶寬利用率的標準差) == " + standard_deviation_usedRate);
-        log.info("mean bw used rate == " + meanTrafficBandWidthUsedRate);
+        //log.info("mean bw used rate == " + meanTrafficBandWidthUsedRate);
         log.info("mean bw KBPS == " + meanTrafficBandWidth);
 
         File csvFile = new File("/home/lihaifeng/BandWidthUsedRateStandardDeviation.csv");
@@ -819,7 +832,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         boolean b = appendData(csvFile, standard_deviation_usedRate+"");
         boolean b0 = appendData(csvFile1, standard_deviation + "");
         boolean b1 = appendData(csvFile2, meanTrafficRestBandWidth+"");
-        boolean b2 = appendData(csvFile3, meanTrafficBandWidthUsedRate+"");
+        boolean b2 = appendData(csvFile3, meanTrafficBandWidthUr+"");
         boolean b3 = appendData(csvFile4, meanTrafficBandWidth + "");
         if(b == true && b1 == true && b2 == true && b3 == true && b0 == true){
             log.info("追加写成功..");
