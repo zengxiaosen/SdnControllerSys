@@ -665,7 +665,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                             //has problem
                                             log.info("install rule ing ..............");
                                             //flowEntryObject
-                                            installRuleForPath(r, pathObject);
+                                            //installRuleForPath(r, pathObject);
                                             break;
                                         }
 
