@@ -658,8 +658,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                          *
                                          */
 
-                                        //Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
-                                        Set<Path> paths = PathsDecision_FESM(reachablePaths);
+                                        Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
+                                        //Set<Path> paths = PathsDecision_FESM(reachablePaths);
                                         log.info("----------------filteredSize: " + paths.size());
 
                                         Path pathObject = null;
@@ -676,7 +676,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                             //has problem
                                             log.info("install rule ing ..............");
                                             //flowEntryObject
-                                            //installRuleForPath(r, pathObject);
+                                            installRuleForPath(r, pathObject);
                                             break;
                                         }
 
