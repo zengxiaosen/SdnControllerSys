@@ -108,7 +108,7 @@ public class StatisticManager implements StatisticService {
     protected PortStatisticsService portStatisticsService;
 
     private final InternalFlowRuleListener listener = new InternalFlowRuleListener();
-    private static ConcurrentHashMap<String, String> flowIdFlowRate = Maps.newConcurrentMap();
+    private static Map<String, String> flowIdFlowRate = Maps.newConcurrentMap();
     private static ReadWriteLock rw1 = new ReentrantReadWriteLock();
     @Override
     public ConcurrentHashMap<String, String> getFlowIdFlowRate() {
