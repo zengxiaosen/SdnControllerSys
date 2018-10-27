@@ -109,36 +109,35 @@ public class StatisticManager implements StatisticService {
 
     private final InternalFlowRuleListener listener = new InternalFlowRuleListener();
     private static Map<String, String> flowIdFlowRate = Maps.newConcurrentMap();
-    private static ReadWriteLock rw1 = new ReentrantReadWriteLock();
+    private static ReadWriteLock rw = new ReentrantReadWriteLock();
     @Override
     public ConcurrentHashMap<String, String> getFlowIdFlowRate() {
-        rw1.readLock().lock();
+        rw.readLock().lock();
         ConcurrentHashMap<String, String> temp = new ConcurrentHashMap<>(flowIdFlowRate);
-        rw1.readLock().unlock();
+        rw.readLock().unlock();
         return temp;
-        //rw1.readLock().unlock();
     }
 
     @Override
     public void setFlowIdFlowRate(ConcurrentHashMap<String, String> flowIdFlowRate) {
-        rw1.writeLock().lock();
+        rw.writeLock().lock();
         try{
             StatisticManager.flowIdFlowRate = flowIdFlowRate;
         }catch (Exception e){
             e.printStackTrace();
         }finally {
-            rw1.writeLock().unlock();
+            rw.writeLock().unlock();
         }
     }
 
     public void setFlowIdFlowRateKV(String key, String value){
-        rw1.writeLock().lock();
+        rw.writeLock().lock();
         try{
             flowIdFlowRate.put(key, value);
         }catch (Exception e){
             e.printStackTrace();
         }finally {
-            rw1.writeLock().unlock();
+            rw.writeLock().unlock();
         }
     }
 
