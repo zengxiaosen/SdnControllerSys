@@ -17,6 +17,8 @@
 
 package org.onosproject.ui.impl;
 
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.commons.lang.StringUtils;
 import org.onlab.packet.MacAddress;
 import org.onosproject.core.DefaultApplicationId;
@@ -427,13 +429,13 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * key: String tlinkId
          * value: Double BandWidth
          */
-        HashMap<String, Double> tLinkId_BandWidth = new HashMap<>();
+        Map<String, Double> tLinkIdBandWidth = Maps.newHashMap();
         /**
          * key: String tlinkId
          * value: Double BandwidthUsedRate
          */
-        HashMap<String, Double> tLinkId_BandWidthUsedRate = new HashMap<>();
-        Set<TrafficLink> linksWithTraffic = new HashSet<>();
+        Map<String, Double> tLinkIdBandWidthUsedRate = Maps.newHashMap();
+        Set<TrafficLink> linksWithTraffic = Sets.newHashSet();
 
 //        for(TrafficLink  tlink1 : linkMapForFlow.biLinks()){
 //            if(type == TrafficLink.StatsType.PORT_STATS){
@@ -461,7 +463,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 //LinkHighlight linkHighlight1 = new LinkHighlight(linkHighlight);
                 highlights.add(linkHighlight);
                 /**
-                 * 目前我准备在这开启监控
+                 * 开启监控
                  */
                 if(type == StatsType.PORT_STATS){
 
@@ -501,8 +503,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     if(bandwidth.contains("M")){
                         double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
                         bwUsedRate = temp / level;
-                        tLinkId_BandWidth.put(tlinkId, temp);
-                        tLinkId_BandWidthUsedRate.put(tlinkId, temp/level);
+                        tLinkIdBandWidth.put(tlinkId, temp);
+                        tLinkIdBandWidthUsedRate.put(tlinkId, temp/level);
                         sum += temp;
                         sum_UsedRate += temp/level;
                         if(temp / level < 1){
@@ -537,8 +539,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         }
                         log.info("=====bandwidth(M: " + temp  + ", 帶寬利用率： " + temp/level1);
                         bwUsedRate = temp/level1;
-                        tLinkId_BandWidth.put(tlinkId, temp);
-                        tLinkId_BandWidthUsedRate.put(tlinkId, temp/level1);
+                        tLinkIdBandWidth.put(tlinkId, temp);
+                        tLinkIdBandWidthUsedRate.put(tlinkId, temp/level1);
                         sum += temp;
                         sum_UsedRate += temp/level1;
                         if(temp/level1 < 1){
@@ -687,11 +689,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                     }
 
 
-
-
-
-
-
                                 }
 
 
@@ -715,8 +712,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 double level2 = 100000;//100M
                 double temp = 0;// 带宽设为0
                 String tlinkId = tlink.linkId();
-                tLinkId_BandWidth.put(tlinkId, temp);
-                tLinkId_BandWidthUsedRate.put(tlinkId, temp/level2);
+                tLinkIdBandWidth.put(tlinkId, temp);
+                tLinkIdBandWidthUsedRate.put(tlinkId, temp/level2);
                 sum += 0;
                 sum_UsedRate += 0;
                 sum_ur += 0;
@@ -770,7 +767,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          */
 
         double bdInterval2_Sum = 0;
-        for(Map.Entry<String, Double> entry : tLinkId_BandWidth.entrySet()){
+        for(Map.Entry<String, Double> entry : tLinkIdBandWidth.entrySet()){
             //tLinkId
             String key = entry.getKey();
             //BandWidth
@@ -788,7 +785,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          *
          */
         double bdInterval3_Sum = 0;
-        for(Map.Entry<String, Double> entry : tLinkId_BandWidthUsedRate.entrySet()){
+        for(Map.Entry<String, Double> entry : tLinkIdBandWidthUsedRate.entrySet()){
             String key = entry.getKey();
             Double value = entry.getValue();
             log.info("li yong l : " + value);
@@ -844,12 +841,14 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return highlights;
     }
 
+
+
     private Map<Double, FlowEntry> sortMapByKey(Map<Double, FlowEntry> map) {
         if (map == null || map.isEmpty()) {
             return null;
         }
 
-        Map<Double, FlowEntry> sortMap = new TreeMap<Double, FlowEntry>(
+        Map<Double, FlowEntry> sortMap = Maps.newTreeMap(
                 new MapKeyComparator());
 
         sortMap.putAll(map);
@@ -906,19 +905,16 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
         /**
          *
-         * flowStatisticService 是信息统计模块，
-         * 这里通过 IOC 技术注入到 负载均衡决策模块，
-         *
+         * flowStatisticService 是信息统计模块
+         * 这里通过 IOC 技术注入到 负载均衡决策模块
          * Set<Path> paths 是 拓扑计算模块 根据源目ip 计算拓扑中此 (src, dst)对的所有等价路径
          * topologyService 拓扑计算模块 是通过 IOC 技术注入到 伏在均衡决策模块
          *
          *
          */
 
-        //flowStatisticService.loadSummaryPortInternal()
-        Set<Path> result = new HashSet<>();
-        Map<Integer, Path> indexPath = new LinkedHashMap<>();
-        //Path finalPath = paths.iterator().next();
+        Set<Path> result = Sets.newHashSet();
+        Map<Integer, Path> indexPath = Maps.newLinkedHashMap();
         Path finalPath = null;
         /**
          *
@@ -932,8 +928,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          *
          */
         int i=0;
-        String sql = null;
-        //DBHelper db1 = null;
 
         /**
          *
@@ -983,23 +977,18 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                  */
 
                 long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
-                long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
+
+                //bps
+                long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst());
                 long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
                 double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
 
-//                    log.info("link的负载(bps): " + IntraLinkLoadBw);
-//                    log.info("link的最大带宽(bps): " + IntraLinkMaxBw);
-//                    log.info("link的剩余带宽(bps): " + IntraLinkRestBw);
-//                    log.info("link的带宽利用率(bps): " + IntraLinkCapability);
+//                log.info("link的负载(bps): " + IntraLinkLoadBw);
+//                log.info("link的最大带宽(bps): " + IntraLinkMaxBw);
+//                log.info("link的剩余带宽(bps): " + IntraLinkRestBw);
+//                log.info("link的带宽利用率(bps): " + IntraLinkCapability);
+//                SummaryFlowEntryWithLoad summaryFlowEntryWithLoad = flowStatisticService.loadSummaryPortInternal(link.src());
 
-
-
-                //SummaryFlowEntryWithLoad summaryFlowEntryWithLoad = flowStatisticService.loadSummaryPortInternal(link.src());
-//                    for(int i1=0; i1<30; i1++){
-//                        log.info("kkkkkkkkkkkkkkkkk" + summaryFlowEntryWithLoad.getTotalLoad().rate() + " ");
-//                    }
-//                    long latest = statisticService.load(link.src()).latest();
-//                    long epochtime = statisticService.load(link.src()).time();
 
 
                 /**
@@ -1036,15 +1025,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 if(services.flowStatistic().getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
                     bytesSent_src = services.flowStatistic().getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
                 }
-//                long rx_dropped_src = 0;
-//                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-//                    rx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
-//                }
-//                long tx_dropped_src = 0;
-//                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-//                    flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
-//                }
-//                long rx_tx_dropped_src = rx_dropped_src+tx_dropped_src;
+
 
                 /**
                  * dst
@@ -1058,39 +1039,19 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                  * rx_dropped_dst
                  * tx_dropped_dst
                  * rx_tx_dropped_dst
+                 *
+                 *
                  */
                 long packetsReceived_dst = 0;
                 if(services.flowStatistic().getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
                     packetsReceived_dst = services.flowStatistic().getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
                 }
-//                long packetsSent_dst = 0;
-//                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-//                    packetsSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
-//                }
+
                 long bytesReceived_dst = 0;
                 if(services.flowStatistic().getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
                     bytesReceived_dst = services.flowStatistic().getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
                 }
-//                long bytesSent_dst = 0;
-//                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-//                    bytesSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesSent();
-//                }
-//                long rx_dropped_dst = 0;
-//                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-//                    flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
-//                }
-//                long tx_dropped_dst = 0;
-//                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-//                    flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
-//                }
 
-//                    log.info("packetsReceived_src: " + packetsReceived_src);
-//                    log.info("packetsSent_src: " + packetsSent_src);
-//                    log.info("bytesReceived_src(bytes): " + bytesReceived_src);
-//                    log.info("bytesSent_src(bytes): " + bytesSent_src);
-//                    log.info("rx_dropped_dst: " + rx_dropped_dst);
-//                    log.info("tx_dropped_dst: " + tx_dropped_dst);
-                //long rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
 
                 /**
                  * U = (h, p, b, r)
@@ -1183,17 +1144,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     private  Set<Path> PathsDecision_PLLB(Double curFlowSpeed, Set<Path> paths) {
 
-        /**
-         * sBigFlow, paths, pkt.receivedFrom().deviceId(),
-         dst.location().deviceId(),
-         src.location().deviceId(),
-         LinksResult
-         */
 
-        //flowStatisticService.loadSummaryPortInternal()
-        Set<Path> result = new HashSet<Path>();
-        Map<Integer, Path> indexPath = new LinkedHashMap<>();
-        //Path finalPath = paths.iterator().next();
+        Set<Path> result = Sets.newHashSet();
+        Map<Integer, Path> indexPath = Maps.newLinkedHashMap();
         Path finalPath = null;
 
         int i=0;

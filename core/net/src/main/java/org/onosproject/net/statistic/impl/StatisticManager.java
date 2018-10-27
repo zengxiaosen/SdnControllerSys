@@ -319,9 +319,6 @@ public class StatisticManager implements StatisticService {
             previous = getPreviousStatistic(connectPoint);
         }
 
-
-
-
         return new Statistics(current, previous);
     }
 
