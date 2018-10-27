@@ -17,8 +17,7 @@ package org.onosproject.net.statistic.impl;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.*;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -109,7 +108,7 @@ public class StatisticManager implements StatisticService {
     protected PortStatisticsService portStatisticsService;
 
     private final InternalFlowRuleListener listener = new InternalFlowRuleListener();
-    private static ConcurrentHashMap<String, String> flowId_flowRate = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<String, String> flowId_flowRate = Maps.newConcurrentMap();
     private static ReadWriteLock rw1 = new ReentrantReadWriteLock();
     @Override
     public ConcurrentHashMap<String, String> getFlowId_flowRate() {
@@ -132,7 +131,7 @@ public class StatisticManager implements StatisticService {
         }
     }
 
-    public void setFlowId_flowRateKV(String key, String value){
+    public void setFlowIdFlowRateKV(String key, String value){
         rw1.writeLock().lock();
         try{
             flowId_flowRate.put(key, value);
@@ -142,9 +141,6 @@ public class StatisticManager implements StatisticService {
             rw1.writeLock().unlock();
         }
     }
-
-
-
 
 
     @Activate
@@ -267,55 +263,38 @@ public class StatisticManager implements StatisticService {
 
             return new DefaultLoad();
         }
-        HashMap<String, Long> flowCurrent_idBytes1 = new HashMap<>();
-        for(FlowEntry flowEntry1 : stats.current){
-//            log.info("currentFlowId: " + flowEntry1.id().toString());
-//            log.info("currentFlowBytes: " + flowEntry1.bytes() + "");
+        HashMap<String, Long> flowCurrentIdBytes = Maps.newHashMap();
+        for(FlowEntry flowEntry : stats.current){
 
-            flowCurrent_idBytes1.put(flowEntry1.id().toString().trim(), flowEntry1.bytes());
+            flowCurrentIdBytes.put(flowEntry.id().toString().trim(), flowEntry.bytes());
         }
 
-        HashMap<String, Long> flowCurrent_idBytes2 = new HashMap<>();
-        for(FlowEntry flowEntry2 : stats.previous){
-//            log.info("previousFlowId: " + flowEntry2.id().toString());
-//            log.info("previousFlowBytes: " + flowEntry2.bytes());
-            flowCurrent_idBytes2.put(flowEntry2.id().toString().trim(), flowEntry2.bytes());
+        HashMap<String, Long> preflowCurrentIdBytes = Maps.newHashMap();
+        for(FlowEntry preFlowEntry : stats.previous){
+
+            preflowCurrentIdBytes.put(preFlowEntry.id().toString().trim(), preFlowEntry.bytes());
         }
 
-        for(Map.Entry<String, Long> stringLongEntry : flowCurrent_idBytes1.entrySet()){
-            String key = stringLongEntry.getKey();//flowId
-            if(flowCurrent_idBytes2.containsKey(key)){
+        for(Map.Entry<String, Long> stringLongEntry : flowCurrentIdBytes.entrySet()){
+            //flowId
+            String key = stringLongEntry.getKey();
+            if(preflowCurrentIdBytes.containsKey(key)){
+
                 long flowBytesNow = stringLongEntry.getValue();
-                long flowBytesPrevious = flowCurrent_idBytes2.get(key);
+                long flowBytesPrevious = preflowCurrentIdBytes.get(key);
                 long bytesTrans = flowBytesNow - flowBytesPrevious;
                 long flowRate = 8 * bytesTrans / 5;
-//                log.info("flowBytesNow: " + flowBytesNow);
-//                log.info("flowBytesPrevious: " + flowBytesPrevious);
-//                log.info("flowRate: " + flowRate);
+
                 String flowRateString = String.valueOf(flowRate);
                 StringBuffer sb = new StringBuffer();
-                sb.append(key).append("|").append(connectPoint.deviceId().toString()).append("|").append(flowRateString).append("b/s");
+
                 //sb:flowId|deviceId|flowRate
-//                log.info("flowId|deviceId|flowRate:");
-//                log.info(sb.toString());
-                //update flow information to file
-//                File csvFile = new File("/home/lihaifeng/deviceId_FlowId_FlowRate.csv");
-//                checkExist(csvFile);
-                /**
-                 * sb:flowId|deviceId|flowRate
-                 * 取出文件中的所有flowId，如果有，同時deviceid一楊，則更新flowRate
-                 * 否則append添加
-                 */
-                //async
-//                ProToRedis proToRedis = new ProToRedis(sb.toString(), flowId_flowRate);
-//                proToRedis.start();
+                sb.append(key).append("|").append(connectPoint.deviceId().toString()).append("|").append(flowRateString).append("b/s");
+
+
                 StringBuffer sbkey = new StringBuffer();
                 sbkey.append(key).append("|").append(connectPoint.deviceId().toString());
-
-                //log.info(sbkey.toString()+"|"+flowRateString+"b/s");
-                //flowId_flowRate.put(sbkey.toString(), flowRateString+"b/s");
-                setFlowId_flowRateKV(sbkey.toString(), flowRateString+"b/s");
-                //log.info("flowId_flowRate.size: " + flowId_flowRate.size());
+                setFlowIdFlowRateKV(sbkey.toString(), flowRateString+"b/s");
 
             }
         }
@@ -323,60 +302,9 @@ public class StatisticManager implements StatisticService {
 
         return new DefaultLoad(aggregate(stats.current), aggregate(stats.previous));
     }
-    public void checkExist(File file) {
-        //判断文件目录的存在
-        if(file.exists()){
-            //file exists
-        }else{
-            //file not exists, create it ...
-            try{
-                file.createNewFile();
-            }catch (IOException e){
-                e.printStackTrace();
-            }
-        }
-    }
-
-    /**
-     * sb:flowId|deviceId|flowRate
-     * 取出文件中的所有flowId，如果有，同時deviceid一楊，則更新flowRate
-     * 否則append添加
-     *
-     * 這裏是直接append，待修復！！！
-     * 方法:只能read then write
-     */
-
-    public boolean appendData(File csvFile, String data, String filePath){
-        try{
-            BufferedReader br = new BufferedReader(new FileReader(filePath));
-            StringBuffer sb = new StringBuffer();
-            String temp = null;
-            int line = 0;
-            temp = br.readLine();
-            while(temp != null){
-                String FlowId = StringUtils.split(temp.trim(), "|")[0];
-                if(temp.contains(FlowId.trim())){
-                    continue;
-                }else{
-                    sb.append(temp).append("\n");
-                }
-                line ++;
-                temp = br.readLine();
-            }
-            br.close();
 
 
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFile, true), "GBK"), 1024);
-            bw.write(sb.toString());
-            bw.write("\n");
-            //bw.flush();
-            bw.close();
-            return true;
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        return false;
-    }
+
     /**
      * Returns statistics of the specified port.
      *
