@@ -32,12 +32,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class StatisticServiceAdapter implements StatisticService {
 
     @Override
-    public ConcurrentHashMap<String, String> getFlowId_flowRate() {
+    public ConcurrentHashMap<String, String> getFlowIdFlowRate() {
         return null;
     }
 
     @Override
-    public void setFlowId_flowRate(ConcurrentHashMap<String, String> flowId_flowRate) {
+    public void setFlowIdFlowRate(ConcurrentHashMap<String, String> flowIdFlowRate) {
 
     }
 

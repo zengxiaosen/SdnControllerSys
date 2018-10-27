@@ -16,10 +16,10 @@ public class ProToRedis extends Thread {
     private final Logger log = getLogger(getClass());
 
     String s;
-    ConcurrentHashMap<String, String> flowId_flowRate;
-    public ProToRedis(String s, ConcurrentHashMap<String, String> flowId_flowRate) {
+    ConcurrentHashMap<String, String> flowIdFlowRate;
+    public ProToRedis(String s, ConcurrentHashMap<String, String> flowIdFlowRate) {
         this.s = s;
-        this.flowId_flowRate = flowId_flowRate;
+        this.flowIdFlowRate = flowIdFlowRate;
     }
 
 
@@ -36,7 +36,7 @@ public class ProToRedis extends Thread {
             String s_key = flowId_deviceId_flowRate[0];
             String s_value = flowId_deviceId_flowRate[2].toString().trim();
             //unique
-            File csvFile = new File("/home/lihaifeng/flowId_flowRate.csv");
+            File csvFile = new File("/home/lihaifeng/flowIdFlowRate.csv");
 
 
             //disunique
@@ -44,7 +44,7 @@ public class ProToRedis extends Thread {
             //checkExist(csvFile);
             //boolean b = appendData(csvFile, standard_deviation+"");
             //如果是沒有這個key就append，有這個key就更改
-            boolean b = updateData(flowId_flowRate, csvFile, s_key, s_value);
+            boolean b = updateData(flowIdFlowRate, csvFile, s_key, s_value);
 
 //            if(b == true){
 //                log.info("update追加写成功..");
@@ -79,13 +79,13 @@ public class ProToRedis extends Thread {
 
     /**
      * change to multi_thread exchange data
-     * @param flowId_flowRate
+     * @param flowIdFlowRate
      * @param csvFile
      * @param s_key
      * @param s_value
      * @return
      */
-    public boolean updateData(ConcurrentHashMap<String, String> flowId_flowRate, File csvFile, String s_key, String s_value){
+    public boolean updateData(ConcurrentHashMap<String, String> flowIdFlowRate, File csvFile, String s_key, String s_value){
         //如果是沒有這個key就append，有這個key就更改
 
         try {
@@ -119,7 +119,7 @@ public class ProToRedis extends Thread {
 //                bw.write("\n");
 //
 //            }
-            flowId_flowRate.put(s_key, s_value);
+            flowIdFlowRate.put(s_key, s_value);
 
 //            bw.close();
             return true;

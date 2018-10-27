@@ -32,8 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public interface StatisticService {
 
-    ConcurrentHashMap<String, String> getFlowId_flowRate();
-    void setFlowId_flowRate(ConcurrentHashMap<String, String> flowId_flowRate);
+    ConcurrentHashMap<String, String> getFlowIdFlowRate();
+    void setFlowIdFlowRate(ConcurrentHashMap<String, String> flowIdFlowRate);
 
     Load vportload(ConnectPoint connectPoint);
     /**

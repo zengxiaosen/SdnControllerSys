@@ -576,7 +576,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             DeviceId curDid = src.deviceId();
                             PortNumber curPort = src.port();
                             //flow and load
-                            ConcurrentHashMap<String, String> flowIdRateCollection = services.flowStats().getFlowId_flowRate();
+                            ConcurrentHashMap<String, String> flowIdRateCollection = services.flowStats().getFlowIdFlowRate();
                             //choose the biggest flow
                             String maxFlowId = "";
                             double maxFlowRate = 0.0;

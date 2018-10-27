@@ -17,6 +17,7 @@ package org.onosproject.fwd;
 
 import com.google.common.collect.ImmutableSet;
 //apache 的OSGi框架felix
+import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -858,7 +859,7 @@ public class ReactiveForwarding {
              * 3 ecmp
              */
 
-            Set<Path> Paths_Choise = new HashSet<>();
+            Set<Path> Paths_Choise = Sets.newHashSet();
 
             int choise = 0;
             if(choise == 0){
@@ -868,31 +869,10 @@ public class ReactiveForwarding {
                         LinksResult);
                 Paths_Choise = Paths_FESM;
             }else if(choise == 1){
-                ConcurrentHashMap<String, String> FlowId_FlowRate = statisticService.getFlowId_flowRate();
+                ConcurrentHashMap<String, String> FlowIdFlowRate = statisticService.getFlowIdFlowRate();
 
                 //ConcurrentHashMap<String, String> FlowId_FlowRate = new ConcurrentHashMap<>();
 
-
-//                File csvFile = new File("/home/lihaifeng/z_test.csv");
-//                try {
-//                    //read
-//                    FileInputStream fis = new FileInputStream(csvFile);
-//                    BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-//                    String line = null;
-//                    BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFile, true), "GBK"), 1024);
-//                    for(Map.Entry<String, String> entry : FlowId_FlowRate.entrySet()){
-//                        log.info("key:" + entry.getKey());
-//                        log.info("value:" + entry.getValue());
-//                        bw.write("key:" + entry.getKey());
-//                        bw.write("\n");
-//                        bw.write("value:" + entry.getValue());
-//                        bw.write("\n");
-//                    }
-//                    bw.close();
-//
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
 
                 boolean isBigFlow = true;
                 //init with a small number
@@ -1004,7 +984,7 @@ public class ReactiveForwarding {
 
 
 
-        private  Double MatchAndComputeThisFlowRate(ConcurrentHashMap<String, String> flowId_FlowRate_Map, MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
+        private  Double MatchAndComputeThisFlowRate(ConcurrentHashMap<String, String> flowIdFlowRateMap, MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
             boolean result = true;
 
             //body
@@ -1057,7 +1037,7 @@ public class ReactiveForwarding {
                         //log.info(r.toString());
 
                         //read file update by monitor module
-                        String flowRateOutOfB2 = getflowRateFromMonitorModule2(ObjectFlowId, flowId_FlowRate_Map);
+                        String flowRateOutOfB2 = getflowRateFromMonitorModule2(ObjectFlowId, flowIdFlowRateMap);
 //                        log.info("matchSrcAndDst == true");
 //                        log.info("flowRateOutOfB2: "+ flowRateOutOfB2);
                         resultflowRate = flowRateOutOfB2;
@@ -1085,7 +1065,7 @@ public class ReactiveForwarding {
 
 
 
-        private  boolean ifBigFlowProcess(ConcurrentHashMap<String, String> flowId_FlowRate, MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
+        private  boolean ifBigFlowProcess(ConcurrentHashMap<String, String> flowIdFlowRate, MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
             boolean result = true;
 
             //body
@@ -1141,7 +1121,7 @@ public class ReactiveForwarding {
 
 
                         //read file update by monitor module
-                        String flowRateOutOfB = getflowRateFromMonitorModule3(ObjectFlowId, flowId_FlowRate);
+                        String flowRateOutOfB = getflowRateFromMonitorModule3(ObjectFlowId, flowIdFlowRate);
                         resultflowRate = flowRateOutOfB;
 
 

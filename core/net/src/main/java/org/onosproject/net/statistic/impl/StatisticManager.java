@@ -108,22 +108,22 @@ public class StatisticManager implements StatisticService {
     protected PortStatisticsService portStatisticsService;
 
     private final InternalFlowRuleListener listener = new InternalFlowRuleListener();
-    private static ConcurrentHashMap<String, String> flowId_flowRate = Maps.newConcurrentMap();
+    private static ConcurrentHashMap<String, String> flowIdFlowRate = Maps.newConcurrentMap();
     private static ReadWriteLock rw1 = new ReentrantReadWriteLock();
     @Override
-    public ConcurrentHashMap<String, String> getFlowId_flowRate() {
+    public ConcurrentHashMap<String, String> getFlowIdFlowRate() {
         rw1.readLock().lock();
-        ConcurrentHashMap<String, String> temp = new ConcurrentHashMap<>(flowId_flowRate);
+        ConcurrentHashMap<String, String> temp = new ConcurrentHashMap<>(flowIdFlowRate);
         rw1.readLock().unlock();
         return temp;
         //rw1.readLock().unlock();
     }
 
     @Override
-    public void setFlowId_flowRate(ConcurrentHashMap<String, String> flowId_flowRate) {
+    public void setFlowIdFlowRate(ConcurrentHashMap<String, String> flowIdFlowRate) {
         rw1.writeLock().lock();
         try{
-            StatisticManager.flowId_flowRate = flowId_flowRate;
+            StatisticManager.flowIdFlowRate = flowIdFlowRate;
         }catch (Exception e){
             e.printStackTrace();
         }finally {
@@ -134,7 +134,7 @@ public class StatisticManager implements StatisticService {
     public void setFlowIdFlowRateKV(String key, String value){
         rw1.writeLock().lock();
         try{
-            flowId_flowRate.put(key, value);
+            flowIdFlowRate.put(key, value);
         }catch (Exception e){
             e.printStackTrace();
         }finally {
