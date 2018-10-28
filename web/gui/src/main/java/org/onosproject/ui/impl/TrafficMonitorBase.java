@@ -108,7 +108,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     // 4 Kilo Bytes as threshold
     protected static final double BPS_THRESHOLD = 4 * TopoUtils.N_KILO;
-
+    private static final double bwLevel = 100000;
 
     /**
      * Designates the different modes of operation.
@@ -448,8 +448,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             if (type == TrafficLink.StatsType.FLOW_STATS) {
                 attachFlowLoad(tlink);
             } else if (type == TrafficLink.StatsType.PORT_STATS) {
-                //TrafficLink tlinkCopy = new TrafficLink(tlink);
-                //attachFlowLoad(tlink);
                 attachPortLoad(tlink, BYTES);
             } else if (type == TrafficLink.StatsType.PORT_PACKET_STATS) {
                 attachPortLoad(tlink, PACKETS);
@@ -460,7 +458,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 numbers ++;
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
-                //LinkHighlight linkHighlight1 = new LinkHighlight(linkHighlight);
                 highlights.add(linkHighlight);
                 /**
                  * 开启监控
@@ -475,10 +472,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                      * LinkHighlight实际上是：
                      * highlightForStats(statsType);
                      *
-                     private LinkHighlight highlightForStats(StatsType type) {
-                     return new LinkHighlight(linkId(), SECONDARY_HIGHLIGHT)
-                     .setLabel(generateLabel(type));
-                     }
+                         private LinkHighlight highlightForStats(StatsType type) {
+                            return new LinkHighlight(linkId(), SECONDARY_HIGHLIGHT).setLabel(generateLabel(type));
+                         }
                      */
 
 
@@ -496,67 +492,66 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                      */
                     String bandwidth = linkHighlight.label();
 
-                    double level = 100000;
+
                     String tlinkId = tlink.linkId();
                     double bwUsedRate = 0;
                     double restBw = 0.0;
                     if(bandwidth.contains("M")){
-                        double temp = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
-                        bwUsedRate = temp / level;
-                        tLinkIdBandWidth.put(tlinkId, temp);
-                        tLinkIdBandWidthUsedRate.put(tlinkId, temp/level);
-                        sum += temp;
-                        sum_UsedRate += temp/level;
-                        if(temp / level < 1){
-                            sum_ur += temp/level;
+                        double usedBw = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
+                        bwUsedRate = usedBw / bwLevel;
+                        tLinkIdBandWidth.put(tlinkId, usedBw);
+                        tLinkIdBandWidthUsedRate.put(tlinkId, usedBw/bwLevel);
+                        sum += usedBw;
+                        sum_UsedRate += usedBw/bwLevel;
+                        if(usedBw / bwLevel < 1){
+                            sum_ur += usedBw/bwLevel;
                         }else{
                             sum_ur += 1;
                         }
                         double restTemp = 0.0;
-                        if(level > temp){
-                            restTemp = level - temp;
+                        if(bwLevel > usedBw){
+                            restTemp = bwLevel - usedBw;
                         }
                         restBw = restTemp;
                         sum_restBw += restTemp;
 
-                        log.info("curBw: " + temp);
-                        log.info("totalBw: " + level);
+                        log.info("curBw: " + usedBw);
+                        log.info("totalBw: " + bwLevel);
                         log.info("restBw: " + restTemp);
 
                     }else if(bandwidth.contains("K")){
-                        double level1 = 100000;
-                        String tempETL = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
+
+                        String bwKEtl = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
                         //处理 “1,006.67”这种脏数据
-                        String tempString = "";
-                        if(tempETL.contains(",")){
-                            String[] tempStringArray = tempETL.split(",");
-                            tempString = tempStringArray[0] + tempStringArray[1];
+                        String bwKStr = "";
+                        if(bwKEtl.contains(",")){
+                            String[] bwKArray = bwKEtl.split(",");
+                            bwKStr = bwKArray[0] + bwKArray[1];
                         }
-                        //log.info("curTemp: " + tempString);
-                        double temp = 0;
-                        if(tempString != null &&  tempString != "" && !tempString.equals("")){
-                            temp = Double.valueOf(tempString);
+                        double usedBw = 0;
+                        if(bwKStr != null && !bwKStr.equals("")){
+                            usedBw = Double.valueOf(bwKStr);
                         }
-                        log.info("=====bandwidth(M: " + temp  + ", 帶寬利用率： " + temp/level1);
-                        bwUsedRate = temp/level1;
-                        tLinkIdBandWidth.put(tlinkId, temp);
-                        tLinkIdBandWidthUsedRate.put(tlinkId, temp/level1);
-                        sum += temp;
-                        sum_UsedRate += temp/level1;
-                        if(temp/level1 < 1){
-                            sum_ur += temp/level1;
+                        log.info("bw(M): " + usedBw  + ", bwUsedRate： " + usedBw/bwLevel);
+                        bwUsedRate = usedBw/bwLevel;
+                        tLinkIdBandWidth.put(tlinkId, usedBw);
+                        tLinkIdBandWidthUsedRate.put(tlinkId, usedBw/bwLevel);
+                        sum += usedBw;
+                        sum_UsedRate += usedBw/bwLevel;
+                        if(usedBw/bwLevel < 1){
+                            sum_ur += usedBw/bwLevel;
                         }else{
                             sum_ur += 1;
                         }
                         double restTemp = 0.0;
-                        if(level1 > temp){
-                            restTemp = level1 - temp;
+                        if(bwLevel > usedBw){
+                            restTemp = bwLevel - usedBw;
                         }
                         restBw = restTemp;
                         sum_restBw += restTemp;
 
-                        log.info("curBw: " + temp);
-                        log.info("totalBw: " + level1);
+                        log.info("curBw: " + usedBw);
+                        log.info("totalBw: " + bwLevel);
                         log.info("restBw: " + restTemp);
 
                     }
@@ -585,7 +580,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             DeviceId maxFlowSrcDeviceId = null;
                             DeviceId maxFlowDstDeviceId = null;
                             FlowEntry flowEntryObject = null;
-                            Map<Double, FlowEntry> flowRateFlowEntry = new TreeMap<>();
+                            Map<Double, FlowEntry> flowRateFlowEntry = Maps.newTreeMap();
                             //sort by rate
                             for(FlowEntry r0 : services.flow().getFlowEntries(curDid)){
                                 String objectFlowId = r0.id().toString();
@@ -660,8 +655,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                          *
                                          */
 
-                                        Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
-                                        //Set<Path> paths = PathsDecision_FESM(reachablePaths);
+                                        Set<Path> paths = PathsDecisionMyDefined(resultFlowSpeed, reachablePaths);
+                                        //Set<Path> paths = PathsDecisionFsem(reachablePaths);
                                         log.info("----------------filteredSize: " + paths.size());
 
                                         Path pathObject = null;
@@ -901,7 +896,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     }
 
 
-    private  Set<Path> PathsDecision_FESM(Set<Path> paths) {
+    private  Set<Path> PathsDecisionFsem(Set<Path> paths) {
 
         /**
          *
@@ -1142,7 +1137,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     }
 
-    private  Set<Path> PathsDecision_PLLB(Double curFlowSpeed, Set<Path> paths) {
+    private  Set<Path> PathsDecisionMyDefined(Double curFlowSpeed, Set<Path> paths) {
 
 
         Set<Path> result = Sets.newHashSet();
