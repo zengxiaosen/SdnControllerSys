@@ -660,8 +660,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                          *
                                          */
 
-                                        //Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
-                                        Set<Path> paths = PathsDecision_FESM(reachablePaths);
+                                        Set<Path> paths = PathsDecision_PLLB(resultFlowSpeed, reachablePaths);
+                                        //Set<Path> paths = PathsDecision_FESM(reachablePaths);
                                         log.info("----------------filteredSize: " + paths.size());
 
                                         Path pathObject = null;
@@ -1165,12 +1165,12 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * pre add the flowbw to path
          * compute the standard deviation of all link in all reachable path
          */
-        HashMap<Path, Integer> path_index_ofPaths = new HashMap<Path, Integer>();
+        HashMap<Path, Integer> pathIndexOfPaths = Maps.newHashMap();
 
         Integer index_of_path_inPaths = 0;
-        HashMap<Integer, String> pathIndex_linksrestBw_ofPaths = new HashMap<Integer, String>();
+        HashMap<Integer, String> pathIndex_linksrestBw_ofPaths = Maps.newHashMap();
         for(Path path : paths){
-            path_index_ofPaths.put(path, index_of_path_inPaths);
+            pathIndexOfPaths.put(path, index_of_path_inPaths);
             StringBuffer sb = new StringBuffer();
             //compute all link rest bw of this path
             for(Link link : path.links()){
@@ -1195,9 +1195,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
              * compute all linksRestBw of all path except cur path
              * And insert them into the otherPathLinksRestBw(ArrayList<Double>)
              */
-            Integer curPathIndex = path_index_ofPaths.get(path);
+            Integer curPathIndex = pathIndexOfPaths.get(path);
             ArrayList<Double> otherPathLinksRestBw = new ArrayList<>();
-            for(Map.Entry<Path, Integer> entry : path_index_ofPaths.entrySet()){
+            for(Map.Entry<Path, Integer> entry : pathIndexOfPaths.entrySet()){
                 Path thisPath = entry.getKey();
                 Integer thisPathIndex = entry.getValue();
                 if(thisPathIndex != curPathIndex){
