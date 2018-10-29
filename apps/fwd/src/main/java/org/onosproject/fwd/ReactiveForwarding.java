@@ -15,9 +15,8 @@
  */
 package org.onosproject.fwd;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.*;
 //apache 的OSGi框架felix
-import com.google.common.collect.Sets;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -314,6 +313,9 @@ public class ReactiveForwarding {
     private final TopologyListener topologyListener = new InternalTopologyListener();
     //java的线程执行接口
     private ExecutorService blackHoleExecutor;
+
+    private static final double bwLevel = 100000;
+    private static final long MAX_REST_BW = 100*1000000;
 
     //OSGi的组件启动时自动调用的方法，
     @Activate
@@ -643,8 +645,6 @@ public class ReactiveForwarding {
         }
 
 
-        //////////////////////////
-
         /**
          * 包处理
          * @param context packet processing context
@@ -725,9 +725,6 @@ public class ReactiveForwarding {
             // Are we on an edge switch that our destination is on? If so,
             // simply forward out to the destination and bail.
 
-//            log.info("---------------------------　每一次选路信息　------------------------");
-//            log.info("源host:"+ id_src.mac().toString());
-//            log.info("目的host:"+ id.mac().toString());
 
             // Are we on an edge switch that our destination is on? If so,
             // simply forward out to the destination and bail.如果是目的主机链接的边缘交换机发过来的，简单安装流规则，然后释放。
@@ -760,7 +757,6 @@ public class ReactiveForwarding {
              */
 
 
-/////////////////////////////////////////////////////////////////-just a test
             Set<TopologyEdge> topologyEdgeset = null;
 
             /**
@@ -879,11 +875,11 @@ public class ReactiveForwarding {
                 //curFlowSpeed1 = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 //                isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
-                Set<Path> Paths_PLLB = PathsDecision_PLLB(curFlowSpeed1, isBigFlow, paths, pkt.receivedFrom().deviceId(),
+                Set<Path> PathsMyDefined = PathsDecisionMyDefined(curFlowSpeed1, isBigFlow, paths, pkt.receivedFrom().deviceId(),
                         dst.location().deviceId(),
                         src.location().deviceId(),
                         LinksResult);
-                Paths_Choise = Paths_PLLB;
+                Paths_Choise = PathsMyDefined;
             }
             else if(choise == 2){
 
@@ -1274,279 +1270,203 @@ public class ReactiveForwarding {
             return result;
         }
 
+        private double getFlowBw(Double curFlowSpeed) {
+            //init with a small score
+            double flowbw = 10.0;
+            if(curFlowSpeed > 0){
+                flowbw = curFlowSpeed;
+            }
+            return flowbw;
+        }
 
-        private  Set<Path> PathsDecision_PLLB(Double curFlowSpeed, boolean isBigFlow, Set<Path> paths, DeviceId recvId, DeviceId dstid, DeviceId srcId, LinkedList<Link> LinksResult) {
+        private Map<Integer,String> getPathIndexLinksRestBwOfPaths(Set<Path> paths, Map<Path, Integer> pathIndexOfPaths) {
+            Integer indexOfPathInPaths = 0;
+            Map<Integer, String> pathIndexLinksRestBwOfPaths = Maps.newHashMap();
+
+            for(Path path : paths){
+                pathIndexOfPaths.put(path, indexOfPathInPaths);
+                StringBuffer sb = new StringBuffer();
+                //compute all link rest bw of this path
+                for(Link link : path.links()){
+                    //long IntraLinkRestBw = services.flowStats().load(link).rate();
+
+
+                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                    sb.append(IntraLinkRestBw+"|");
+                }
+                log.info("path i : " + indexOfPathInPaths);
+                log.info("links rest bw : " + sb.toString());
+                pathIndexLinksRestBwOfPaths.put(indexOfPathInPaths, sb.toString());
+                indexOfPathInPaths ++;
+
+            }
+            return pathIndexLinksRestBwOfPaths;
+        }
+
+        private List<Double> getOtherPathLinksRestBw(Map<Path, Integer> pathIndexOfPaths, Integer curPathIndex, Map<Integer, String> pathIndexLinksRestBwOfPaths) {
+            List<Double> otherPathLinksRestBw = Lists.newArrayList();
+            for(Map.Entry<Path, Integer> entry : pathIndexOfPaths.entrySet()){
+                Path thisPath = entry.getKey();
+                Integer thisPathIndex = entry.getValue();
+                if(thisPathIndex != curPathIndex){
+                    // this is the other path needed to compute the rest Bw
+                    String alllinkRestBw_OfThisPath = pathIndexLinksRestBwOfPaths.get(thisPathIndex);
+                    //ETL: link1_RestBw|link2_RestBw|link3_RestBw....
+                    alllinkRestBw_OfThisPath = alllinkRestBw_OfThisPath.substring(0, alllinkRestBw_OfThisPath.length()-1);
+                    String[] alllinkRestBw = StringUtils.split(alllinkRestBw_OfThisPath, "|");
+                    for(String s : alllinkRestBw){
+                        Double tmp = Double.valueOf(s);
+                        otherPathLinksRestBw.add(tmp);
+                    }
+                }
+
+            }
+            return otherPathLinksRestBw;
+        }
+
+        private boolean getPathCanChooseFlag(double flowbw, long IntraLinkLoadBw) {
+            if(flowbw > IntraLinkLoadBw){
+                log.info("flow speed too large");
+                return false;
+            }else{
+                log.info("flow is enough to put");
+                return true;
+            }
+        }
+
+        private double getSumLinksRestBwAfterAddFlow(List<Double> allPathLinksRestBwAfterAddFlow) {
+            double sumLinksRestBwAfterAddFlow = 0;
+            for(int k1=0; k1<allPathLinksRestBwAfterAddFlow.size(); k1++){
+                double t = allPathLinksRestBwAfterAddFlow.get(k1);
+                sumLinksRestBwAfterAddFlow += t;
+            }
+            return sumLinksRestBwAfterAddFlow;
+        }
+
+        private double getSdRaw(List<Double> allPathLinksRestBwAfterAddFlow, double meanLinksResBwAfterAdd) {
+            double sum = 0;
+            for(int k2=0; k2<allPathLinksRestBwAfterAddFlow.size(); k2++){
+                double t2 = allPathLinksRestBwAfterAddFlow.get(k2);
+                double t3 = t2-meanLinksResBwAfterAdd;
+                double t4 = Math.pow(t3, 2);
+                sum += t4;
+            }
+            return sum;
+        }
+
+        private  Set<Path> PathsDecisionMyDefined(Double curFlowSpeed, Set<Path> paths) {
+
+
+            Set<Path> result = Sets.newHashSet();
+            Map<Integer, Path> indexPath = Maps.newLinkedHashMap();
+            Path finalPath = null;
+
+            int i=0;
+            double maxScore = 0.0;
+            double flowbw = getFlowBw(curFlowSpeed);
 
             /**
-             * sBigFlow, paths, pkt.receivedFrom().deviceId(),
-             dst.location().deviceId(),
-             src.location().deviceId(),
-             LinksResult
+             * pre add the flowbw to path
+             * compute the standard deviation of all link in all reachable path
              */
+            Map<Path, Integer> pathIndexOfPaths = Maps.newHashMap();
+            Map<Integer, String> pathIndexLinksRestBwOfPaths = getPathIndexLinksRestBwOfPaths(paths, pathIndexOfPaths);
 
-                //flowStatisticService.loadSummaryPortInternal()
-                Set<Path> result = new HashSet<Path>();
-                Map<Integer, Path> indexPath = new LinkedHashMap<>();
-                //Path finalPath = paths.iterator().next();
-                Path finalPath = null;
+            for(Path path : paths){
 
-                int i=0;
+                Integer curPathIndex = pathIndexOfPaths.get(path);
+                List<Double> otherPathLinksRestBw = getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
+                List<Double> allPathLinksRestBwAfterAddFlow = Lists.newArrayList(otherPathLinksRestBw);
+                log.info("allPathLinksRestBwAfterAddFlow.size : " + allPathLinksRestBwAfterAddFlow.size());
+                indexPath.put(i, path);
                 /**
                  *
-                 * 对多条等价路径进行选路决策
+                 *  ChokeLinkPassbytes: link bytes
                  *
                  */
-                double maxScore = 0.0;
-                //init with a small score
-                Double flowbw = 10.0;
-                if(curFlowSpeed > 0){
-                    flowbw = curFlowSpeed;
+                double allLinkOfPathRestBandWidth = 0;
+                double allBwRestAfterAddFlow = 0;
+                long ChokeLinkPassbytes = 0;
+                long IntraLinkMaxBw = 100 * 1000000;
+                boolean pathCanChooseFlag = true;
+                int j=0;
+                long ChokePointRestBandWidth = MAX_REST_BW;
+                for(Link link : path.links()){
+
+                    long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
+                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                    //bit/s
+                    //log
+                    log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
+                    log.info("IntraLinkRestBw: " + IntraLinkRestBw);
+                    log.info("flowbw: " + flowbw);
+                    pathCanChooseFlag = getPathCanChooseFlag(flowbw, IntraLinkLoadBw);
+
+                    //pre add the flowBw to curPath
+                    Double theAddRestBw = flowbw;
+                    Double thisLinkResBw = Double.valueOf(IntraLinkLoadBw);
+                    Double thisLinkResBwUpdate = thisLinkResBw - theAddRestBw;
+                    if(thisLinkResBwUpdate < 0){
+                        thisLinkResBwUpdate = 0.0;
+                    }
+                    allPathLinksRestBwAfterAddFlow.add(thisLinkResBwUpdate);
+                    // ---------------------------------
+                    allLinkOfPathRestBandWidth += IntraLinkRestBw;
+                    allBwRestAfterAddFlow += allBwRestAfterAddFlow;
+
+
+                    if(IntraLinkRestBw < ChokePointRestBandWidth){
+                        //choise the choke point
+                        //ChokePointRestBandWidth
+                        ChokePointRestBandWidth = IntraLinkRestBw;
+                    }
+
+                    j++;
                 }
                 /**
-                 * pre add the flowbw to path
-                 * compute the standard deviation of all link in all reachable path
+                 * 从检测路径模块得到的path中包含的link的数量
                  */
-                HashMap<Path, Integer> path_index_ofPaths = new HashMap<Path, Integer>();
-                Integer index_of_path_inPaths = 0;
-                HashMap<Integer, String> pathIndex_linksrestBw_ofPaths = new HashMap<Integer, String>();
-                for(Path path : paths){
-                    path_index_ofPaths.put(path, index_of_path_inPaths);
-                    StringBuffer sb = new StringBuffer();
-                    //compute all link rest bw of this path
-                    for(Link link : path.links()){
-                        long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-                        sb.append(IntraLinkRestBw+"|");
-                    }
-                    pathIndex_linksrestBw_ofPaths.put(index_of_path_inPaths, sb.toString());
-                    index_of_path_inPaths ++;
+                double pathlinksSize = path.links().size();
+
+                /**
+                 * the mean restBandWidth of all link at this path
+                 */
+                double pathMeanRestBw = allLinkOfPathRestBandWidth / pathlinksSize;
+
+
+                int allPathLinkSize = allPathLinksRestBwAfterAddFlow.size();
+                double sumLinksRestBwAfterAddFlow = getSumLinksRestBwAfterAddFlow(allPathLinksRestBwAfterAddFlow);
+
+                double meanLinksResBwAfterAdd = sumLinksRestBwAfterAddFlow / allPathLinkSize;
+                double sum = getSdRaw(allPathLinksRestBwAfterAddFlow, meanLinksResBwAfterAdd);
+                double AllRestBWSdAfterPreAdd = Math.sqrt(sum)/allPathLinkSize;
+
+                double fChokeLinkRestBw = (double)(Math.log((double)ChokePointRestBandWidth + 1));
+                double fPathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
+                double fAllRestBwSdAfterPreAdd = 1.0/(double)(Math.log((double)AllRestBWSdAfterPreAdd + 1) + 1);
+
+                double resultScore = fChokeLinkRestBw * 5 + fPathMeanRestBw * 5;
+
+                //there are some links not satisfy the flow bw
+                if(!pathCanChooseFlag){
+                    // not choose this path
+                    resultScore = 0;
                 }
-
-                for(Path path : paths){
-                    /**
-                     * in order to compute the standard deviation of all links after pre add the flowBw to curPath
-                     * now:
-                     * compute all linksRestBw of all path except cur path
-                     * And insert them into the otherPathLinksRestBw(ArrayList<Double>)
-                     */
-                    Integer curPathIndex = path_index_ofPaths.get(path);
-                    ArrayList<Double> otherPathLinksRestBw = new ArrayList<>();
-                    for(Map.Entry<Path, Integer> entry : path_index_ofPaths.entrySet()){
-                        Path thisPath = entry.getKey();
-                        Integer thisPathIndex = entry.getValue();
-                        if(thisPathIndex != curPathIndex){
-                            // this is the other path needed to compute the rest Bw
-                            String alllinkRestBw_OfThisPath = pathIndex_linksrestBw_ofPaths.get(thisPathIndex);
-                            //ETL: link1_RestBw|link2_RestBw|link3_RestBw....
-                            alllinkRestBw_OfThisPath = alllinkRestBw_OfThisPath.substring(0, alllinkRestBw_OfThisPath.length()-1);
-                            String[] alllinkRestBw = StringUtils.split(alllinkRestBw_OfThisPath, "|");
-                            for(String s : alllinkRestBw){
-                                Double tmp = Double.valueOf(s);
-                                otherPathLinksRestBw.add(tmp);
-                            }
-                        }
-
-                    }
-                    int j=0;
-                    indexPath.put(i, path);
-                    int rPathLength = path.links().size();
-                    /**
-                     *
-                     *  PathsDecision_PLLB
-                     *
-                     *  ChokeLinkPassbytes: link bytes
-                     *
-                     */
-                    double allLinkOfPath_BandWidth = 0;
-                    double allLinkOfPath_RestBandWidth = 0;
-                    //if there is no traffic in this link, that means the link bandwidth is 100M
-                    long ChokePointRestBandWidth = 100*1000000;
-                    long ChokeLinkPassbytes = 0;
-                    ArrayList<Double> arrayList = new ArrayList<>();
-                    long IntraLinkMaxBw = 100 * 1000000;
-                    int ifPathCanChoose = 1;
-                    for(Link link : path.links()){
-
-                        long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
-
-//                    long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
-//                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-//                    double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
-
-                        arrayList.add((double)IntraLinkLoadBw);
-                        allLinkOfPath_BandWidth += IntraLinkLoadBw;
-                        long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-                        if(flowbw > IntraLinkRestBw){
-                            ifPathCanChoose = 0;
-                        }
-                        // --------------------------------
-                        /**
-                         * pre add the flowBw to curPath
-                         */
-                        Double theAddRestBw = flowbw;
-                        Double thisLinkResBw = Double.valueOf(IntraLinkLoadBw);
-                        Double tp = thisLinkResBw - theAddRestBw;
-                        if(tp < 0){
-                            tp = 0.0;
-                        }
-                        otherPathLinksRestBw.add(tp);
-                        // ---------------------------------
-                        allLinkOfPath_RestBandWidth += IntraLinkRestBw;
-                        /**
-                         * link 源端口和目的端口 信息监控
-                         */
-                        long bytesReceived_src = 0;
-                        if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                            bytesReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesReceived();
-                        }
-
-                        long bytesSent_src = 0;
-                        if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                            bytesSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
-                        }
-                        long rx_dropped_src = 0;
-                        if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                            rx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
-                        }
-                        long tx_dropped_src = 0;
-                        if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                            flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
-                        }
-                        long rx_tx_dropped_src = rx_dropped_src+tx_dropped_src;
-                        /**
-                         * dst
-                         */
-                        long bytesReceived_dst = 0;
-                        if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                            bytesReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
-                        }
-                        long bytesSent_dst = 0;
-                        if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                            bytesSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesSent();
-                        }
-                        long rx_dropped_dst = 0;
-                        if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                            flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
-                        }
-                        long tx_dropped_dst = 0;
-                        if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                            flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
-                        }
-                        long rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
-                        /**
-                         * the choke point link means(the min restBandWidth)
-                         * b denotes the byte count of the critical
-                         * r denotes the forwarding rate
-                         */
-                        if(IntraLinkRestBw < ChokePointRestBandWidth){
-                            //choise the choke point
-                            ChokeLinkPassbytes = Math.max(bytesSent_src, bytesReceived_dst);
-                            //ChokePointRestBandWidth
-                            ChokePointRestBandWidth = IntraLinkRestBw;
-                        }
-
-                        j++;
-                    }
-
-
-
-
-                    /**
-                     * 从检测路径模块得到的path中包含的link的数量
-                     */
-                    double pathlinksSize = path.links().size();
-                    /**
-                     * path中各个link的平均负载
-                     */
-                    double pathMeanLoad = allLinkOfPath_BandWidth / pathlinksSize;
-                    /**
-                     * the mean restBandWidth of all link at this path
-                     */
-                    double pathMeanRestBw = allLinkOfPath_RestBandWidth / pathlinksSize;
-
-                    // -------------------------------------
-
-                    /**
-                     * otherPathLinksRestBw: ArrayList<Double>
-                     * this data structure store the rest Bw of all links in all Path after pre add the flowBw to the cur Path
-                     * now compute the standart deviation of them
-                     */
-                    int sizeOf_otherPathLinksRestBw = otherPathLinksRestBw.size();
-                    double sumLinksRestBw = 0;
-                    for(int k1=0; k1<otherPathLinksRestBw.size(); k1++){
-                        double t = otherPathLinksRestBw.get(k1);
-                        sumLinksRestBw += t;
-                    }
-                    double meanLinksResBw = sumLinksRestBw / sizeOf_otherPathLinksRestBw;
-                    double sumpownode = 0;
-                    for(int k2=0; k2<otherPathLinksRestBw.size(); k2++){
-                        double t2 = otherPathLinksRestBw.get(k2);
-                        double t3 = t2-sumLinksRestBw;
-                        double t4 = Math.pow(t3, 2);
-                        sumpownode += t4;
-                    }
-                    double preAddFlowToThisPath_AllStandardDeviation = Math.sqrt(sumpownode)/sizeOf_otherPathLinksRestBw;
-                    //log.info("preAddFlowToThisPath_AllStandardDeviation: " + preAddFlowToThisPath_AllStandardDeviation);
-                    // -------------------------------------
-                    /**
-                     * 特征工程(all between 0~1 )
-                     * rb = 1.0/log(b+1) + 1
-                     * rrestBW = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
-                     *
-                     */
-                    //double feature_ChokeLinkPassbytes = 1.0 / (double)(Math.log((double)(ChokeLinkPassbytes + 2))) + 1;
-                    //double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
-                    double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1));
-                    //double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
-                    double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
-                    double feature_preAddFlowToThisPath_AllStandardDeviation = 1.0/(double)(Math.log((double)preAddFlowToThisPath_AllStandardDeviation + 1) + 1);
-//                    log.info("feature_ChokeLinkPassbytes: " + feature_ChokeLinkPassbytes);
-//                    log.info("feature_ChokePointRestBandWidth: " + feature_ChokePointRestBandWidth);
-//                    log.info("feature_pathMeanRestBw: " + feature_pathMeanRestBw);
-//                    log.info("feature_preAddFlowToThisPath_AllStandardDeviation: " + feature_preAddFlowToThisPath_AllStandardDeviation);
-
-                    //log.info("resultScore: " + resultScore);
-                    //there are some problem
-                    //feature_preAddFlowToThisPath_AllStandardDeviation * 0
-                    double resultScore = feature_ChokePointRestBandWidth * 1   + feature_pathMeanRestBw * 1;
-                    //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
-                    //log.info("resultScore: "+ resultScore);
-
-                    //there are some links not satisfy the flow bw
-                    if(ifPathCanChoose == 0){
-                        // not choose this path
-                        //resultScore = 0;
-                    }
-
-
-
-                    if(resultScore > maxScore){
-                        finalPath = path;
-                    }
-
-                    i++;
+                if(resultScore > maxScore){
+                    finalPath = path;
                 }
+                i++;
+            }
 
-                //result.add(indexPath.get(0));
-                if(finalPath == null){
-                    result.add(indexPath.get(0));
-                }else{
-                    result.add(finalPath);
-                }
-                return result;
+            if(finalPath == null){
+                result.add(indexPath.get(0));
+            }else{
+                result.add(finalPath);
+            }
+            return result;
 
-
-//            int hashvalue = (srcId.toString()+dstid.toString()).hashCode()%paths.size();
-//            Set<Path> result = new HashSet<>();
-//            //result.add(paths[hashvalue]);
-//            int j=0;
-//            for(Path path : paths){
-//                if(j == hashvalue){
-//                    result.add(path);
-//                }
-//                j++;
-//            }
-//            return result;
         }
+
 
 
         private  Set<Path> PathsDecision_FESM(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1, LinkedList<Link> LinksResult) {
