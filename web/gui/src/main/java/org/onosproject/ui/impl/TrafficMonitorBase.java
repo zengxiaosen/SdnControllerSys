@@ -880,10 +880,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         //value descending sort
 
 
+
         for(int i=0; i< 3; i++){
             log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         }
-        log.info("linkMap.size : " + linkMap.size());
 //        log.info("list.size : " + list.size());
 //        for(Map.Entry<TrafficLink, Double> entry : list){
 //            log.info("key : " + entry.getKey() + ", value : " + entry.getValue());
