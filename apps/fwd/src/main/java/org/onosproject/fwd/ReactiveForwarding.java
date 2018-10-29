@@ -43,8 +43,7 @@ import org.onlab.packet.VlanId;
 import org.onlab.util.KryoNamespace;
 import org.onlab.util.Tools;
 import org.onosproject.cfg.ComponentConfigService;
-import org.onosproject.core.ApplicationId;
-import org.onosproject.core.CoreService;
+import org.onosproject.core.*;
 import org.onosproject.event.Event;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
@@ -224,6 +223,9 @@ public class ReactiveForwarding {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected StatisticService statisticService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PathChoiceItf pathChoiceItf;
     //本类的一个内部私有类
     private ReactivePacketProcessor processor = new ReactivePacketProcessor();
 
@@ -1340,16 +1342,7 @@ public class ReactiveForwarding {
             return sumLinksRestBwAfterAddFlow;
         }
 
-        private double getSdRaw(List<Double> allPathLinksRestBwAfterAddFlow, double meanLinksResBwAfterAdd) {
-            double sum = 0;
-            for(int k2=0; k2<allPathLinksRestBwAfterAddFlow.size(); k2++){
-                double t2 = allPathLinksRestBwAfterAddFlow.get(k2);
-                double t3 = t2-meanLinksResBwAfterAdd;
-                double t4 = Math.pow(t3, 2);
-                sum += t4;
-            }
-            return sum;
-        }
+
 
         private  Set<Path> PathsDecisionMyDefined(Double curFlowSpeed, Set<Path> paths) {
 
@@ -1435,7 +1428,7 @@ public class ReactiveForwarding {
                 double sumLinksRestBwAfterAddFlow = getSumLinksRestBwAfterAddFlow(allPathLinksRestBwAfterAddFlow);
 
                 double meanLinksResBwAfterAdd = sumLinksRestBwAfterAddFlow / allPathLinkSize;
-                double sum = getSdRaw(allPathLinksRestBwAfterAddFlow, meanLinksResBwAfterAdd);
+                double sum = pathChoiceItf.getSdRaw(allPathLinksRestBwAfterAddFlow, meanLinksResBwAfterAdd);
                 double AllRestBWSdAfterPreAdd = Math.sqrt(sum)/allPathLinkSize;
 
                 double fChokeLinkRestBw = (double)(Math.log((double)ChokePointRestBandWidth + 1));
