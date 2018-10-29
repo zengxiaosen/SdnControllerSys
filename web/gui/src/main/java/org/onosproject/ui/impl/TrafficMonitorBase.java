@@ -839,7 +839,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     private LinkedList<TrafficLink> getSortedLinkedByBw(TrafficLinkMap linkMap, StatsType type) {
         //sort tlinkBwUsed (bw descending sort)
-        Map<TrafficLink, Double> sortedTlinkBwUsed = Maps.newHashMap();
+        Map<TrafficLink, Double> sortedTlinkBwUsed = new TreeMap<>();
         for (TrafficLink tlink : linkMap.biLinks()) {
             LinkHighlight linkHighlight = tlink.highlight(type);
             String bandwidth = linkHighlight.label();
@@ -862,6 +862,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     }
                 }
             }
+            log.info("before : key: " + tlink + ", value: " + usedBw);
             sortedTlinkBwUsed.put(tlink, usedBw);
         }
 
@@ -879,11 +880,11 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         //value descending sort
 
 
-        for(int i=0; i< 10; i++){
+        for(int i=0; i< 3; i++){
             log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         }
         log.info("linkMap.size : " + linkMap.size());
-
+        log.info("list.size : " + list.size());
         for(Map.Entry<TrafficLink, Double> entry : list){
             log.info("key : " + entry.getKey() + ", value : " + entry.getValue());
         }
