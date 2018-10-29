@@ -836,10 +836,27 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     }
 
 
+    public class MapValueComparator<T extends Comparable<T>> implements Comparator<TrafficLink> {
+        private Map<TrafficLink, T> map = null;
+
+        public MapValueComparator(Map<TrafficLink, T> map) {
+            this.map = map;
+        }
+
+
+        @Override
+        public int compare(TrafficLink o1, TrafficLink o2) {
+            int r = map.get(o2).compareTo(map.get(o1));
+            if(r == 0){
+                return 1;
+            }
+            return r;
+        }
+    }
 
     private LinkedList<TrafficLink> getSortedLinkedByBw(TrafficLinkMap linkMap, StatsType type) {
         //sort tlinkBwUsed (bw descending sort)
-        Map<TrafficLink, Double> sortedTlinkBwUsed = Maps.newHashMap();
+        Map<TrafficLink, Double> unsortedTlinkBwUsed = Maps.newHashMap();
         for (TrafficLink tlink : linkMap.biLinks()) {
             LinkHighlight linkHighlight = tlink.highlight(type);
             String bandwidth = linkHighlight.label();
@@ -863,29 +880,20 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 }
             }
             log.info("before : key: " + tlink + ", value: " + usedBw);
-            sortedTlinkBwUsed.put(tlink, usedBw);
+            unsortedTlinkBwUsed.put(tlink, usedBw);
         }
 
-        Comparator<Map.Entry<TrafficLink, Double>> valueComparator = new Comparator<Map.Entry<TrafficLink, Double>>() {
-            @Override
-            public int compare(Map.Entry<TrafficLink, Double> o1, Map.Entry<TrafficLink, Double> o2) {
-                return (int) (o2.getValue() - o1.getValue());
-            }
-        };
-
-        //map to list for sort
-        List<Map.Entry<TrafficLink, Double>> list = new ArrayList<Map.Entry<TrafficLink, Double>>(sortedTlinkBwUsed.entrySet());
-        Collections.sort(list, valueComparator);
 
         //value descending sort
-
+        Map<TrafficLink, Double> sortedTlinkBwUsed = new TreeMap<>(new MapValueComparator<Double>(unsortedTlinkBwUsed));
+        sortedTlinkBwUsed.putAll(unsortedTlinkBwUsed);
 
 
         for(int i=0; i< 3; i++){
             log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         }
-        log.info("list.size : " + list.size());
-        for(Map.Entry<TrafficLink, Double> entry : list){
+        log.info("sortedTlinkBwUsed.size : " + sortedTlinkBwUsed.size());
+        for(Map.Entry<TrafficLink, Double> entry : sortedTlinkBwUsed.entrySet()){
             log.info("key : " + entry.getKey() + ", value : " + entry.getValue());
         }
 
