@@ -834,26 +834,17 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return highlights;
     }
 
-    public class MapValueComparator<T extends Comparable<T>> implements Comparator<TrafficLink> {
-        private Map<TrafficLink, T> map = null;
-
-        public MapValueComparator(Map<TrafficLink, T> map) {
-            this.map = map;
-        }
-
+    public class linkBwComparator implements Comparator<Double> {
 
         @Override
-        public int compare(TrafficLink o1, TrafficLink o2) {
-            int res = map.get(o2).compareTo(map.get(o1));
-            if(res == 0) {
-                return 1;
-            }
-            return res;
+        public int compare(Double o1, Double o2) {
+            return (int) (o2 - o1);
         }
     }
 
     private LinkedList<TrafficLink> getSortedLinkedByBw(TrafficLinkMap linkMap, StatsType type) {
-        Map<TrafficLink, Double> tlinkBwUsed = Maps.newHashMap();
+        //sort tlinkBwUsed (down)
+        Map<Double, TrafficLink> sortedTlinkBwUsed = Maps.newTreeMap(new linkBwComparator());
         for (TrafficLink tlink : linkMap.biLinks()) {
             LinkHighlight linkHighlight = tlink.highlight(type);
             String bandwidth = linkHighlight.label();
@@ -876,13 +867,18 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     }
                 }
             }
-            tlinkBwUsed.put(tlink, usedBw);
+            sortedTlinkBwUsed.put(usedBw, tlink);
         }
-        //sort tlinkBwUsed
-        Map<TrafficMonitor, Double> sortedTlinkBwUsed = Maps.newTreeMap(new MapValueComparator<Double>(tlinkBwUsed));
+
+
         for(int i=0; i< 10; i++){
             log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         }
+
+        for(Map.Entry<Double, TrafficLink> entry : sortedTlinkBwUsed.entrySet()){
+            log.info("key : " + entry.getKey() + ", value : " + entry.getValue());
+        }
+
 
         return null;
 
