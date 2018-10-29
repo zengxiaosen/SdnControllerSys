@@ -389,11 +389,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     }
 
 
-
-
-    // =======================================================================
-    // === Methods for computing traffic on links
-
     /**
      * Generates a {@link Highlights} object summarizing the traffic on the
      * network, ready to be transmitted back to the client for display on
@@ -402,22 +397,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
      * @param type the type of statistics to be displayed
      * @return highlights, representing links to be labeled/colored
      */
-    /** 2018 3 6
-     * 监控的核心方法
-     * @param type
-     * @return
-     */
-    ///////////////////////////////////////////////TrafficLink.StatsType.PORT_STATS///////////////////////////////////////////////////////
-    protected Highlights trafficSummaryV2(TrafficLink.StatsType type){
-        Highlights highlights = new Highlights();
-        Set<TrafficLink> linksWithTraffic = computeLinksWithTraffic(type);
-        Set<TrafficLink> aggregatedLinks = doAggregation(linksWithTraffic);
 
-        for (TrafficLink tlink : aggregatedLinks) {
-            highlights.add(tlink.highlight(type));
-        }
-        return highlights;
-    }
 
     protected Highlights trafficSummary(TrafficLink.StatsType type) {
 
@@ -443,21 +423,13 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         Map<String, Double> tLinkIdBandWidthUsedRate = Maps.newHashMap();
         Set<TrafficLink> linksWithTraffic = Sets.newHashSet();
 
-        int numbers = 0;
         String maxBwLinkId = getMaxBwLinkId(linkMap, type);
         log.info("maxBwLinkId: " + maxBwLinkId);
         for (TrafficLink tlink : linkMap.biLinks()) {
 
-            if (type == TrafficLink.StatsType.FLOW_STATS) {
-                attachFlowLoad(tlink);
-            } else if (type == TrafficLink.StatsType.PORT_STATS) {
-                attachPortLoad(tlink, BYTES);
-            } else if (type == TrafficLink.StatsType.PORT_PACKET_STATS) {
-                attachPortLoad(tlink, PACKETS);
-            }
+            preAttachLoad(tlink, type);
 
             if (tlink.hasTraffic()) {
-                numbers ++;
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
                 highlights.add(linkHighlight);
@@ -686,9 +658,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * 每5秒周期，计算出拓扑中所有link负载的均衡度
          * 目前在mininet上设定的最大linkcapacity是10M
          */
-        //int TrafficLinkSize = numbers;
         int TrafficLinkSize = linkMap.biLinks().size();
-        //log.info("TrafficLinkSize: " + TrafficLinkSize);
 
         /**
          * 每条link平均的带宽
@@ -790,6 +760,16 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
         return highlights;
+    }
+
+    private void preAttachLoad(TrafficLink tlink, StatsType type) {
+        if (type == TrafficLink.StatsType.FLOW_STATS) {
+            attachFlowLoad(tlink);
+        } else if (type == TrafficLink.StatsType.PORT_STATS) {
+            attachPortLoad(tlink, BYTES);
+        } else if (type == TrafficLink.StatsType.PORT_PACKET_STATS) {
+            attachPortLoad(tlink, PACKETS);
+        }
     }
 
 
