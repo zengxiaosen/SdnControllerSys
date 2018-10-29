@@ -874,7 +874,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         };
 
         //map to list for sort
-        List<Map.Entry<TrafficLink, Double>> list = new ArrayList<>(sortedTlinkBwUsed.entrySet());
+        List<Map.Entry<TrafficLink, Double>> list = new ArrayList<Map.Entry<TrafficLink, Double>>(sortedTlinkBwUsed.entrySet());
         Collections.sort(list, valueComparator);
 
         //value descending sort
