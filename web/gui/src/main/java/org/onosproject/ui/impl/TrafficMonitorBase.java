@@ -1245,30 +1245,21 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             double allBwRestAfterAddFlow = 0;
             long ChokeLinkPassbytes = 0;
             long IntraLinkMaxBw = 100 * 1000000;
-            int ifPathCanChoose = 1;
+            boolean pathCanChooseFlag = true;
             int j=0;
             long ChokePointRestBandWidth = MAX_REST_BW;
             for(Link link : path.links()){
 
                 long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
                 long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-
-                log.info("check............................................");
                 //bit/s
-
+                //log
                 log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
                 log.info("IntraLinkRestBw: " + IntraLinkRestBw);
                 log.info("flowbw: " + flowbw);
-                if(flowbw > IntraLinkLoadBw){
-                    log.info("flow speed too large");
-                    ifPathCanChoose = 0;
-                }else{
-                    log.info("flow is enough to put");
-                }
-                // --------------------------------
-                /**
-                 * pre add the flowBw to curPath
-                 */
+                pathCanChooseFlag = getPathCanChooseFlag(flowbw, IntraLinkLoadBw);
+
+                //pre add the flowBw to curPath
                 Double theAddRestBw = flowbw;
                 Double thisLinkResBw = Double.valueOf(IntraLinkLoadBw);
                 Double thisLinkResBwUpdate = thisLinkResBw - theAddRestBw;
@@ -1322,7 +1313,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
             //there are some links not satisfy the flow bw
-            if(ifPathCanChoose == 0){
+            if(!pathCanChooseFlag){
                 // not choose this path
                 resultScore = 0;
             }
@@ -1339,6 +1330,16 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         }
         return result;
 
+    }
+
+    private boolean getPathCanChooseFlag(double flowbw, long IntraLinkLoadBw) {
+        if(flowbw > IntraLinkLoadBw){
+            log.info("flow speed too large");
+            return false;
+        }else{
+            log.info("flow is enough to put");
+            return true;
+        }
     }
 
     private double getSumLinksRestBwAfterAddFlow(List<Double> allPathLinksRestBwAfterAddFlow) {
