@@ -34,6 +34,7 @@ import org.onosproject.net.flow.criteria.PortCriterion;
 import org.onosproject.net.flow.instructions.Instructions;
 import org.onosproject.net.statistic.*;
 import org.onosproject.net.topology.TopologyService;
+import org.onosproject.ui.impl.constCollection.constCollect;
 import org.onosproject.ui.impl.topo.util.ServicesBundle;
 import org.onosproject.ui.impl.topo.util.TrafficLink;
 import org.onosproject.ui.impl.topo.util.TrafficLinkMap;
@@ -112,8 +113,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     // 4 Kilo Bytes as threshold
     protected static final double BPS_THRESHOLD = 4 * TopoUtils.N_KILO;
-    private static final double bwLevel = 100000;
-    private static final long MAX_REST_BW = 100*1000000;
+
 
     /**
      * Designates the different modes of operation.
@@ -362,7 +362,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     private long getIntraLinkMaxBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
         //return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
         //100Mbps b:bit
-        return 100*1000000;
+        return constCollect.LINK_MAX_BW;
     }
 
     /**
@@ -410,15 +410,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         double sum_UsedRate = 0;
         double sum_ur = 0;
         double sum_restBw = 0;
-        /**
-         * key: String tlinkId
-         * value: Double BandWidth
-         */
+
         Map<String, Double> tLinkIdBandWidth = Maps.newHashMap();
-        /**
-         * key: String tlinkId
-         * value: Double BandwidthUsedRate
-         */
         Map<String, Double> tLinkIdBandWidthUsedRate = Maps.newHashMap();
         Set<TrafficLink> linksWithTraffic = Sets.newHashSet();
 
@@ -431,9 +424,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
                 highlights.add(linkHighlight);
-                /**
-                 * 开启监控
-                 */
+
                 if(type == StatsType.PORT_STATS){
 
                     ConnectPoint src = tlink.key().src();
@@ -446,25 +437,25 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     double restBw = 0.0;
                     if(bandwidth.contains("M")){
                         double usedBw = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
-                        bwUsedRate = usedBw / bwLevel;
+                        bwUsedRate = usedBw / constCollect.BW_LEVEL;
                         tLinkIdBandWidth.put(tlinkId, usedBw);
-                        tLinkIdBandWidthUsedRate.put(tlinkId, usedBw/bwLevel);
+                        tLinkIdBandWidthUsedRate.put(tlinkId, usedBw/constCollect.BW_LEVEL);
                         sum += usedBw;
-                        sum_UsedRate += usedBw/bwLevel;
-                        if(usedBw / bwLevel < 1){
-                            sum_ur += usedBw/bwLevel;
+                        sum_UsedRate += usedBw/constCollect.BW_LEVEL;
+                        if(usedBw / constCollect.BW_LEVEL < 1){
+                            sum_ur += usedBw/constCollect.BW_LEVEL;
                         }else{
                             sum_ur += 1;
                         }
                         double restTemp = 0.0;
-                        if(bwLevel > usedBw){
-                            restTemp = bwLevel - usedBw;
+                        if(constCollect.BW_LEVEL > usedBw){
+                            restTemp = constCollect.BW_LEVEL - usedBw;
                         }
                         restBw = restTemp;
                         sum_restBw += restTemp;
 
                         log.info("curBw: " + usedBw);
-                        log.info("totalBw: " + bwLevel);
+                        log.info("totalBw: " + constCollect.BW_LEVEL);
                         log.info("restBw: " + restTemp);
 
                     }else if(bandwidth.contains("K")){
@@ -480,27 +471,27 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         if(bwKStr != null && !bwKStr.equals("")){
                             usedBw = Double.valueOf(bwKStr);
                         }
-                        log.info("bw(M): " + usedBw  + ", bwUsedRate： " + usedBw/bwLevel);
-                        bwUsedRate = usedBw/bwLevel;
+                        log.info("bw(M): " + usedBw  + ", bwUsedRate： " + usedBw/constCollect.BW_LEVEL);
+                        bwUsedRate = usedBw/constCollect.BW_LEVEL;
                         tLinkIdBandWidth.put(tlinkId, usedBw);
-                        tLinkIdBandWidthUsedRate.put(tlinkId, usedBw/bwLevel);
+                        tLinkIdBandWidthUsedRate.put(tlinkId, usedBw/constCollect.BW_LEVEL);
                         sum += usedBw;
-                        sum_UsedRate += usedBw/bwLevel;
-                        if(usedBw/bwLevel < 1){
-                            sum_ur += usedBw/bwLevel;
+                        sum_UsedRate += usedBw/constCollect.BW_LEVEL;
+                        if(usedBw/constCollect.BW_LEVEL < 1){
+                            sum_ur += usedBw/constCollect.BW_LEVEL;
                         }else{
                             sum_ur += 1;
                         }
                         double restTemp = 0.0;
-                        if(bwLevel > usedBw){
-                            restTemp = bwLevel - usedBw;
+                        if(constCollect.BW_LEVEL > usedBw){
+                            restTemp = constCollect.BW_LEVEL - usedBw;
                         }
                         restBw = restTemp;
                         sum_restBw += restTemp;
 
                         //log
                         log.info("curBw: " + usedBw);
-                        log.info("totalBw: " + bwLevel);
+                        log.info("totalBw: " + constCollect.BW_LEVEL);
                         log.info("restBw: " + restTemp);
 
                     }
@@ -1180,7 +1171,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             long IntraLinkMaxBw = 100 * 1000000;
             boolean pathCanChooseFlag = true;
             int j=0;
-            long ChokePointRestBandWidth = MAX_REST_BW;
+            long ChokePointRestBandWidth = constCollect.MAX_REST_BW;
             for(Link link : path.links()){
 
                 long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
