@@ -586,8 +586,7 @@ public class ReactiveForwarding {
          * @param connectPoint
          * @return
          */
-        //current port speed 应该是现在的port的流速，但onos代码有bug.....一直显示10G，没有任何变化
-        //目前解决这个bug的办法，在mininet设定带宽最大只能是100Mbps
+
         private long getVportMaxCapability(ConnectPoint connectPoint) {
             Port port = deviceService.getPort(connectPoint.deviceId(), connectPoint.port());
             long vportMaxSpeed = 0;
