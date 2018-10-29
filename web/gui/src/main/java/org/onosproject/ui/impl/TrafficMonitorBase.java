@@ -782,7 +782,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         for(Map.Entry<String, Double> entry : tLinkIdBandWidthUsedRate.entrySet()){
             String key = entry.getKey();
             Double value = entry.getValue();
-            log.info("li yong l : " + value);
+            log.info("bw used rate : " + value);
             double bdInterval = Math.abs(value - meanTrafficBandWidthUsedRate);
             double bdInterval3 = Math.pow(bdInterval, 2);
             bdInterval3_Sum += bdInterval3;
@@ -1405,6 +1405,12 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             //log.info("resultScore: " + resultScore);
             //there are some problem
             double resultScore = feature_ChokePointRestBandWidth * 5 + feature_pathMeanRestBw * 2 + feature_preAddFlowToThisPath_AllStandardDeviation * 3;
+            log.info("ChokePointRestBandWidth: " + ChokePointRestBandWidth);
+            log.info("pathMeanRestBw: " + pathMeanRestBw);
+            log.info("preAddFlowToThisPath_AllStandardDeviation: " + preAddFlowToThisPath_AllStandardDeviation);
+            log.info("feature_ChokePointRestBandWidth: " + feature_ChokePointRestBandWidth);
+            log.info("feature_pathMeanRestBw: " + feature_pathMeanRestBw);
+            log.info("feature_preAddFlowToThisPath_AllStandardDeviation: " + feature_preAddFlowToThisPath_AllStandardDeviation);
 
             //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
             //log.info("resultScore: "+ resultScore);
