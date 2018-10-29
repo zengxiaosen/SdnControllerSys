@@ -452,7 +452,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 attachPortLoad(tlink, PACKETS);
             }
 
-            // we only want to report on links deemed to have traffic
             if (tlink.hasTraffic()) {
                 numbers ++;
                 linksWithTraffic.add(tlink);
@@ -467,35 +466,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     ConnectPoint dst = tlink.key().dst();
 
 
-                    /**
-                     * LinkHighlight实际上是：
-                     * highlightForStats(statsType);
-                     *
-                         private LinkHighlight highlightForStats(StatsType type) {
-                            return new LinkHighlight(linkId(), SECONDARY_HIGHLIGHT).setLabel(generateLabel(type));
-                         }
-                     */
-
-
-
-                    /**
-                     *
-                     * linkHighlight.label()就是带宽
-                     *                     log.info("linkId: " + tlink.linkId());
-                     *                     log.info("link的带宽"+"label: " + linkHighlight.label());
-                     *
-                     * case ALL_PORT_TRAFFIC_BIT_PS:
-                     *                 clearSelection();
-                     *                 scheduleTask();
-                     *                 sendAllPortTrafficBits();
-                     *                 break;
-                     *
-                     * show that the label unit is bit
-                     */
                     String bandwidth = linkHighlight.label();
-
-
                     String tlinkId = tlink.linkId();
+
                     double bwUsedRate = 0;
                     double restBw = 0.0;
                     if(bandwidth.contains("M")){
@@ -552,6 +525,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         restBw = restTemp;
                         sum_restBw += restTemp;
 
+                        //log
                         log.info("curBw: " + usedBw);
                         log.info("totalBw: " + bwLevel);
                         log.info("restBw: " + restTemp);
@@ -671,7 +645,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                             //not install rule
                                         }else{
                                             //install rule
-                                            //has problem
                                             log.info("install rule ing ..............");
                                             //flowEntryObject
                                             installRuleForPath(r, pathObject);
@@ -680,28 +653,14 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
                                         log.info("install rule finish");
 
-                                    }else{
-                                        log.info("xxxxxxxxxxxxxxxxxxxxxxxx");
                                     }
-
-
                                 }
-
-
                             }
-
                         }
-
-
-
                     }
-
-                    /////////////////////////////////////////////////////////////////////////
-
 
                 }else{
                     //type == StatsType.FLOW_STATS
-
                 }
 
             }else{
