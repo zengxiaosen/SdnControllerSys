@@ -1302,45 +1302,9 @@ public class ReactiveForwarding {
             return pathIndexLinksRestBwOfPaths;
         }
 
-        private List<Double> getOtherPathLinksRestBw(Map<Path, Integer> pathIndexOfPaths, Integer curPathIndex, Map<Integer, String> pathIndexLinksRestBwOfPaths) {
-            List<Double> otherPathLinksRestBw = Lists.newArrayList();
-            for(Map.Entry<Path, Integer> entry : pathIndexOfPaths.entrySet()){
-                Path thisPath = entry.getKey();
-                Integer thisPathIndex = entry.getValue();
-                if(thisPathIndex != curPathIndex){
-                    // this is the other path needed to compute the rest Bw
-                    String alllinkRestBw_OfThisPath = pathIndexLinksRestBwOfPaths.get(thisPathIndex);
-                    //ETL: link1_RestBw|link2_RestBw|link3_RestBw....
-                    alllinkRestBw_OfThisPath = alllinkRestBw_OfThisPath.substring(0, alllinkRestBw_OfThisPath.length()-1);
-                    String[] alllinkRestBw = StringUtils.split(alllinkRestBw_OfThisPath, "|");
-                    for(String s : alllinkRestBw){
-                        Double tmp = Double.valueOf(s);
-                        otherPathLinksRestBw.add(tmp);
-                    }
-                }
 
-            }
-            return otherPathLinksRestBw;
-        }
 
-        private boolean getPathCanChooseFlag(double flowbw, long IntraLinkLoadBw) {
-            if(flowbw > IntraLinkLoadBw){
-                log.info("flow speed too large");
-                return false;
-            }else{
-                log.info("flow is enough to put");
-                return true;
-            }
-        }
 
-        private double getSumLinksRestBwAfterAddFlow(List<Double> allPathLinksRestBwAfterAddFlow) {
-            double sumLinksRestBwAfterAddFlow = 0;
-            for(int k1=0; k1<allPathLinksRestBwAfterAddFlow.size(); k1++){
-                double t = allPathLinksRestBwAfterAddFlow.get(k1);
-                sumLinksRestBwAfterAddFlow += t;
-            }
-            return sumLinksRestBwAfterAddFlow;
-        }
 
 
 
@@ -1365,7 +1329,7 @@ public class ReactiveForwarding {
             for(Path path : paths){
 
                 Integer curPathIndex = pathIndexOfPaths.get(path);
-                List<Double> otherPathLinksRestBw = getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
+                List<Double> otherPathLinksRestBw = pathChoiceItf.getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
                 List<Double> allPathLinksRestBwAfterAddFlow = Lists.newArrayList(otherPathLinksRestBw);
                 log.info("allPathLinksRestBwAfterAddFlow.size : " + allPathLinksRestBwAfterAddFlow.size());
                 indexPath.put(i, path);
@@ -1390,7 +1354,7 @@ public class ReactiveForwarding {
                     log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
                     log.info("IntraLinkRestBw: " + IntraLinkRestBw);
                     log.info("flowbw: " + flowbw);
-                    pathCanChooseFlag = getPathCanChooseFlag(flowbw, IntraLinkLoadBw);
+                    pathCanChooseFlag = pathChoiceItf.getPathCanChooseFlag(flowbw, IntraLinkLoadBw);
 
                     //pre add the flowBw to curPath
                     Double theAddRestBw = flowbw;
@@ -1425,7 +1389,7 @@ public class ReactiveForwarding {
 
 
                 int allPathLinkSize = allPathLinksRestBwAfterAddFlow.size();
-                double sumLinksRestBwAfterAddFlow = getSumLinksRestBwAfterAddFlow(allPathLinksRestBwAfterAddFlow);
+                double sumLinksRestBwAfterAddFlow = pathChoiceItf.getSumLinksRestBwAfterAddFlow(allPathLinksRestBwAfterAddFlow);
 
                 double meanLinksResBwAfterAdd = sumLinksRestBwAfterAddFlow / allPathLinkSize;
                 double sum = pathChoiceItf.getSdRaw(allPathLinksRestBwAfterAddFlow, meanLinksResBwAfterAdd);
