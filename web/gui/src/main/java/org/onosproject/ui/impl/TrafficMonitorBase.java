@@ -839,7 +839,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     private LinkedList<TrafficLink> getSortedLinkedByBw(TrafficLinkMap linkMap, StatsType type) {
         //sort tlinkBwUsed (bw descending sort)
-        Map<TrafficLink, Double> sortedTlinkBwUsed = new TreeMap<>();
+        Map<TrafficLink, Double> sortedTlinkBwUsed = Maps.newHashMap();
         for (TrafficLink tlink : linkMap.biLinks()) {
             LinkHighlight linkHighlight = tlink.highlight(type);
             String bandwidth = linkHighlight.label();
