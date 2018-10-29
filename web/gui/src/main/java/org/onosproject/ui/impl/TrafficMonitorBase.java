@@ -1241,8 +1241,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
              *  ChokeLinkPassbytes: link bytes
              *
              */
-            double allLinkOfPath_BandWidth = 0;
-            double allLinkOfPath_RestBandWidth = 0;
+            double allLinkOfPathRestBandWidth = 0;
             double allBwRestAfterAddFlow = 0;
             long ChokeLinkPassbytes = 0;
             long IntraLinkMaxBw = 100 * 1000000;
@@ -1252,19 +1251,11 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             for(Link link : path.links()){
 
                 long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
-                //long IntraLinkLoadBw = services.flowStats().load(link).rate();
-                //long IntraLinkLoadBw = services.portStats().load(link.src(), BYTES).rate();
-                //long IntraLinkMaxBwTest = getIntraLinkMaxBw(link.src(), link.dst()); //bps
                 long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-//                    double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
 
-                allLinkOfPath_BandWidth += IntraLinkLoadBw;
-                //long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-                //long IntraLinkRestBw = 100*1000000 - IntraLinkLoadBw;
                 log.info("check............................................");
                 //bit/s
-//                log.info("src: " + link.src().deviceId().toString());
-//                log.info("dst: " + link.dst().deviceId().toString());
+
                 log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
                 log.info("IntraLinkRestBw: " + IntraLinkRestBw);
                 log.info("flowbw: " + flowbw);
@@ -1284,9 +1275,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 if(thisLinkResBwUpdate < 0){
                     thisLinkResBwUpdate = 0.0;
                 }
-                otherPathLinksRestBw.add(thisLinkResBwUpdate);
+                allPathLinksRestBwAfterAddFlow.add(thisLinkResBwUpdate);
                 // ---------------------------------
-                allLinkOfPath_RestBandWidth += IntraLinkRestBw;
+                allLinkOfPathRestBandWidth += IntraLinkRestBw;
                 allBwRestAfterAddFlow += allBwRestAfterAddFlow;
 
 
@@ -1302,45 +1293,20 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
              * 从检测路径模块得到的path中包含的link的数量
              */
             double pathlinksSize = path.links().size();
-            /**
-             * path中各个link的平均负载
-             */
-            double pathMeanLoad = allLinkOfPath_BandWidth / pathlinksSize;
+
             /**
              * the mean restBandWidth of all link at this path
              */
-            double pathMeanRestBw = allLinkOfPath_RestBandWidth / pathlinksSize;
+            double pathMeanRestBw = allLinkOfPathRestBandWidth / pathlinksSize;
 
-            // -------------------------------------
 
-            /**
-             * otherPathLinksRestBw: ArrayList<Double>
-             * this data structure store the rest Bw of all links in all Path after pre add the flowBw to the cur Path
-             * now compute the standart deviation of them
-             */
-            int sizeOf_otherPathLinksRestBw = otherPathLinksRestBw.size();
-            double sumLinksRestBw = 0;
-            for(int k1=0; k1<otherPathLinksRestBw.size(); k1++){
-                double t = otherPathLinksRestBw.get(k1);
-                sumLinksRestBw += t;
-            }
-            double meanLinksResBw = sumLinksRestBw / sizeOf_otherPathLinksRestBw;
-            double sum = 0;
-            for(int k2=0; k2<otherPathLinksRestBw.size(); k2++){
-                double t2 = otherPathLinksRestBw.get(k2);
-                double t3 = t2-sumLinksRestBw;
-                double t4 = Math.pow(t3, 2);
-                sum += t4;
-            }
-            double AllRestBWSdAfterPreAdd = Math.sqrt(sum)/sizeOf_otherPathLinksRestBw;
-            //log.info("preAddFlowToThisPath_AllStandardDeviation: " + preAddFlowToThisPath_AllStandardDeviation);
-            // -------------------------------------
-            /**
-             * 特征工程(all between 0~1 )
-             * rb = 1.0/log(b+1) + 1
-             * rrestBW = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
-             *
-             */
+            int allPathLinkSize = allPathLinksRestBwAfterAddFlow.size();
+            double sumLinksRestBwAfterAddFlow = getSumLinksRestBwAfterAddFlow(allPathLinksRestBwAfterAddFlow);
+
+            double meanLinksResBwAfterAdd = sumLinksRestBwAfterAddFlow / allPathLinkSize;
+            double sum = getSdRaw(allPathLinksRestBwAfterAddFlow, meanLinksResBwAfterAdd);
+            double AllRestBWSdAfterPreAdd = Math.sqrt(sum)/allPathLinkSize;
+
             double fChokeLinkRestBw = (double)(Math.log((double)ChokePointRestBandWidth + 1));
             double fPathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
             double fAllRestBwSdAfterPreAdd = 1.0/(double)(Math.log((double)AllRestBWSdAfterPreAdd + 1) + 1);
@@ -1373,6 +1339,26 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         }
         return result;
 
+    }
+
+    private double getSumLinksRestBwAfterAddFlow(List<Double> allPathLinksRestBwAfterAddFlow) {
+        double sumLinksRestBwAfterAddFlow = 0;
+        for(int k1=0; k1<allPathLinksRestBwAfterAddFlow.size(); k1++){
+            double t = allPathLinksRestBwAfterAddFlow.get(k1);
+            sumLinksRestBwAfterAddFlow += t;
+        }
+        return sumLinksRestBwAfterAddFlow;
+    }
+
+    private double getSdRaw(List<Double> allPathLinksRestBwAfterAddFlow, double meanLinksResBwAfterAdd) {
+        double sum = 0;
+        for(int k2=0; k2<allPathLinksRestBwAfterAddFlow.size(); k2++){
+            double t2 = allPathLinksRestBwAfterAddFlow.get(k2);
+            double t3 = t2-meanLinksResBwAfterAdd;
+            double t4 = Math.pow(t3, 2);
+            sum += t4;
+        }
+        return sum;
     }
 
     private double getFlowBw(Double curFlowSpeed) {
