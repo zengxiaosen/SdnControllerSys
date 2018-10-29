@@ -465,7 +465,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     ConnectPoint src = tlink.key().src();
                     ConnectPoint dst = tlink.key().dst();
 
-
                     String bandwidth = linkHighlight.label();
                     String tlinkId = tlink.linkId();
 
@@ -534,16 +533,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
 
-                    //log.info("curSUm: " +  sum);
                     if(bwUsedRate > 0.5){
-                        log.info("-------2----------------");
                         log.info("bwUsedRate: " + bwUsedRate);
-                        /**
-                         * check if the link load reach 70%
-                         * choose the biggest flow
-                         * and replace it to the new path for load balance
-                         *
-                         */
+
                         if(src.toString().trim().split(":")[0].equals("of") &&
                                 dst.toString().trim().split(":")[0].equals("of")){
                             DeviceId curDid = src.deviceId();
