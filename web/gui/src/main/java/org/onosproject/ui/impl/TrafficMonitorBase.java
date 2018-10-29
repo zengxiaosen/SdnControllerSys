@@ -1220,30 +1220,22 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
         int i=0;
         double maxScore = 0.0;
-        //init with a small score
-        double flowbw = 10.0;
-        if(curFlowSpeed > 0){
-            flowbw = curFlowSpeed;
-        }
+        double flowbw = getFlowBw(curFlowSpeed);
+
         /**
          * pre add the flowbw to path
          * compute the standard deviation of all link in all reachable path
          */
         Map<Path, Integer> pathIndexOfPaths = Maps.newHashMap();
         Map<Integer, String> pathIndexLinksRestBwOfPaths = getPathIndexLinksRestBwOfPaths(paths, pathIndexOfPaths);
-        for(int kkkk=0; kkkk< 10; kkkk ++){
-            log.info("pathIndexOfPaths.size: " + pathIndexOfPaths.size());
-        }
-
 
         for(Path path : paths){
 
             Integer curPathIndex = pathIndexOfPaths.get(path);
             List<Double> otherPathLinksRestBw = getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
-
-
+            List<Double> allPathLinksRestBwAfterAddFlow = Lists.newArrayList(otherPathLinksRestBw);
+            log.info("allPathLinksRestBwAfterAddFlow.size : " + allPathLinksRestBwAfterAddFlow.size());
             indexPath.put(i, path);
-            int rPathLength = path.links().size();
             /**
              *
              *  ChokeLinkPassbytes: link bytes
@@ -1251,6 +1243,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
              */
             double allLinkOfPath_BandWidth = 0;
             double allLinkOfPath_RestBandWidth = 0;
+            double allBwRestAfterAddFlow = 0;
             long ChokeLinkPassbytes = 0;
             long IntraLinkMaxBw = 100 * 1000000;
             int ifPathCanChoose = 1;
@@ -1287,23 +1280,16 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                  */
                 Double theAddRestBw = flowbw;
                 Double thisLinkResBw = Double.valueOf(IntraLinkLoadBw);
-                Double tp = thisLinkResBw - theAddRestBw;
-                if(tp < 0){
-                    tp = 0.0;
+                Double thisLinkResBwUpdate = thisLinkResBw - theAddRestBw;
+                if(thisLinkResBwUpdate < 0){
+                    thisLinkResBwUpdate = 0.0;
                 }
-                otherPathLinksRestBw.add(tp);
+                otherPathLinksRestBw.add(thisLinkResBwUpdate);
                 // ---------------------------------
                 allLinkOfPath_RestBandWidth += IntraLinkRestBw;
-                /**
-                 * link 源端口和目的端口 信息监控
-                 */
+                allBwRestAfterAddFlow += allBwRestAfterAddFlow;
 
 
-                /**
-                 * the choke point link means(the min restBandWidth)
-                 * b denotes the byte count of the critical
-                 * r denotes the forwarding rate
-                 */
                 if(IntraLinkRestBw < ChokePointRestBandWidth){
                     //choise the choke point
                     //ChokePointRestBandWidth
@@ -1387,6 +1373,15 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         }
         return result;
 
+    }
+
+    private double getFlowBw(Double curFlowSpeed) {
+        //init with a small score
+        double flowbw = 10.0;
+        if(curFlowSpeed > 0){
+            flowbw = curFlowSpeed;
+        }
+        return flowbw;
     }
 
     private Map<Integer,String> getPathIndexLinksRestBwOfPaths(Set<Path> paths, Map<Path, Integer> pathIndexOfPaths) {
