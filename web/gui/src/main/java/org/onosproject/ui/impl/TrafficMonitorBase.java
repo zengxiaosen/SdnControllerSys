@@ -23,6 +23,7 @@ import com.google.common.collect.Sets;
 import org.apache.commons.lang.StringUtils;
 import org.onlab.packet.MacAddress;
 import org.onosproject.core.DefaultApplicationId;
+import org.onosproject.core.PathChoiceItf;
 import org.onosproject.incubator.net.PortStatisticsService.MetricType;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.Link;
@@ -105,6 +106,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowStatisticService flowStatisticService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected PathChoiceItf pathChoiceItf;
 
 
     // 4 Kilo Bytes as threshold
@@ -1171,7 +1175,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
         int i=0;
         double maxScore = 0.0;
-        double flowbw = getFlowBw(curFlowSpeed);
+        double flowbw = pathChoiceItf.getFlowBw(curFlowSpeed);
 
         /**
          * pre add the flowbw to path
@@ -1183,7 +1187,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         for(Path path : paths){
 
             Integer curPathIndex = pathIndexOfPaths.get(path);
-            List<Double> otherPathLinksRestBw = getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
+            List<Double> otherPathLinksRestBw = pathChoiceItf.getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
             List<Double> allPathLinksRestBwAfterAddFlow = Lists.newArrayList(otherPathLinksRestBw);
             log.info("allPathLinksRestBwAfterAddFlow.size : " + allPathLinksRestBwAfterAddFlow.size());
             indexPath.put(i, path);
@@ -1208,7 +1212,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
                 log.info("IntraLinkRestBw: " + IntraLinkRestBw);
                 log.info("flowbw: " + flowbw);
-                pathCanChooseFlag = getPathCanChooseFlag(flowbw, IntraLinkLoadBw);
+                pathCanChooseFlag = pathChoiceItf.getPathCanChooseFlag(flowbw, IntraLinkLoadBw);
 
                 //pre add the flowBw to curPath
                 Double theAddRestBw = flowbw;
@@ -1218,7 +1222,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     thisLinkResBwUpdate = 0.0;
                 }
                 allPathLinksRestBwAfterAddFlow.add(thisLinkResBwUpdate);
-                // ---------------------------------
                 allLinkOfPathRestBandWidth += IntraLinkRestBw;
                 allBwRestAfterAddFlow += allBwRestAfterAddFlow;
 
@@ -1243,10 +1246,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
             int allPathLinkSize = allPathLinksRestBwAfterAddFlow.size();
-            double sumLinksRestBwAfterAddFlow = getSumLinksRestBwAfterAddFlow(allPathLinksRestBwAfterAddFlow);
+            double sumLinksRestBwAfterAddFlow = pathChoiceItf.getSumLinksRestBwAfterAddFlow(allPathLinksRestBwAfterAddFlow);
 
             double meanLinksResBwAfterAdd = sumLinksRestBwAfterAddFlow / allPathLinkSize;
-            double sum = getSdRaw(allPathLinksRestBwAfterAddFlow, meanLinksResBwAfterAdd);
+            double sum = pathChoiceItf.getSdRaw(allPathLinksRestBwAfterAddFlow, meanLinksResBwAfterAdd);
             double AllRestBWSdAfterPreAdd = Math.sqrt(sum)/allPathLinkSize;
 
             double fChokeLinkRestBw = (double)(Math.log((double)ChokePointRestBandWidth + 1));
@@ -1283,45 +1286,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     }
 
-    private boolean getPathCanChooseFlag(double flowbw, long IntraLinkLoadBw) {
-        if(flowbw > IntraLinkLoadBw){
-            log.info("flow speed too large");
-            return false;
-        }else{
-            log.info("flow is enough to put");
-            return true;
-        }
-    }
-
-    private double getSumLinksRestBwAfterAddFlow(List<Double> allPathLinksRestBwAfterAddFlow) {
-        double sumLinksRestBwAfterAddFlow = 0;
-        for(int k1=0; k1<allPathLinksRestBwAfterAddFlow.size(); k1++){
-            double t = allPathLinksRestBwAfterAddFlow.get(k1);
-            sumLinksRestBwAfterAddFlow += t;
-        }
-        return sumLinksRestBwAfterAddFlow;
-    }
-
-    private double getSdRaw(List<Double> allPathLinksRestBwAfterAddFlow, double meanLinksResBwAfterAdd) {
-        double sum = 0;
-        for(int k2=0; k2<allPathLinksRestBwAfterAddFlow.size(); k2++){
-            double t2 = allPathLinksRestBwAfterAddFlow.get(k2);
-            double t3 = t2-meanLinksResBwAfterAdd;
-            double t4 = Math.pow(t3, 2);
-            sum += t4;
-        }
-        return sum;
-    }
-
-    private double getFlowBw(Double curFlowSpeed) {
-        //init with a small score
-        double flowbw = 10.0;
-        if(curFlowSpeed > 0){
-            flowbw = curFlowSpeed;
-        }
-        return flowbw;
-    }
-
     private Map<Integer,String> getPathIndexLinksRestBwOfPaths(Set<Path> paths, Map<Path, Integer> pathIndexOfPaths) {
         Integer indexOfPathInPaths = 0;
         Map<Integer, String> pathIndexLinksRestBwOfPaths = Maps.newHashMap();
@@ -1346,26 +1310,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return pathIndexLinksRestBwOfPaths;
     }
 
-    private List<Double> getOtherPathLinksRestBw(Map<Path, Integer> pathIndexOfPaths, Integer curPathIndex, Map<Integer, String> pathIndexLinksRestBwOfPaths) {
-        List<Double> otherPathLinksRestBw = Lists.newArrayList();
-        for(Map.Entry<Path, Integer> entry : pathIndexOfPaths.entrySet()){
-            Path thisPath = entry.getKey();
-            Integer thisPathIndex = entry.getValue();
-            if(thisPathIndex != curPathIndex){
-                // this is the other path needed to compute the rest Bw
-                String alllinkRestBw_OfThisPath = pathIndexLinksRestBwOfPaths.get(thisPathIndex);
-                //ETL: link1_RestBw|link2_RestBw|link3_RestBw....
-                alllinkRestBw_OfThisPath = alllinkRestBw_OfThisPath.substring(0, alllinkRestBw_OfThisPath.length()-1);
-                String[] alllinkRestBw = StringUtils.split(alllinkRestBw_OfThisPath, "|");
-                for(String s : alllinkRestBw){
-                    Double tmp = Double.valueOf(s);
-                    otherPathLinksRestBw.add(tmp);
-                }
-            }
 
-        }
-        return otherPathLinksRestBw;
-    }
 
 
     public String getflowRateFromMonitorModule2(String ObjectFlowId, ConcurrentHashMap<String, String> curSwitch_deviceId){

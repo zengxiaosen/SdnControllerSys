@@ -1269,14 +1269,11 @@ public class ReactiveForwarding {
             return result;
         }
 
-        private double getFlowBw(Double curFlowSpeed) {
-            //init with a small score
-            double flowbw = 10.0;
-            if(curFlowSpeed > 0){
-                flowbw = curFlowSpeed;
-            }
-            return flowbw;
-        }
+
+
+
+
+
 
         private Map<Integer,String> getPathIndexLinksRestBwOfPaths(Set<Path> paths, Map<Path, Integer> pathIndexOfPaths) {
             Integer indexOfPathInPaths = 0;
@@ -1304,10 +1301,6 @@ public class ReactiveForwarding {
 
 
 
-
-
-
-
         private  Set<Path> PathsDecisionMyDefined(Double curFlowSpeed, Set<Path> paths) {
 
 
@@ -1317,7 +1310,7 @@ public class ReactiveForwarding {
 
             int i=0;
             double maxScore = 0.0;
-            double flowbw = getFlowBw(curFlowSpeed);
+            double flowbw = pathChoiceItf.getFlowBw(curFlowSpeed);
 
             /**
              * pre add the flowbw to path
