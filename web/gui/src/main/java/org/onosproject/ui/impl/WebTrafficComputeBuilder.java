@@ -21,7 +21,7 @@ public class WebTrafficComputeBuilder {
 
     }
 
-    public WebTrafficComputeBuilder build() {
+    public static WebTrafficComputeBuilder build() {
 
         if(singleBuilder == null) {
             synchronized (syncLock){
