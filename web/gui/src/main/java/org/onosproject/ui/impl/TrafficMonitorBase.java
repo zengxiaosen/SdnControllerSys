@@ -414,13 +414,13 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     }
 
     protected Highlights trafficSummary(TrafficLink.StatsType type) {
+
         Highlights highlights = new Highlights();
         TrafficLinkMap linkMap = new TrafficLinkMap();
-        //TrafficLinkMap linkMapForFlow = new TrafficLinkMap();
+
         compileLinks(linkMap);
         addEdgeLinks(linkMap);
-        //compileLinks(linkMapForFlow);
-        //addEdgeLinks(linkMapForFlow);
+
         double sum = 0;
         double sum_UsedRate = 0;
         double sum_ur = 0;
@@ -437,14 +437,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         Map<String, Double> tLinkIdBandWidthUsedRate = Maps.newHashMap();
         Set<TrafficLink> linksWithTraffic = Sets.newHashSet();
 
-//        for(TrafficLink  tlink1 : linkMapForFlow.biLinks()){
-//            if(type == TrafficLink.StatsType.PORT_STATS){
-//                //對流也要做一份處理
-//                attachFlowLoad(tlink1);
-//            }
-//        }
         int numbers = 0;
+        LinkedList<TrafficLink> sortedLinkByBw = getSortedLinkedByBw(linkMap, type);
         for (TrafficLink tlink : linkMap.biLinks()) {
+
             if (type == TrafficLink.StatsType.FLOW_STATS) {
                 attachFlowLoad(tlink);
             } else if (type == TrafficLink.StatsType.PORT_STATS) {
@@ -478,10 +474,13 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                      */
 
 
-                    //linkHighlight.label()就是带宽
-                    //log.info("linkId: " + tlink.linkId());
-                    //log.info("link的带宽"+"label: " + linkHighlight.label());
+
                     /**
+                     *
+                     * linkHighlight.label()就是带宽
+                     *                     log.info("linkId: " + tlink.linkId());
+                     *                     log.info("link的带宽"+"label: " + linkHighlight.label());
+                     *
                      * case ALL_PORT_TRAFFIC_BIT_PS:
                      *                 clearSelection();
                      *                 scheduleTask();
@@ -582,20 +581,18 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             FlowEntry flowEntryObject = null;
                             Map<Double, FlowEntry> flowRateFlowEntry = Maps.newTreeMap();
                             //sort by rate
-                            for(FlowEntry r0 : services.flow().getFlowEntries(curDid)){
-                                String objectFlowId = r0.id().toString();
+                            for(FlowEntry fentry : services.flow().getFlowEntries(curDid)){
+                                String objectFlowId = fentry.id().toString();
                                 String flowRateOutOfMonitor = getflowRateFromMonitorModule2(objectFlowId, flowIdRateCollection);
                                 String flowSpeedEtl = flowRateOutOfMonitor.substring(0, flowRateOutOfMonitor.indexOf("b"));
                                 Double resultFlowSpeed = Double.valueOf(flowSpeedEtl);
                                 if(resultFlowSpeed > 0){
-                                    flowRateFlowEntry.put(resultFlowSpeed, r0);
+                                    flowRateFlowEntry.put(resultFlowSpeed, fentry);
                                 }
 
                             }
 
                             Map<Double, FlowEntry> sortedFlowRateFlowEntry = sortMapByKey(flowRateFlowEntry);
-
-
 
 
                             // has sorted by rate finished
@@ -633,6 +630,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 //                                    flowEntryObject = r;
 //
 //                                }
+
                                 if(srcEth != null && dstEth != null){
 
                                     //flow src
@@ -836,6 +834,59 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return highlights;
     }
 
+    public class MapValueComparator<T extends Comparable<T>> implements Comparator<TrafficLink> {
+        private Map<TrafficLink, T> map = null;
+
+        public MapValueComparator(Map<TrafficLink, T> map) {
+            this.map = map;
+        }
+
+
+        @Override
+        public int compare(TrafficLink o1, TrafficLink o2) {
+            int res = map.get(o2).compareTo(map.get(o1));
+            if(res == 0) {
+                return 1;
+            }
+            return res;
+        }
+    }
+
+    private LinkedList<TrafficLink> getSortedLinkedByBw(TrafficLinkMap linkMap, StatsType type) {
+        Map<TrafficLink, Double> tlinkBwUsed = Maps.newHashMap();
+        for (TrafficLink tlink : linkMap.biLinks()) {
+            LinkHighlight linkHighlight = tlink.highlight(type);
+            String bandwidth = linkHighlight.label();
+            double usedBw = 0;
+            if(tlink.hasTraffic()){
+
+                if(bandwidth.contains("M")) {
+                    usedBw = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
+                }else if(bandwidth.contains("K")) {
+
+                    String bwKEtl = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
+                    //处理 “1,006.67”这种脏数据
+                    String bwKStr = "";
+                    if (bwKEtl.contains(",")) {
+                        String[] bwKArray = bwKEtl.split(",");
+                        bwKStr = bwKArray[0] + bwKArray[1];
+                    }
+                    if (bwKStr != null && !bwKStr.equals("")) {
+                        usedBw = Double.valueOf(bwKStr);
+                    }
+                }
+            }
+            tlinkBwUsed.put(tlink, usedBw);
+        }
+        //sort tlinkBwUsed
+        Map<TrafficMonitor, Double> sortedTlinkBwUsed = Maps.newTreeMap(new MapValueComparator<Double>(tlinkBwUsed));
+        for(int i=0; i< 10; i++){
+            log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+        }
+
+        return null;
+
+    }
 
 
     private Map<Double, FlowEntry> sortMapByKey(Map<Double, FlowEntry> map) {
