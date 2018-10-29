@@ -956,7 +956,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             long rObject = 0;
             for(Link link : path.links()){
 
-                //log.info("统计信息=====对于path " + i + " 的第 " + j + "条link： ");
 
                 /**
                  * 链路link 信息监控
@@ -976,11 +975,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
                 double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
 
-//                log.info("link的负载(bps): " + IntraLinkLoadBw);
-//                log.info("link的最大带宽(bps): " + IntraLinkMaxBw);
-//                log.info("link的剩余带宽(bps): " + IntraLinkRestBw);
-//                log.info("link的带宽利用率(bps): " + IntraLinkCapability);
-//                SummaryFlowEntryWithLoad summaryFlowEntryWithLoad = flowStatisticService.loadSummaryPortInternal(link.src());
 
 
 

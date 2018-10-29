@@ -656,20 +656,16 @@ public class ReactiveForwarding {
             // Stop processing if the packet has been handled, since we
             // can't do any more to it.
 
-
-
             if (context.isHandled()) {
                 return;
             }
             /**
              *
-             * 收集网络信息
              * Packet_In 消息 上报
-             *
              *
              */
             InboundPacket pkt = context.inPacket();
-            Ethernet ethPkt = pkt.parsed();//从数据包中解析出以太网的信息
+            Ethernet ethPkt = pkt.parsed();
             String curProtocol = String.valueOf(ethPkt.getEtherType());
 
             if (ethPkt == null) {
@@ -736,42 +732,7 @@ public class ReactiveForwarding {
                 }
                 return;
             }
- /*
-            注意：这里的src.location().deviceId()是边缘交换机，但是和Dijkstra的getPaths里面的src交换机地址不同
-            因为getPaths的src交换机指的是此时发出packetIn的交换机
-             */
 
-            /**
-             * 负载均衡决策模块
-             * 选出TopK的决策路径
-             * 目前版本：决策出最佳路径： 1条
-             */
-
-            /**
-             *
-             * 配合mininet
-             * 此topologyService的getPaths1实现了
-             * 拓扑管理模块 和 拓扑计算模块
-             * 通过 IOC 技术继承进负载均衡模块当中
-             *
-             * 拓扑管理模块底层依赖 链路发现模块 传递的信息，方法： IOC 技术
-             *
-             */
-
-
-            Set<TopologyEdge> topologyEdgeset = null;
-
-            /**
-             * 根据 LinksResult中每条link，算出它的maxBandwidthCapacity
-             * 然后持久化到文件中
-             */
-
-            //这里的size是64,是双向的
-            //log.info("allLinks: LinksResult.size(): " + LinksResult.size());
-
-            //packetIn
-//            DeviceId dstDeviceId = dst.location().deviceId();
-//            DeviceId srcDeviceId = src.location().deviceId();
 
             // Otherwise, get a set of paths that lead from here to the
             // destination edge switch.如果不是边缘交换机，则通过拓扑服务，得到从这里到达目地边缘交换机的路径集合。
@@ -781,9 +742,7 @@ public class ReactiveForwarding {
                                              dst.location().deviceId());
 
 
-
             if (paths.isEmpty()) {
-                // If there are no paths, flood and bail.//如果得到的路径为空，则flood然后释放
                 flood(context, macMetrics);
                 return;
             }
@@ -793,29 +752,10 @@ public class ReactiveForwarding {
              * 网络拓扑中的所有link
              */
             LinkedList<Link> LinksResult = topologyService.getAllPaths(topologyService.currentTopology());
-            //Jedis jedidiss = new Jedis("127.0.0.1", 6379);
-
-            /**
-             * 根据 LinksResult中每条link，算出它的maxBandwidthCapacity
-             * 然后持久化到文件中
-             */
-
-            //这里的size是64,是双向的
-            //log.info("allLinks: LinksResult.size(): " + LinksResult.size());
-
-            //packetIn
-//            DeviceId dstDeviceId = dst.location().deviceId();
-//            DeviceId srcDeviceId = src.location().deviceId();
 
 
-            /**
-             * macAddress: ethPkt.getSourceMAC()
-             * macAddress1 = ethPkt.getDestinationMAC();
-             */
+            //size:64
 
-            /**
-             * 根据linkResult得到所有的DeviceId
-             */
 
             /**
              * 遍历所有link的src端交换机中所有的流表，得到此交换机中的流
@@ -827,73 +767,43 @@ public class ReactiveForwarding {
              * 所以用B的流出速度模拟C的流入速度
              * 若流速较大则为大流
              * 否则，则为小流
-             *
-             * 大流选路采用PLLB算法（避免大流汇聚）
-             * 小流选路采用hash均分的方式
+
              */
 
             ConnectPoint curSwitchConnectionPoint = pkt.receivedFrom();
-            //log.info("=============================================");
 
-//            if(isFlowFound == true){
-//                log.info("找到packetIn所对应的流，源mac为" + macAddress.toString() + ", 目的mac为" + macAddress1.toString() + ", FlowId为" + ObjectFlowId);
-//            }
 
-            /**
-             * 选择最优路径
-             * 来自trustCom: FESM
-             */
 
-            /**
-             * PathsDecision_FESM
-             *
-             */
 
             /**
              * 0 fesm
-             * 1 pllb
-             * 2 dijkstra
-             * 3 ecmp
+             * 1 mydefined
+             * 2 ecmp
              */
 
-            Set<Path> Paths_Choise = Sets.newHashSet();
+            Set<Path> PathsChoise = Sets.newHashSet();
 
             int choise = 0;
             if(choise == 0){
-                Set<Path> Paths_FESM = PathsDecision_FESM(paths, pkt.receivedFrom().deviceId(),
-                        dst.location().deviceId(),
-                        src.location().deviceId(),
-                        LinksResult);
-                Paths_Choise = Paths_FESM;
+                Set<Path> PathsFsem = PathsDecisionFESM(paths);
+                PathsChoise = PathsFsem;
             }else if(choise == 1){
-                ConcurrentHashMap<String, String> FlowIdFlowRate = statisticService.getFlowIdFlowRate();
-
-                //ConcurrentHashMap<String, String> FlowId_FlowRate = new ConcurrentHashMap<>();
-
-
-                boolean isBigFlow = true;
+                Map<String, String> FlowIdFlowRate = statisticService.getFlowIdFlowRate();
                 //init with a small number
-                Double curFlowSpeed1 = 10.0;
-                //curFlowSpeed1 = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
-//                isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+                Double curFlowSpeed = 0.0;
+                //curFlowSpeed = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+                //isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
-                Set<Path> PathsMyDefined = PathsDecisionMyDefined(curFlowSpeed1, paths);
-                Paths_Choise = PathsMyDefined;
+                Set<Path> PathsMyDefined = PathsDecisionMyDefined(curFlowSpeed, paths);
+                PathsChoise = PathsMyDefined;
             }
             else if(choise == 2){
 
-                Set<Path> paths_ecmp = PathsDecision_ECMP(paths,
+                Set<Path> pathsEcmp = PathsDecisionECMP(paths,
                         src.location().deviceId().toString(), dst.location().deviceId().toString(),
                         src.location().port().toString(), dst.location().port().toString(), curProtocol);
-                Paths_Choise = paths_ecmp;
+                PathsChoise = pathsEcmp;
             }
-
-
-
-//
-//            for(int k4=0; k4 < 1; k4++){
-//                log.info("Paths_Choise.size() : " + Paths_Choise.size());
-//            }
 
 
 
@@ -912,15 +822,13 @@ public class ReactiveForwarding {
              * Paths_PLLB : PLLB
              * Paths_FESM : FESM
              */
-//            Set<Path> mypllb_pathset = Paths_PLLB != null ? Paths_PLLB : paths_DijkStra;
-//            Set<Path> myfesm_pathset = Paths_FESM != null ? Paths_FESM : paths_DijkStra;
 
-            // Otherwise, pick a path that does not lead back to where we
-            // came from; if no such path, flood and bail.如果存在路径的话，从给定集合中选择一条不返回指定端口的路径。
+
+
 //            Path path = Paths_Choise.size() == 0 ? pickForwardPathIfPossible(paths, pkt.receivedFrom().port())
 //                    : pickForwardPathIfPossible(Paths_Choise, pkt.receivedFrom().port());
 
-            Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
+            Path path = pickForwardPathIfPossible(PathsChoise, pkt.receivedFrom().port());
 
 //            Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
 
@@ -934,28 +842,12 @@ public class ReactiveForwarding {
             // Otherwise forward and be done with it.最后安装流规则
             installRule(context, path.src().port(), macMetrics);
 
-            /**
-             * 评价指标监控计算模块 路径如下：
-             * /root/onos/web/gui/src/main/java/org/onosproject/ui/impl/TrafficMonitor.java
-             *
-             * 目前的评价指标有：
-             * 总体link负载的均衡度
-             * 丢包率
-             */
 
 
-
-            /**
-             * 评价指标---所有link负载的均衡度
-             * 如果写在这里，就是在每次处理packetin的时候统计，不符合需求..
-             * 我已經寫在統計模塊了。。。。
-             */
-
-            //log.info("=====================================================================================================================================");
 
         }
 
-        private  Set<Path> PathsDecision_ECMP(Set<Path> paths, String srcMac, String dstMac, String srcPort, String dstPort,String protocol){
+        private  Set<Path> PathsDecisionECMP(Set<Path> paths, String srcMac, String dstMac, String srcPort, String dstPort,String protocol){
             Set<Path> result = new HashSet<>();
             String srcDstMac = srcMac.trim() + dstMac.trim();
             int indexPath = 0;
@@ -1416,7 +1308,7 @@ public class ReactiveForwarding {
 
 
 
-        private  Set<Path> PathsDecision_FESM(Set<Path> paths, DeviceId deviceId, DeviceId id, DeviceId deviceId1, LinkedList<Link> LinksResult) {
+        private  Set<Path> PathsDecisionFESM(Set<Path> paths) {
 
             /**
              *
@@ -1430,25 +1322,12 @@ public class ReactiveForwarding {
              */
 
             //flowStatisticService.loadSummaryPortInternal()
-            Set<Path> result = new HashSet<>();
-            Map<Integer, Path> indexPath = new LinkedHashMap<>();
-            //Path finalPath = paths.iterator().next();
+            Set<Path> result = Sets.newHashSet();
+            Map<Integer, Path> indexPath = Maps.newLinkedHashMap();
             Path finalPath = null;
-            /**
-             *
-             *  数据库的IO：
-             *
-             *  实时监控数据
-             *  选路决策数据
-             *  历史流的数据
-             *  效果数据
-             *
-             *
-             */
+
             int i=0;
-            String sql = null;
-            //DBHelper db1 = null;
-            ResultSet ret = null;
+
 
             /**
              *
@@ -1498,23 +1377,8 @@ public class ReactiveForwarding {
                      */
 
                     long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
-                    long IntraLinkMaxBw = getIntraLinkMaxBw(link.src(), link.dst()); //bps
-                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-                    double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
-
-//                    log.info("link的负载(bps): " + IntraLinkLoadBw);
-//                    log.info("link的最大带宽(bps): " + IntraLinkMaxBw);
-//                    log.info("link的剩余带宽(bps): " + IntraLinkRestBw);
-//                    log.info("link的带宽利用率(bps): " + IntraLinkCapability);
 
 
-
-                    //SummaryFlowEntryWithLoad summaryFlowEntryWithLoad = flowStatisticService.loadSummaryPortInternal(link.src());
-//                    for(int i1=0; i1<30; i1++){
-//                        log.info("kkkkkkkkkkkkkkkkk" + summaryFlowEntryWithLoad.getTotalLoad().rate() + " ");
-//                    }
-//                    long latest = statisticService.load(link.src()).latest();
-//                    long epochtime = statisticService.load(link.src()).time();
 
 
                     /**
@@ -1600,12 +1464,7 @@ public class ReactiveForwarding {
                         flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
                     }
 
-//                    log.info("packetsReceived_src: " + packetsReceived_src);
-//                    log.info("packetsSent_src: " + packetsSent_src);
-//                    log.info("bytesReceived_src(bytes): " + bytesReceived_src);
-//                    log.info("bytesSent_src(bytes): " + bytesSent_src);
-//                    log.info("rx_dropped_dst: " + rx_dropped_dst);
-//                    log.info("tx_dropped_dst: " + tx_dropped_dst);
+
                     long rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
 
                     /**
