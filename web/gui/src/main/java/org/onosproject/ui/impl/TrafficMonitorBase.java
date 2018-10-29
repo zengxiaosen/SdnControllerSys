@@ -110,6 +110,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     // 4 Kilo Bytes as threshold
     protected static final double BPS_THRESHOLD = 4 * TopoUtils.N_KILO;
     private static final double bwLevel = 100000;
+    private static final long ChokePointRestBandWidth = 100*1000000;
 
     /**
      * Designates the different modes of operation.
@@ -439,7 +440,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         Set<TrafficLink> linksWithTraffic = Sets.newHashSet();
 
         int numbers = 0;
-        LinkedList<TrafficLink> sortedLinkByBw = getSortedLinkedByBw(linkMap, type);
+        String maxBwLinkId = getMaxBwLinkId(linkMap, type);
+        log.info("maxBwLinkId: " + maxBwLinkId);
         for (TrafficLink tlink : linkMap.biLinks()) {
 
             if (type == TrafficLink.StatsType.FLOW_STATS) {
@@ -854,13 +856,16 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         }
     }
 
-    private LinkedList<TrafficLink> getSortedLinkedByBw(TrafficLinkMap linkMap, StatsType type) {
+    private String getMaxBwLinkId(TrafficLinkMap linkMap, StatsType type) {
         //sort tlinkBwUsed (bw descending sort)
         Map<TrafficLink, Double> unsortedTlinkBwUsed = Maps.newHashMap();
+        double maxUsedBw = 0;
+        String maxUsedBwLink = "";
         for (TrafficLink tlink : linkMap.biLinks()) {
             LinkHighlight linkHighlight = tlink.highlight(type);
             String bandwidth = linkHighlight.label();
             double usedBw = 0;
+
             if(tlink.hasTraffic()){
 
                 if(bandwidth.contains("M")) {
@@ -881,6 +886,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             }
             log.info("before : key: " + tlink + ", value: " + usedBw);
             unsortedTlinkBwUsed.put(tlink, usedBw);
+            if(usedBw > maxUsedBw){
+                maxUsedBw = usedBw;
+                maxUsedBwLink = tlink.linkId();
+            }
         }
 
 
@@ -898,7 +907,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         }
 
 
-        return null;
+        return maxUsedBwLink;
 
     }
 
@@ -1210,11 +1219,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         Path finalPath = null;
 
         int i=0;
-        /**
-         *
-         * 对多条等价路径进行选路决策
-         *
-         */
         double maxScore = 0.0;
         //init with a small score
         double flowbw = 10.0;
@@ -1225,72 +1229,32 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * pre add the flowbw to path
          * compute the standard deviation of all link in all reachable path
          */
-        HashMap<Path, Integer> pathIndexOfPaths = Maps.newHashMap();
-
-        Integer index_of_path_inPaths = 0;
-        HashMap<Integer, String> pathIndex_linksrestBw_ofPaths = Maps.newHashMap();
-        for(Path path : paths){
-            pathIndexOfPaths.put(path, index_of_path_inPaths);
-            StringBuffer sb = new StringBuffer();
-            //compute all link rest bw of this path
-            for(Link link : path.links()){
-                //long IntraLinkRestBw = services.flowStats().load(link).rate();
-
-
-                long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-                sb.append(IntraLinkRestBw+"|");
-            }
-            log.info("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
-            log.info("path i : " + index_of_path_inPaths);
-            log.info("links rest bw : " + sb.toString());
-            pathIndex_linksrestBw_ofPaths.put(index_of_path_inPaths, sb.toString());
-            index_of_path_inPaths ++;
-
+        Map<Path, Integer> pathIndexOfPaths = Maps.newHashMap();
+        Map<Integer, String> pathIndexLinksRestBwOfPaths = getPathIndexLinksRestBwOfPaths(paths, pathIndexOfPaths);
+        for(int kkkk=0; kkkk< 10; kkkk ++){
+            log.info("pathIndexOfPaths.size: " + pathIndexOfPaths.size());
         }
 
-        for(Path path : paths){
-            /**
-             * in order to compute the standard deviation of all links after pre add the flowBw to curPath
-             * now:
-             * compute all linksRestBw of all path except cur path
-             * And insert them into the otherPathLinksRestBw(ArrayList<Double>)
-             */
-            Integer curPathIndex = pathIndexOfPaths.get(path);
-            ArrayList<Double> otherPathLinksRestBw = new ArrayList<>();
-            for(Map.Entry<Path, Integer> entry : pathIndexOfPaths.entrySet()){
-                Path thisPath = entry.getKey();
-                Integer thisPathIndex = entry.getValue();
-                if(thisPathIndex != curPathIndex){
-                    // this is the other path needed to compute the rest Bw
-                    String alllinkRestBw_OfThisPath = pathIndex_linksrestBw_ofPaths.get(thisPathIndex);
-                    //ETL: link1_RestBw|link2_RestBw|link3_RestBw....
-                    alllinkRestBw_OfThisPath = alllinkRestBw_OfThisPath.substring(0, alllinkRestBw_OfThisPath.length()-1);
-                    String[] alllinkRestBw = StringUtils.split(alllinkRestBw_OfThisPath, "|");
-                    for(String s : alllinkRestBw){
-                        Double tmp = Double.valueOf(s);
-                        otherPathLinksRestBw.add(tmp);
-                    }
-                }
 
-            }
-            int j=0;
+        for(Path path : paths){
+
+            Integer curPathIndex = pathIndexOfPaths.get(path);
+            List<Double> otherPathLinksRestBw = getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
+
+
             indexPath.put(i, path);
             int rPathLength = path.links().size();
             /**
-             *
-             *  PathsDecision_PLLB
              *
              *  ChokeLinkPassbytes: link bytes
              *
              */
             double allLinkOfPath_BandWidth = 0;
             double allLinkOfPath_RestBandWidth = 0;
-            //if there is no traffic in this link, that means the link bandwidth is 100M
-            long ChokePointRestBandWidth = 100*1000000;
             long ChokeLinkPassbytes = 0;
-            ArrayList<Double> arrayList = new ArrayList<>();
             long IntraLinkMaxBw = 100 * 1000000;
             int ifPathCanChoose = 1;
+            int j=0;
             for(Link link : path.links()){
 
                 long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
@@ -1300,7 +1264,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
 //                    double IntraLinkCapability = getIntraLinkCapability(link.src(), link.dst());
 
-                arrayList.add((double)IntraLinkLoadBw);
                 allLinkOfPath_BandWidth += IntraLinkLoadBw;
                 //long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
                 //long IntraLinkRestBw = 100*1000000 - IntraLinkLoadBw;
@@ -1375,14 +1338,14 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 sumLinksRestBw += t;
             }
             double meanLinksResBw = sumLinksRestBw / sizeOf_otherPathLinksRestBw;
-            double sumpownode = 0;
+            double sum = 0;
             for(int k2=0; k2<otherPathLinksRestBw.size(); k2++){
                 double t2 = otherPathLinksRestBw.get(k2);
                 double t3 = t2-sumLinksRestBw;
                 double t4 = Math.pow(t3, 2);
-                sumpownode += t4;
+                sum += t4;
             }
-            double preAddFlowToThisPath_AllStandardDeviation = Math.sqrt(sumpownode)/sizeOf_otherPathLinksRestBw;
+            double AllRestBWSdAfterPreAdd = Math.sqrt(sum)/sizeOf_otherPathLinksRestBw;
             //log.info("preAddFlowToThisPath_AllStandardDeviation: " + preAddFlowToThisPath_AllStandardDeviation);
             // -------------------------------------
             /**
@@ -1391,29 +1354,19 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
              * rrestBW = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
              *
              */
-            //double feature_ChokeLinkPassbytes = 1.0 / (double)(Math.log((double)(ChokeLinkPassbytes + 2))) + 1;
-            //double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
-            double feature_ChokePointRestBandWidth = (double)(Math.log((double)ChokePointRestBandWidth + 1));
-            //double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1)) / (double)(Math.log((double)(IntraLinkMaxBw + 1)));
-            double feature_pathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
-            double feature_preAddFlowToThisPath_AllStandardDeviation = 1.0/(double)(Math.log((double)preAddFlowToThisPath_AllStandardDeviation + 1) + 1);
-//                    log.info("feature_ChokeLinkPassbytes: " + feature_ChokeLinkPassbytes);
-//                    log.info("feature_ChokePointRestBandWidth: " + feature_ChokePointRestBandWidth);
-//                    log.info("feature_pathMeanRestBw: " + feature_pathMeanRestBw);
-//                    log.info("feature_preAddFlowToThisPath_AllStandardDeviation: " + feature_preAddFlowToThisPath_AllStandardDeviation);
+            double fChokeLinkRestBw = (double)(Math.log((double)ChokePointRestBandWidth + 1));
+            double fPathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
+            double fAllRestBwSdAfterPreAdd = 1.0/(double)(Math.log((double)AllRestBWSdAfterPreAdd + 1) + 1);
 
-            //log.info("resultScore: " + resultScore);
-            //there are some problem
-            double resultScore = feature_ChokePointRestBandWidth * 5 + feature_pathMeanRestBw * 2 + feature_preAddFlowToThisPath_AllStandardDeviation * 3;
+            double resultScore = fChokeLinkRestBw * 5 + fPathMeanRestBw * 2 + fAllRestBwSdAfterPreAdd * 3;
+            //log
             log.info("ChokePointRestBandWidth: " + ChokePointRestBandWidth);
             log.info("pathMeanRestBw: " + pathMeanRestBw);
-            log.info("preAddFlowToThisPath_AllStandardDeviation: " + preAddFlowToThisPath_AllStandardDeviation);
-            log.info("feature_ChokePointRestBandWidth: " + feature_ChokePointRestBandWidth);
-            log.info("feature_pathMeanRestBw: " + feature_pathMeanRestBw);
-            log.info("feature_preAddFlowToThisPath_AllStandardDeviation: " + feature_preAddFlowToThisPath_AllStandardDeviation);
+            log.info("preAddFlowToThisPath_AllStandardDeviation: " + AllRestBWSdAfterPreAdd);
+            log.info("feature_ChokePointRestBandWidth: " + fChokeLinkRestBw);
+            log.info("feature_pathMeanRestBw: " + fPathMeanRestBw);
+            log.info("feature_preAddFlowToThisPath_AllStandardDeviation: " + fAllRestBwSdAfterPreAdd);
 
-            //double resultScore = (ChokePointRestBandWidth*0.4 + pathMeanRestBw*0.2 + 2)*10/(0.4*preAddFlowToThisPath_AllStandardDeviation + 1);
-            //log.info("resultScore: "+ resultScore);
 
             //there are some links not satisfy the flow bw
             if(ifPathCanChoose == 0){
@@ -1423,11 +1376,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             if(resultScore > maxScore){
                 finalPath = path;
             }
-
             i++;
         }
 
-        //result.add(indexPath.get(0));
         if(finalPath == null){
             result.add(indexPath.get(0));
         }else{
@@ -1435,18 +1386,51 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         }
         return result;
 
+    }
 
-//            int hashvalue = (srcId.toString()+dstid.toString()).hashCode()%paths.size();
-//            Set<Path> result = new HashSet<>();
-//            //result.add(paths[hashvalue]);
-//            int j=0;
-//            for(Path path : paths){
-//                if(j == hashvalue){
-//                    result.add(path);
-//                }
-//                j++;
-//            }
-//            return result;
+    private Map<Integer,String> getPathIndexLinksRestBwOfPaths(Set<Path> paths, Map<Path, Integer> pathIndexOfPaths) {
+        Integer indexOfPathInPaths = 0;
+        Map<Integer, String> pathIndexLinksRestBwOfPaths = Maps.newHashMap();
+
+        for(Path path : paths){
+            pathIndexOfPaths.put(path, indexOfPathInPaths);
+            StringBuffer sb = new StringBuffer();
+            //compute all link rest bw of this path
+            for(Link link : path.links()){
+                //long IntraLinkRestBw = services.flowStats().load(link).rate();
+
+
+                long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                sb.append(IntraLinkRestBw+"|");
+            }
+            log.info("path i : " + indexOfPathInPaths);
+            log.info("links rest bw : " + sb.toString());
+            pathIndexLinksRestBwOfPaths.put(indexOfPathInPaths, sb.toString());
+            indexOfPathInPaths ++;
+
+        }
+        return pathIndexLinksRestBwOfPaths;
+    }
+
+    private List<Double> getOtherPathLinksRestBw(Map<Path, Integer> pathIndexOfPaths, Integer curPathIndex, Map<Integer, String> pathIndexLinksRestBwOfPaths) {
+        List<Double> otherPathLinksRestBw = Lists.newArrayList();
+        for(Map.Entry<Path, Integer> entry : pathIndexOfPaths.entrySet()){
+            Path thisPath = entry.getKey();
+            Integer thisPathIndex = entry.getValue();
+            if(thisPathIndex != curPathIndex){
+                // this is the other path needed to compute the rest Bw
+                String alllinkRestBw_OfThisPath = pathIndexLinksRestBwOfPaths.get(thisPathIndex);
+                //ETL: link1_RestBw|link2_RestBw|link3_RestBw....
+                alllinkRestBw_OfThisPath = alllinkRestBw_OfThisPath.substring(0, alllinkRestBw_OfThisPath.length()-1);
+                String[] alllinkRestBw = StringUtils.split(alllinkRestBw_OfThisPath, "|");
+                for(String s : alllinkRestBw){
+                    Double tmp = Double.valueOf(s);
+                    otherPathLinksRestBw.add(tmp);
+                }
+            }
+
+        }
+        return otherPathLinksRestBw;
     }
 
 
