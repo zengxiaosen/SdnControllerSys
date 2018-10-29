@@ -110,7 +110,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     // 4 Kilo Bytes as threshold
     protected static final double BPS_THRESHOLD = 4 * TopoUtils.N_KILO;
     private static final double bwLevel = 100000;
-    private static final long ChokePointRestBandWidth = 100*1000000;
+    private static final long MAX_REST_BW = 100*1000000;
 
     /**
      * Designates the different modes of operation.
@@ -1255,6 +1255,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             long IntraLinkMaxBw = 100 * 1000000;
             int ifPathCanChoose = 1;
             int j=0;
+            long ChokePointRestBandWidth = MAX_REST_BW;
             for(Link link : path.links()){
 
                 long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
