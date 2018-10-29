@@ -17,6 +17,7 @@
 
 package org.onosproject.ui.impl;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang.StringUtils;
@@ -834,17 +835,11 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return highlights;
     }
 
-    public class linkBwComparator implements Comparator<Double> {
 
-        @Override
-        public int compare(Double o1, Double o2) {
-            return (int) (o2 - o1);
-        }
-    }
 
     private LinkedList<TrafficLink> getSortedLinkedByBw(TrafficLinkMap linkMap, StatsType type) {
-        //sort tlinkBwUsed (down)
-        Map<Double, TrafficLink> sortedTlinkBwUsed = Maps.newTreeMap(new linkBwComparator());
+        //sort tlinkBwUsed (bw descending sort)
+        Map<TrafficLink, Double> sortedTlinkBwUsed = Maps.newHashMap();
         for (TrafficLink tlink : linkMap.biLinks()) {
             LinkHighlight linkHighlight = tlink.highlight(type);
             String bandwidth = linkHighlight.label();
@@ -867,15 +862,29 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     }
                 }
             }
-            sortedTlinkBwUsed.put(usedBw, tlink);
+            sortedTlinkBwUsed.put(tlink, usedBw);
         }
+
+        Comparator<Map.Entry<TrafficLink, Double>> valueComparator = new Comparator<Map.Entry<TrafficLink, Double>>() {
+            @Override
+            public int compare(Map.Entry<TrafficLink, Double> o1, Map.Entry<TrafficLink, Double> o2) {
+                return (int) (o2.getValue() - o1.getValue());
+            }
+        };
+
+        //map to list for sort
+        List<Map.Entry<TrafficLink, Double>> list = new ArrayList<>(sortedTlinkBwUsed.entrySet());
+        Collections.sort(list, valueComparator);
+
+        //value descending sort
 
 
         for(int i=0; i< 10; i++){
             log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         }
+        log.info("linkMap.size : " + linkMap.size());
 
-        for(Map.Entry<Double, TrafficLink> entry : sortedTlinkBwUsed.entrySet()){
+        for(Map.Entry<TrafficLink, Double> entry : list){
             log.info("key : " + entry.getKey() + ", value : " + entry.getValue());
         }
 
