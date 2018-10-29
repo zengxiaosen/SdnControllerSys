@@ -866,16 +866,16 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             sortedTlinkBwUsed.put(tlink, usedBw);
         }
 
-        Comparator<Map.Entry<TrafficLink, Double>> valueComparator = new Comparator<Map.Entry<TrafficLink, Double>>() {
-            @Override
-            public int compare(Map.Entry<TrafficLink, Double> o1, Map.Entry<TrafficLink, Double> o2) {
-                return (int) (o2.getValue() - o1.getValue());
-            }
-        };
-
-        //map to list for sort
-        List<Map.Entry<TrafficLink, Double>> list = new ArrayList<Map.Entry<TrafficLink, Double>>(sortedTlinkBwUsed.entrySet());
-        Collections.sort(list, valueComparator);
+//        Comparator<Map.Entry<TrafficLink, Double>> valueComparator = new Comparator<Map.Entry<TrafficLink, Double>>() {
+//            @Override
+//            public int compare(Map.Entry<TrafficLink, Double> o1, Map.Entry<TrafficLink, Double> o2) {
+//                return (int) (o2.getValue() - o1.getValue());
+//            }
+//        };
+//
+//        //map to list for sort
+//        List<Map.Entry<TrafficLink, Double>> list = new ArrayList<Map.Entry<TrafficLink, Double>>(sortedTlinkBwUsed.entrySet());
+//        Collections.sort(list, valueComparator);
 
         //value descending sort
 
@@ -884,10 +884,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         }
         log.info("linkMap.size : " + linkMap.size());
-        log.info("list.size : " + list.size());
-        for(Map.Entry<TrafficLink, Double> entry : list){
-            log.info("key : " + entry.getKey() + ", value : " + entry.getValue());
-        }
+//        log.info("list.size : " + list.size());
+//        for(Map.Entry<TrafficLink, Double> entry : list){
+//            log.info("key : " + entry.getKey() + ", value : " + entry.getValue());
+//        }
 
 
         return null;
