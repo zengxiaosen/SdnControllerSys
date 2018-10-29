@@ -107,8 +107,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowStatisticService flowStatisticService;
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected PathChoiceItf pathChoiceItf;
+
 
 
     // 4 Kilo Bytes as threshold
@@ -428,7 +427,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         for (TrafficLink tlink : linkMap.biLinks()) {
 
             preAttachLoad(tlink, type);
-
             if (tlink.hasTraffic()) {
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
@@ -1155,7 +1153,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
         int i=0;
         double maxScore = 0.0;
-        double flowbw = pathChoiceItf.getFlowBw(curFlowSpeed);
+        double flowbw = WebTrafficComputeBuilder.build().getFlowBw(curFlowSpeed);
 
         /**
          * pre add the flowbw to path
@@ -1167,7 +1165,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         for(Path path : paths){
 
             Integer curPathIndex = pathIndexOfPaths.get(path);
-            List<Double> otherPathLinksRestBw = pathChoiceItf.getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
+            List<Double> otherPathLinksRestBw = WebTrafficComputeBuilder.build().getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
             List<Double> allPathLinksRestBwAfterAddFlow = Lists.newArrayList(otherPathLinksRestBw);
             log.info("allPathLinksRestBwAfterAddFlow.size : " + allPathLinksRestBwAfterAddFlow.size());
             indexPath.put(i, path);
@@ -1192,7 +1190,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
                 log.info("IntraLinkRestBw: " + IntraLinkRestBw);
                 log.info("flowbw: " + flowbw);
-                pathCanChooseFlag = pathChoiceItf.getPathCanChooseFlag(flowbw, IntraLinkLoadBw);
+                pathCanChooseFlag = WebTrafficComputeBuilder.build().getPathCanChooseFlag(flowbw, IntraLinkLoadBw);
 
                 //pre add the flowBw to curPath
                 Double theAddRestBw = flowbw;
@@ -1226,10 +1224,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
             int allPathLinkSize = allPathLinksRestBwAfterAddFlow.size();
-            double sumLinksRestBwAfterAddFlow = pathChoiceItf.getSumLinksRestBwAfterAddFlow(allPathLinksRestBwAfterAddFlow);
+            double sumLinksRestBwAfterAddFlow = WebTrafficComputeBuilder.build().getSumLinksRestBwAfterAddFlow(allPathLinksRestBwAfterAddFlow);
 
             double meanLinksResBwAfterAdd = sumLinksRestBwAfterAddFlow / allPathLinkSize;
-            double sum = pathChoiceItf.getSdRaw(allPathLinksRestBwAfterAddFlow, meanLinksResBwAfterAdd);
+            double sum = WebTrafficComputeBuilder.build().getSdRaw(allPathLinksRestBwAfterAddFlow, meanLinksResBwAfterAdd);
             double AllRestBWSdAfterPreAdd = Math.sqrt(sum)/allPathLinkSize;
 
             double fChokeLinkRestBw = (double)(Math.log((double)ChokePointRestBandWidth + 1));
