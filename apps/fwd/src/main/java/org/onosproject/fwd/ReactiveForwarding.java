@@ -875,10 +875,7 @@ public class ReactiveForwarding {
                 //curFlowSpeed1 = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 //                isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
-                Set<Path> PathsMyDefined = PathsDecisionMyDefined(curFlowSpeed1, isBigFlow, paths, pkt.receivedFrom().deviceId(),
-                        dst.location().deviceId(),
-                        src.location().deviceId(),
-                        LinksResult);
+                Set<Path> PathsMyDefined = PathsDecisionMyDefined(curFlowSpeed1, paths);
                 Paths_Choise = PathsMyDefined;
             }
             else if(choise == 2){
