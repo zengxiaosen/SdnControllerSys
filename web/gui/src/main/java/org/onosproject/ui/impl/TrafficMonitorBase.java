@@ -414,10 +414,15 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         Map<String, Double> tLinkIdBandWidth = Maps.newHashMap();
         Map<String, Double> tLinkIdBandWidthUsedRate = Maps.newHashMap();
         Set<TrafficLink> linksWithTraffic = Sets.newHashSet();
-        Map<String, Double> sortedTlinkIdBw = getSortedTlinkIdBw(linkMap, type);
-        for (TrafficLink tlink : linkMap.biLinks()) {
-
+        Collection<TrafficLink> trafficLinks = Lists.newArrayList();
+        for(TrafficLink tlink : linkMap.biLinks()) {
             preAttachLoad(tlink, type);
+            trafficLinks.add(tlink);
+        }
+        Map<String, Double> sortedTlinkIdBw = getSortedTlinkIdBw(trafficLinks, type);
+        for (TrafficLink tlink : trafficLinks) {
+
+            //preAttachLoad(tlink, type);
             if (tlink.hasTraffic()) {
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
@@ -749,10 +754,10 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return highlights;
     }
 
-    private Map<String,Double> getSortedTlinkIdBw(TrafficLinkMap linkMap, StatsType type) {
+    private Map<String,Double> getSortedTlinkIdBw(Collection<TrafficLink> trafficLinks, StatsType type) {
         //sort tlinkBwUsed (bw descending sort)
         Map<String, Double> unsortedTlinkBwUsed = Maps.newHashMap();
-        for (TrafficLink tlink : linkMap.biLinks()) {
+        for (TrafficLink tlink : trafficLinks) {
             LinkHighlight linkHighlight = tlink.highlight(type);
             String bandwidth = linkHighlight.label();
             double usedBw = 0;
