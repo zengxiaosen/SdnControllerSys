@@ -1182,8 +1182,8 @@ public class ReactiveForwarding {
                     long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
                     sb.append(IntraLinkRestBw+"|");
                 }
-                log.info("path i : " + indexOfPathInPaths);
-                log.info("links rest bw : " + sb.toString());
+                //log.info("path i : " + indexOfPathInPaths);
+                //log.info("links rest bw : " + sb.toString());
                 pathIndexLinksRestBwOfPaths.put(indexOfPathInPaths, sb.toString());
                 indexOfPathInPaths ++;
 
