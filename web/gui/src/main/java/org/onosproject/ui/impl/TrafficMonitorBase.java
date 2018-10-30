@@ -555,10 +555,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                         Boolean enou2PutFlow = true;
                                         Set<Path> paths = PathsDecisionMyDefined(resultFlowSpeed, reachablePaths, enou2PutFlow);
 
-                                        if(!enou2PutFlow) {
-                                            log.info("!enou2PutFlow...................................");
-                                        }
-
                                         //Set<Path> paths = PathsDecisionFsem(reachablePaths);
                                         if(enou2PutFlow) {
                                             reScheduledFlag = true;
