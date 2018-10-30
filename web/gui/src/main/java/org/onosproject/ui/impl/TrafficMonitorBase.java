@@ -527,7 +527,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             }
 
                             Map<Double, FlowEntry> sortedFlowRateFlowEntry = sortMapByKey(flowRateFlowEntry);
-
+                            log.info("sortedFlowRateFlowEntry.size : " + sortedFlowRateFlowEntry.size());
 
                             // has sorted by rate finished
                             for(Map.Entry<Double, FlowEntry> entryEntry : sortedFlowRateFlowEntry.entrySet()){
@@ -822,9 +822,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         sortedTlinkBwUsed.putAll(unsortedTlinkBwUsed);
 
 
-        for(int i=0; i< 3; i++){
-            log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-        }
         log.info("sortedTlinkBwUsed.size : " + sortedTlinkBwUsed.size());
         for(Map.Entry<TrafficLink, Double> entry : sortedTlinkBwUsed.entrySet()){
             log.info("key : " + entry.getKey() + ", value : " + entry.getValue());
@@ -860,7 +857,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
         for(int j=0; j < path.links().size(); j++){
 
-            System.out.println("------" + path.links().get(0).src().deviceId().toString());
             if(j == 0){
                 PortCriterion inPortCriterion = (PortCriterion)flowEntry.selector().getCriterion(Criterion.Type.IN_PORT);
                 PortNumber inPort = inPortCriterion.port();
