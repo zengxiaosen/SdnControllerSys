@@ -414,15 +414,15 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         Map<String, Double> tLinkIdBandWidth = Maps.newHashMap();
         Map<String, Double> tLinkIdBandWidthUsedRate = Maps.newHashMap();
         Set<TrafficLink> linksWithTraffic = Sets.newHashSet();
-        Collection<TrafficLink> trafficLinks = Lists.newArrayList();
+        Collection<TrafficLink> attachLoadTrafficLinks = Lists.newArrayList();
         for(TrafficLink tlink : linkMap.biLinks()) {
             preAttachLoad(tlink, type);
-            trafficLinks.add(tlink);
+            attachLoadTrafficLinks.add(tlink);
         }
-        Map<String, Double> sortedTlinkIdBw = getSortedTlinkIdBw(trafficLinks, type);
-        for (TrafficLink tlink : trafficLinks) {
+        List<TrafficLink> sortedTlinkIdByBw = getSortedTlinkIdByBw(attachLoadTrafficLinks, type);
+        log.info("sortedTlinkIdByBw.size... " + sortedTlinkIdByBw.size());
+        for (TrafficLink tlink : attachLoadTrafficLinks) {
 
-            //preAttachLoad(tlink, type);
             if (tlink.hasTraffic()) {
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
@@ -442,9 +442,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         double usedBw = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
                         bwUsedRate = usedBw / constCollect.BW_LEVEL;
                         tLinkIdBandWidth.put(tlinkId, usedBw);
-                        tLinkIdBandWidthUsedRate.put(tlinkId, usedBw/constCollect.BW_LEVEL);
+                        tLinkIdBandWidthUsedRate.put(tlinkId, bwUsedRate);
                         sum += usedBw;
-                        sum_UsedRate += usedBw/constCollect.BW_LEVEL;
+                        sum_UsedRate += bwUsedRate;
                         if(usedBw / constCollect.BW_LEVEL < 1){
                             sum_ur += usedBw/constCollect.BW_LEVEL;
                         }else{
@@ -463,25 +463,15 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
                     }else if(bandwidth.contains("K")){
 
-                        String bwKEtl = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
-                        //处理 “1,006.67”这种脏数据
-                        String bwKStr = "";
-                        if(bwKEtl.contains(",")){
-                            String[] bwKArray = bwKEtl.split(",");
-                            bwKStr = bwKArray[0] + bwKArray[1];
-                        }
-                        double usedBw = 0;
-                        if(bwKStr != null && !bwKStr.equals("")){
-                            usedBw = Double.valueOf(bwKStr);
-                        }
-                        log.info("bw(M): " + usedBw  + ", bwUsedRate： " + usedBw/constCollect.BW_LEVEL);
+                        double usedBw = getKUsedBw(bandwidth);
                         bwUsedRate = usedBw/constCollect.BW_LEVEL;
+                        log.info("bw(M): " + usedBw  + ", bwUsedRate： " + bwUsedRate);
                         tLinkIdBandWidth.put(tlinkId, usedBw);
-                        tLinkIdBandWidthUsedRate.put(tlinkId, usedBw/constCollect.BW_LEVEL);
+                        tLinkIdBandWidthUsedRate.put(tlinkId, bwUsedRate);
                         sum += usedBw;
-                        sum_UsedRate += usedBw/constCollect.BW_LEVEL;
-                        if(usedBw/constCollect.BW_LEVEL < 1){
-                            sum_ur += usedBw/constCollect.BW_LEVEL;
+                        sum_UsedRate += bwUsedRate;
+                        if(bwUsedRate < 1){
+                            sum_ur += bwUsedRate;
                         }else{
                             sum_ur += 1;
                         }
@@ -496,7 +486,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         log.info("curBw: " + usedBw);
                         log.info("totalBw: " + constCollect.BW_LEVEL);
                         log.info("restBw: " + restTemp);
-
                     }
 
 
@@ -754,9 +743,25 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return highlights;
     }
 
-    private Map<String,Double> getSortedTlinkIdBw(Collection<TrafficLink> trafficLinks, StatsType type) {
+    private double getKUsedBw(String bandwidth) {
+        String bwKEtl = bandwidth.trim().substring(0, bandwidth.indexOf("K"));
+        //处理 “1,006.67”这种脏数据
+        String bwKStr = "";
+        if(bwKEtl.contains(",")){
+            String[] bwKArray = bwKEtl.split(",");
+            bwKStr = bwKArray[0] + bwKArray[1];
+        }
+        double usedBw = 0;
+        if(bwKStr != null && !bwKStr.equals("")){
+            usedBw = Double.valueOf(bwKStr);
+        }
+        return usedBw;
+    }
+
+    private List<TrafficLink> getSortedTlinkIdByBw(Collection<TrafficLink> trafficLinks, StatsType type) {
         //sort tlinkBwUsed (bw descending sort)
         Map<String, Double> unsortedTlinkBwUsed = Maps.newHashMap();
+        Map<String, TrafficLink> tIdLinks = Maps.newHashMap();
         for (TrafficLink tlink : trafficLinks) {
             LinkHighlight linkHighlight = tlink.highlight(type);
             String bandwidth = linkHighlight.label();
@@ -782,6 +787,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             }
             log.info("before : key: " + tlink + ", value: " + usedBw);
             unsortedTlinkBwUsed.put(tlink.linkId(), usedBw);
+            tIdLinks.put(tlink.linkId(), tlink);
 
         }
 
@@ -791,11 +797,16 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         sortedTlinkBwUsed.putAll(unsortedTlinkBwUsed);
 
 
-        log.info("sortedTlinkBwUsed.size : " + sortedTlinkBwUsed.size());
+        List<String> sortedLinksByBwlst = Lists.newLinkedList();
+        List<TrafficLink> sortedTLink = Lists.newLinkedList();
+        //log.info("sortedTlinkBwUsed.size : " + sortedTlinkBwUsed.size());
         for(Map.Entry<String, Double> entry : sortedTlinkBwUsed.entrySet()){
-            log.info("tlinkId : " + entry.getKey() + ", bw : " + entry.getValue());
+            String tid = entry.getKey();
+            TrafficLink curTLink = tIdLinks.get(tid);
+            sortedLinksByBwlst.add(entry.getKey());
+            sortedTLink.add(curTLink);
         }
-        return sortedTlinkBwUsed;
+        return sortedTLink;
 
     }
 
