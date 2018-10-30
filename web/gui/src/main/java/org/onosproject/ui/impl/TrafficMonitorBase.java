@@ -414,9 +414,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         Map<String, Double> tLinkIdBandWidth = Maps.newHashMap();
         Map<String, Double> tLinkIdBandWidthUsedRate = Maps.newHashMap();
         Set<TrafficLink> linksWithTraffic = Sets.newHashSet();
-
-        String maxBwLinkId = getMaxBwLinkId(linkMap, type);
-        log.info("maxBwLinkId: " + maxBwLinkId);
+        Map<String, Double> sortedTlinkIdBw = getSortedTlinkIdBw(linkMap, type);
         for (TrafficLink tlink : linkMap.biLinks()) {
 
             preAttachLoad(tlink, type);
@@ -751,40 +749,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         return highlights;
     }
 
-    private void preAttachLoad(TrafficLink tlink, StatsType type) {
-        if (type == TrafficLink.StatsType.FLOW_STATS) {
-            attachFlowLoad(tlink);
-        } else if (type == TrafficLink.StatsType.PORT_STATS) {
-            attachPortLoad(tlink, BYTES);
-        } else if (type == TrafficLink.StatsType.PORT_PACKET_STATS) {
-            attachPortLoad(tlink, PACKETS);
-        }
-    }
-
-
-    public class MapValueComparator<T extends Comparable<T>> implements Comparator<TrafficLink> {
-        private Map<TrafficLink, T> map = null;
-
-        public MapValueComparator(Map<TrafficLink, T> map) {
-            this.map = map;
-        }
-
-
-        @Override
-        public int compare(TrafficLink o1, TrafficLink o2) {
-            int r = map.get(o2).compareTo(map.get(o1));
-            if(r == 0){
-                return 1;
-            }
-            return r;
-        }
-    }
-
-    private String getMaxBwLinkId(TrafficLinkMap linkMap, StatsType type) {
+    private Map<String,Double> getSortedTlinkIdBw(TrafficLinkMap linkMap, StatsType type) {
         //sort tlinkBwUsed (bw descending sort)
-        Map<TrafficLink, Double> unsortedTlinkBwUsed = Maps.newHashMap();
-        double maxUsedBw = 0;
-        String maxUsedBwLink = "";
+        Map<String, Double> unsortedTlinkBwUsed = Maps.newHashMap();
         for (TrafficLink tlink : linkMap.biLinks()) {
             LinkHighlight linkHighlight = tlink.highlight(type);
             String bandwidth = linkHighlight.label();
@@ -809,28 +776,54 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 }
             }
             log.info("before : key: " + tlink + ", value: " + usedBw);
-            unsortedTlinkBwUsed.put(tlink, usedBw);
-            if(usedBw > maxUsedBw){
-                maxUsedBw = usedBw;
-                maxUsedBwLink = tlink.linkId();
-            }
+            unsortedTlinkBwUsed.put(tlink.linkId(), usedBw);
+
         }
 
 
         //value descending sort
-        Map<TrafficLink, Double> sortedTlinkBwUsed = new TreeMap<>(new MapValueComparator<Double>(unsortedTlinkBwUsed));
+        Map<String, Double> sortedTlinkBwUsed = new TreeMap<>(new MapValueComparator<Double>(unsortedTlinkBwUsed));
         sortedTlinkBwUsed.putAll(unsortedTlinkBwUsed);
 
 
         log.info("sortedTlinkBwUsed.size : " + sortedTlinkBwUsed.size());
-        for(Map.Entry<TrafficLink, Double> entry : sortedTlinkBwUsed.entrySet()){
-            log.info("key : " + entry.getKey() + ", value : " + entry.getValue());
+        for(Map.Entry<String, Double> entry : sortedTlinkBwUsed.entrySet()){
+            log.info("tlinkId : " + entry.getKey() + ", bw : " + entry.getValue());
+        }
+        return sortedTlinkBwUsed;
+
+    }
+
+    private void preAttachLoad(TrafficLink tlink, StatsType type) {
+        if (type == TrafficLink.StatsType.FLOW_STATS) {
+            attachFlowLoad(tlink);
+        } else if (type == TrafficLink.StatsType.PORT_STATS) {
+            attachPortLoad(tlink, BYTES);
+        } else if (type == TrafficLink.StatsType.PORT_PACKET_STATS) {
+            attachPortLoad(tlink, PACKETS);
+        }
+    }
+
+
+    public class MapValueComparator<T extends Comparable<T>> implements Comparator<String> {
+        private Map<String, T> map = null;
+
+        public MapValueComparator(Map<String, T> map) {
+            this.map = map;
         }
 
 
-        return maxUsedBwLink;
-
+        @Override
+        public int compare(String o1, String o2) {
+            int r = map.get(o2).compareTo(map.get(o1));
+            if(r == 0){
+                return 1;
+            }
+            return r;
+        }
     }
+
+
 
 
     private Map<Double, FlowEntry> sortMapByKey(Map<Double, FlowEntry> map) {
