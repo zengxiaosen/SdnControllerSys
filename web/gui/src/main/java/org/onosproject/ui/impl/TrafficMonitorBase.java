@@ -423,6 +423,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         log.info("sortedTlinkIdByBw.size... " + sortedTlinkIdByBw.size());
         for (TrafficLink tlink : attachLoadTrafficLinks) {
 
+
             if (tlink.hasTraffic()) {
                 linksWithTraffic.add(tlink);
                 LinkHighlight linkHighlight = tlink.highlight(type);
