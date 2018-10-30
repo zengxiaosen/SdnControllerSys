@@ -1216,7 +1216,7 @@ public class ReactiveForwarding {
                 Integer curPathIndex = pathIndexOfPaths.get(path);
                 List<Double> otherPathLinksRestBw = pathChoiceItf.getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
                 List<Double> allPathLinksRestBwAfterAddFlow = Lists.newArrayList(otherPathLinksRestBw);
-                log.info("allPathLinksRestBwAfterAddFlow.size : " + allPathLinksRestBwAfterAddFlow.size());
+                //log.info("allPathLinksRestBwAfterAddFlow.size : " + allPathLinksRestBwAfterAddFlow.size());
                 indexPath.put(i, path);
                 /**
                  *
@@ -1236,9 +1236,9 @@ public class ReactiveForwarding {
                     long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
                     //bit/s
                     //log
-                    log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
-                    log.info("IntraLinkRestBw: " + IntraLinkRestBw);
-                    log.info("flowbw: " + flowbw);
+                    //log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
+                    //log.info("IntraLinkRestBw: " + IntraLinkRestBw);
+                    //log.info("flowbw: " + flowbw);
                     pathCanChooseFlag = pathChoiceItf.getPathCanChooseFlag(flowbw, IntraLinkLoadBw);
 
                     //pre add the flowBw to curPath

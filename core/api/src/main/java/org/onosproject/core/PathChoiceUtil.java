@@ -37,10 +37,10 @@ public class PathChoiceUtil implements PathChoiceItf {
     @Override
     public boolean getPathCanChooseFlag(double flowbw, long IntraLinkLoadBw) {
         if(flowbw > IntraLinkLoadBw){
-            log.info("flow speed too large");
+            //log.info("flow speed too large");
             return false;
         }else{
-            log.info("flow is enough to put");
+            //log.info("flow is enough to put");
             return true;
         }
     }
