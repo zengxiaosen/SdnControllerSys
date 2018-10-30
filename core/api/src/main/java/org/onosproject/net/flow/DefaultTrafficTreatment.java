@@ -180,7 +180,7 @@ public final class DefaultTrafficTreatment implements TrafficTreatment {
      * @return traffic treatment builder
      */
     public static TrafficTreatment.Builder builder(TrafficTreatment treatment) {
-        return new (treatment);
+        return new Builder(treatment);
     }
 
     //FIXME: Order of instructions may affect hashcode
