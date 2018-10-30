@@ -555,7 +555,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                         Boolean enou2PutFlow = true;
                                         Set<Path> paths = PathsDecisionMyDefined(resultFlowSpeed, reachablePaths, enou2PutFlow);
 
-                                        //Set<Path> paths = PathsDecisionFsem(reachablePaths);
+                                        //Set<Path> paths = PathsDecisionFsem(reachablePaths, enou2PutFlow);
                                         if(enou2PutFlow) {
                                             reScheduledFlag = true;
                                         }
@@ -874,7 +874,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     }
 
 
-    private  Set<Path> PathsDecisionFsem(Set<Path> paths) {
+    private  Set<Path> PathsDecisionFsem(Set<Path> paths, Boolean enou2PutFlow) {
 
         /**
          *
@@ -1102,6 +1102,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         //result.add(indexPath.get(0));
         if(finalPath == null){
             result.add(indexPath.get(0));
+            enou2PutFlow = false;
         }else{
             result.add(finalPath);
         }
@@ -1199,7 +1200,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             double fPathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
             double fAllRestBwSdAfterPreAdd = 1.0/(double)(Math.log((double)AllRestBWSdAfterPreAdd + 1) + 1);
 
-            double resultScore = fChokeLinkRestBw * 5 + fPathMeanRestBw * 2 + fAllRestBwSdAfterPreAdd * 3;
+            double resultScore = fChokeLinkRestBw * 10 + fPathMeanRestBw * 0 + fAllRestBwSdAfterPreAdd * 0;
             //log
             log.info("ChokePointRestBandWidth: " + ChokePointRestBandWidth);
             log.info("pathMeanRestBw: " + pathMeanRestBw);
