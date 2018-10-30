@@ -1118,7 +1118,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         Path finalPath = null;
 
         int i=0;
-        double maxScore = 0.0;
+        double maxScore = -100000000;
         double flowbw = WebTrafficComputeBuilder.build().getFlowBw(curFlowSpeed);
 
         /**
