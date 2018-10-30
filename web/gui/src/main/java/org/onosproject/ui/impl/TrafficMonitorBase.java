@@ -420,8 +420,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             attachLoadTrafficLinks.add(tlink);
         }
         List<TrafficLink> sortedTlinkIdByBw = getSortedTlinkIdByBw(attachLoadTrafficLinks, type);
+        boolean reScheduledFlag = false;
         for (TrafficLink tlink : sortedTlinkIdByBw) {
-
 
             if (tlink.hasTraffic()) {
                 linksWithTraffic.add(tlink);
@@ -490,9 +490,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
 
-                    if(bwUsedRate > 0.5){
-                        log.info("bwUsedRate: " + bwUsedRate);
+                    if(!reScheduledFlag){
 
+                        //flow dimension
                         if(src.toString().trim().split(":")[0].equals("of") &&
                                 dst.toString().trim().split(":")[0].equals("of")){
                             DeviceId curDid = src.deviceId();
@@ -531,34 +531,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
                                 EthCriterion srcEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_SRC);
                                 EthCriterion dstEth = (EthCriterion)r.selector().getCriterion(Criterion.Type.ETH_DST);
-//                                if(resultFlowSpeed > maxFlowRate
-//                                        && r != null
-//                                        && srcEth != null
-//                                        && dstEth != null
-//                                        ){
-//                                    log.info("resultFlowSpeed: " + resultFlowSpeed); //bps
-//
-//                                    maxFlowRate = resultFlowSpeed;
-//                                    maxFlowId = objectFlowId;
-//                                    //flow src
-//                                    MacAddress srcMac = srcEth.mac();
-//                                    HostId srcHostId = HostId.hostId(srcMac);
-//                                    Host srcHost = services.host().getHost(srcHostId);
-//                                    DeviceId srcDeviceId = srcHost.location().deviceId();
-//                                    //flow dst
-//                                    MacAddress dstMac = dstEth.mac();
-//                                    HostId dstHostId = HostId.hostId(dstMac);
-//                                    Host dstHost = services.host().getHost(dstHostId);
-//                                    DeviceId dstDeviceId = dstHost.location().deviceId();
-//
-//                                    maxFlowSrcDeviceId = srcDeviceId;
-//                                    maxFlowDstDeviceId = dstDeviceId;
-//                                    flowEntryObject = r;
-//
-//                                }
 
                                 if(srcEth != null && dstEth != null){
-
                                     //flow src
                                     MacAddress srcMac = srcEth.mac();
                                     HostId srcHostId = HostId.hostId(srcMac);
@@ -569,20 +543,26 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                     HostId dstHostId = HostId.hostId(dstMac);
                                     Host dstHost = services.host().getHost(dstHostId);
                                     DeviceId dstDeviceId = dstHost.location().deviceId();
-                                    if(r != null && srcDeviceId != null && dstDeviceId != null){
+                                    if(r != null && srcDeviceId != null && dstDeviceId != null && !reScheduledFlag){
                                         Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), srcDeviceId, dstDeviceId);
-                                        log.info("--------------reachablePaths.size(): " + reachablePaths.size());
+                                        log.info("reachablePaths.size(): " + reachablePaths.size());
 
                                         /**
                                          * judge each link of the reachable path
                                          * choise the min link restbw
                                          *
                                          */
+                                        Boolean enou2PutFlow = true;
+                                        Set<Path> paths = PathsDecisionMyDefined(resultFlowSpeed, reachablePaths, enou2PutFlow);
 
-                                        Set<Path> paths = PathsDecisionMyDefined(resultFlowSpeed, reachablePaths);
+                                        if(!enou2PutFlow) {
+                                            log.info("!enou2PutFlow...................................");
+                                        }
+
                                         //Set<Path> paths = PathsDecisionFsem(reachablePaths);
-                                        log.info("----------------filteredSize: " + paths.size());
-
+                                        if(enou2PutFlow) {
+                                            reScheduledFlag = true;
+                                        }
                                         Path pathObject = null;
                                         //size == 1
                                         for(Path pathTemp : paths){
@@ -1133,7 +1113,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     }
 
-    private  Set<Path> PathsDecisionMyDefined(Double curFlowSpeed, Set<Path> paths) {
+    private  Set<Path> PathsDecisionMyDefined(Double curFlowSpeed, Set<Path> paths, Boolean enou2PutFlow) {
 
 
         Set<Path> result = Sets.newHashSet();
@@ -1245,6 +1225,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         }
 
         if(finalPath == null){
+            enou2PutFlow = false;
             result.add(indexPath.get(0));
         }else{
             result.add(finalPath);
