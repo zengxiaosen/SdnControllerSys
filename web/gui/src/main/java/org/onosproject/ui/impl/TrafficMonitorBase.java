@@ -420,8 +420,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             attachLoadTrafficLinks.add(tlink);
         }
         List<TrafficLink> sortedTlinkIdByBw = getSortedTlinkIdByBw(attachLoadTrafficLinks, type);
-        log.info("sortedTlinkIdByBw.size... " + sortedTlinkIdByBw.size());
-        for (TrafficLink tlink : attachLoadTrafficLinks) {
+        for (TrafficLink tlink : sortedTlinkIdByBw) {
 
 
             if (tlink.hasTraffic()) {
@@ -786,7 +785,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     }
                 }
             }
-            log.info("before : key: " + tlink + ", value: " + usedBw);
             unsortedTlinkBwUsed.put(tlink.linkId(), usedBw);
             tIdLinks.put(tlink.linkId(), tlink);
 
