@@ -408,9 +408,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         compileLinks(linkMap);
         addEdgeLinks(linkMap);
 
-        double sum = 0;
-        double sum_UsedRate = 0;
-        double sum_ur = 0;
+        double sumUsedBw = 0;
+        double sumUsedRate = 0;
 
         Map<String, Double> tLinkIdBandWidth = Maps.newHashMap();
         Map<String, Double> tLinkIdBandWidthUsedRate = Maps.newHashMap();
@@ -442,15 +441,14 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     if(bandwidth.contains("M")){
                         double usedBw = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
                         bwUsedRate = usedBw / BW_LEVEL;
+
+                        if(bwUsedRate > 1){
+                            bwUsedRate = 1;
+                        }
                         tLinkIdBandWidth.put(tlinkId, usedBw);
                         tLinkIdBandWidthUsedRate.put(tlinkId, bwUsedRate);
-                        sum += usedBw;
-                        sum_UsedRate += bwUsedRate;
-                        if(usedBw / BW_LEVEL < 1){
-                            sum_ur += usedBw/BW_LEVEL;
-                        }else{
-                            sum_ur += 1;
-                        }
+                        sumUsedBw += usedBw;
+                        sumUsedRate += bwUsedRate;
                         double restTemp = 0.0;
                         if(BW_LEVEL > usedBw){
                             restTemp = BW_LEVEL - usedBw;
@@ -465,15 +463,14 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         double usedBw = getKUsedBw(bandwidth);
                         bwUsedRate = usedBw/BW_LEVEL;
                         log.info("bw(M): " + usedBw  + ", bwUsedRate： " + bwUsedRate);
+                        if(bwUsedRate >= 1){
+                            bwUsedRate = 1;
+                        }
+
                         tLinkIdBandWidth.put(tlinkId, usedBw);
                         tLinkIdBandWidthUsedRate.put(tlinkId, bwUsedRate);
-                        sum += usedBw;
-                        sum_UsedRate += bwUsedRate;
-                        if(bwUsedRate < 1){
-                            sum_ur += bwUsedRate;
-                        }else{
-                            sum_ur += 1;
-                        }
+                        sumUsedBw += usedBw;
+                        sumUsedRate += bwUsedRate;
                         double restTemp = 0.0;
                         if(BW_LEVEL > usedBw){
                             restTemp = BW_LEVEL - usedBw;
@@ -484,9 +481,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
                     }
 
-
                     if(!reScheduledFlag){
-
                         //flow dimension
                         if(src.toString().trim().split(":")[0].equals("of") &&
                                 dst.toString().trim().split(":")[0].equals("of")){
@@ -573,49 +568,43 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 }
 
             }else{
-                double level2 = 100000;//100M
                 double temp = 0;// 带宽设为0
                 String tlinkId = tlink.linkId();
                 tLinkIdBandWidth.put(tlinkId, temp);
-                tLinkIdBandWidthUsedRate.put(tlinkId, temp/level2);
-                sum += 0;
-                sum_UsedRate += 0;
-                sum_ur += 0;
+                tLinkIdBandWidthUsedRate.put(tlinkId, 0.0);
+                sumUsedBw += 0;
+                sumUsedRate += 0;
             }
         }
 
 
-
-        //csv
         /**
          * 每5秒周期，计算出拓扑中所有link负载的均衡度
-         * 目前在mininet上设定的最大linkcapacity是10M
          */
         int TrafficLinkSize = linkMap.biLinks().size();
 
         /**
          * 每条link平均的带宽
          */
-        double linkMeanTrafficBandWidth = sum / TrafficLinkSize;
+        double linkMeanTrafficBandWidth = sumUsedBw / TrafficLinkSize;
         /**
          * 每条link平均的带宽利用率
          */
-        double meanTrafficBandWidthUsedRate = sum_UsedRate / TrafficLinkSize;
-        double linkMeanTrafficBwUsedRate = sum_ur / TrafficLinkSize;
+        double meanTrafficBandWidthUsedRate = sumUsedRate / TrafficLinkSize;
 
 
         /**
          * Kbps
          */
         double linkBwUsedRateStandardDeviation = getLinkBwUsedRateStandardDeviation(tLinkIdBandWidthUsedRate, meanTrafficBandWidthUsedRate, TrafficLinkSize);
-        double linkBwStandardDeviation = getLinkBwStandardDeviation(tLinkIdBandWidth, linkMeanTrafficBandWidth, TrafficLinkSize);
+        double linkBwStandardDeviation = getLinkBwStandardDeviation(tLinkIdBandWidth, meanTrafficBandWidthUsedRate, TrafficLinkSize);
 
         log.info("linkBwStandardDeviation: " + linkBwStandardDeviation);
         log.info("linkBwUsedRateStandardDeviation: " + linkBwUsedRateStandardDeviation);
         log.info("meanBw(kbps): " + linkMeanTrafficBandWidth);
 
         try {
-            persistenceLog(linkBwUsedRateStandardDeviation, linkBwStandardDeviation, linkMeanTrafficBwUsedRate, linkMeanTrafficBandWidth);
+            persistenceLog(linkBwUsedRateStandardDeviation, linkBwStandardDeviation, meanTrafficBandWidthUsedRate, linkMeanTrafficBandWidth);
         } catch (Exception e) {
             log.error("err message : " + e.getMessage());
         }
@@ -642,7 +631,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             String key = entry.getKey();
             //BandWidth
             Double value = entry.getValue();
-            log.info("value: " + value + ", linkMeanTrafficBandWidth: " + linkMeanTrafficBandWidth);
+            //log.info("value: " + value + ", linkMeanTrafficBandWidth: " + linkMeanTrafficBandWidth);
             double bdInterval = Math.abs(value - linkMeanTrafficBandWidth) ;
             double bdInterval2 = Math.pow(bdInterval, 2);
             bdIntervalSum2 += bdInterval2;
