@@ -411,7 +411,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         double sum = 0;
         double sum_UsedRate = 0;
         double sum_ur = 0;
-        double sum_restBw = 0;
 
         Map<String, Double> tLinkIdBandWidth = Maps.newHashMap();
         Map<String, Double> tLinkIdBandWidthUsedRate = Maps.newHashMap();
@@ -457,7 +456,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             restTemp = BW_LEVEL - usedBw;
                         }
                         restBw = restTemp;
-                        sum_restBw += restTemp;
 
                         logAspect(usedBw, BW_LEVEL, restTemp);
 
@@ -481,9 +479,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             restTemp = BW_LEVEL - usedBw;
                         }
                         restBw = restTemp;
-                        sum_restBw += restTemp;
 
-                        //log
                         logAspect(usedBw, BW_LEVEL, restTemp);
 
                     }
@@ -560,17 +556,11 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                             break;
                                         }
 
-                                        if(paths.size() == 0 || paths == null || pathObject == null){
-                                            //not install rule
-                                        }else{
-                                            //install rule
-                                            log.info("install rule ing ..............");
-                                            //flowEntryObject
+                                        if(paths != null && pathObject != null && paths.size() != 0){
+                                            log.info("install rule ");
                                             installRuleForPath(r, pathObject);
                                             break;
                                         }
-
-                                        log.info("install rule finish");
 
                                     }
                                 }
@@ -591,7 +581,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 sum += 0;
                 sum_UsedRate += 0;
                 sum_ur += 0;
-                sum_restBw += 0;
             }
         }
 
@@ -608,16 +597,12 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * 每条link平均的带宽
          */
         double linkMeanTrafficBandWidth = sum / TrafficLinkSize;
-        //log.info("linkMeanTrafficBandWidth: " + linkMeanTrafficBandWidth);
         /**
          * 每条link平均的带宽利用率
          */
         double meanTrafficBandWidthUsedRate = sum_UsedRate / TrafficLinkSize;
         double linkMeanTrafficBwUsedRate = sum_ur / TrafficLinkSize;
-        /**
-         * mean restbw of links
-         */
-        double meanTrafficRestBandWidth = sum_restBw / TrafficLinkSize;
+
 
         /**
          * 对tLinkId_BandWidth中每条link算负载的均衡度(用帶寬的均衡度判斷）
@@ -631,47 +616,43 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * meanTrafficBandWidth： 所有link的平均负载（kbps）
          */
 
-        double bdInterval2_Sum = 0;
+        double bdIntervalSum2 = 0;
         for(Map.Entry<String, Double> entry : tLinkIdBandWidth.entrySet()){
             //tLinkId
             String key = entry.getKey();
             //BandWidth
             Double value = entry.getValue();
-            //bit -> Byte
+            log.info("value: " + value + ", linkMeanTrafficBandWidth: " + linkMeanTrafficBandWidth);
             double bdInterval = Math.abs(value - linkMeanTrafficBandWidth) / 10;
-            //log.info("bdInterval : " + bdInterval);
             double bdInterval2 = Math.pow(bdInterval, 2);
-            //log.info("bdInterval2 : " + bdInterval2);
-            bdInterval2_Sum += bdInterval2;
+            bdIntervalSum2 += bdInterval2;
         }
 
         /**
-         * 對tLinkId_BandWidth中每條link的帶寬利用率算方差 來表示負載 的均衡度
+         * 帶寬利用率算方差
          *
          */
-        double bdInterval3_Sum = 0;
+        double bdIntervalSum3 = 0;
         for(Map.Entry<String, Double> entry : tLinkIdBandWidthUsedRate.entrySet()){
             String key = entry.getKey();
             Double value = entry.getValue();
             double bdInterval = Math.abs(value - meanTrafficBandWidthUsedRate);
             double bdInterval3 = Math.pow(bdInterval, 2);
-            bdInterval3_Sum += bdInterval3;
+            bdIntervalSum3 += bdInterval3;
         }
 
 
         /**
          * 方差
          */
-        double variance = bdInterval2_Sum / TrafficLinkSize;
-        double variance_of_usedRate = bdInterval3_Sum / TrafficLinkSize;
-        //log.info("variance(方差）: " + variance);
+        double linkBwVariance = bdIntervalSum2 / TrafficLinkSize;
+        double linkBwUsedRateVariance = bdIntervalSum3 / TrafficLinkSize;
         /**
          * 标准差
-         * bit -> Byte
          * K -> M
          */
-        double linkBwUsedRateStandardDeviation = Math.pow(variance_of_usedRate, 0.5);
-        double linkBwStandardDeviation = Math.pow(variance, 0.5) ;
+        double linkBwUsedRateStandardDeviation = Math.pow(linkBwUsedRateVariance, 0.5);
+        double linkBwStandardDeviation = Math.pow(linkBwVariance, 0.5) ;
 
         log.info("linkBwStandardDeviation: " + linkBwStandardDeviation);
         log.info("linkBwUsedRateStandardDeviation: " + linkBwUsedRateStandardDeviation);

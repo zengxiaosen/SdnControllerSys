@@ -11,6 +11,7 @@ import static org.onosproject.ui.impl.constCollection.constCollect.*;
 public class PersistenceUtil {
 
 
+
     public static void persistenceLog(double linkBwUsedRateStandardDeviation, double linkBwStandardDeviation, double linkMeanTrafficBwUsedRate, double linkMeanTrafficBandWidth) throws Exception{
         File csvBandWidthUsedRateStandardDeviation = new File(CSVPATH_BANDWIDTH_USEDRATE_STANDARDDEVIATION);
         File csvlinkBwStandardDeviation = new File(CSVPATH_LINK_BW_STANDARDDEVIATION);
