@@ -457,9 +457,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         restBw = restTemp;
                         sum_restBw += restTemp;
 
-                        log.info("curBw: " + usedBw);
-                        log.info("totalBw: " + constCollect.BW_LEVEL);
-                        log.info("restBw: " + restTemp);
+                        logAspect(usedBw, constCollect.BW_LEVEL, restTemp);
+
 
                     }else if(bandwidth.contains("K")){
 
@@ -483,9 +482,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         sum_restBw += restTemp;
 
                         //log
-                        log.info("curBw: " + usedBw);
-                        log.info("totalBw: " + constCollect.BW_LEVEL);
-                        log.info("restBw: " + restTemp);
+                        logAspect(usedBw, constCollect.BW_LEVEL, restTemp);
+
                     }
 
 
@@ -553,9 +551,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                          *
                                          */
                                         Boolean enou2PutFlow = true;
-                                        Set<Path> paths = PathsDecisionMyDefined(resultFlowSpeed, reachablePaths, enou2PutFlow);
+                                        //Set<Path> paths = PathsDecisionMyDefined(resultFlowSpeed, reachablePaths, enou2PutFlow);
 
-                                        //Set<Path> paths = PathsDecisionFsem(reachablePaths, enou2PutFlow);
+                                        Set<Path> paths = PathsDecisionFsem(reachablePaths, enou2PutFlow);
                                         if(enou2PutFlow) {
                                             reScheduledFlag = true;
                                         }
@@ -717,6 +715,12 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
         return highlights;
+    }
+
+    private void logAspect(double usedBw, double bwLevel, double restTemp) {
+        log.info("curBw: " + usedBw);
+        log.info("totalBw: " + constCollect.BW_LEVEL);
+        log.info("restBw: " + restTemp);
     }
 
     private double getKUsedBw(String bandwidth) {

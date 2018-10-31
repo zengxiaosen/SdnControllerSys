@@ -262,13 +262,13 @@ public class StatisticManager implements StatisticService {
 
             return new DefaultLoad();
         }
-        HashMap<String, Long> flowCurrentIdBytes = Maps.newHashMap();
+        Map<String, Long> flowCurrentIdBytes = Maps.newHashMap();
         for(FlowEntry flowEntry : stats.current){
 
             flowCurrentIdBytes.put(flowEntry.id().toString().trim(), flowEntry.bytes());
         }
 
-        HashMap<String, Long> preflowCurrentIdBytes = Maps.newHashMap();
+        Map<String, Long> preflowCurrentIdBytes = Maps.newHashMap();
         for(FlowEntry preFlowEntry : stats.previous){
 
             preflowCurrentIdBytes.put(preFlowEntry.id().toString().trim(), preFlowEntry.bytes());
