@@ -605,6 +605,26 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
         /**
+         * Kbps
+         */
+        double linkBwUsedRateStandardDeviation = getLinkBwUsedRateStandardDeviation(tLinkIdBandWidthUsedRate, meanTrafficBandWidthUsedRate, TrafficLinkSize);
+        double linkBwStandardDeviation = getLinkBwStandardDeviation(tLinkIdBandWidth, linkMeanTrafficBandWidth, TrafficLinkSize);
+
+        log.info("linkBwStandardDeviation: " + linkBwStandardDeviation);
+        log.info("linkBwUsedRateStandardDeviation: " + linkBwUsedRateStandardDeviation);
+        log.info("meanBw(kbps): " + linkMeanTrafficBandWidth);
+
+        try {
+            persistenceLog(linkBwUsedRateStandardDeviation, linkBwStandardDeviation, linkMeanTrafficBwUsedRate, linkMeanTrafficBandWidth);
+        } catch (Exception e) {
+            log.error("err message : " + e.getMessage());
+        }
+        return highlights;
+    }
+
+    private double getLinkBwStandardDeviation(Map<String, Double> tLinkIdBandWidth, double linkMeanTrafficBandWidth, int TrafficLinkSize) {
+
+        /**
          * 对tLinkId_BandWidth中每条link算负载的均衡度(用帶寬的均衡度判斷）
          *
          * 标准差：
@@ -623,10 +643,21 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             //BandWidth
             Double value = entry.getValue();
             log.info("value: " + value + ", linkMeanTrafficBandWidth: " + linkMeanTrafficBandWidth);
-            double bdInterval = Math.abs(value - linkMeanTrafficBandWidth) / 10;
+            double bdInterval = Math.abs(value - linkMeanTrafficBandWidth) ;
             double bdInterval2 = Math.pow(bdInterval, 2);
             bdIntervalSum2 += bdInterval2;
         }
+
+        /**
+         * 方差
+         */
+        double linkBwVariance = bdIntervalSum2 / TrafficLinkSize;
+        return linkBwVariance;
+
+    }
+
+    private double getLinkBwUsedRateStandardDeviation(Map<String, Double> tLinkIdBandWidthUsedRate, double meanTrafficBandWidthUsedRate, int TrafficLinkSize) {
+
 
         /**
          * 帶寬利用率算方差
@@ -642,30 +673,11 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         }
 
 
-        /**
-         * 方差
-         */
-        double linkBwVariance = bdIntervalSum2 / TrafficLinkSize;
         double linkBwUsedRateVariance = bdIntervalSum3 / TrafficLinkSize;
-        /**
-         * 标准差
-         * K -> M
-         */
         double linkBwUsedRateStandardDeviation = Math.pow(linkBwUsedRateVariance, 0.5);
-        double linkBwStandardDeviation = Math.pow(linkBwVariance, 0.5) ;
 
-        log.info("linkBwStandardDeviation: " + linkBwStandardDeviation);
-        log.info("linkBwUsedRateStandardDeviation: " + linkBwUsedRateStandardDeviation);
-        log.info("meanBw(kbps): " + linkMeanTrafficBandWidth);
-
-        try {
-            persistenceLog(linkBwUsedRateStandardDeviation, linkBwStandardDeviation, linkMeanTrafficBwUsedRate, linkMeanTrafficBandWidth);
-        } catch (Exception e) {
-            log.error("err message : " + e.getMessage());
-        }
-        return highlights;
+        return linkBwUsedRateStandardDeviation;
     }
-
 
 
     private void logAspect(double usedBw, double bwLevel, double restTemp) {
