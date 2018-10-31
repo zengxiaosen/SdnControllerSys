@@ -858,13 +858,31 @@ public class ReactiveForwarding {
                 srcDstMacEcmp.put(srcDstMac, indexPath);
             }
 
-            int j=0;
-            for(Path path : paths){
-                if(j == indexPath){
-                    result.add(path);
+            if(indexPath != 0){
+                int j=0;
+                for(Path path : paths){
+                    if(j == indexPath){
+                        result.add(path);
+                    }
                 }
+                return result;
+            }else {
+                Random random = new Random();
+                int max = result.size() - 1;
+                int min = 0;
+                int rand = random.nextInt(max)%(max - min + 1) + min;
+                int index = 0;
+                for(Path path : paths) {
+                    if(index == rand) {
+                        result.add(path);
+                    }
+                    index ++;
+                }
+                return result;
             }
-            return result;
+
+
+
         }
 
 
