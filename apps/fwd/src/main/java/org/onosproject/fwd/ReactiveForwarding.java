@@ -181,7 +181,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 @Service(value = ReactiveForwarding.class)
 public class ReactiveForwarding {
 
-    private static ConcurrentHashMap<String, Integer> srcDstMacEcmp = new ConcurrentHashMap<>();
+    private static Map<String, Integer> srcDstMacEcmp = new ConcurrentHashMap<>();
 
     //默认超时时间
     private static final int DEFAULT_TIMEOUT = 10;
@@ -868,7 +868,7 @@ public class ReactiveForwarding {
                 return result;
             }else {
                 Random random = new Random();
-                int max = result.size();
+                int max = paths.size();
                 int min = 1;
                 int rand = random.nextInt(max)%(max - min + 1) + min;
                 int index = 0;
