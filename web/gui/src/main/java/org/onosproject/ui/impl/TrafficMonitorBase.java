@@ -50,6 +50,8 @@ import static org.onosproject.incubator.net.PortStatisticsService.MetricType.BYT
 import static org.onosproject.incubator.net.PortStatisticsService.MetricType.PACKETS;
 import static org.onosproject.net.DefaultEdgeLink.createEdgeLink;
 import static org.onosproject.ui.impl.TrafficMonitorBase.Mode.IDLE;
+import static org.onosproject.ui.impl.Utils.PersistenceUtil.persistenceLog;
+import static org.onosproject.ui.impl.constCollection.constCollect.*;
 
 //////////////////////////////
 import com.google.common.collect.ImmutableList;
@@ -362,7 +364,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
     private long getIntraLinkMaxBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
         //return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
         //100Mbps b:bit
-        return constCollect.LINK_MAX_BW;
+        return LINK_MAX_BW;
     }
 
     /**
@@ -440,30 +442,30 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                     double restBw = 0.0;
                     if(bandwidth.contains("M")){
                         double usedBw = Double.valueOf(bandwidth.trim().substring(0, bandwidth.indexOf("M"))) * 1000;
-                        bwUsedRate = usedBw / constCollect.BW_LEVEL;
+                        bwUsedRate = usedBw / BW_LEVEL;
                         tLinkIdBandWidth.put(tlinkId, usedBw);
                         tLinkIdBandWidthUsedRate.put(tlinkId, bwUsedRate);
                         sum += usedBw;
                         sum_UsedRate += bwUsedRate;
-                        if(usedBw / constCollect.BW_LEVEL < 1){
-                            sum_ur += usedBw/constCollect.BW_LEVEL;
+                        if(usedBw / BW_LEVEL < 1){
+                            sum_ur += usedBw/BW_LEVEL;
                         }else{
                             sum_ur += 1;
                         }
                         double restTemp = 0.0;
-                        if(constCollect.BW_LEVEL > usedBw){
-                            restTemp = constCollect.BW_LEVEL - usedBw;
+                        if(BW_LEVEL > usedBw){
+                            restTemp = BW_LEVEL - usedBw;
                         }
                         restBw = restTemp;
                         sum_restBw += restTemp;
 
-                        logAspect(usedBw, constCollect.BW_LEVEL, restTemp);
+                        logAspect(usedBw, BW_LEVEL, restTemp);
 
 
                     }else if(bandwidth.contains("K")){
 
                         double usedBw = getKUsedBw(bandwidth);
-                        bwUsedRate = usedBw/constCollect.BW_LEVEL;
+                        bwUsedRate = usedBw/BW_LEVEL;
                         log.info("bw(M): " + usedBw  + ", bwUsedRate： " + bwUsedRate);
                         tLinkIdBandWidth.put(tlinkId, usedBw);
                         tLinkIdBandWidthUsedRate.put(tlinkId, bwUsedRate);
@@ -475,17 +477,16 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                             sum_ur += 1;
                         }
                         double restTemp = 0.0;
-                        if(constCollect.BW_LEVEL > usedBw){
-                            restTemp = constCollect.BW_LEVEL - usedBw;
+                        if(BW_LEVEL > usedBw){
+                            restTemp = BW_LEVEL - usedBw;
                         }
                         restBw = restTemp;
                         sum_restBw += restTemp;
 
                         //log
-                        logAspect(usedBw, constCollect.BW_LEVEL, restTemp);
+                        logAspect(usedBw, BW_LEVEL, restTemp);
 
                     }
-
 
 
                     if(!reScheduledFlag){
@@ -545,11 +546,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                         Set<Path> reachablePaths = services.topology().getPaths(services.topology().currentTopology(), srcDeviceId, dstDeviceId);
                                         log.info("reachablePaths.size(): " + reachablePaths.size());
 
-                                        /**
-                                         * judge each link of the reachable path
-                                         * choise the min link restbw
-                                         *
-                                         */
                                         Boolean enou2PutFlow = true;
                                         //Set<Path> paths = PathsDecisionMyDefined(resultFlowSpeed, reachablePaths, enou2PutFlow);
 
@@ -598,14 +594,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                 sum_restBw += 0;
             }
         }
-        // TODO: consider whether a map would be better...
-        //Set<TrafficLink> linksWithTraffic = computeLinksWithTraffic(type);
 
-        //Set<TrafficLink> aggregatedLinks = doAggregation(linksWithTraffic);
-
-        //for (TrafficLink tlink : linksWithTraffic) {
-        //    highlights.add(tlink.highlight(type));
-        //}
 
 
         //csv
@@ -618,13 +607,13 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         /**
          * 每条link平均的带宽
          */
-        double meanTrafficBandWidth = sum / TrafficLinkSize;
-        //log.info("meanTrafficBandWidth: " + meanTrafficBandWidth);
+        double linkMeanTrafficBandWidth = sum / TrafficLinkSize;
+        //log.info("linkMeanTrafficBandWidth: " + linkMeanTrafficBandWidth);
         /**
          * 每条link平均的带宽利用率
          */
         double meanTrafficBandWidthUsedRate = sum_UsedRate / TrafficLinkSize;
-        double meanTrafficBandWidthUr = sum_ur / TrafficLinkSize;
+        double linkMeanTrafficBwUsedRate = sum_ur / TrafficLinkSize;
         /**
          * mean restbw of links
          */
@@ -649,7 +638,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             //BandWidth
             Double value = entry.getValue();
             //bit -> Byte
-            double bdInterval = Math.abs(value - meanTrafficBandWidth) / 80;
+            double bdInterval = Math.abs(value - linkMeanTrafficBandWidth) / 10;
             //log.info("bdInterval : " + bdInterval);
             double bdInterval2 = Math.pow(bdInterval, 2);
             //log.info("bdInterval2 : " + bdInterval2);
@@ -664,15 +653,12 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         for(Map.Entry<String, Double> entry : tLinkIdBandWidthUsedRate.entrySet()){
             String key = entry.getKey();
             Double value = entry.getValue();
-            //log.info("bw used rate : " + value);
             double bdInterval = Math.abs(value - meanTrafficBandWidthUsedRate);
             double bdInterval3 = Math.pow(bdInterval, 2);
             bdInterval3_Sum += bdInterval3;
         }
 
 
-        //log.info("bdInterval2_Sum : " + bdInterval2_Sum);
-        //log.info("TrafficLinkSize : " + TrafficLinkSize);
         /**
          * 方差
          */
@@ -684,42 +670,26 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
          * bit -> Byte
          * K -> M
          */
-        double standard_deviation = Math.pow(variance, 0.5) ;
-        double standard_deviation_usedRate = Math.pow(variance_of_usedRate, 0.5);
-        log.info("标准差(网络拓扑所有link帶寬的標準差）== " + standard_deviation);
-        log.info("標準差(網絡拓撲所有link帶寬利用率的標準差) == " + standard_deviation_usedRate);
-        //log.info("mean bw used rate == " + meanTrafficBandWidthUsedRate);
-        log.info("mean bw KBPS == " + meanTrafficBandWidth);
+        double linkBwUsedRateStandardDeviation = Math.pow(variance_of_usedRate, 0.5);
+        double linkBwStandardDeviation = Math.pow(variance, 0.5) ;
 
-        File csvFile = new File("/home/lihaifeng/BandWidthUsedRateStandardDeviation.csv");
-        File csvFile1 = new File("/home/lihaifeng/BandWidthStandardDeviation.csv");
-        File csvFile2 = new File("/home/lihaifeng/BwMeanRest.csv");
-        File csvFile3 = new File("/home/lihaifeng/BwMeanUsedRate.csv");
-        File csvFile4 = new File("/home/lihaifeng/BwMeanBps.csv");
-        checkExist(csvFile);
-        checkExist(csvFile1);
-        checkExist(csvFile2);
-        checkExist(csvFile3);
-        checkExist(csvFile4);
-        //boolean b = appendData(csvFile, standard_deviation+"");
-        boolean b = appendData(csvFile, standard_deviation_usedRate+"");
-        boolean b0 = appendData(csvFile1, standard_deviation + "");
-        boolean b1 = appendData(csvFile2, meanTrafficRestBandWidth+"");
-        boolean b2 = appendData(csvFile3, meanTrafficBandWidthUr+"");
-        boolean b3 = appendData(csvFile4, meanTrafficBandWidth + "");
-        if(b == true && b1 == true && b2 == true && b3 == true && b0 == true){
-            log.info("追加写成功..");
-        }else{
-            log.info("追加写失败..");
+        log.info("linkBwStandardDeviation: " + linkBwStandardDeviation);
+        log.info("linkBwUsedRateStandardDeviation: " + linkBwUsedRateStandardDeviation);
+        log.info("meanBw(kbps): " + linkMeanTrafficBandWidth);
+
+        try {
+            persistenceLog(linkBwUsedRateStandardDeviation, linkBwStandardDeviation, linkMeanTrafficBwUsedRate, linkMeanTrafficBandWidth);
+        } catch (Exception e) {
+            log.error("err message : " + e.getMessage());
         }
-
-
         return highlights;
     }
 
+
+
     private void logAspect(double usedBw, double bwLevel, double restTemp) {
         log.info("curBw: " + usedBw);
-        log.info("totalBw: " + constCollect.BW_LEVEL);
+        log.info("totalBw: " + BW_LEVEL);
         log.info("restBw: " + restTemp);
     }
 
@@ -1150,7 +1120,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             long IntraLinkMaxBw = 100 * 1000000;
             boolean pathCanChooseFlag = true;
             int j=0;
-            long ChokePointRestBandWidth = constCollect.MAX_REST_BW;
+            long ChokePointRestBandWidth = MAX_REST_BW;
             for(Link link : path.links()){
 
                 long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
@@ -1283,34 +1253,6 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
 
         return resultFLowRate;
-    }
-
-    public void checkExist(File file) {
-        //判断文件目录的存在
-        if(file.exists()){
-            //file exists
-        }else{
-            //file not exists, create it ...
-            try{
-                file.createNewFile();
-            }catch (IOException e){
-                e.printStackTrace();
-            }
-        }
-    }
-
-    public boolean appendData(File csvFile, String data){
-        try{
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFile, true), "GBK"), 1024);
-            bw.write(data);
-            bw.write("\n");
-            //bw.flush();
-            bw.close();
-            return true;
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        return false;
     }
 
 
