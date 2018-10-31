@@ -868,15 +868,16 @@ public class ReactiveForwarding {
                 return result;
             }else {
                 Random random = new Random();
-                int max = result.size() - 1;
-                int min = 0;
+                int max = result.size();
+                int min = 1;
                 int rand = random.nextInt(max)%(max - min + 1) + min;
                 int index = 0;
                 for(Path path : paths) {
+                    index ++;
                     if(index == rand) {
                         result.add(path);
                     }
-                    index ++;
+
                 }
                 return result;
             }
