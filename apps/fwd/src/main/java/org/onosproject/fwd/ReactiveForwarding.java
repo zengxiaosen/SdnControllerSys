@@ -783,7 +783,7 @@ public class ReactiveForwarding {
 
             Set<Path> PathsChoise = Sets.newHashSet();
 
-            int choise = 0;
+            int choise = 1;
             if(choise == 0){
                 Set<Path> PathsFsem = PathsDecisionFESM(paths);
                 PathsChoise = PathsFsem;
