@@ -266,7 +266,7 @@
                       <arg>-Xep:BetaApi:WARN</arg>
                       <!-- <arg>-Xep:BetaApi:ERROR</arg>  -->
                       <!-- Add following to disable error-prone -->
-                      <!-- <arg>-XepDisableAllChecks</arg> -->
+                       <arg>-XepDisableAllChecks</arg>
                     </compilerArgs>
                 </configuration>
                 <executions>

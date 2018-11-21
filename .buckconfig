@@ -16,7 +16,7 @@
   in_build = true
 
 [maven_repositories]
-  central = https://repo1.maven.org/maven2
+  central = https://maven.aliyun.com/nexus/content/groups/public/
 
 [project]
   ide = intellij
