@@ -562,17 +562,9 @@ public class ReactiveForwarding {
         log.info("Configured. Flow Priority is configured to {}", flowPriority);
     }
 
-    /**
-     * Packet processor responsible for forwarding packets along their paths.
-     * 负责在他们路径上的数据包的处理
-     */
+
     private class ReactivePacketProcessor implements PacketProcessor {
-        /**
-         * 自研统计模块
-         * 对端口带宽的统计信息
-         * @param connectPoint
-         * @return
-         */
+
 
 
         private long getVportLoadCapability(ConnectPoint connectPoint) {
@@ -585,11 +577,6 @@ public class ReactiveForwarding {
             return vportCurSpeed;
         }
 
-        /**
-         * 这个方法是用来设定link最大的负载能达到多少
-         * @param connectPoint
-         * @return
-         */
 
         private long getVportMaxCapability(ConnectPoint connectPoint) {
             Port port = deviceService.getPort(connectPoint.deviceId(), connectPoint.port());
@@ -783,7 +770,7 @@ public class ReactiveForwarding {
 
             Set<Path> PathsChoise = Sets.newHashSet();
 
-            int choise = 2;
+            int choise = 0;
             if(choise == 0){
                 Set<Path> PathsFsem = PathsDecisionFESM(paths);
                 PathsChoise = PathsFsem;
