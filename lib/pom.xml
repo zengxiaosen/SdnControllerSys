@@ -893,42 +893,42 @@
                 <artifactId>maven-jar-plugin</artifactId>
             </plugin>
 
-            <!--<plugin>-->
-                <!--<groupId>org.apache.maven.plugins</groupId>-->
-                <!--<artifactId>maven-checkstyle-plugin</artifactId>-->
-                <!--<version>3.0.0</version>-->
-                <!--<dependencies>-->
-                    <!--<dependency>-->
-                        <!--<groupId>org.onosproject</groupId>-->
-                        <!--<artifactId>onos-build-conf</artifactId>-->
-                        <!--<version>${onos-build-conf.version}</version>-->
-                    <!--</dependency>-->
-                    <!--<dependency>-->
-                        <!--<groupId>com.puppycrawl.tools</groupId>-->
-                        <!--<artifactId>checkstyle</artifactId>-->
-                        <!--<version>6.19</version>-->
-                    <!--</dependency>-->
-                <!--</dependencies>-->
-                <!--<configuration>-->
-                    <!--<configLocation>onos/checkstyle-mvn.xml</configLocation>-->
-                    <!--<suppressionsLocation>onos/suppressions.xml-->
-                    <!--</suppressionsLocation>-->
-                    <!--<headerLocation>onos/onos-java.header</headerLocation>-->
-                    <!--<failsOnError>false</failsOnError>-->
-                    <!--<logViolationsToConsole>true</logViolationsToConsole>-->
-                    <!--<includeTestSourceDirectory>true</includeTestSourceDirectory>-->
-                    <!--<includeResources>false</includeResources>-->
-                <!--</configuration>-->
-                <!--<executions>-->
-                    <!--<execution>-->
-                        <!--<id>validate-checkstyle</id>-->
-                        <!--<phase>verify</phase>-->
-                        <!--<goals>-->
-                            <!--<goal>check</goal>-->
-                        <!--</goals>-->
-                    <!--</execution>-->
-                <!--</executions>-->
-            <!--</plugin>-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>3.0.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.onosproject</groupId>
+                        <artifactId>onos-build-conf</artifactId>
+                        <version>${onos-build-conf.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>6.19</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <configLocation>onos/checkstyle-mvn.xml</configLocation>
+                    <suppressionsLocation>onos/suppressions.xml
+                    </suppressionsLocation>
+                    <headerLocation>onos/onos-java.header</headerLocation>
+                    <failsOnError>false</failsOnError>
+                    <logViolationsToConsole>true</logViolationsToConsole>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                    <includeResources>false</includeResources>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>validate-checkstyle</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -978,13 +978,13 @@
 
     <reporting>
         <plugins>
-            <!--<plugin>-->
-                <!--<groupId>org.apache.maven.plugins</groupId>-->
-                <!--<artifactId>maven-checkstyle-plugin</artifactId>-->
-                <!--<configuration>-->
-                    <!--<configLocation>onos/checkstyle.xml</configLocation>-->
-                <!--</configuration>-->
-            <!--</plugin>-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <configLocation>onos/checkstyle.xml</configLocation>
+                </configuration>
+            </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
