@@ -1514,7 +1514,7 @@ public class ReactiveForwarding {
                 if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
                     tx_dropped_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
                 }
-                rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst
+                rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
             }
 
 
