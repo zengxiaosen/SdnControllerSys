@@ -1214,18 +1214,18 @@ public class ReactiveForwarding {
 
         private AlternativePathsContext getAltnativePathCtx(Set<Path> paths, PortNumber srcPort) {
             AlternativePathsContext ecmpPathsCtx = new AlternativePathsContext();
-            Cache<Long, Path> cache = ecmpPathsCtx.getCache();
+            Map<Long, Path> pathIndexMap = ecmpPathsCtx.getPathIndex();
             long index = 0;
             for (Path path : paths) {
                 Path prePickPath = checkLeadBackSrc(path, srcPort);
                 //filter if lead back to the src port
                 if(prePickPath != null) {
-                    cache.put(index, path);
+                    pathIndexMap.put(index, path);
                     index++;
                     //log.info("getAltnativePathCtx , cache[index,path], index: " + index + ", path: " + path.toString());
                 }
             }
-            ecmpPathsCtx.setCache(cache);
+            ecmpPathsCtx.setPathIndex(pathIndexMap);
             ecmpPathsCtx.setSize(index);
             return ecmpPathsCtx;
         }
@@ -1581,19 +1581,19 @@ public class ReactiveForwarding {
         }
 
         private class AlternativePathsContext {
-            private Cache<Long, Path> cache;
+            private Map<Long, Path> pathIndex;
             private long size;
             public AlternativePathsContext() {
-                this.cache = CacheBuilder.newBuilder().maximumSize(100).build();
+                this.pathIndex = Maps.newLinkedHashMap();
                 this.size = 0;
             }
 
-            public Cache<Long, Path> getCache() {
-                return cache;
+            public Map<Long, Path> getPathIndex() {
+                return pathIndex;
             }
 
-            public void setCache(Cache<Long, Path> cache) {
-                this.cache = cache;
+            public void setPathIndex(Map<Long, Path> pathIndex) {
+                this.pathIndex = pathIndex;
             }
 
             public long getSize() {
