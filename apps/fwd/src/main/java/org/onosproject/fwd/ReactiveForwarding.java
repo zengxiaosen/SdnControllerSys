@@ -1189,12 +1189,12 @@ public class ReactiveForwarding {
                 //filter if lead back to the src port
                 if(prePickPath != null) {
                     cache.put(index, path);
+                    index++;
                 }
             }
 
             long hashCode = factors.hashCode() % cache.size();
             Path objectPath = cache.getIfPresent(hashCode);
-
             result.add(objectPath);
             return result;
         }
