@@ -634,7 +634,7 @@ public class ReactiveForwarding {
                 }
                 return;
             }
-
+            Double curFlowSpeed = getCurFlowSpeed();
 
             // Otherwise, get a set of paths that lead from here to the
             // destination edge switch.如果不是边缘交换机，则通过拓扑服务，得到从这里到达目地边缘交换机的路径集合。
@@ -653,16 +653,11 @@ public class ReactiveForwarding {
             // ConnectPoint curSwitchConnectionPoint = pkt.receivedFrom();
             Set<Path> PathsChoise = Sets.newHashSet();
 
-            int choise = 0;
+            int choise = 1;
             if(choise == 0){
                 Set<Path> PathsFSEM = PathsDecisionFESM(paths, pkt.receivedFrom().port());
                 PathsChoise = PathsFSEM;
             }else if(choise == 1){
-                Map<String, String> FlowIdFlowRate = statisticService.getFlowIdFlowRate();
-                //init with a small number
-                Double curFlowSpeed = 0.0;
-                //curFlowSpeed = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
-                //isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
                 Set<Path> PathsMyDefined = PathsDecisionMyDefined(curFlowSpeed, paths, pkt.receivedFrom().port());
                 PathsChoise = PathsMyDefined;
@@ -688,6 +683,15 @@ public class ReactiveForwarding {
             // Otherwise forward and be done with it.最后安装流规则
             installRule(context, path.src().port(), macMetrics);
 
+        }
+
+        private Double getCurFlowSpeed() {
+            Map<String, String> FlowIdFlowRate = statisticService.getFlowIdFlowRate();
+            //init with a small number
+            Double curFlowSpeed = 0.0;
+            //curFlowSpeed = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+            //isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+            return  curFlowSpeed;
         }
 
         private  Set<Path> PathsDecisionECMP(Set<Path> paths, String srcMac, String dstMac, String srcPort, String dstPort,String protocol){
