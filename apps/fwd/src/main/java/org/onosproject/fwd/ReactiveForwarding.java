@@ -566,74 +566,6 @@ public class ReactiveForwarding {
     private class ReactivePacketProcessor implements PacketProcessor {
 
 
-
-        private long getVportLoadCapability(ConnectPoint connectPoint) {
-            long vportCurSpeed = 0;
-            if(connectPoint != null && statisticService.vportload(connectPoint) != null){
-                //rate : bytes/s result : b/s
-
-                vportCurSpeed = statisticService.vportload(connectPoint).rate() * 8 ;
-            }
-            return vportCurSpeed;
-        }
-
-
-        private long getVportMaxCapability(ConnectPoint connectPoint) {
-            Port port = deviceService.getPort(connectPoint.deviceId(), connectPoint.port());
-            long vportMaxSpeed = 0;
-            if(connectPoint != null){
-                //vportMaxSpeed = port.portSpeed() * 1000000;  //portSpeed Mbps result : bps
-                vportMaxSpeed = 100*1000000;
-            }
-
-            return vportMaxSpeed;
-        }
-
-        /**
-         *
-         * @param srcConnectPoint
-         * @param dstConnectPoint
-         * @return
-         */
-        private long getIntraLinkLoadBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
-//            log.info("aaaaa : " + getVportLoadCapability(srcConnectPoint));
-//            log.info("bbbbb : " + getVportLoadCapability(dstConnectPoint));
-            return Long.max(getVportLoadCapability(srcConnectPoint), getVportLoadCapability(dstConnectPoint));
-        }
-
-        /**
-         *
-         * @param srcConnectPoint
-         * @param dstConnectPoint
-         * @return
-         */
-        private long getIntraLinkMaxBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
-            //return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
-            return 100 * 1000000;
-        }
-
-        /**
-         *
-         * @param srcConnectPoint
-         * @param dstConnectPoint
-         * @return
-         */
-        private long getIntraLinkRestBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
-            return getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint) - getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint);
-        }
-
-        /**
-         *
-         * @param srcConnectPoint
-         * @param dstConnectPoint
-         * @return
-         */
-
-        private Double getIntraLinkCapability(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
-            return (Double.valueOf(getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint)) / Double.valueOf(getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint)) * 100);
-        }
-
-
         /**
          * 包处理
          * @param context packet processing context
@@ -646,11 +578,7 @@ public class ReactiveForwarding {
             if (context.isHandled()) {
                 return;
             }
-            /**
-             *
-             * Packet_In 消息 上报
-             *
-             */
+
             InboundPacket pkt = context.inPacket();
             Ethernet ethPkt = pkt.parsed();
             String curProtocol = String.valueOf(ethPkt.getEtherType());
@@ -659,16 +587,11 @@ public class ReactiveForwarding {
                 return;
             }
 
-            /**
-             * macAddress: ethPkt.getSourceMAC()
-             * macAddress1 = ethPkt.getDestinationMAC();
-             */
             MacAddress macAddress = ethPkt.getSourceMAC();
             ReactiveForwardMetrics macMetrics = null;
             macMetrics = createCounter(macAddress);
             inPacket(macMetrics);//增加packet_in数据包的计数
 
-            // Bail if this is deemed to be a control packet.如果这被认为是一个控制包，释放。
             if (isControlPacket(ethPkt)) {
                 droppedPacket(macMetrics);//只是增加丢弃数据包的计数
                 return;
@@ -680,7 +603,6 @@ public class ReactiveForwarding {
                 return;
             }
             //HostId包含Mac和VlanId
-            // HostId id = HostId.hostId(ethPkt.getDestinationMAC());//得到目的主机的mac
             HostId id_src = HostId.hostId(macAddress);
             MacAddress macAddress1 = ethPkt.getDestinationMAC();
             HostId id = HostId.hostId(macAddress1);
@@ -691,7 +613,6 @@ public class ReactiveForwarding {
                 return;
             }
 
-            // Do not process IPv4 multicast packets, let mfwd handle them，不处理IPv4多播数据包
             if (ignoreIpv4McastPackets && ethPkt.getEtherType() == Ethernet.TYPE_IPV4) {
                 if (id.mac().isMulticast()) {
                     return;
@@ -804,8 +725,6 @@ public class ReactiveForwarding {
                 return result;
             }
 
-
-
         }
 
 
@@ -888,6 +807,74 @@ public class ReactiveForwarding {
 
             Double resultFlowSpeed = Double.valueOf(flowSpeedEtl);
             return resultFlowSpeed;
+        }
+
+
+
+        private long getVportLoadCapability(ConnectPoint connectPoint) {
+            long vportCurSpeed = 0;
+            if(connectPoint != null && statisticService.vportload(connectPoint) != null){
+                //rate : bytes/s result : b/s
+
+                vportCurSpeed = statisticService.vportload(connectPoint).rate() * 8 ;
+            }
+            return vportCurSpeed;
+        }
+
+
+        private long getVportMaxCapability(ConnectPoint connectPoint) {
+            Port port = deviceService.getPort(connectPoint.deviceId(), connectPoint.port());
+            long vportMaxSpeed = 0;
+            if(connectPoint != null){
+                //vportMaxSpeed = port.portSpeed() * 1000000;  //portSpeed Mbps result : bps
+                vportMaxSpeed = 100*1000000;
+            }
+
+            return vportMaxSpeed;
+        }
+
+        /**
+         *
+         * @param srcConnectPoint
+         * @param dstConnectPoint
+         * @return
+         */
+        private long getIntraLinkLoadBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+//            log.info("aaaaa : " + getVportLoadCapability(srcConnectPoint));
+//            log.info("bbbbb : " + getVportLoadCapability(dstConnectPoint));
+            return Long.max(getVportLoadCapability(srcConnectPoint), getVportLoadCapability(dstConnectPoint));
+        }
+
+        /**
+         *
+         * @param srcConnectPoint
+         * @param dstConnectPoint
+         * @return
+         */
+        private long getIntraLinkMaxBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+            //return Long.min(getVportMaxCapability(srcConnectPoint), getVportMaxCapability(dstConnectPoint));
+            return 100 * 1000000;
+        }
+
+        /**
+         *
+         * @param srcConnectPoint
+         * @param dstConnectPoint
+         * @return
+         */
+        private long getIntraLinkRestBw(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+            return getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint) - getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint);
+        }
+
+        /**
+         *
+         * @param srcConnectPoint
+         * @param dstConnectPoint
+         * @return
+         */
+
+        private Double getIntraLinkCapability(ConnectPoint srcConnectPoint, ConnectPoint dstConnectPoint) {
+            return (Double.valueOf(getIntraLinkLoadBw(srcConnectPoint, dstConnectPoint)) / Double.valueOf(getIntraLinkMaxBw(srcConnectPoint, dstConnectPoint)) * 100);
         }
 
 
