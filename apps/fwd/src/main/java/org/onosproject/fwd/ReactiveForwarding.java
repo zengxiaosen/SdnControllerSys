@@ -1217,6 +1217,7 @@ public class ReactiveForwarding {
                 if(prePickPath != null) {
                     cache.put(index, path);
                     index++;
+                    log.info("getAltnativePathCtx , cache[index,path], index: " + index + ", path: " + path.toString());
                 }
             }
             ecmpPathsCtx.setCache(cache);
