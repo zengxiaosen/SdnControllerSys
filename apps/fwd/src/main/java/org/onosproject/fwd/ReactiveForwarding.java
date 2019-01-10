@@ -728,14 +728,14 @@ public class ReactiveForwarding {
                 return;
             }
 
-            LinkedList<Link> LinksResult = topologyService.getAllPaths(topologyService.currentTopology());
-            ConnectPoint curSwitchConnectionPoint = pkt.receivedFrom();
+            // LinkedList<Link> LinksResult = topologyService.getAllPaths(topologyService.currentTopology());
+            // ConnectPoint curSwitchConnectionPoint = pkt.receivedFrom();
             Set<Path> PathsChoise = Sets.newHashSet();
 
-            int choise = 1;
+            int choise = 0;
             if(choise == 0){
-                Set<Path> PathsFsem = PathsDecisionFESM(paths);
-                PathsChoise = PathsFsem;
+                Set<Path> PathsFSEM = PathsDecisionFESM(paths, pkt.receivedFrom().port());
+                PathsChoise = PathsFSEM;
             }else if(choise == 1){
                 Map<String, String> FlowIdFlowRate = statisticService.getFlowIdFlowRate();
                 //init with a small number
@@ -1202,9 +1202,7 @@ public class ReactiveForwarding {
                 double fAllRestBwSdAfterPreAdd = 1.0/(double)(Math.log((double)AllRestBWSdAfterPreAdd + 1) + 1);
                 double resultScore = fChokeLinkRestBw * 5 + fPathMeanRestBw * 5;
 
-                Set<Path> testPathDstPort = Sets.newHashSet();
-                Path prePickPath =  pickForwardPathIfPossible(testPathDstPort, srcPort);
-
+                Path prePickPath = checkLeadBackSrc(path, srcPort);
                 //if lead back to the src port
                 if(prePickPath != null) {
                     resultScore = 0;
@@ -1230,6 +1228,13 @@ public class ReactiveForwarding {
 
         }
 
+        private Path checkLeadBackSrc(Path path, PortNumber srcPort) {
+            Set<Path> testPathDstPort = Sets.newHashSet();
+            testPathDstPort.add(path);
+            Path prePickPath =  pickForwardPathIfPossible(testPathDstPort, srcPort);
+            return prePickPath;
+        }
+
         private Double getThisLinkResBwUpdate(Double thisLinkResBw, Double theAddRestBw) {
             Double thisLinkResBwUpdate = thisLinkResBw - theAddRestBw;
             if(thisLinkResBwUpdate < 0){
@@ -1238,165 +1243,56 @@ public class ReactiveForwarding {
             return thisLinkResBwUpdate;
         }
 
-
-        private  Set<Path> PathsDecisionFESM(Set<Path> paths) {
-
-            /**
-             *
-             * flowStatisticService 是信息统计模块，
-             * 这里通过 IOC 技术注入到 负载均衡决策模块，
-             *
-             * Set<Path> paths 是 拓扑计算模块 根据源目ip 计算拓扑中此 (src, dst)对的所有等价路径
-             * topologyService 拓扑计算模块 是通过 IOC 技术注入到 伏在均衡决策模块
-             *
-             *
-             */
+        /**
+         *
+         *  FESM - TrustCom
+         *
+         *  since a path is composed by many switches and links,
+         *  the average or the total traffic can't not reflect the real status of
+         *  the path, so the critical switch and link will be selected to represent the status of the path
+         *
+         *
+         *  the traffic of switch will be messured by packet count and byte count forward by switch.
+         *  the traffic of link will be messured by the conrresponding port forwarding rate
+         *
+         *
+         *  U = (h, p, b, r)
+         *
+         */
+        private  Set<Path> PathsDecisionFESM(Set<Path> paths, PortNumber srcPort) {
 
             //flowStatisticService.loadSummaryPortInternal()
             Set<Path> result = Sets.newHashSet();
             Map<Integer, Path> indexPath = Maps.newLinkedHashMap();
             Path finalPath = null;
-
             int i=0;
-
-
-            /**
-             *
-             * 对多条等价路径进行选路决策
-             *
-             */
             double maxScore = 0.0;
-            for(Path path : paths){
 
+            for(Path path : paths){
                 int j=0;
                 indexPath.put(i, path);
-                int rPathLength = path.links().size();
-
-
-                /**
-                 *
-                 *  FESM - TrustCom
-                 *
-                 *  since a path is composed by many switches and links,
-                 *  the average or the total traffic can't not reflect the real status of
-                 *  the path, so the critical switch and link will be selected to represent the status of the path
-                 *
-                 *
-                 *  the traffic of switch will be messured by packet count and byte count forward by switch.
-                 *  the traffic of link will be messured by the conrresponding port forwarding rate
-                 *
-                 *
-                 *  U = (h, p, b, r)
-                 *
-                 */
-                long pObject = 0;
-                long bObject = 0;
-                long rObject = 0;
+                ComputeFactorContext computeFactorContext = new ComputeFactorContext();
+                computeFactorContext.sethObject(computeHObject(path));
                 for(Link link : path.links()){
-
-                    //log.info("统计信息=====对于path " + i + " 的第 " + j + "条link： ");
-
-                    /**
-                     * 链路link 信息监控
-                     *
-                     * "link的负载(bps): " + IntraLinkLoadBw
-                     * "link的最大带宽(bps): " + IntraLinkMaxBw
-                     * "link的剩余带宽(bps): " + IntraLinkRestBw
-                     * "link的带宽利用率(bps): " + IntraLinkCapability
-                     *
-                     *
-                     */
 
                     long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
 
-
-
-
                     /**
-                     * link 源端口和目的端口 信息监控
-                     */
-
-                    /**
-                     * src
                      *
+                     * link context:
                      * some statistic of the src of this link:
-                     *
-                     * packetsReceived_src
-                     * packetsSent_src
-                     * bytesReceived_src
-                     * bytesSent_src
-                     * rx_dropped_src
-                     * tx_dropped_src
-                     * rx_tx_dropped_src
-                     */
-
-                    long packetsReceived_src = 0;
-                    if(link.src()!=null &&  link.src().deviceId() != null && link.src().port() !=null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                        packetsReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsReceived();
-                    }
-                    long packetsSent_src = 0;
-                    if(link.src()!=null && link.src().deviceId() !=null && link.src().port() != null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                        packetsSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsSent();
-                    }
-                    long bytesReceived_src = 0;
-                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                        bytesReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesReceived();
-                    }
-
-                    long bytesSent_src = 0;
-                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                        bytesSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
-                    }
-                    long rx_dropped_src = 0;
-                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                        rx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
-                    }
-                    long tx_dropped_src = 0;
-                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
-                        flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
-                    }
-                    long rx_tx_dropped_src = rx_dropped_src+tx_dropped_src;
-
-                    /**
-                     * dst
+                     * packetsReceived_src, packetsSent_src
+                     * bytesReceived_src, bytesSent_src
+                     * rx_dropped_src, tx_dropped_src, rx_tx_dropped_src (tx:transport, rx:receive)
                      *
                      * some statistic of the dst of this link:
+                     * packetsReceived_dst, packetsSent_dst
+                     * bytesReceived_dst, bytesSent_dst
+                     * rx_dropped_dst, tx_dropped_dst, rx_tx_dropped_dst
                      *
-                     * packetsReceived_dst
-                     * packetsSent_dst
-                     * bytesReceived_dst
-                     * bytesSent_dst
-                     * rx_dropped_dst
-                     * tx_dropped_dst
-                     * rx_tx_dropped_dst
                      */
-                    long packetsReceived_dst = 0;
-                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                        packetsReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
-                    }
-                    long packetsSent_dst = 0;
-                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                        packetsSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
-                    }
-                    long bytesReceived_dst = 0;
-                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                        bytesReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
-                    }
-                    long bytesSent_dst = 0;
-                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                        bytesSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesSent();
-                    }
-                    long rx_dropped_dst = 0;
-                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                        flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
-                    }
-                    long tx_dropped_dst = 0;
-                    if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
-                        flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
-                    }
-
-
-                    long rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst;
+                    LinkContext linkContext = new LinkContext(link);
+                    linkContext.InitLinkContext();
 
                     /**
                      * U = (h, p, b, r)
@@ -1405,78 +1301,52 @@ public class ReactiveForwarding {
                      * b denotes the byte count of the critical
                      * r denotes the forwarding rate of the critical port
                      */
-                    if(IntraLinkLoadBw > rObject){
-                        pObject = Math.max(packetsSent_src, packetsReceived_dst);
-                        bObject = Math.max(bytesSent_src, bytesReceived_dst);
-                        rObject = IntraLinkLoadBw;
+                    if(IntraLinkLoadBw > computeFactorContext.rObject){
+                        computeFactorContext.pObject = Math.max(linkContext.packetsSent_src, linkContext.packetsReceived_dst);
+                        computeFactorContext.bObject = Math.max(linkContext.bytesSent_src, linkContext.bytesReceived_dst);
+                        computeFactorContext.rObject = IntraLinkLoadBw;
                     }
 
                     j++;
                 }
 
+
                 /**
+                 *
                  * U = (h, p, b, r) ： 一条路径
                  * h: hObject
                  * p: pObject
                  * b: bObject
                  * r: rObject
-                 */
-                long hObject = (long)rPathLength;
-
-                /**
+                 *
                  * 特征工程
                  * rh = 1.0/(e^h)
                  * rp = 1.0/log(p+0.1)
                  * rb = 1.0/log(b+0.1)
                  * rr = 1.0/(1+e^(-r/50.0))
                  *
-                 * so:
-                 *
                  * the matrix R can be presented as the column vector for one path:
                  * R = (rh, rp, rb, rr)
-                 *
-                 *
+                 * weight = (0.4, 0.15, 0.15, 0.3)
                  */
 
-
-                double rh = 1.0 / (double)(Math.exp((double)hObject));
-                double rp = 1.0 / (double)(Math.log((double)(pObject + 0.1)));
-                double rb = 1.0 / (double)(Math.log((double)(bObject + 0.1)));
-                double rr = 1.0 / (double)(1 + Math.exp((double)((0-rObject) / 50.0)));
-
-                /**
-                 *
-                 *
-                 * B = (b1, b2, ..., bm)
-                 * B = AOR
-                 *
-                 * A = (a1, a2, ..., an)
-                 *
-                 * R = (rh, rp, rb, rr)
-                 *   = (0.4, 0.15, 0.15, 0.3)
-                 *
-                 */
-
-                double a1 = 0.4;
-                double a2 = 0.15;
-                double a3 = 0.15;
-                double a4 = 0.3;
-
-                double b1 = a1 * rh;
-                double b2 = a2 * rp;
-                double b3 = a3 * rb;
-                double b4 = a4 * rr;
-
-                double resultScore = b1 + b2 + b3 + b4;
-                if(resultScore > maxScore){
-                    finalPath = path;
+                double resultScore = getResultScore(computeFactorContext);
+                Path prePickPath = checkLeadBackSrc(path, srcPort);
+                //if lead back to the src port
+                if(prePickPath != null) {
+                    i ++;
+                } else {
+                    if(resultScore > maxScore){
+                        finalPath = path;
+                    }
+                    i++;
                 }
-
-
-
-                i++;
             }
 
+            return packResult(result, finalPath, indexPath);
+        }
+
+        private Set<Path> packResult(Set<Path> result, Path finalPath, Map<Integer, Path> indexPath) {
             //result.add(indexPath.get(0));
             if(finalPath == null){
                 result.add(indexPath.get(0));
@@ -1484,9 +1354,184 @@ public class ReactiveForwarding {
                 result.add(finalPath);
             }
             return result;
+        }
+
+        private long computeHObject(Path path) {
+            int rPathLength = path.links().size();
+            long hObject = (long)rPathLength;
+            return hObject;
+        }
+
+        private double getResultScore(ComputeFactorContext computeFactorContext) {
+
+            double rh = 1.0 / (double)(Math.exp((double)computeFactorContext.hObject));
+            double rp = 1.0 / (double)(Math.log((double)(computeFactorContext.pObject + 0.1)));
+            double rb = 1.0 / (double)(Math.log((double)(computeFactorContext.bObject + 0.1)));
+            double rr = 1.0 / (double)(1 + Math.exp((double)((0-computeFactorContext.rObject) / 50.0)));
+
+            double a1 = 0.4;
+            double a2 = 0.15;
+            double a3 = 0.15;
+            double a4 = 0.3;
+
+            double b1 = a1 * rh;
+            double b2 = a2 * rp;
+            double b3 = a3 * rb;
+            double b4 = a4 * rr;
+
+            double resultScore = b1 + b2 + b3 + b4;
+
+            return resultScore;
+        }
+
+        private class ComputeFactorContext {
+
+            private long pObject;
+            private long bObject;
+            private long rObject;
+            private long hObject;
+
+
+            public long gethObject() {
+                return hObject;
+            }
+
+            public void sethObject(long hObject) {
+                this.hObject = hObject;
+            }
+
+            public long getpObject() {
+                return pObject;
+            }
+
+            public void setpObject(long pObject) {
+                this.pObject = pObject;
+            }
+
+            public long getbObject() {
+                return bObject;
+            }
+
+            public void setbObject(long bObject) {
+                this.bObject = bObject;
+            }
+
+            public long getrObject() {
+                return rObject;
+            }
+
+            public void setrObject(long rObject) {
+                this.rObject = rObject;
+            }
+
+            public ComputeFactorContext() {
+                this.pObject = 0;
+                this.bObject = 0;
+                this.rObject = 0;
+                this.hObject = 0;
+            }
+
 
         }
 
+        private class LinkContext {
+            private Link link;
+            private long packetsReceived_src;
+            private long packetsSent_src;
+            private long bytesReceived_src;
+            private long bytesSent_src;
+            private long rx_dropped_src;
+            private long tx_dropped_src;
+            private long rx_tx_dropped_src;
+
+            private long packetsReceived_dst;
+            private long packetsSent_dst;
+            private long bytesReceived_dst;
+            private long bytesSent_dst;
+            private long rx_dropped_dst;
+            private long tx_dropped_dst;
+            private long rx_tx_dropped_dst = 0;
+
+            public LinkContext(Link link) {
+                this.link = link;
+                this.packetsReceived_src = 0;
+                this.packetsSent_src = 0;
+                this.bytesReceived_src = 0;
+                this.bytesSent_src = 0;
+                this.rx_dropped_src = 0;
+                this.tx_dropped_src = 0;
+                this.rx_tx_dropped_src = 0;
+
+                this.packetsReceived_dst = 0;
+                this.packetsSent_dst = 0;
+                this.bytesReceived_dst = 0;
+                this.bytesSent_dst = 0;
+                this.rx_dropped_dst = 0;
+                this.tx_dropped_dst = 0;
+            }
+
+            public void InitLinkContext() {
+                InitLinkSrcNodeContext();
+                InitLinkDstNodeContext();
+
+            }
+
+            private void InitLinkSrcNodeContext() {
+                if(link.src()!=null &&  link.src().deviceId() != null && link.src().port() !=null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    packetsReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsReceived();
+                }
+
+                if(link.src()!=null && link.src().deviceId() !=null && link.src().port() != null && flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    packetsSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsSent();
+                }
+
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    bytesReceived_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesReceived();
+                }
+
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    bytesSent_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).bytesSent();
+                }
+
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    rx_dropped_src = flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsRxDropped();
+                }
+
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()) != null){
+                    flowStatisticService.getDeviceService().getStatisticsForPort(link.src().deviceId(), link.src().port()).packetsTxDropped();
+                }
+                rx_tx_dropped_src = rx_dropped_src+tx_dropped_src;
+            }
+
+            private void InitLinkDstNodeContext() {
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                    packetsReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsReceived();
+                }
+
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                    packetsSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsSent();
+                }
+
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                    bytesReceived_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesReceived();
+                }
+
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                    bytesSent_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).bytesSent();
+                }
+
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                    rx_dropped_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsRxDropped();
+                }
+
+                if(flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()) != null){
+                    tx_dropped_dst = flowStatisticService.getDeviceService().getStatisticsForPort(link.dst().deviceId(), link.dst().port()).packetsTxDropped();
+                }
+                rx_tx_dropped_dst = tx_dropped_dst+rx_dropped_dst
+            }
+
+
+        }
     }
 
     // Indicates whether this is a control packet, e.g. LLDP, BDDP，判断数据包是否是一个控制数据包
