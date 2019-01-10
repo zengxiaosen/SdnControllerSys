@@ -1179,8 +1179,6 @@ public class ReactiveForwarding {
 
         }
 
-
-
         private  Set<Path> PathsDecisionECMP(Set<Path> paths, FlowContext flowContext, PortNumber srcPort){
 
             Set<Path> result = Sets.newHashSet();
@@ -1202,11 +1200,8 @@ public class ReactiveForwarding {
                     ctx.setFlowDistributionMap(flowDistributionMap);
                     result.add(pathList.get(objectIndex));
                 }
-            } catch (ArithmeticException e) {
-                log.warn("ArithmeticException");
-                return null;
             } catch (Exception e) {
-                return null;
+                return ExceptionLogs(paths);
             }
 
             return result;
@@ -1243,6 +1238,12 @@ public class ReactiveForwarding {
                 thisLinkResBwUpdate = 0.0;
             }
             return thisLinkResBwUpdate;
+        }
+
+        private Set<Path> ExceptionLogs(Set<Path> paths) {
+            log.warn("ArithmeticException");
+            //only the way back, lazy process in next function
+            return paths;
         }
 
         /**
