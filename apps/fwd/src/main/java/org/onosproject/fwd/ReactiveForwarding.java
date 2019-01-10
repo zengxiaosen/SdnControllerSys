@@ -1194,7 +1194,6 @@ public class ReactiveForwarding {
 
             long hashCode = factors.hashCode() % cache.size();
             Path objectPath = cache.getIfPresent(hashCode);
-            log.info("objectPath: " + objectPath.toString());
 
             result.add(objectPath);
             return result;
