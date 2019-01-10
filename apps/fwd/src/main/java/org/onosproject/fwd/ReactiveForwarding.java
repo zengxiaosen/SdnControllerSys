@@ -572,8 +572,6 @@ public class ReactiveForwarding {
          */
         @Override
         public void process(PacketContext context) {
-            // Stop processing if the packet has been handled, since we
-            // can't do any more to it.
 
             if (context.isHandled()) {
                 return;
@@ -619,15 +617,14 @@ public class ReactiveForwarding {
                 }
             }
             Host src = hostService.getHost(id_src);
-            // Do we know who this is for? If not, flood and bail.如果主机服务中没有这个主机，flood然后丢弃
+            // 如果主机服务中没有这个主机，flood然后丢弃
             Host dst = hostService.getHost(id);
             if (dst == null) {
                 flood(context, macMetrics);
                 return;
             }
 
-            // Are we on an edge switch that our destination is on? If so,
-            // simply forward out to the destination and bail.如果是目的主机链接的边缘交换机发过来的，简单安装流规则，然后释放。
+            // 如果是目的主机链接的边缘交换机发过来的，简单安装流规则，然后释放。
             if (pkt.receivedFrom().deviceId().equals(dst.location().deviceId())) {
                 if (!context.inPacket().receivedFrom().port().equals(dst.location().port())) {
                     installRule(context, dst.location().port(), macMetrics);
@@ -635,25 +632,19 @@ public class ReactiveForwarding {
                 return;
             }
             Double curFlowSpeed = getCurFlowSpeed();
-
-            // Otherwise, get a set of paths that lead from here to the
-            // destination edge switch.如果不是边缘交换机，则通过拓扑服务，得到从这里到达目地边缘交换机的路径集合。
             Set<Path> paths =
                     topologyService.getPaths(topologyService.currentTopology(),
                                              pkt.receivedFrom().deviceId(),
                                              dst.location().deviceId());
-
 
             if (paths.isEmpty()) {
                 flood(context, macMetrics);
                 return;
             }
 
-            // LinkedList<Link> LinksResult = topologyService.getAllPaths(topologyService.currentTopology());
-            // ConnectPoint curSwitchConnectionPoint = pkt.receivedFrom();
             Set<Path> PathsChoise = Sets.newHashSet();
 
-            int choise = 1;
+            int choise = 2;
             if(choise == 0){
                 Set<Path> PathsFSEM = PathsDecisionFESM(paths, pkt.receivedFrom().port());
                 PathsChoise = PathsFSEM;
@@ -663,11 +654,9 @@ public class ReactiveForwarding {
                 PathsChoise = PathsMyDefined;
             }
             else if(choise == 2){
-
-                Set<Path> pathsEcmp = PathsDecisionECMP(paths,
-                        src.location().deviceId().toString(), dst.location().deviceId().toString(),
-                        src.location().port().toString(), dst.location().port().toString(), curProtocol);
-                PathsChoise = pathsEcmp;
+                FlowContext flowContext = new FlowContext(src, dst, curProtocol);
+                Set<Path> pathsECMP = PathsDecisionECMP(paths, flowContext);
+                PathsChoise = pathsECMP;
             }
 
             // Otherwise, pick a path that does not lead back to where we
@@ -685,6 +674,7 @@ public class ReactiveForwarding {
 
         }
 
+
         private Double getCurFlowSpeed() {
             Map<String, String> FlowIdFlowRate = statisticService.getFlowIdFlowRate();
             //init with a small number
@@ -694,41 +684,18 @@ public class ReactiveForwarding {
             return  curFlowSpeed;
         }
 
-        private  Set<Path> PathsDecisionECMP(Set<Path> paths, String srcMac, String dstMac, String srcPort, String dstPort,String protocol){
-            Set<Path> result = new HashSet<>();
-            String srcDstMac = srcMac.trim() + dstMac.trim();
-            int indexPath = 0;
-            if(srcDstMacEcmp.get(srcDstMac) == null){
-                srcDstMacEcmp.put(srcDstMac, indexPath);
-            }else{
-                indexPath = (srcDstMacEcmp.get(srcDstMac) + 1) % paths.size();
-                srcDstMacEcmp.put(srcDstMac, indexPath);
-            }
-
-            if(indexPath != 0){
-                int j=0;
-                for(Path path : paths){
-                    if(j == indexPath){
-                        result.add(path);
-                    }
+        private  Set<Path> PathsDecisionECMP(Set<Path> paths, FlowContext flowContext){
+            Set<Path> result = Sets.newHashSet();
+            String factors = flowContext.toString();
+            int hashCode = factors.hashCode() % paths.size();
+            int index = 0;
+            for (Path path : paths) {
+                index ++;
+                if (index == hashCode) {
+                    result.add(path);
                 }
-                return result;
-            }else {
-                Random random = new Random();
-                int max = paths.size();
-                int min = 1;
-                int rand = random.nextInt(max)%(max - min + 1) + min;
-                int index = 0;
-                for(Path path : paths) {
-                    index ++;
-                    if(index == rand) {
-                        result.add(path);
-                    }
-
-                }
-                return result;
             }
-
+            return result;
         }
 
 
@@ -1522,6 +1489,51 @@ public class ReactiveForwarding {
             }
 
 
+        }
+
+        private class FlowContext {
+            private Host src;
+            private Host dst;
+            private String curProtocol;
+
+            public FlowContext(Host src, Host dst, String curProtocol) {
+                this.src = src;
+                this.dst = dst;
+                this.curProtocol = curProtocol;
+            }
+
+            @Override
+            public String toString() {
+                return "FlowContext{" +
+                        "src=" + src +
+                        ", dst=" + dst +
+                        ", curProtocol='" + curProtocol + '\'' +
+                        '}';
+            }
+
+            public Host getSrc() {
+                return src;
+            }
+
+            public void setSrc(Host src) {
+                this.src = src;
+            }
+
+            public Host getDst() {
+                return dst;
+            }
+
+            public void setDst(Host dst) {
+                this.dst = dst;
+            }
+
+            public String getCurProtocol() {
+                return curProtocol;
+            }
+
+            public void setCurProtocol(String curProtocol) {
+                this.curProtocol = curProtocol;
+            }
         }
     }
 
