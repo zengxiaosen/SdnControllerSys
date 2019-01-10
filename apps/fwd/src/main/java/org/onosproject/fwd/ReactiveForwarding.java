@@ -705,12 +705,6 @@ public class ReactiveForwarding {
                 return;
             }
 
-
-
-            // Are we on an edge switch that our destination is on? If so,
-            // simply forward out to the destination and bail.
-
-
             // Are we on an edge switch that our destination is on? If so,
             // simply forward out to the destination and bail.如果是目的主机链接的边缘交换机发过来的，简单安装流规则，然后释放。
             if (pkt.receivedFrom().deviceId().equals(dst.location().deviceId())) {
@@ -734,40 +728,8 @@ public class ReactiveForwarding {
                 return;
             }
 
-
-            /**
-             * 网络拓扑中的所有link
-             */
             LinkedList<Link> LinksResult = topologyService.getAllPaths(topologyService.currentTopology());
-
-
-            //size:64
-
-
-            /**
-             * 遍历所有link的src端交换机中所有的流表，得到此交换机中的流
-             * 从而等价于遍历所有但凡交换机流表项目有的流
-             * 然后轮询遍历所有流的源目mac是否和packetin的流相同
-             * 如果相同则取此流的流速分析
-             * for example:
-             * A->B->C, C产生packetIn，应该取B中flow的流速判断是不是大流，因为此时C的流表项中根本就没有该匹配了多少字节数，而B中有，
-             * 所以用B的流出速度模拟C的流入速度
-             * 若流速较大则为大流
-             * 否则，则为小流
-
-             */
-
             ConnectPoint curSwitchConnectionPoint = pkt.receivedFrom();
-
-
-
-
-            /**
-             * 0 fesm
-             * 1 mydefined
-             * 2 ecmp
-             */
-
             Set<Path> PathsChoise = Sets.newHashSet();
 
             int choise = 1;
@@ -792,33 +754,9 @@ public class ReactiveForwarding {
                 PathsChoise = pathsEcmp;
             }
 
-
-
-            /**
-             *
-             * 根据负载均衡策略模块的结果
-             * 执行流表下发模块
-             *
-             */
-
             // Otherwise, pick a path that does not lead back to where we
             // came from; if no such path, flood and bail.
-            /**
-             * 第一個參數：
-             *
-             * Paths_PLLB : PLLB
-             * Paths_FESM : FESM
-             */
-
-
-
-//            Path path = Paths_Choise.size() == 0 ? pickForwardPathIfPossible(paths, pkt.receivedFrom().port())
-//                    : pickForwardPathIfPossible(Paths_Choise, pkt.receivedFrom().port());
-
             Path path = pickForwardPathIfPossible(PathsChoise, pkt.receivedFrom().port());
-
-//            Path path = pickForwardPathIfPossible(paths, pkt.receivedFrom().port());
-
             if (path == null) {
                 log.warn("Don't know where to go from here {} for {} -> {}",
                         pkt.receivedFrom(), ethPkt.getSourceMAC(), ethPkt.getDestinationMAC());
@@ -828,9 +766,6 @@ public class ReactiveForwarding {
 
             // Otherwise forward and be done with it.最后安装流规则
             installRule(context, path.src().port(), macMetrics);
-
-
-
 
         }
 
