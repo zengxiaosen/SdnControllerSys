@@ -1194,8 +1194,18 @@ public class ReactiveForwarding {
             }
 
             long hashCode = factors.hashCode() % cache.size();
-            Path objectPath = cache.getIfPresent(hashCode);
-            result.add(objectPath);
+            log.info("hashcode: " + hashCode);
+            log.info("cache size: " + cache.size());
+            Path objectPath = cache.asMap().get(hashCode);
+            cache.cleanUp();
+            if(objectPath != null){
+                log.info("right");
+                result.add(objectPath);
+            } else{
+                log.info("error while ecmp ");
+                result.add(cache.asMap().get(0L));
+            }
+
             return result;
         }
 
