@@ -15,6 +15,10 @@
  */
 package org.onosproject.fwd;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.*;
 //apache 的OSGi框架felix
 import org.apache.felix.scr.annotations.Activate;
@@ -78,6 +82,7 @@ import org.onosproject.net.topology.TopologyListener;
 import org.onosproject.net.topology.TopologyService;
 
 //onos存储相关的类
+import org.onosproject.store.primitives.resources.impl.AtomixAtomicCounterMapOperations;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.EventuallyConsistentMap;
 import org.onosproject.store.service.MultiValuedTimestamp;
@@ -94,6 +99,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 //导入的静态方法
@@ -655,7 +661,7 @@ public class ReactiveForwarding {
             }
             else if(choise == 2){
                 FlowContext flowContext = new FlowContext(src, dst, curProtocol);
-                Set<Path> pathsECMP = PathsDecisionECMP(paths, flowContext);
+                Set<Path> pathsECMP = PathsDecisionECMP(paths, flowContext, pkt.receivedFrom().port());
                 PathsChoise = pathsECMP;
             }
 
@@ -683,22 +689,6 @@ public class ReactiveForwarding {
             //isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
             return  curFlowSpeed;
         }
-
-        private  Set<Path> PathsDecisionECMP(Set<Path> paths, FlowContext flowContext){
-            Set<Path> result = Sets.newHashSet();
-            String factors = flowContext.toString();
-            int hashCode = factors.hashCode() % paths.size();
-            int index = 0;
-            for (Path path : paths) {
-                index ++;
-                if (index == hashCode) {
-                    result.add(path);
-                }
-            }
-            return result;
-        }
-
-
 
 
         private  Double MatchAndComputeThisFlowRate(ConcurrentHashMap<String, String> flowIdFlowRateMap, MacAddress macAddress, MacAddress macAddress1, LinkedList<Link> LinksResult, ConnectPoint curSwitchConnectionPoint) {
@@ -1162,7 +1152,7 @@ public class ReactiveForwarding {
 
                 Path prePickPath = checkLeadBackSrc(path, srcPort);
                 //if lead back to the src port
-                if(prePickPath != null) {
+                if(prePickPath == null) {
                     resultScore = 0;
                 }
 
@@ -1184,6 +1174,30 @@ public class ReactiveForwarding {
             }
             return result;
 
+        }
+
+
+
+        private  Set<Path> PathsDecisionECMP(Set<Path> paths, FlowContext flowContext, PortNumber srcPort){
+            Set<Path> result = Sets.newHashSet();
+            String factors = flowContext.toString();
+            //map
+            Cache<Long, Path> cache = CacheBuilder.newBuilder().maximumSize(100).build();
+            long index = 0;
+            for (Path path : paths) {
+                Path prePickPath = checkLeadBackSrc(path, srcPort);
+                //filter if lead back to the src port
+                if(prePickPath != null) {
+                    cache.put(index, path);
+                }
+            }
+
+            long hashCode = factors.hashCode() % cache.size();
+            Path objectPath = cache.getIfPresent(hashCode);
+            log.info("objectPath: " + objectPath.toString());
+
+            result.add(objectPath);
+            return result;
         }
 
         private Path checkLeadBackSrc(Path path, PortNumber srcPort) {
@@ -1291,7 +1305,7 @@ public class ReactiveForwarding {
                 double resultScore = getResultScore(computeFactorContext);
                 Path prePickPath = checkLeadBackSrc(path, srcPort);
                 //if lead back to the src port
-                if(prePickPath != null) {
+                if(prePickPath == null) {
                     i ++;
                 } else {
                     if(resultScore > maxScore){
