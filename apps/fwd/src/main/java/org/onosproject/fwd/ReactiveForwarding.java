@@ -781,7 +781,7 @@ public class ReactiveForwarding {
                 //curFlowSpeed = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
                 //isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
 
-                Set<Path> PathsMyDefined = PathsDecisionMyDefined(curFlowSpeed, paths);
+                Set<Path> PathsMyDefined = PathsDecisionMyDefined(curFlowSpeed, paths, pkt.receivedFrom().port());
                 log.info("PathsMyDefined: " + PathsMyDefined.toString());
 
                 PathsChoise = PathsMyDefined;
@@ -1201,7 +1201,7 @@ public class ReactiveForwarding {
 
 
 
-        private  Set<Path> PathsDecisionMyDefined(Double curFlowSpeed, Set<Path> paths) {
+        private  Set<Path> PathsDecisionMyDefined(Double curFlowSpeed, Set<Path> paths, PortNumber srcPort) {
 
 
             Set<Path> result = Sets.newHashSet();
@@ -1224,13 +1224,8 @@ public class ReactiveForwarding {
                 Integer curPathIndex = pathIndexOfPaths.get(path);
                 List<Double> otherPathLinksRestBw = pathChoiceItf.getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
                 List<Double> allPathLinksRestBwAfterAddFlow = Lists.newArrayList(otherPathLinksRestBw);
-                //log.info("allPathLinksRestBwAfterAddFlow.size : " + allPathLinksRestBwAfterAddFlow.size());
                 indexPath.put(i, path);
-                /**
-                 *
-                 *  ChokeLinkPassbytes: link bytes
-                 *
-                 */
+
                 double allLinkOfPathRestBandWidth = 0;
                 double allBwRestAfterAddFlow = 0;
                 long ChokeLinkPassbytes = 0;
@@ -1242,44 +1237,25 @@ public class ReactiveForwarding {
 
                     long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
                     long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-                    //bit/s
-                    //log
-                    //log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
-                    //log.info("IntraLinkRestBw: " + IntraLinkRestBw);
-                    //log.info("flowbw: " + flowbw);
                     pathCanChooseFlag = pathChoiceItf.getPathCanChooseFlag(flowbw, IntraLinkLoadBw);
 
                     //pre add the flowBw to curPath
                     Double theAddRestBw = flowbw;
                     Double thisLinkResBw = Double.valueOf(IntraLinkLoadBw);
-                    Double thisLinkResBwUpdate = thisLinkResBw - theAddRestBw;
-                    if(thisLinkResBwUpdate < 0){
-                        thisLinkResBwUpdate = 0.0;
-                    }
+                    Double thisLinkResBwUpdate = getThisLinkResBwUpdate(thisLinkResBw, theAddRestBw);
+
                     allPathLinksRestBwAfterAddFlow.add(thisLinkResBwUpdate);
-                    // ---------------------------------
                     allLinkOfPathRestBandWidth += IntraLinkRestBw;
                     allBwRestAfterAddFlow += allBwRestAfterAddFlow;
 
-
                     if(IntraLinkRestBw < ChokePointRestBandWidth){
-                        //choise the choke point
-                        //ChokePointRestBandWidth
                         ChokePointRestBandWidth = IntraLinkRestBw;
                     }
-
                     j++;
                 }
-                /**
-                 * 从检测路径模块得到的path中包含的link的数量
-                 */
+
                 double pathlinksSize = path.links().size();
-
-                /**
-                 * the mean restBandWidth of all link at this path
-                 */
                 double pathMeanRestBw = allLinkOfPathRestBandWidth / pathlinksSize;
-
 
                 int allPathLinkSize = allPathLinksRestBwAfterAddFlow.size();
                 double sumLinksRestBwAfterAddFlow = pathChoiceItf.getSumLinksRestBwAfterAddFlow(allPathLinksRestBwAfterAddFlow);
@@ -1291,8 +1267,15 @@ public class ReactiveForwarding {
                 double fChokeLinkRestBw = (double)(Math.log((double)ChokePointRestBandWidth + 1));
                 double fPathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
                 double fAllRestBwSdAfterPreAdd = 1.0/(double)(Math.log((double)AllRestBWSdAfterPreAdd + 1) + 1);
-
                 double resultScore = fChokeLinkRestBw * 5 + fPathMeanRestBw * 5;
+
+                Set<Path> testPathDstPort = Sets.newHashSet();
+                Path prePickPath =  pickForwardPathIfPossible(testPathDstPort, srcPort);
+
+                //if lead back to the src port
+                if(prePickPath != null) {
+                    resultScore = 0;
+                }
 
                 //there are some links not satisfy the flow bw
                 if(!pathCanChooseFlag){
@@ -1314,6 +1297,13 @@ public class ReactiveForwarding {
 
         }
 
+        private Double getThisLinkResBwUpdate(Double thisLinkResBw, Double theAddRestBw) {
+            Double thisLinkResBwUpdate = thisLinkResBw - theAddRestBw;
+            if(thisLinkResBwUpdate < 0){
+                thisLinkResBwUpdate = 0.0;
+            }
+            return thisLinkResBwUpdate;
+        }
 
 
         private  Set<Path> PathsDecisionFESM(Set<Path> paths) {
@@ -1577,12 +1567,9 @@ public class ReactiveForwarding {
         return eth.getEtherType() == Ethernet.TYPE_IPV6 && eth.isMulticast();
     }
 
-    // Selects a path from the given set that does not lead back to the
-    // specified port if possible.如果可能的话，从给定集合中选择一条不返回指定端口的路径。
+    // Selects a path from the given set that does not lead back to the src
     private Path pickForwardPathIfPossible(Set<Path> paths, PortNumber notToPort) {
         for (Path path : paths) {
-//            log.info(path.src().port().toString());
-//            log.info(notToPort.toString());
             if (!path.src().port().equals(notToPort)) {
                 return path;
             }
