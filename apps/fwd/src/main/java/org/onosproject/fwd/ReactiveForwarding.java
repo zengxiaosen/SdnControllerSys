@@ -1189,20 +1189,25 @@ public class ReactiveForwarding {
             AlternativePathsContext EcmpPathsCtx = getAltnativePathCtx(paths, srcPort);//map(id, path), size
             ECMPContext ctx = ECMPContext.BuildECMPContext();
             Map<String, Integer> flowDistributionMap = ctx.getFlowDistributionMap();
-
-            if (!flowDistributionMap.containsKey(flowCtx)) {
-                flowDistributionMap.put(flowCtx, 0);
-                result.add(pathList.get(0));
-                ctx.setFlowDistributionMap(flowDistributionMap);
-                return result;
-            } else {
-                int AlternativePathSize = (int)EcmpPathsCtx.getSize();
-                int objectIndex = (flowDistributionMap.get(flowCtx) + 1) % AlternativePathSize;
-                flowDistributionMap.put(flowCtx, objectIndex);
-                ctx.setFlowDistributionMap(flowDistributionMap);
-                result.add(pathList.get(objectIndex));
+            try {
+                if (!flowDistributionMap.containsKey(flowCtx)) {
+                    flowDistributionMap.put(flowCtx, 0);
+                    result.add(pathList.get(0));
+                    ctx.setFlowDistributionMap(flowDistributionMap);
+                    return result;
+                } else {
+                    int AlternativePathSize = (int)EcmpPathsCtx.getSize();
+                    int objectIndex = (flowDistributionMap.get(flowCtx) + 1) % AlternativePathSize;
+                    flowDistributionMap.put(flowCtx, objectIndex);
+                    ctx.setFlowDistributionMap(flowDistributionMap);
+                    result.add(pathList.get(objectIndex));
+                }
+            } catch (ArithmeticException e) {
+                log.warn("ArithmeticException");
+                return null;
+            } catch (Exception e) {
+                return null;
             }
-
 
             return result;
         }
@@ -1217,7 +1222,7 @@ public class ReactiveForwarding {
                 if(prePickPath != null) {
                     cache.put(index, path);
                     index++;
-                    log.info("getAltnativePathCtx , cache[index,path], index: " + index + ", path: " + path.toString());
+                    //log.info("getAltnativePathCtx , cache[index,path], index: " + index + ", path: " + path.toString());
                 }
             }
             ecmpPathsCtx.setCache(cache);
