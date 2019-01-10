@@ -175,6 +175,9 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.event.Event;
 import org.onosproject.net.*;
+import sun.security.provider.MD5;
+import sun.security.rsa.RSASignature;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -572,8 +575,8 @@ public class ReactiveForwarding {
     private class ReactivePacketProcessor implements PacketProcessor {
 
 
+
         /**
-         * 包处理
          * @param context packet processing context
          */
         @Override
@@ -1179,10 +1182,34 @@ public class ReactiveForwarding {
 
 
         private  Set<Path> PathsDecisionECMP(Set<Path> paths, FlowContext flowContext, PortNumber srcPort){
+
             Set<Path> result = Sets.newHashSet();
-            String factors = flowContext.toString();
-            //map
-            Cache<Long, Path> cache = CacheBuilder.newBuilder().maximumSize(100).build();
+            String flowCtx = flowContext.toString();
+            List<Path> pathList = Lists.newLinkedList(paths);
+            AlternativePathsContext EcmpPathsCtx = getAltnativePathCtx(paths, srcPort);//map(id, path), size
+            ECMPContext ctx = ECMPContext.BuildECMPContext();
+            Map<String, Integer> flowDistributionMap = ctx.getFlowDistributionMap();
+
+            if (!flowDistributionMap.containsKey(flowCtx)) {
+                flowDistributionMap.put(flowCtx, 0);
+                result.add(pathList.get(0));
+                ctx.setFlowDistributionMap(flowDistributionMap);
+                return result;
+            } else {
+                int AlternativePathSize = (int)EcmpPathsCtx.getSize();
+                int objectIndex = (flowDistributionMap.get(flowCtx) + 1) % AlternativePathSize;
+                flowDistributionMap.put(flowCtx, objectIndex);
+                ctx.setFlowDistributionMap(flowDistributionMap);
+                result.add(pathList.get(objectIndex));
+            }
+
+
+            return result;
+        }
+
+        private AlternativePathsContext getAltnativePathCtx(Set<Path> paths, PortNumber srcPort) {
+            AlternativePathsContext ecmpPathsCtx = new AlternativePathsContext();
+            Cache<Long, Path> cache = ecmpPathsCtx.getCache();
             long index = 0;
             for (Path path : paths) {
                 Path prePickPath = checkLeadBackSrc(path, srcPort);
@@ -1192,21 +1219,9 @@ public class ReactiveForwarding {
                     index++;
                 }
             }
-
-            long hashCode = factors.hashCode() % cache.size();
-            log.info("hashcode: " + hashCode);
-            log.info("cache size: " + cache.size());
-            Path objectPath = cache.asMap().get(hashCode);
-            cache.cleanUp();
-            if(objectPath != null){
-                log.info("right");
-                result.add(objectPath);
-            } else{
-                log.info("error while ecmp ");
-                result.add(cache.asMap().get(0L));
-            }
-
-            return result;
+            ecmpPathsCtx.setCache(cache);
+            ecmpPathsCtx.setSize(index);
+            return ecmpPathsCtx;
         }
 
         private Path checkLeadBackSrc(Path path, PortNumber srcPort) {
@@ -1556,6 +1571,31 @@ public class ReactiveForwarding {
 
             public void setCurProtocol(String curProtocol) {
                 this.curProtocol = curProtocol;
+            }
+        }
+
+        private class AlternativePathsContext {
+            private Cache<Long, Path> cache;
+            private long size;
+            public AlternativePathsContext() {
+                this.cache = CacheBuilder.newBuilder().maximumSize(100).build();
+                this.size = 0;
+            }
+
+            public Cache<Long, Path> getCache() {
+                return cache;
+            }
+
+            public void setCache(Cache<Long, Path> cache) {
+                this.cache = cache;
+            }
+
+            public long getSize() {
+                return size;
+            }
+
+            public void setSize(long size) {
+                this.size = size;
             }
         }
     }
