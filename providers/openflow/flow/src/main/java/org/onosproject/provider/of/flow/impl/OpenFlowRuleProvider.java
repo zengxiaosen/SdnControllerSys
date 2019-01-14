@@ -224,7 +224,6 @@ public class OpenFlowRuleProvider extends AbstractProvider
         log.info("Settings: adaptiveFlowSampling={}", adaptiveFlowSampling);
     }
 
-
     private Cache<Long, InternalCacheEntry> createBatchCache() {
         return CacheBuilder.newBuilder()
                 .expireAfterWrite(10, TimeUnit.SECONDS)
