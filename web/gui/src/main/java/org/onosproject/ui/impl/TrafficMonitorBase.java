@@ -553,7 +553,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
                                         if(paths != null && pathObject != null && paths.size() != 0){
                                             log.info("install rule ");
-                                            //installRuleForPath(r, pathObject);
+                                            installRuleForPath(r, pathObject);
                                             break;
                                         }
 

@@ -574,8 +574,6 @@ public class ReactiveForwarding {
 
     private class ReactivePacketProcessor implements PacketProcessor {
 
-
-
         /**
          * @param context packet processing context
          */
@@ -633,7 +631,6 @@ public class ReactiveForwarding {
                 return;
             }
 
-            // 如果是目的主机链接的边缘交换机发过来的，简单安装流规则，然后释放。
             if (pkt.receivedFrom().deviceId().equals(dst.location().deviceId())) {
                 if (!context.inPacket().receivedFrom().port().equals(dst.location().port())) {
                     installRule(context, dst.location().port(), macMetrics);
@@ -653,7 +650,7 @@ public class ReactiveForwarding {
 
             Set<Path> PathsChoise = Sets.newHashSet();
 
-            int choise = 2;
+            int choise = 1;
             if(choise == 0){
                 Set<Path> PathsFSEM = PathsDecisionFESM(paths, pkt.receivedFrom().port());
                 PathsChoise = PathsFSEM;
@@ -678,9 +675,7 @@ public class ReactiveForwarding {
                 return;
             }
 
-            // Otherwise forward and be done with it.最后安装流规则
             installRule(context, path.src().port(), macMetrics);
-
         }
 
 
