@@ -224,9 +224,11 @@ public class OpenFlowRuleProvider extends AbstractProvider
         log.info("Settings: adaptiveFlowSampling={}", adaptiveFlowSampling);
     }
 
+    // flow timeout : 5
+    // expireAfterWrite : 5
     private Cache<Long, InternalCacheEntry> createBatchCache() {
         return CacheBuilder.newBuilder()
-                .expireAfterWrite(10, TimeUnit.SECONDS)
+                .expireAfterWrite(5, TimeUnit.SECONDS)
                 .removalListener((RemovalNotification<Long, InternalCacheEntry> notification) -> {
                     if (notification.getCause() == RemovalCause.EXPIRED) {
                         providerService.batchOperationCompleted(notification.getKey(),
