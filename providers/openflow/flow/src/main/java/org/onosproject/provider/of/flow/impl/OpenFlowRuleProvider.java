@@ -227,7 +227,7 @@ public class OpenFlowRuleProvider extends AbstractProvider
 
     private Cache<Long, InternalCacheEntry> createBatchCache() {
         return CacheBuilder.newBuilder()
-                .expireAfterWrite(15, TimeUnit.SECONDS)
+                .expireAfterWrite(10, TimeUnit.SECONDS)
                 .removalListener((RemovalNotification<Long, InternalCacheEntry> notification) -> {
                     if (notification.getCause() == RemovalCause.EXPIRED) {
                         providerService.batchOperationCompleted(notification.getKey(),
