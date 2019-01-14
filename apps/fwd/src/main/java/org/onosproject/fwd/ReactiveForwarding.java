@@ -193,7 +193,7 @@ public class ReactiveForwarding {
     private static Map<String, Integer> srcDstMacEcmp = new ConcurrentHashMap<>();
 
     //默认超时时间
-    private static final int DEFAULT_TIMEOUT = 10;
+    private static final int DEFAULT_TIMEOUT = 5;
     //默认优先级
     private static final int DEFAULT_PRIORITY = 10;
 
