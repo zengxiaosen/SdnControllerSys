@@ -683,7 +683,7 @@ public class ReactiveForwarding {
             Map<String, String> FlowIdFlowRate = statisticService.getFlowIdFlowRate();
             //init with a small number
             Double curFlowSpeed = 0.0;
-            //curFlowSpeed = MatchAndComputeThisFlowRate(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
+            //curFlowSpeed = MatchAndComputeThisFlowRate(FlowIdFlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
             //isBigFlow = ifBigFlowProcess(FlowId_FlowRate, macAddress, macAddress1, LinksResult, curSwitchConnectionPoint);
             return  curFlowSpeed;
         }
@@ -703,10 +703,6 @@ public class ReactiveForwarding {
                 DeviceId deviceId_src = link.src().deviceId();
                 DeviceId deviceId_dst = link.dst().deviceId();
 
-
-
-
-
                 for (FlowEntry r : flowRuleService.getFlowEntries(deviceId_src)) {
                     //log.info(r.deviceId()+","+deviceId_src+","+deviceId_dst);
                     //测试结果：r.deviceId() == deviceId_src
@@ -723,9 +719,8 @@ public class ReactiveForwarding {
                      *
                      * 计算该流流入C的速度：
                      * for example:
-                     * A->B->C, C产生packetIn，应该取B中flow的流速判断是不是大流，因为此时C的流表项中根本就没有该匹配了多少字节数，而B中有，
+                     * A->B->C, C产生packetIn，应该取B中flow的流速判断，因为此时C的流表项中根本就没有该匹配了多少字节数，而B中有，
                      * 所以用B的流出速度模拟C的流入速度
-                     * 若流速较大则为大流
                      *
                      * 找到B->C这个link的计算方法：
                      * matchSrcAndDst是判断link是否有目标流，但不一定就是B->C这条link
@@ -751,8 +746,6 @@ public class ReactiveForwarding {
                 }
 
             }
-
-
 
             String flowSpeedEtl;
             /**
