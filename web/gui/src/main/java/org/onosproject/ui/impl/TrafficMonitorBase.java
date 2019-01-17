@@ -1155,7 +1155,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
             double fPathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
             //double fAllRestBwSdAfterPreAdd = 1.0/(double)(Math.log((double)AllRestBWSdAfterPreAdd + 1) + 0.1);
             double fAllRestBwSdAfterPreAdd = (double)(Math.log((double)AllRestBWSdAfterPreAdd + 1));
-            double resultScore = fChokeLinkRestBw * 5 + fPathMeanRestBw * 5 - fAllRestBwSdAfterPreAdd * 0;
+            double resultScore = fChokeLinkRestBw * 7 + fPathMeanRestBw * 3 - fAllRestBwSdAfterPreAdd * 0;
             //log
             log.info("ChokePointRestBandWidth: " + ChokePointRestBandWidth);
             log.info("pathMeanRestBw: " + pathMeanRestBw);
