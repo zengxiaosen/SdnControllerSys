@@ -251,7 +251,7 @@ public class StatisticManager implements StatisticService {
     }
 
     /**
-     * 自研，每流統計模塊
+     * 自研，每流統計模塊 xinxitongjizixitong
      * @param connectPoint
      * @return
      */

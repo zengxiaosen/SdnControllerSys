@@ -649,7 +649,7 @@ public class ReactiveForwarding {
             }
 
             Set<Path> PathsChoise = Sets.newHashSet();
-
+            //TODO to a service ...
             int choise = 1;
             if(choise == 0){
                 Set<Path> PathsFSEM = PathsDecisionFESM(paths, pkt.receivedFrom().port());
@@ -1139,7 +1139,7 @@ public class ReactiveForwarding {
                 double fChokeLinkRestBw = (double)(Math.log((double)ChokePointRestBandWidth + 1));
                 double fPathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
                 double fAllRestBwSdAfterPreAdd = (double)(Math.log((double)AllRestBWSdAfterPreAdd + 1) );
-                double resultScore = fChokeLinkRestBw * 3 + fPathMeanRestBw * 7 - fAllRestBwSdAfterPreAdd * 0;
+                double resultScore = fChokeLinkRestBw * 5 + fPathMeanRestBw * 5 - fAllRestBwSdAfterPreAdd * 0;
 
                 Path prePickPath = checkLeadBackSrc(path, srcPort);
                 //if lead back to the src port
