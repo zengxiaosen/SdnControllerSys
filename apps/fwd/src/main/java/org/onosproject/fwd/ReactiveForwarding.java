@@ -1174,6 +1174,11 @@ public class ReactiveForwarding {
             int hashCode = flowContext.hashCode();
 
             List<Path> pathList = Lists.newLinkedList(paths);
+
+
+
+
+            //test
             int chooseIndex = hashCode % pathList.size();
             for (int i=0; i< pathList.size(); i++){
                 if (i == chooseIndex) {
