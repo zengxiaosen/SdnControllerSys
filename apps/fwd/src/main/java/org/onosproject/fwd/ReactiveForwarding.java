@@ -650,7 +650,7 @@ public class ReactiveForwarding {
 
             Set<Path> PathsChoise = Sets.newHashSet();
             //TODO to a service ...
-            int choise = 0;
+            int choise = 2;
             if(choise == 0){
                 Set<Path> PathsFSEM = PathsDecisionFESM(paths, pkt.receivedFrom().port());
                 PathsChoise = PathsFSEM;
