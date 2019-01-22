@@ -1171,26 +1171,41 @@ public class ReactiveForwarding {
 
             Set<Path> result = Sets.newHashSet();
             String flowCtx = flowContext.toString();
+            int hashCode = flowContext.hashCode();
+
             List<Path> pathList = Lists.newLinkedList(paths);
-            AlternativePathsContext EcmpPathsCtx = getAltnativePathCtx(paths, srcPort);//map(id, path), size
-            ECMPContext ctx = ECMPContext.BuildECMPContext();
-            Map<String, Integer> flowDistributionMap = ctx.getFlowDistributionMap();
-            try {
-                if (!flowDistributionMap.containsKey(flowCtx)) {
-                    flowDistributionMap.put(flowCtx, 0);
-                    result.add(pathList.get(0));
-                    ctx.setFlowDistributionMap(flowDistributionMap);
-                    return result;
-                } else {
-                    int AlternativePathSize = (int)EcmpPathsCtx.getSize();
-                    int objectIndex = (flowDistributionMap.get(flowCtx) + 1) % AlternativePathSize;
-                    flowDistributionMap.put(flowCtx, objectIndex);
-                    ctx.setFlowDistributionMap(flowDistributionMap);
-                    result.add(pathList.get(objectIndex));
+            int chooseIndex = hashCode % pathList.size();
+            for (int i=0; i< pathList.size(); i++){
+                if (i == chooseIndex) {
+                    result.add(pathList.get(i));
+                    break;
                 }
-            } catch (Exception e) {
-                return ExceptionLogs(paths);
             }
+            return result;
+
+
+
+
+
+//            AlternativePathsContext EcmpPathsCtx = getAltnativePathCtx(paths, srcPort);//map(id, path), size
+//            ECMPContext ctx = ECMPContext.BuildECMPContext();
+//            Map<String, Integer> flowDistributionMap = ctx.getFlowDistributionMap();
+//            try {
+//                if (!flowDistributionMap.containsKey(flowCtx)) {
+//                    flowDistributionMap.put(flowCtx, 0);
+//                    result.add(pathList.get(0));
+//                    ctx.setFlowDistributionMap(flowDistributionMap);
+//                    return result;
+//                } else {
+//                    int AlternativePathSize = (int)EcmpPathsCtx.getSize();
+//                    int objectIndex = (flowDistributionMap.get(flowCtx) + 1) % AlternativePathSize;
+//                    flowDistributionMap.put(flowCtx, objectIndex);
+//                    ctx.setFlowDistributionMap(flowDistributionMap);
+//                    result.add(pathList.get(objectIndex));
+//                }
+//            } catch (Exception e) {
+//                return ExceptionLogs(paths);
+//            }
 
             return result;
         }
@@ -1542,6 +1557,12 @@ public class ReactiveForwarding {
                         ", dst=" + dst +
                         ", curProtocol='" + curProtocol + '\'' +
                         '}';
+            }
+
+            @Override
+            public int hashCode() {
+                //return super.hashCode();
+                return src.toString().hashCode() + dst.toString().hashCode() + curProtocol.hashCode();
             }
 
             public Host getSrc() {
