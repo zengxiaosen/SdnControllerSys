@@ -41,6 +41,7 @@ import org.onosproject.ui.impl.topo.util.TrafficLinkMap;
 import org.onosproject.ui.topo.AbstractTopoMonitor;
 import org.onosproject.ui.topo.Highlights;
 import org.onosproject.ui.topo.TopoUtils;
+import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -476,6 +477,7 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                         logAspect(usedBw, BW_LEVEL, restTemp);
 
                     }
+
                     AlgorithmService algorithmService = new AlgorithmService();
                     if(!reScheduledFlag){
                         //flow dimension
@@ -534,10 +536,9 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
                                         log.info("reachablePaths.size(): " + reachablePaths.size());
 
                                         Boolean enou2PutFlow = true;
+                                        //Set<Path> paths = algorithmService.PathsDecisionMyDefined(resultFlowSpeed, reachablePaths, enou2PutFlow);
 
-                                        Set<Path> paths = algorithmService.PathsDecisionMyDefined(resultFlowSpeed, reachablePaths, enou2PutFlow);
-
-                                        //Set<Path> paths = PathsDecisionFsem(reachablePaths, enou2PutFlow);
+                                        Set<Path> paths = PathsDecisionFsem(reachablePaths, enou2PutFlow);
                                         if(enou2PutFlow) {
                                             reScheduledFlag = true;
                                         }
@@ -1063,129 +1064,8 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
 
     }
 
-    public class AlgorithmService {
-
-        public Set<Path> PathsDecisionMyDefined(Double curFlowSpeed, Set<Path> paths, Boolean enou2PutFlow) {
 
 
-            Set<Path> result = Sets.newHashSet();
-            Map<Integer, Path> indexPath = Maps.newLinkedHashMap();
-            Path finalPath = null;
-
-            int i=0;
-            double maxScore = -100000000;
-            double flowbw = WebTrafficComputeBuilder.build().getFlowBw(curFlowSpeed);
-
-            /**
-             * pre add the flowbw to path
-             * compute the standard deviation of all link in all reachable path
-             */
-            Map<Path, Integer> pathIndexOfPaths = Maps.newHashMap();
-            Map<Integer, String> pathIndexLinksRestBwOfPaths = getPathIndexLinksRestBwOfPaths(paths, pathIndexOfPaths);
-
-            for(Path path : paths){
-
-                Integer curPathIndex = pathIndexOfPaths.get(path);
-                List<Double> otherPathLinksRestBw = WebTrafficComputeBuilder.build().getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
-                List<Double> allPathLinksRestBwAfterAddFlow = Lists.newArrayList(otherPathLinksRestBw);
-                log.info("allPathLinksRestBwAfterAddFlow.size : " + allPathLinksRestBwAfterAddFlow.size());
-                indexPath.put(i, path);
-                /**
-                 *
-                 *  ChokeLinkPassbytes: link bytes
-                 *
-                 */
-                double allLinkOfPathRestBandWidth = 0;
-                double allBwRestAfterAddFlow = 0;
-                long ChokeLinkPassbytes = 0;
-                long IntraLinkMaxBw = 100 * 1000000;
-                boolean pathCanChooseFlag = true;
-                int j=0;
-                long ChokePointRestBandWidth = MAX_REST_BW;
-                for(Link link : path.links()){
-
-                    long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
-                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
-                    //bit/s
-                    //log
-                    log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
-                    log.info("IntraLinkRestBw: " + IntraLinkRestBw);
-                    log.info("flowbw: " + flowbw);
-                    pathCanChooseFlag = WebTrafficComputeBuilder.build().getPathCanChooseFlag(flowbw, IntraLinkLoadBw);
-
-                    //pre add the flowBw to curPath
-                    Double theAddRestBw = flowbw;
-                    Double thisLinkResBw = Double.valueOf(IntraLinkLoadBw);
-                    Double thisLinkResBwUpdate = thisLinkResBw - theAddRestBw;
-                    if(thisLinkResBwUpdate < 0){
-                        thisLinkResBwUpdate = 0.0;
-                    }
-                    allPathLinksRestBwAfterAddFlow.add(thisLinkResBwUpdate);
-                    allLinkOfPathRestBandWidth += IntraLinkRestBw;
-                    allBwRestAfterAddFlow += allBwRestAfterAddFlow;
-
-
-                    if(IntraLinkRestBw < ChokePointRestBandWidth){
-                        //choise the choke point
-                        //ChokePointRestBandWidth
-                        ChokePointRestBandWidth = IntraLinkRestBw;
-                    }
-
-                    j++;
-                }
-                /**
-                 * 从检测路径模块得到的path中包含的link的数量
-                 */
-                double pathlinksSize = path.links().size();
-
-                /**
-                 * the mean restBandWidth of all link at this path
-                 */
-                double pathMeanRestBw = allLinkOfPathRestBandWidth / pathlinksSize;
-
-                int allPathLinkSize = allPathLinksRestBwAfterAddFlow.size();
-                double sumLinksRestBwAfterAddFlow = WebTrafficComputeBuilder.build().getSumLinksRestBwAfterAddFlow(allPathLinksRestBwAfterAddFlow);
-
-                double meanLinksResBwAfterAdd = sumLinksRestBwAfterAddFlow / allPathLinkSize;
-                double sum = WebTrafficComputeBuilder.build().getSdRaw(allPathLinksRestBwAfterAddFlow, meanLinksResBwAfterAdd);
-                double AllRestBWSdAfterPreAdd = Math.sqrt(sum)/allPathLinkSize;
-
-                double fChokeLinkRestBw = (double)(Math.log((double)ChokePointRestBandWidth + 1));
-                double fPathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
-                //double fAllRestBwSdAfterPreAdd = 1.0/(double)(Math.log((double)AllRestBWSdAfterPreAdd + 1) + 0.1);
-                double fAllRestBwSdAfterPreAdd = (double)(Math.log((double)AllRestBWSdAfterPreAdd + 1));
-                double resultScore = fChokeLinkRestBw * 5 + fPathMeanRestBw * 5 - fAllRestBwSdAfterPreAdd * 0;
-                //log
-                log.info("ChokePointRestBandWidth: " + ChokePointRestBandWidth);
-                log.info("pathMeanRestBw: " + pathMeanRestBw);
-                log.info("preAddFlowToThisPath_AllStandardDeviation: " + AllRestBWSdAfterPreAdd);
-                log.info("feature_ChokePointRestBandWidth: " + fChokeLinkRestBw);
-                log.info("feature_pathMeanRestBw: " + fPathMeanRestBw);
-                log.info("feature_preAddFlowToThisPath_AllStandardDeviation: " + fAllRestBwSdAfterPreAdd);
-
-
-                //there are some links not satisfy the flow bw
-                if(!pathCanChooseFlag){
-                    // not choose this path
-                    resultScore = 0;
-                }
-                if(resultScore > maxScore){
-                    finalPath = path;
-                }
-                i++;
-            }
-
-            if(finalPath == null){
-                enou2PutFlow = false;
-                result.add(indexPath.get(0));
-            }else{
-                result.add(finalPath);
-            }
-            return result;
-
-        }
-
-    }
 
 
     private Map<Integer,String> getPathIndexLinksRestBwOfPaths(Set<Path> paths, Map<Path, Integer> pathIndexOfPaths) {
@@ -1439,5 +1319,130 @@ public abstract class TrafficMonitorBase extends AbstractTopoMonitor {
         public int compare(Double o1, Double o2) {
             return o2.compareTo(o1);
         }
+    }
+
+    public class AlgorithmService {
+
+
+        public Set<Path> PathsDecisionMyDefined(Double curFlowSpeed, Set<Path> paths, Boolean enou2PutFlow) {
+
+
+            Set<Path> result = Sets.newHashSet();
+            Map<Integer, Path> indexPath = Maps.newLinkedHashMap();
+            Path finalPath = null;
+
+            int i=0;
+            double maxScore = -100000000;
+            double flowbw = WebTrafficComputeBuilder.build().getFlowBw(curFlowSpeed);
+
+            /**
+             * pre add the flowbw to path
+             * compute the standard deviation of all link in all reachable path
+             */
+            Map<Path, Integer> pathIndexOfPaths = Maps.newHashMap();
+            Map<Integer, String> pathIndexLinksRestBwOfPaths = getPathIndexLinksRestBwOfPaths(paths, pathIndexOfPaths);
+
+            for(Path path : paths){
+
+                Integer curPathIndex = pathIndexOfPaths.get(path);
+                List<Double> otherPathLinksRestBw = WebTrafficComputeBuilder.build().getOtherPathLinksRestBw(pathIndexOfPaths, curPathIndex, pathIndexLinksRestBwOfPaths);
+                List<Double> allPathLinksRestBwAfterAddFlow = Lists.newArrayList(otherPathLinksRestBw);
+                log.info("allPathLinksRestBwAfterAddFlow.size : " + allPathLinksRestBwAfterAddFlow.size());
+                indexPath.put(i, path);
+                /**
+                 *
+                 *  ChokeLinkPassbytes: link bytes
+                 *
+                 */
+                double allLinkOfPathRestBandWidth = 0;
+                double allBwRestAfterAddFlow = 0;
+                long ChokeLinkPassbytes = 0;
+                long IntraLinkMaxBw = 100 * 1000000;
+                boolean pathCanChooseFlag = true;
+                int j=0;
+                long ChokePointRestBandWidth = MAX_REST_BW;
+                for(Link link : path.links()){
+
+                    long IntraLinkLoadBw = getIntraLinkLoadBw(link.src(), link.dst());
+                    long IntraLinkRestBw = getIntraLinkRestBw(link.src(), link.dst());
+                    //bit/s
+                    //log
+                    log.info("IntraLinkLoadBw: " + IntraLinkLoadBw);
+                    log.info("IntraLinkRestBw: " + IntraLinkRestBw);
+                    log.info("flowbw: " + flowbw);
+                    pathCanChooseFlag = WebTrafficComputeBuilder.build().getPathCanChooseFlag(flowbw, IntraLinkLoadBw);
+
+                    //pre add the flowBw to curPath
+                    Double theAddRestBw = flowbw;
+                    Double thisLinkResBw = Double.valueOf(IntraLinkLoadBw);
+                    Double thisLinkResBwUpdate = thisLinkResBw - theAddRestBw;
+                    if(thisLinkResBwUpdate < 0){
+                        thisLinkResBwUpdate = 0.0;
+                    }
+                    allPathLinksRestBwAfterAddFlow.add(thisLinkResBwUpdate);
+                    allLinkOfPathRestBandWidth += IntraLinkRestBw;
+                    allBwRestAfterAddFlow += allBwRestAfterAddFlow;
+
+
+                    if(IntraLinkRestBw < ChokePointRestBandWidth){
+                        //choise the choke point
+                        //ChokePointRestBandWidth
+                        ChokePointRestBandWidth = IntraLinkRestBw;
+                    }
+
+                    j++;
+                }
+                /**
+                 * 从检测路径模块得到的path中包含的link的数量
+                 */
+                double pathlinksSize = path.links().size();
+
+                /**
+                 * the mean restBandWidth of all link at this path
+                 */
+                double pathMeanRestBw = allLinkOfPathRestBandWidth / pathlinksSize;
+
+                int allPathLinkSize = allPathLinksRestBwAfterAddFlow.size();
+                double sumLinksRestBwAfterAddFlow = WebTrafficComputeBuilder.build().getSumLinksRestBwAfterAddFlow(allPathLinksRestBwAfterAddFlow);
+
+                double meanLinksResBwAfterAdd = sumLinksRestBwAfterAddFlow / allPathLinkSize;
+                double sum = WebTrafficComputeBuilder.build().getSdRaw(allPathLinksRestBwAfterAddFlow, meanLinksResBwAfterAdd);
+                double AllRestBWSdAfterPreAdd = Math.sqrt(sum)/allPathLinkSize;
+
+                double fChokeLinkRestBw = (double)(Math.log((double)ChokePointRestBandWidth + 1));
+                double fPathMeanRestBw = (double)(Math.log((double)pathMeanRestBw + 1));
+                //double fAllRestBwSdAfterPreAdd = 1.0/(double)(Math.log((double)AllRestBWSdAfterPreAdd + 1) + 0.1);
+                double fAllRestBwSdAfterPreAdd = (double)(Math.log((double)AllRestBWSdAfterPreAdd + 1));
+                double resultScore = fChokeLinkRestBw * 5 + fPathMeanRestBw * 5 - fAllRestBwSdAfterPreAdd * 0;
+                //log
+                log.info("ChokePointRestBandWidth: " + ChokePointRestBandWidth);
+                log.info("pathMeanRestBw: " + pathMeanRestBw);
+                log.info("preAddFlowToThisPath_AllStandardDeviation: " + AllRestBWSdAfterPreAdd);
+                log.info("feature_ChokePointRestBandWidth: " + fChokeLinkRestBw);
+                log.info("feature_pathMeanRestBw: " + fPathMeanRestBw);
+                log.info("feature_preAddFlowToThisPath_AllStandardDeviation: " + fAllRestBwSdAfterPreAdd);
+
+
+                //there are some links not satisfy the flow bw
+                if(!pathCanChooseFlag){
+                    // not choose this path
+                    resultScore = 0;
+                }
+                if(resultScore > maxScore){
+                    finalPath = path;
+                }
+                i++;
+            }
+
+            if(finalPath == null){
+                enou2PutFlow = false;
+                result.add(indexPath.get(0));
+            }else{
+                result.add(finalPath);
+            }
+            return result;
+
+        }
+
     }
 }
